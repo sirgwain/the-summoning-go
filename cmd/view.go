@@ -18,7 +18,7 @@ import (
 
 func init() {
 	var level, screenshot string
-	var scale int
+	var scale, shotTicks int
 	viewCmd := &cobra.Command{
 		Use:   "view [pack-dir]",
 		Short: "Look around a content pack's levels",
@@ -41,7 +41,7 @@ level, Home recenters.`,
 			if err != nil {
 				return err
 			}
-			v.screenshot = screenshot
+			v.screenshot, v.shotTicks = screenshot, int64(shotTicks)
 			ebiten.SetWindowTitle("The Summoning: " + pack.Manifest.Name)
 			ebiten.SetWindowSize(1280, 800)
 			ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
@@ -50,7 +50,8 @@ level, Home recenters.`,
 	}
 	viewCmd.Flags().StringVar(&level, "level", "", "level id to open (default: the start level)")
 	viewCmd.Flags().IntVar(&scale, "scale", 2, "pixels per art pixel")
-	viewCmd.Flags().StringVar(&screenshot, "screenshot", "", "save the first frame to this PNG file and exit")
+	viewCmd.Flags().StringVar(&screenshot, "screenshot", "", "save a frame to this PNG file and exit")
+	viewCmd.Flags().IntVar(&shotTicks, "screenshot-ticks", 0, "updates to run before the screenshot")
 	rootCmd.AddCommand(viewCmd)
 }
 
@@ -64,9 +65,12 @@ type viewer struct {
 	pack      *content.Pack
 	sprites   *render.Sprites
 	presenter *render.Presenter
-	levels    []string
-	current   int
-	view      *render.LevelView
+	palette   *content.Palette
+	// ticks counts updates, the clock palette effects run on.
+	ticks   int64
+	levels  []string
+	current int
+	view    *render.LevelView
 	// origin is the view pixel at the buffer's top-left.
 	origin image.Point
 	scale  int
@@ -78,6 +82,7 @@ type viewer struct {
 	wheel float64
 	// screenshot, if set, is where to save the first frame before exiting.
 	screenshot string
+	shotTicks  int64
 	shotTaken  bool
 	err        error
 }
@@ -87,11 +92,11 @@ func newViewer(p *content.Pack, level string, scale int) (*viewer, error) {
 	if err != nil {
 		return nil, err
 	}
-	pr.SetPalette(p.Palettes[p.Manifest.Palette])
 	v := &viewer{
 		pack:      p,
 		sprites:   render.NewSprites(p),
 		presenter: pr,
+		palette:   p.Palettes[p.Manifest.Palette],
 		scale:     max(1, min(scale, maxScale)),
 		screen:    image.Pt(1280, 800),
 	}
@@ -143,6 +148,7 @@ func (v *viewer) Update() error {
 	if v.shotTaken {
 		return ebiten.Termination
 	}
+	v.ticks++
 	speed := panSpeed
 	if ebiten.IsKeyPressed(ebiten.KeyShift) {
 		speed = panSpeedFat
@@ -238,8 +244,9 @@ func (v *viewer) Draw(screen *ebiten.Image) {
 	}
 	v.buffer.Clear()
 	v.view.Draw(v.buffer, v.origin)
+	v.presenter.SetColors(v.palette.At(v.ticks * 1000 / int64(ebiten.TPS())))
 	v.presenter.Present(screen, v.buffer, v.scale)
-	if v.screenshot != "" && !v.shotTaken {
+	if v.screenshot != "" && !v.shotTaken && v.ticks >= v.shotTicks {
 		v.shotTaken = true
 		v.err = saveScreenshot(screen, v.screenshot)
 	}

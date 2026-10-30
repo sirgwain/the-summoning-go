@@ -229,9 +229,11 @@ The file formats are in [pack.md](pack.md).
 
 ## Rendering
 
-- **Palette shader.** Indexed sprites upload as single-channel textures, palettes as a 256×N texture,
-  and a Kage shader looks up colors. Fades, flashes, remapped creature colors and color cycling change
-  the lookup, not the art.
+- **Palette shader.** Indexed sprites upload as index images (the index in the red channel), the
+  world draws in indexes into an offscreen buffer, and a Kage shader looks each index up in the
+  current palette, passed as a uniform array (Ebitengine requires a shader's source images to be
+  the same size, which rules out a palette texture). Fades, flashes, remapped creature colors and
+  color cycling change the lookup, not the art.
 - **World buffer.** The world draws into an offscreen image at the art's pixel scale, then scales to
   the window by a whole number. UI draws at native resolution on top.
 - **Projection.** Pixel-art isometric (2:1), as the Summoning draws: the grid is turned 45 degrees,

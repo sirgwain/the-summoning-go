@@ -5,7 +5,6 @@ package content
 import (
 	"fmt"
 	"image"
-	"image/color"
 )
 
 // Format is the pack format version this package reads and writes.
@@ -56,12 +55,6 @@ type Cell [2]int
 
 // Offset is a pixel offset (dx, dy).
 type Offset [2]int
-
-// Palette is a 256-color palette.
-type Palette struct {
-	ID     string
-	Colors [256]color.RGBA
-}
 
 // SpriteBank is a sheet of same-sized frames in an indexed image, laid out left to right, top
 // to bottom.

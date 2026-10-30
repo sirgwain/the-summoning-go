@@ -155,9 +155,10 @@ func NewPresenter() (*Presenter, error) {
 	return &Presenter{shader: sh, palette: make([]float32, 256*4)}, nil
 }
 
-// SetPalette sets the palette indexes are looked up in.
-func (pr *Presenter) SetPalette(p *content.Palette) {
-	for i, c := range p.Colors {
+// SetColors sets the colors indexes are looked up in, such as a palette's colors at a moment of
+// its effects (content.Palette.At).
+func (pr *Presenter) SetColors(colors [256]color.RGBA) {
+	for i, c := range colors {
 		pr.palette[4*i] = float32(c.R) / 255
 		pr.palette[4*i+1] = float32(c.G) / 255
 		pr.palette[4*i+2] = float32(c.B) / 255

@@ -20,6 +20,10 @@ func testPack() *Pack {
 	for i := range pal.Colors {
 		pal.Colors[i] = color.RGBA{uint8(i), uint8(255 - i), 7, 255}
 	}
+	pal.Effects = []PaletteEffect{
+		{Kind: EffectRotate, PeriodMS: 440, First: 0, Size: 4, Groups: 2},
+		{Kind: EffectCycle, PeriodMS: 100, Index: 252, Colors: []color.RGBA{{1, 2, 3, 255}, {4, 5, 6, 255}}},
+	}
 	p.Palettes[pal.ID] = pal
 
 	transparent := 9
@@ -53,8 +57,8 @@ func TestWriteLoad(t *testing.T) {
 	if !reflect.DeepEqual(got.Manifest, want.Manifest) {
 		t.Errorf("manifest %+v, want %+v", got.Manifest, want.Manifest)
 	}
-	if *got.Palettes["palette.0"] != *want.Palettes["palette.0"] {
-		t.Error("palette differs")
+	if !reflect.DeepEqual(got.Palettes["palette.0"], want.Palettes["palette.0"]) {
+		t.Errorf("palette %+v, want %+v", got.Palettes["palette.0"].Effects, want.Palettes["palette.0"].Effects)
 	}
 	if !reflect.DeepEqual(got.Levels, want.Levels) || !reflect.DeepEqual(got.Floors, want.Floors) || !reflect.DeepEqual(got.Walls, want.Walls) {
 		t.Error("tile sets or levels differ")
@@ -120,6 +124,9 @@ func TestVerify(t *testing.T) {
 		"overlay frame":    {func(p *Pack) { p.Levels["level.00"].Overlays[0].Frame = 3 }, "frame 3"},
 		"sheet too small":  {func(p *Pack) { p.Sprites["sprite.tiles"].Frames = 5 }, "do not fit"},
 		"exit without set": {func(p *Pack) { p.Levels["level.00"].ExitWalls = "" }, "no exit wall set"},
+		"rotate too far":   {func(p *Pack) { p.Palettes["palette.0"].Effects[0].First = 250 }, "outside the palette"},
+		"no period":        {func(p *Pack) { p.Palettes["palette.0"].Effects[1].PeriodMS = 0 }, "period"},
+		"unknown effect":   {func(p *Pack) { p.Palettes["palette.0"].Effects[1].Kind = "fade" }, "unknown kind"},
 	}
 	if err := testPack().Verify(); err != nil {
 		t.Fatalf("valid pack: %v", err)
@@ -131,5 +138,29 @@ func TestVerify(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%s: got %v, want an error with %q", name, err, tc.want)
 		}
+	}
+}
+
+func TestPaletteAt(t *testing.T) {
+	p := testPack().Palettes["palette.0"]
+	at := func(ms int64, i int) uint8 { c := p.At(ms); return c[i].R }
+
+	// Rotation: two groups of four from 0; each step every color takes the next one's value.
+	if at(0, 0) != 0 || at(439, 3) != 3 {
+		t.Error("rotated before the first period")
+	}
+	if at(440, 0) != 1 || at(440, 3) != 0 || at(440, 4) != 5 || at(440, 7) != 4 {
+		t.Error("one step of rotation wrong")
+	}
+	if at(4*440, 2) != 2 {
+		t.Error("four steps do not come back around")
+	}
+	if at(440, 8) != 8 {
+		t.Error("a color outside the groups changed")
+	}
+
+	// Cycle: color 252 through its two colors, one per 100 ms.
+	if at(0, 252) != 1 || at(100, 252) != 4 || at(200, 252) != 1 {
+		t.Error("cycle wrong")
 	}
 }

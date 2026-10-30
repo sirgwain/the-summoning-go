@@ -42,7 +42,21 @@ palette gameplay draws with.
 { "id": "palette.0", "colors": ["#000000", "#0c080c", "…256 entries…"] }
 ```
 
-Exactly 256 colors. Palette effects (cycling, fades, remaps) are added in a later milestone.
+Exactly 256 colors, plus optional `effects` that animate them:
+
+```json
+"effects": [
+  { "kind": "rotate", "period_ms": 440, "first": 224, "size": 4, "groups": 4 },
+  { "kind": "cycle", "period_ms": 440, "index": 252, "colors": ["#3d006d", "#610f9a"] }
+]
+```
+
+- `rotate`: `groups` runs of `size` colors starting at `first`. Every `period_ms`, each color in a
+  run takes the value of the next, and the last takes the first's.
+- `cycle`: every `period_ms`, color `index` becomes the next of `colors`, starting with the first.
+
+Effects run on presentation time from when the view starts, so anything drawn in those colors
+animates without being redrawn. Fades, flashes and remaps are added with scenes.
 
 ## Sprite banks
 

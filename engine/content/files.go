@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	"image/color"
 	"image/png"
 	"io/fs"
 	"os"
@@ -234,38 +233,6 @@ func sortedKeys[T any](m map[string]*T) []string {
 	return keys
 }
 
-type paletteJSON struct {
-	ID     string   `json:"id"`
-	Colors []string `json:"colors"`
-}
-
-func (p *Palette) MarshalJSON() ([]byte, error) {
-	out := paletteJSON{ID: p.ID, Colors: make([]string, len(p.Colors))}
-	for i, c := range p.Colors {
-		out.Colors[i] = fmt.Sprintf("#%02x%02x%02x", c.R, c.G, c.B)
-	}
-	return json.Marshal(out)
-}
-
-func (p *Palette) UnmarshalJSON(data []byte) error {
-	var in paletteJSON
-	if err := json.Unmarshal(data, &in); err != nil {
-		return err
-	}
-	if len(in.Colors) != len(p.Colors) {
-		return fmt.Errorf("palette %s: %d colors, want %d", in.ID, len(in.Colors), len(p.Colors))
-	}
-	p.ID = in.ID
-	for i, s := range in.Colors {
-		var r, g, b uint8
-		if n, err := fmt.Sscanf(s, "#%02x%02x%02x", &r, &g, &b); n != 3 || err != nil || len(s) != 7 {
-			return fmt.Errorf("palette %s: bad color %q", in.ID, s)
-		}
-		p.Colors[i] = color.RGBA{r, g, b, 0xFF}
-	}
-	return nil
-}
-
 // Verify checks that every reference in the pack resolves and every record is consistent.
 func (p *Pack) Verify() error {
 	var errs []error
@@ -274,6 +241,9 @@ func (p *Pack) Verify() error {
 	m := p.Manifest
 	if _, ok := p.Palettes[m.Palette]; !ok {
 		fail("pack.json: palette %q not found", m.Palette)
+	}
+	for _, id := range sortedKeys(p.Palettes) {
+		errs = append(errs, p.Palettes[id].verify()...)
 	}
 	if l, ok := p.Levels[m.Start.Level]; !ok {
 		fail("pack.json: start level %q not found", m.Start.Level)

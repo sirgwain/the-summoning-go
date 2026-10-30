@@ -136,7 +136,7 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 		report:    &Report{},
 	}
 	for i, p := range palettes {
-		pal := &content.Palette{ID: paletteID(i), Colors: p}
+		pal := &content.Palette{ID: paletteID(i), Colors: p, Effects: paletteEffects()}
 		im.pack.Palettes[pal.ID] = pal
 	}
 	im.palette = im.pack.Palettes[paletteID(0)]
