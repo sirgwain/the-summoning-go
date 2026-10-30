@@ -24,8 +24,9 @@ func init() {
 		Short: "Look around a content pack's levels",
 		Long: `Opens a window showing a pack's levels in the game's projection.
 
-Arrows or WASD (with Shift, faster) or dragging with the mouse move the view. Page Up and
-Page Down (or [ and ]) change level, + and - zoom, Home recenters.`,
+Arrows or WASD (with Shift, faster), dragging with the mouse or scrolling move the view. Page
+Up and Page Down (or [ and ]) change level, + and - (or Ctrl or Cmd with the scroll wheel) zoom,
+Home recenters.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := "packs/summoning"
@@ -57,6 +58,8 @@ const (
 	maxScale    = 6
 	panSpeed    = 6
 	panSpeedFat = 24
+	// wheelSpeed is how far one step of the scroll wheel pans, in art pixels.
+	wheelSpeed = 16
 )
 
 type viewer struct {
@@ -73,6 +76,8 @@ type viewer struct {
 	// screen is the size of the screen in pixels.
 	screen image.Point
 	drag   *image.Point
+	// wheel accumulates scrolling not yet turned into whole pixels or zoom steps.
+	wheel [2]float64
 	// screenshot, if set, is where to save the first frame before exiting.
 	screenshot string
 	shotTaken  bool
@@ -163,6 +168,7 @@ func (v *viewer) Update() error {
 
 	x, y := ebiten.CursorPosition()
 	cursor := image.Pt(x, y)
+	v.scroll(cursor)
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) || ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
 		if v.drag != nil {
 			v.origin = v.origin.Sub(cursor.Sub(*v.drag).Div(v.scale))
@@ -191,11 +197,42 @@ func (v *viewer) Update() error {
 	return v.err
 }
 
+// scroll pans by the scroll wheel, or with Ctrl or Cmd held zooms around the cursor.
+func (v *viewer) scroll(cursor image.Point) {
+	dx, dy := ebiten.Wheel()
+	if dx == 0 && dy == 0 {
+		return
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyControl) || ebiten.IsKeyPressed(ebiten.KeyMeta) {
+		v.wheel[0] = 0
+		v.wheel[1] += dy
+		for ; v.wheel[1] >= 1; v.wheel[1]-- {
+			v.zoomAt(1, cursor)
+		}
+		for ; v.wheel[1] <= -1; v.wheel[1]++ {
+			v.zoomAt(-1, cursor)
+		}
+		return
+	}
+	// Scrolling up or left shows what is above or to the left.
+	v.wheel[0] -= dx * wheelSpeed
+	v.wheel[1] -= dy * wheelSpeed
+	step := image.Pt(int(v.wheel[0]), int(v.wheel[1]))
+	v.wheel[0] -= float64(step.X)
+	v.wheel[1] -= float64(step.Y)
+	v.origin = v.origin.Add(step)
+}
+
 // zoom changes the scale, keeping the view centered on the same point.
 func (v *viewer) zoom(d int) {
-	center := v.origin.Add(v.bufferSize().Div(2))
+	v.zoomAt(d, v.screen.Div(2))
+}
+
+// zoomAt changes the scale, keeping the art pixel under the screen point at fixed.
+func (v *viewer) zoomAt(d int, at image.Point) {
+	under := v.origin.Add(at.Div(v.scale))
 	v.scale = max(1, min(v.scale+d, maxScale))
-	v.origin = center.Sub(v.bufferSize().Div(2))
+	v.origin = under.Sub(at.Div(v.scale))
 }
 
 func justPressed(keys ...ebiten.Key) bool {
@@ -222,7 +259,7 @@ func (v *viewer) Draw(screen *ebiten.Image) {
 		v.shotTaken = true
 		v.err = saveScreenshot(screen, v.screenshot)
 	}
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("%s (%d/%d)  scale %d  [ ] level  +/- zoom  Home recenter",
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("%s (%d/%d)  scale %d  [ ] level  +/- zoom  scroll to pan  Home recenter",
 		v.levels[v.current], v.current+1, len(v.levels), v.scale))
 }
 
