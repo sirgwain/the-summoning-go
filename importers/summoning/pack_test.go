@@ -84,6 +84,11 @@ func TestImport(t *testing.T) {
 	if want := (content.Grid{{0, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 0, n}}); !reflect.DeepEqual(l.Floor, want) {
 		t.Errorf("floor %v, want %v", l.Floor, want)
 	}
+	// Walls show the floor halves whose check neighbors are on the map: shape 1 checks up-left
+	// (off the map) and down-right; shape 3 checks the walls on either side.
+	if want := (content.Grid{{2, 2, 3, 2}, {3, 3, 3, 3}, {3, 3, 3, n}}); !reflect.DeepEqual(l.FloorHalves, want) {
+		t.Errorf("floor halves %v, want %v", l.FloorHalves, want)
+	}
 	if l.Floors != "floors.20" || l.Walls != "walls.18" || l.ExitWalls != "exitwalls.25" {
 		t.Errorf("sets %s %s %s", l.Floors, l.Walls, l.ExitWalls)
 	}
@@ -176,5 +181,21 @@ func TestImportReportsMissingFrames(t *testing.T) {
 	}
 	if len(report.Lines()) == 0 {
 		t.Error("missing plate frame not reported")
+	}
+}
+
+func TestWallChecksAs(t *testing.T) {
+	l := &Level{Rows: 2, Columns: 3, Terrain: []byte{
+		0x11, 0x05, 0x11,
+		0x1B, 0x10, 0x1B,
+	}}
+	// A closed horizontal door below wins over the vertical doors beside.
+	if got := wallChecksAs(l, 0, 1, 5); got != checkBelowDoor[5] {
+		t.Errorf("below a door: %d, want %d", got, checkBelowDoor[5])
+	}
+	l.Terrain[4] = 0x1B
+	// Vertical doors on both sides: left, then right of the result.
+	if got, want := wallChecksAs(l, 0, 1, 5), checkRightDoor[checkLeftDoor[5]]; got != want {
+		t.Errorf("between doors: %d, want %d", got, want)
 	}
 }

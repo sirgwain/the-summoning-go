@@ -30,10 +30,10 @@ The view is drawn back to front: by increasing `a + b` (screen row), and within 
 | Terrain | Meaning | Walkable |
 | --- | --- | --- |
 | 00h–0Eh | Wall, shape 0..14 | no |
-| 0Fh | Unused (drawn as floor) | no |
+| 0Fh | Unused (drawn black) | no |
 | 10h | Closed door, horizontal | no |
 | 11h | Closed door, vertical | no |
-| 12h–14h | Unused (drawn as floor) | no |
+| 12h–14h | Unused (drawn black) | no |
 | 15h | Floor under a door in motion | no |
 | 16h | Door opening | no |
 | 17h, 18h | Item slot (keyhole, object hole) | yes |
@@ -61,12 +61,36 @@ All art comes from the banks named in the level header (formats.md). Offsets are
 
 The floor bank holds floor tiles as half-tiles: frame `2k` is the upper half (32×16) at `(0, 0)` and frame `2k+1` the lower half at `(0, 16)`.
 
-- Every cell that is not a wall or off the map first gets a floor. Walls also get floor 0 under them.
+- Every cell that is not off the map first gets a floor, by halves (see **Floor halves** below). Walls get floor 0 under them.
 - Terrain 1Bh–1Eh uses floor `k = terrain − 1Bh`; every other walkable or door cell uses floor 0.
 - Terrain 17h–1Ah add frame `terrain − 17h` of the floor-overlay bank at `(4, 11)`.
 - Terrain 1Fh–28h add frame `terrain − 1Fh` of the plate bank at `(−16, 8)`, except a teleporter (24h) that is not armed and a closed trapdoor (27h), which show only floor.
 - Terrain 28h (gem socket) instead shows the socket: if its six gems are all set (mask 3Fh) frame 1 of terrain bank +37h at `(−1, 16)`; otherwise frame 0 there, and for each set bit `p` of the mask, frame `p` of terrain bank +38h at `(−1, 16)` plus the offset for `p`: 0 `(11, 1)`, 1 `(3, 1)`, 2 `(21, 1)`, 3 `(19, 6)`, 4 `(1, 6)`, 5 `(9, 7)`.
 - Terrain 29h–35h add frame `terrain − 29h` of resource 67 at `(0, 0)`.
+
+#### Floor halves
+
+Each half of a cell's floor (the upper half at `(0, 0)`, the lower at `(0, 16)`) is either drawn or filled black, by the cell's terrain:
+
+- 15h–28h: both halves drawn.
+- 29h–35h (hazard tiles): the upper half black; the lower half drawn only for 2Bh, 2Eh, 30h and 33h. The hazard sprite is drawn over it.
+- 0Fh, 12h–14h: both black.
+- Walls (00h–0Eh) and closed doors (10h, 11h): each has two check directions (README.md directions). The upper half is drawn if the neighbor one step in the first direction **counts**, the lower half if the neighbor in the second does. A neighbor counts when it is inside the level, visible, and not a hazard tile (29h–35h). "–" never counts.
+
+  | Terrain | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | Ah | Bh | Ch | Dh | Eh | 10h | 11h |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | Upper | 7 | 0 | 1 | 6 | 5 | 7 | 0 | 6 | – | – | – | 0 | 7 | 6 | 7 | 6 | 0 |
+  | Lower | 3 | 4 | 1 | 2 | 4 | 3 | 3 | 3 | 2 | 4 | 3 | 3 | 4 | 3 | 2 | 2 | 4 |
+
+  A wall next to a closed door takes its check directions from another shape. If the cell at `(x + 1, y)` is 10h, shape `s` checks as `below[s]`. Otherwise, if `(x, y − 1)` is 11h, `s` becomes `left[s]`; then, if `(x, y + 1)` is 11h, the result becomes `right[result]`.
+
+  | `s` | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | Ah | Bh | Ch | Dh | Eh |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | below | 0 | 6 | 2 | 3 | 7 | 8 | 6 | 7 | 8 | Ah | Ah | 2 | 0 | Dh | Eh |
+  | left | 6 | 1 | 2 | 8 | 9 | 5 | 6 | Ah | 8 | 9 | Ah | Bh | Ch | 5 | 2 |
+  | right | 0 | 1 | 6 | 7 | 4 | 9 | 6 | 7 | Ah | 9 | Ah | Bh | Ch | 4 | 0 |
+
+So the floor under a wall shows only on the sides that face into the room the player sees, and the black halves keep it from sticking out below the wall's art.
 
 ### Walls
 
@@ -93,6 +117,8 @@ The two sprites are drawn in the order of their rows among the other things stan
 ### What is drawn
 
 Only visible cells are drawn; the rest of the view is black. Each visible cell is marked **seen**, which the level map shows.
+
+A cell that is not drawn (off the map, or not visible) has its tile box filled black in its place among the floors. This matters: the floor under a wall sticks out below the wall's art, and the black fill of the cells in front covers it. Walls and things standing are drawn after all floors, so the fill never covers them.
 
 ## Visibility
 

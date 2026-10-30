@@ -367,6 +367,9 @@ func (p *Pack) verifyLevel(l *Level, frames func(owner, sprite string) int) []er
 	}
 	checkGrid("floor", l.Floor, func(v int) bool { return floors == nil || v < floors.Variants })
 	checkGrid("wall", l.Wall, func(v int) bool { return walls == nil || (v < len(walls.Shapes) && walls.Shapes[v] != NoFrame) })
+	if l.FloorHalves != nil {
+		checkGrid("floor_halves", l.FloorHalves, func(v int) bool { return v <= HalvesBoth })
+	}
 
 	for _, c := range l.Exits {
 		if !l.InBounds(c) {

@@ -432,6 +432,8 @@ func (im *importer) level(index int, l *Level) (*content.Level, error) {
 		}
 	}
 
+	cl.FloorHalves = floorHalves(l, im.init.Directions)
+
 	for i := range l.Placements {
 		if err := im.feature(cl, l, &l.Placements[i]); err != nil {
 			return nil, err

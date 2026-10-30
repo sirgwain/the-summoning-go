@@ -118,6 +118,10 @@ use a second wall set with only the shapes that can hold an exit.
     "1 1 1 1 1 1 1 5 . . .",
     "…"
   ],
+  "floor_halves": [
+    "2 2 2 2 2 2 2 3 . . .",
+    "…"
+  ],
   "exits": [[0, 9]],
   "overlays": [
     { "cell": [3, 4], "sprite": "sprite.res.1045", "frame": 0, "offset": [-16, 8] }
@@ -134,6 +138,11 @@ use a second wall set with only the shapes that can hold an exit.
 - `size` is rows, columns. Cell `(x, y)` is row `x`, column `y`, as in the spec.
 - `floor` and `wall` hold one string per row of space-separated values, `.` for none, so a level
   diffs well. A floor value is a variant of the floor set, a wall value a shape of the wall set.
+- `floor_halves` says which halves of each floor are drawn: 1 the upper, 2 the lower, 3 both, 0
+  neither. A half not drawn is blanked. Without it, every floor is drawn whole. In v0 the importer
+  computes it as if the whole level were visible (`docs/spec/world.md`, Floor halves); once
+  visibility exists (Milestone 2) the rule moves into content and the renderer applies it to what
+  the player sees.
 - `exits` are wall cells drawn from `exit_walls` instead of `walls`, by the same shape.
 - `overlays` are drawn after all floors and before anything standing: plates, levers, keyholes,
   hazard tiles. `decorations` are drawn on their cell's wall right after it. `props` stand in their

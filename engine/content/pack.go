@@ -104,6 +104,21 @@ type WallSet struct {
 // NoFrame marks a missing wall shape and an empty grid cell.
 const NoFrame = -1
 
+// Floor halves, as bits of Level.FloorHalves.
+const (
+	HalfUpper  = 1
+	HalfLower  = 2
+	HalvesBoth = HalfUpper | HalfLower
+)
+
+// Halves returns which halves of cell c's floor are drawn.
+func (l *Level) Halves(c Cell) int {
+	if l.FloorHalves == nil {
+		return HalvesBoth
+	}
+	return l.FloorHalves[c[0]][c[1]]
+}
+
 // Level is the drawable part of a level.
 type Level struct {
 	ID   string `json:"id"`
@@ -115,9 +130,12 @@ type Level struct {
 	// ExitWalls draws the cells listed in Exits, by their shape in Wall.
 	ExitWalls string `json:"exit_walls,omitempty"`
 	// Floor is each cell's floor variant; Wall each cell's wall shape. NoFrame for none.
-	Floor Grid   `json:"floor"`
-	Wall  Grid   `json:"wall"`
-	Exits []Cell `json:"exits,omitempty"`
+	Floor Grid `json:"floor"`
+	Wall  Grid `json:"wall"`
+	// FloorHalves says which halves of each cell's floor are drawn (HalfUpper, HalfLower); the
+	// others are blanked. Nil draws every floor whole.
+	FloorHalves Grid   `json:"floor_halves,omitempty"`
+	Exits       []Cell `json:"exits,omitempty"`
 	// Overlays are drawn after all floors and before anything standing.
 	Overlays []Placed `json:"overlays,omitempty"`
 	// Decorations are drawn on their cell's wall, right after it.
