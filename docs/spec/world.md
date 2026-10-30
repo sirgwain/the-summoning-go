@@ -12,9 +12,9 @@ World positions are in units, 32 per cell (README.md). The first coordinate `u` 
 
 ### Projection
 
-The view is 2:1 isometric. Each cell is a 64×32 diamond. In view pixels, relative to a scrolling origin:
+The view is 2:1 isometric: neighboring cells along a screen row are 64 pixels apart, and each screen row is 16 pixels below the last. In view pixels, relative to a scrolling origin:
 
-- The **tile box** of cell `(a, b)`, the 64×32 rectangle around its floor diamond, has its top-left corner at `(32·(b − a), 16·(a + b))`. All terrain art below is placed relative to this corner.
+- The **tile box** of cell `(a, b)` is a 32×32 rectangle with its top-left corner at `(32·(b − a), 16·(a + b))`. All terrain art below is placed relative to this corner. The boxes of all cells tile the view like bricks: each column of boxes is offset 16 pixels down from its neighbors. Floor art is opaque and fills its box, with the diamond outlines of the grid painted into the art, so the floor looks like diamonds although every cell draws a rectangle.
 - The **reference point** of world position `(u, v)` is `(16 + v − u, ⌊u/2⌋ + ⌊v/2⌋)`. An entity's sprite is drawn with its top-left corner at its position's reference point, so an entity's position is the top-left of its sprite, and the point that decides which cell it stands on is offset from it by kind (entities.md).
 
 Both share one origin: the view's origin cell `(R, C)` has its tile box at `(0, 0)`, and the world point `(32R, 32C)` has its reference point at `(16, 0)`. Moving the origin shifts both by the same amount.
@@ -59,7 +59,7 @@ All art comes from the banks named in the level header (formats.md). Offsets are
 
 ### Floors
 
-The floor bank holds floor tiles as half-tiles: frame `2k` is the upper half (64×16) at `(0, 0)` and frame `2k+1` the lower half at `(0, 16)`.
+The floor bank holds floor tiles as half-tiles: frame `2k` is the upper half (32×16) at `(0, 0)` and frame `2k+1` the lower half at `(0, 16)`.
 
 - Every cell that is not a wall or off the map first gets a floor. Walls also get floor 0 under them.
 - Terrain 1Bh–1Eh uses floor `k = terrain − 1Bh`; every other walkable or door cell uses floor 0.
@@ -74,7 +74,7 @@ The wall bank holds, for shape `s` (0..14), the upper part as frame `s` at `(0, 
 
 The engine combines a shape's upper part, lower part and caps into one image per shape on import.
 
-**Exits in walls.** A wall cell with a teleporter feature is an exit (rules.md). It is drawn from the exit-wall bank, as shape 1 if its terrain is 1, or shape 4 if its terrain is 3: frame `s − 1` at `(0, −16)`, frame `s` at `(0, 0)` and frame `s + 1` at `(0, 16)`, with caps from the exit-wall bank + 1 as for walls.
+**Exits in walls.** A wall cell with a teleporter feature is an exit (rules.md). It is drawn from the exit-wall bank, as shape 1 if its terrain is 1, or shape 4 if its terrain is 3: frame `s − 1` at `(0, −16)`, frame `s` at `(0, 0)` and frame `s + 1` at `(0, 16)`, in that order. An exit wall has no caps; its top frame covers the space where they would be. A decoration on an exit wall is not shown.
 
 **Decorations.** A wall cell with a decoration feature shows it only on shape 1 or 3: frame `ornament` of the decoration's bank at `(8, 8)`. The level's decoration byte `b` gives `ornament = b % 10` and `decoration = b / 10`, which selects one of the five decoration banks in the header. Decorations animate only by palette (scenes.md).
 
@@ -85,6 +85,8 @@ A door is drawn as two sprites, placed from the reference point `(rx, ry)` of th
 - Horizontal: frames `2s` and `2s + 1` of the door bank, at `(rx − 33, ry − 3)` and `(rx − 1, ry − 14)`.
 - Vertical: the same frames of the door bank + 1, at `(rx − 30, ry − 14)` and `(rx + 2, ry − 3)`.
 - Sealed stages 5..7: frames `4(s − 5)` and `4(s − 5) + 1` of terrain bank +39h, placed as horizontal.
+
+The door banks have eight frames, stages 0..3. An open door (stage 4) is not drawn.
 
 The two sprites are drawn in the order of their rows among the other things standing in the view.
 

@@ -1,18 +1,21 @@
 # Content pack format
 
-Status: draft v0, 2026-10-30. Covers what Milestone 1 (Viewer) needs: the manifest, palettes,
-sprite banks, floor and wall sets, and the drawable part of a level. Later milestones extend it.
+Status: v0, 2026-10-30. Covers what Milestone 1 (Viewer) needs: the manifest, palettes, sprite
+banks, floor and wall sets, and the drawable part of a level. Later milestones extend it. The Go
+types are in `engine/content`.
 
-A pack is a directory (or a zip of one). Paths below are relative to its root. All JSON is UTF-8.
-Every record has a stable string `id`; references are by id, never by path or index.
+A pack is a directory. Paths below are relative to its root. All JSON is UTF-8, and unknown fields
+are an error. Every record has a stable string `id`; references are by id, never by path or index.
+A record's file is named after its id without the kind prefix (`sprite.res.1056` is
+`sprites/res.1056.json`), but the loader goes by the `id` inside.
 
 ## IDs
 
-- Lowercase, dot-separated: `<kind>.<name>`, for example `palette.game`, `sprite.terrain.44`,
-  `level.00`.
+- Lowercase, dot-separated: `<kind>.<name>`, for example `palette.0`, `walls.1056`, `level.00`.
 - Mods override a record by giving the same id, and add records with new ids.
-- The importer names records after the original's groups and offsets (`sprite.terrain.44` is
-  terrain base + 44), so an import is stable across runs.
+- The Summoning importer names records after the original's resource ids (`sprite.res.1045` is
+  resource 1045 as it is; `walls.1056` is composed from wall bank 1056), so an import is stable
+  across runs.
 
 ## pack.json
 
@@ -23,18 +26,20 @@ Every record has a stable string `id`; references are by id, never by path or in
   "version": "0.1.0",
   "format": 0,
   "depends": [],
+  "palette": "palette.0",
   "start": { "level": "level.00", "cell": [16, 15] }
 }
 ```
 
-`format` is this document's version; the loader rejects a format it does not know.
+`format` is this document's version; the loader rejects a format it does not know. `palette` is the
+palette gameplay draws with.
 
 ## Palettes
 
 `palettes/<name>.json`:
 
 ```json
-{ "id": "palette.game", "colors": ["#000000", "#0c080c", "…256 entries…"] }
+{ "id": "palette.0", "colors": ["#000000", "#0c080c", "…256 entries…"] }
 ```
 
 Exactly 256 colors. Palette effects (cycling, fades, remaps) are added in a later milestone.
@@ -43,33 +48,34 @@ Exactly 256 colors. Palette effects (cycling, fades, remaps) are added in a late
 
 `sprites/<name>.png` and `sprites/<name>.json`.
 
-- The PNG is 8-bit indexed. Its pixel values are palette indexes; the engine ignores its PLTE and
-  draws through the palette named at draw time. The importer writes `palette.game` into PLTE so the
-  sheet looks right in an image editor. The transparent index, if any, is also marked in tRNS.
-- Frames are laid out on the sheet in a grid, left to right, top to bottom, in frame order. Each
-  frame of a bank has the same size, as in the original's banks.
+- The PNG is indexed. Its pixel values are palette indexes; the engine ignores its PLTE and draws
+  through the palette in use. The importer writes the gameplay palette into PLTE, with the
+  transparent index fully transparent, so the sheet looks right in an image editor.
+- Frames are laid out in a grid, left to right, top to bottom, in frame order. Each frame of a bank
+  has the same size, as in the original's banks.
 
 ```json
 {
-  "id": "sprite.terrain.44",
-  "frame_size": [64, 16],
+  "id": "sprite.res.1045",
+  "frame_size": [64, 32],
   "columns": 8,
-  "frames": 30,
-  "transparent": 0
+  "frames": 8,
+  "transparent": 254
 }
 ```
 
-`transparent` is a palette index or `null` for an opaque bank. A frame's sheet position is
-`(i % columns * w, i / columns * h)`. Per-frame origins and animations are added when entities need
-them.
+`transparent` is a palette index or `null` for an opaque bank. Frame `i` is at
+`(i % columns * w, i / columns * h)`. Per-frame origins and animations are added when entities
+need them.
 
 ## Floor sets
 
-`tiles/floors/<name>.json`: the floor variants of a level, each one 64×32 image covering a cell's
-tile box (world.md), composed by the importer from the original's half-tiles.
+`tiles/floors/<name>.json`: a level's floor variants. Each is one image covering a cell's tile box
+(32×32 in the Summoning; `docs/spec/world.md`), composed by the importer from the original's
+half-tiles.
 
 ```json
-{ "id": "floors.terrain.24", "sprite": "sprite.floors.terrain.24", "variants": 4 }
+{ "id": "floors.1036", "sprite": "sprite.floors.1036", "variants": 4 }
 ```
 
 Variant `k` is frame `k` of the sprite bank.
@@ -81,15 +87,16 @@ caps already in it.
 
 ```json
 {
-  "id": "walls.terrain.44",
-  "sprite": "sprite.walls.terrain.44",
+  "id": "walls.1056",
+  "sprite": "sprite.walls.1056",
   "offset": [0, -8],
-  "shapes": 15
+  "shapes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 }
 ```
 
-Shape `s` is frame `s`. `offset` places the image's top-left relative to the cell's tile box
-(the caps rise 8 pixels above it).
+`shapes[s]` is the frame for shape `s`, or −1 when the set has no such shape. `offset` places each
+image's top-left relative to the cell's tile box (the caps rise 8 pixels above it). Exits in walls
+use a second wall set with only the shapes that can hold an exit.
 
 ## Levels
 
@@ -100,33 +107,45 @@ Shape `s` is frame `s`. `offset` places the image's top-left relative to the cel
   "id": "level.00",
   "name": "",
   "size": [18, 26],
-  "floors": "floors.terrain.24",
-  "walls": "walls.terrain.44",
-  "floor": [[0, 0, -1, "…"], "…"],
-  "wall": [[-1, 1, 1, "…"], "…"],
+  "floors": "floors.1036",
+  "walls": "walls.1056",
+  "exit_walls": "exitwalls.1014",
+  "floor": [
+    "0 0 0 0 0 0 0 0 . . .",
+    "…one string per row…"
+  ],
+  "wall": [
+    "1 1 1 1 1 1 1 5 . . .",
+    "…"
+  ],
+  "exits": [[0, 9]],
   "overlays": [
-    { "cell": [3, 4], "sprite": "sprite.terrain.33", "frame": 0, "offset": [-16, 8] }
+    { "cell": [3, 4], "sprite": "sprite.res.1045", "frame": 0, "offset": [-16, 8] }
   ],
   "decorations": [
-    { "cell": [0, 5], "sprite": "sprite.decoration.1", "frame": 3, "offset": [8, 8] }
+    { "cell": [0, 5], "sprite": "sprite.res.1187", "frame": 3, "offset": [8, 8] }
+  ],
+  "props": [
+    { "cell": [7, 2], "sprite": "sprite.res.1030", "frame": 0, "offset": [-17, -3] }
   ]
 }
 ```
 
-- `floor` and `wall` are `size[0]` rows of `size[1]` integers. A floor entry is a variant of the
-  floor set, a wall entry a shape of the wall set; −1 is none. Cell `(x, y)` is row `x`, column `y`,
-  as in the spec. The writer puts one row per line so a level diffs well.
-- `overlays` are static pieces drawn on a floor after it (plates, levers, keyholes, hazard tiles).
-  `decorations` are drawn on a wall right after it. Offsets are from the cell's tile box.
-- Gameplay meaning (walkability, doors, triggers, exits) is not in v0. It arrives with Milestones 2
-  and 3, and will replace the hard-coded overlay sprites with typed cell features that the renderer
-  draws by state.
+- `size` is rows, columns. Cell `(x, y)` is row `x`, column `y`, as in the spec.
+- `floor` and `wall` hold one string per row of space-separated values, `.` for none, so a level
+  diffs well. A floor value is a variant of the floor set, a wall value a shape of the wall set.
+- `exits` are wall cells drawn from `exit_walls` instead of `walls`, by the same shape.
+- `overlays` are drawn after all floors and before anything standing: plates, levers, keyholes,
+  hazard tiles. `decorations` are drawn on their cell's wall right after it. `props` stand in their
+  cell and are drawn back to front with the walls (doors). Offsets are from the cell's tile box.
+- Gameplay meaning (walkability, doors that move, triggers, exits that lead somewhere) is not in
+  v0. It arrives with Milestones 2 and 3, and will replace the fixed overlay and prop sprites with
+  typed cell features that the renderer draws by state.
+- Level names are empty for now; the spec does not yet say where the game keeps them.
 
-## Open questions
+## Decisions
 
-- Whether a level's grids should be one grid of cell records (`{"floor":0,"wall":-1,…}`) instead of
-  parallel layers. Layers are smaller and diff better; records are easier to extend.
-- Whether the level-specific art references (floor set, wall set, overlays) belong in the level or
-  in a reusable "tileset" record that several levels share. The original shares banks across levels,
-  so the importer would produce shared sets either way.
-- Exits in walls and doors need state-dependent sprites; they come with Milestone 2.
+- **Layers, not cell records.** A level's grids are parallel layers. They are smaller and diff
+  better; new per-cell data becomes a new layer.
+- **Shared tile sets.** Floor and wall sets are records of their own that levels reference, since
+  the original shares banks between levels.

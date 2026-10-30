@@ -235,7 +235,8 @@ The file formats are in [pack.md](pack.md).
 - **World buffer.** The world draws into an offscreen image at the art's pixel scale, then scales to
   the window by a whole number. UI draws at native resolution on top.
 - **Projection.** Pixel-art isometric (2:1), as the Summoning draws: the grid is turned 45 degrees,
-  each cell a 64×32 diamond, and a world point (x, y) lands on screen at
+  cells 64 pixels apart along a screen row and 16 pixels between rows, each cell's art in a 32×32
+  box, and a world point (x, y) lands on screen at
   ((y − x), (x + y) / 2) from the view's origin. Walls rise from their cell's diamond. The cell size
   is content.
 - **Draw order.** Floors first, then walls, objects and entities in one list sorted back to front
