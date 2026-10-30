@@ -216,6 +216,8 @@ audio/music/<id>.ogg       with loop points in a sidecar
 audio/sfx/<id>.ogg
 ```
 
+The file formats are in [pack.md](pack.md).
+
 - **Stable string IDs** (`creature.guard`, `item.healing_potion`). Mods override and add by ID.
 - **Indexed PNGs** keep palette effects working on edited art. A true-color sprite is allowed and
   simply opts out of palette effects.

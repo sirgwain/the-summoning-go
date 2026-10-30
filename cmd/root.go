@@ -19,10 +19,10 @@ var debugEnabled bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Version:           semver,
-	Use:               "the-summoning",
-	Short:             "A Summoning clone",
-	Long:              `A Summoning clone`,
+	Version: semver,
+	Use:     "summoning",
+	Short:   "An engine for isometric real-time RPGs in the style of The Summoning",
+	Long:    `An engine for isometric real-time RPGs in the style of The Summoning, with an importer for that game's data files.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Show usage
 		cmd.Help()

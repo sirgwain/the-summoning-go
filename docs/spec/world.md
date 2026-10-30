@@ -15,9 +15,9 @@ World positions are in units, 32 per cell (README.md). The first coordinate `u` 
 The view is 2:1 isometric. Each cell is a 64×32 diamond. In view pixels, relative to a scrolling origin:
 
 - The **tile box** of cell `(a, b)`, the 64×32 rectangle around its floor diamond, has its top-left corner at `(32·(b − a), 16·(a + b))`. All terrain art below is placed relative to this corner.
+- The **reference point** of world position `(u, v)` is `(16 + v − u, ⌊u/2⌋ + ⌊v/2⌋)`. An entity's sprite is drawn with its top-left corner at its position's reference point, so an entity's position is the top-left of its sprite, and the point that decides which cell it stands on is offset from it by kind (entities.md).
 
 Both share one origin: the view's origin cell `(R, C)` has its tile box at `(0, 0)`, and the world point `(32R, 32C)` has its reference point at `(16, 0)`. Moving the origin shifts both by the same amount.
-- The **reference point** of world position `(u, v)` is `(16 + v − u, ⌊u/2⌋ + ⌊v/2⌋)`. An entity's sprite is drawn with its top-left corner at its position's reference point, so an entity's position is the top-left of its sprite, and the point that decides which cell it stands on is offset from it by kind (entities.md).
 
 Increasing `u` moves down-left on screen; increasing `v` moves down-right.
 

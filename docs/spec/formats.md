@@ -155,7 +155,7 @@ u8 count
 { u8 op; u8 arg[4]; } [count]
 ```
 
-Procedure `n` is the n-th in the pool. Ops are in rules.md.
+Procedure `n` is the n-th in the pool. A count of 0 is an empty procedure, which does nothing; empty procedures occur between others and still take their place in the numbering. The padding at the end reads as empty procedures. Ops are in rules.md.
 
 ## INTERACT
 
