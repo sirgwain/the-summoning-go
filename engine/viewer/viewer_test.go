@@ -319,14 +319,14 @@ func TestViewFollowsPlayer(t *testing.T) {
 	}
 }
 
-// TestToggleText hides the panel and the event log with ~ and shows them again.
-func TestToggleText(t *testing.T) {
+// TestToggleDebug hides the debug overlay with ~ and shows it again.
+func TestToggleDebug(t *testing.T) {
 	v := run(t, `[{"at": 0, "play": true, "keys": ["Backquote"]}]`)
-	if !v.HideText || !v.PanelRect().Empty() || !v.LogRect().Empty() {
+	if !v.HideDebug || !v.PanelRect().Empty() || !v.LogRect().Empty() {
 		t.Fatalf("~ did not hide the text: panel %v, log %v", v.PanelRect(), v.LogRect())
 	}
 	v.Update(Input{Held: map[Key]bool{KeyBackquote: true}, Pressed: map[Key]bool{KeyBackquote: true}})
-	if v.HideText || v.PanelRect().Empty() {
+	if v.HideDebug || v.PanelRect().Empty() {
 		t.Error("~ did not show the text again")
 	}
 }

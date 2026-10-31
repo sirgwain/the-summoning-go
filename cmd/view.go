@@ -48,7 +48,7 @@ hands, with Shift their second action; T throws what the right hand holds, Shift
 and 0 swap the hand with shelves 0-9 (with Shift, 10-19), R and L with the right and left hands,
 F1-F8 with the pack (the bag in the left hand). V shows the whole level, Tab switches to the
 viewer's tools (see summoning view --help), clicking a cell inspects it, ~ hides or shows the
-text.
+debug overlay: the text, and the outlines of the selection and the cell under the mouse.
 `
 	}
 	viewCmd := &cobra.Command{
@@ -284,6 +284,9 @@ func (s *shell) Draw(screen *ebiten.Image) {
 // drawTools draws the selection, the inspector panel and the event log over the view.
 func (s *shell) drawTools(screen *ebiten.Image) {
 	v := s.v
+	if v.HideDebug {
+		return
+	}
 	if v.Hover != nil && (v.Selected == nil || *v.Hover != *v.Selected) {
 		s.diamond(screen, *v.Hover, hoverColor)
 	}
@@ -304,9 +307,6 @@ func (s *shell) drawTools(screen *ebiten.Image) {
 		for i, line := range lines {
 			ebitenutil.DebugPrintAt(screen, line, r.Min.X+viewer.Margin/2, r.Min.Y+i*viewer.LineHeight)
 		}
-	}
-	if v.HideText {
-		return
 	}
 	text(v.PanelRect(), v.PanelLines())
 	if r := v.LogRect(); !r.Empty() {
