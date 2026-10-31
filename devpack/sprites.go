@@ -368,15 +368,25 @@ const figureW, figureH = 24, 40
 
 var figureAnchor = content.Offset{12, 36}
 
+// figure draws a figure facing each direction, standing (frames 0–7) and in two strides
+// (frames 8–15 and 16–23), one leg forward in each.
 func figure(body, skin byte) []*canvas {
-	out := make([]*canvas, 8)
-	for d := range 8 {
+	out := make([]*canvas, 3*8)
+	for i := range out {
+		d, pose := i%8, i/8
 		c := newCanvas(figureW, figureH, clear)
 		c.fill(ellipse(12, 36, 9, 3.5), solid(gray+2))
 		dir := directions[d]
 		c.line(12, 36, 12+int(math.Round(dir[0]*9)), 36+int(math.Round(dir[1]*4)), gold+6)
-		c.rect(8, 26, 11, 36, body)
-		c.rect(13, 26, 16, 36, body)
+		left, right := 0, 0
+		switch pose {
+		case 1:
+			left, right = -2, 1
+		case 2:
+			left, right = 1, -2
+		}
+		c.rect(8+left, 26, 11+left, 36, body)
+		c.rect(13+right, 26, 16+right, 36, body)
 		c.fill(ellipse(12, 21, 6, 8), solid(body+3))
 		c.outline(ellipse(12, 21, 6, 8), body)
 		c.fill(ellipse(12, 9, 4.5, 4.5), solid(skin))
@@ -387,19 +397,56 @@ func figure(body, skin byte) []*canvas {
 			c.set(ex-2, 9, black)
 			c.set(ex+1, 9, black)
 		}
-		out[d] = c
+		out[i] = c
 	}
 	return out
 }
 
-func boulder() *canvas {
-	c := newCanvas(32, 32, clear)
-	ball := ellipse(16, 17, 13, 12)
-	c.fill(ball, func(x, y int) byte {
-		shade := 7 - (x+y)/10
-		return byte(gray + max(2, shade+noise(x/3, y/3, 2)))
+// boulderFrames is how many frames a boulder's roll turns through.
+const boulderFrames = 4
+
+// boulders draws a boulder turning: a spot on it moves round a quarter turn each frame.
+func boulders() []*canvas {
+	var out []*canvas
+	for f := range boulderFrames {
+		c := newCanvas(32, 32, clear)
+		ball := ellipse(16, 17, 13, 12)
+		c.fill(ball, func(x, y int) byte {
+			shade := 7 - (x+y)/10
+			return byte(gray + max(2, shade+noise(x/3, y/3, 2)))
+		})
+		c.fill(ellipse(11, 11, 3, 2.5), solid(gray+10))
+		a := float64(f) * math.Pi / 2
+		c.fill(ellipse(16+7*math.Cos(a), 17+6*math.Sin(a), 2.5, 2), solid(gray+1))
+		c.outline(ball, gray+1)
+		out = append(out, c)
+	}
+	return out
+}
+
+// crateW and crateH are the size of a crate's frame; its ground point is at (20, 30), the middle
+// of its base, a diamond as wide as its 20-unit footprint.
+const crateW, crateH = 40, 42
+
+// crate draws a wooden crate, a block a player can push.
+func crate() *canvas {
+	c := newCanvas(crateW, crateH, clear)
+	const cx, base, h = 20, 30, 14
+	edge := func(cy, x float64) float64 { return cy + 10*(1-math.Abs(x-cx)/20) }
+	top := diamond(cx, base-h, 40)
+	sides := func(x, y float64) bool { return x >= 0 && x < 40 && y >= edge(base-h, x) && y < edge(base, x) }
+	c.fill(sides, func(x, y int) byte {
+		shade := byte(wood + 3)
+		if x < cx {
+			shade = wood + 1
+		}
+		if y%5 == 0 {
+			shade--
+		}
+		return shade
 	})
-	c.fill(ellipse(11, 11, 3, 2.5), solid(gray+10))
-	c.outline(ball, gray+1)
+	c.fill(top, solid(wood+5))
+	c.outline(top, wood)
+	c.line(cx, base-h+10, cx, base+10, wood)
 	return c
 }

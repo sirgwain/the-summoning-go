@@ -1,6 +1,7 @@
 package drawlist
 
 import (
+	"fmt"
 	"image"
 	"slices"
 	"sort"
@@ -9,9 +10,13 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
 
-// SimScene returns a simulated level as it is now.
-func SimScene(l *sim.Level) Scene {
+// SimScene returns a simulated level of world w as it is now, with the player when it is on the
+// level, showing what the player sees when the level has the player's visibility.
+func SimScene(w *sim.World, l *sim.Level) Scene {
 	s := Scene{Level: l.Def, Floor: l.Floor, Wall: l.Wall}
+	if l.Sighted() {
+		s.Visible = l.Visible
+	}
 	for _, f := range l.Features {
 		s.Features = append(s.Features, Feature{Cell: f.Cell, Kind: f.Kind, Look: f.Look, State: f.LookState(), Set: f.Set})
 	}
@@ -31,7 +36,18 @@ func SimScene(l *sim.Level) Scene {
 		}
 	}
 	for _, t := range l.Things {
-		s.Things = append(s.Things, Thing{ID: t.ID, Template: t.Template.ID, U: t.U, V: t.V, Facing: t.Facing})
+		th := Thing{ID: t.ID, Template: t.Template.ID, U: t.U, V: t.V, Facing: t.Facing}
+		if t.Rolling != nil {
+			th.Anim, th.Phase = fmt.Sprintf("roll.%d", t.Rolling.Direction), t.Phase
+		}
+		s.Things = append(s.Things, th)
+	}
+	if p := w.Player(); p != nil && w.Current() == l {
+		th := Thing{ID: sim.PlayerID, Template: p.Template.ID, U: p.U, V: p.V, Facing: p.Facing}
+		if p.Walking() {
+			th.Anim, th.Phase = fmt.Sprintf("walk.%d", p.Facing), p.Moves
+		}
+		s.Things = append(s.Things, th)
 	}
 	return s
 }

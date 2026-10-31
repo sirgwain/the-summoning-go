@@ -52,6 +52,8 @@ type Manifest struct {
 	// Palette is the palette gameplay draws with.
 	Palette string `json:"palette"`
 	Start   Start  `json:"start"`
+	// Player is the thing template of kind ThingPlayer the player is made from; empty for none.
+	Player string `json:"player,omitempty"`
 }
 
 // Start is where a new game begins.
@@ -172,10 +174,35 @@ func (w *WallSet) Shape(s int) *WallShape {
 // WallShape is one shape of a wall set.
 type WallShape struct {
 	Frame int `json:"frame"`
-	// Diagonal walls fill half their cell.
-	Diagonal bool `json:"diagonal,omitempty"`
+	// Diagonal walls fill the half of their cell at this corner of its diamond, one of the
+	// Corner constants; empty for a wall that fills its cell.
+	Diagonal string `json:"diagonal,omitempty"`
 	// Face walls can carry a decoration or a wall feature.
 	Face bool `json:"face,omitempty"`
+}
+
+// Corners of a cell's diamond, on screen, that a diagonal wall fills.
+const (
+	CornerTop    = "top"    // toward −u and −v
+	CornerRight  = "right"  // toward −u and +v
+	CornerBottom = "bottom" // toward +u and +v
+	CornerLeft   = "left"   // toward +u and −v
+)
+
+// CornerSigns returns the signs along u and v of the corner a diagonal wall fills, and false for
+// a name that is not a corner.
+func CornerSigns(corner string) (su, sv int, ok bool) {
+	switch corner {
+	case CornerTop:
+		return -1, -1, true
+	case CornerRight:
+		return -1, 1, true
+	case CornerBottom:
+		return 1, 1, true
+	case CornerLeft:
+		return 1, -1, true
+	}
+	return 0, 0, false
 }
 
 // NoFrame marks an empty grid cell.

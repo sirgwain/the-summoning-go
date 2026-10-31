@@ -36,7 +36,11 @@ const (
 	ThingCreature = "creature"
 	ThingBoulder  = "boulder"
 	ThingTrap     = "trap"
+	ThingPlayer   = "player"
 )
+
+// DefaultFootprint is the footprint of a thing whose template gives none.
+const DefaultFootprint = 16
 
 // Behaviors.
 const (
@@ -61,11 +65,15 @@ type Thing struct {
 	// Speed is the step in world units.
 	Speed      int `json:"speed,omitempty"`
 	IntervalMS int `json:"interval_ms,omitempty"`
+	// Footprint is the side of the square, in world units around the ground point, the thing
+	// takes up; 0 means DefaultFootprint.
+	Footprint int `json:"footprint,omitempty"`
 	// Weight is what the thing adds to a plate it stands on.
-	Weight    int            `json:"weight"`
-	HitPoints Dice           `json:"hit_points,omitzero"`
-	Behaviors []string       `json:"behaviors,omitempty"`
-	Stats     map[string]int `json:"stats,omitempty"`
+	Weight      int            `json:"weight"`
+	HitPoints   Dice           `json:"hit_points,omitzero"`
+	MagicPoints Dice           `json:"magic_points,omitzero"`
+	Behaviors   []string       `json:"behaviors,omitempty"`
+	Stats       map[string]int `json:"stats,omitempty"`
 	// Animations are the thing's own; a name it does not have comes from its sprite.
 	Animations map[string]Animation `json:"animations,omitempty"`
 }
@@ -86,6 +94,14 @@ func (p *Pack) Animation(t *Thing, names ...string) (Animation, bool) {
 		}
 	}
 	return Animation{}, false
+}
+
+// Size returns the thing's footprint.
+func (t *Thing) Size() int {
+	if t.Footprint > 0 {
+		return t.Footprint
+	}
+	return DefaultFootprint
 }
 
 // Has reports whether the thing has behavior b.
@@ -137,8 +153,9 @@ const (
 	MsgSlotWrongItem = "slot_wrong_item"
 	MsgSlotStuck     = "slot_stuck"
 	MsgNoDropHere    = "no_drop_here"
+	MsgNoRoom        = "no_room"
 )
 
 var messageKeys = map[string]bool{
-	MsgLeverStuck: true, MsgSlotWrongItem: true, MsgSlotStuck: true, MsgNoDropHere: true,
+	MsgLeverStuck: true, MsgSlotWrongItem: true, MsgSlotStuck: true, MsgNoDropHere: true, MsgNoRoom: true,
 }

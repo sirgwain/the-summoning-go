@@ -57,6 +57,12 @@ func (w *World) advance(l *Level) {
 // (docs/spec/rules.md, Doors). Pushing what is in the way aside comes with movement.
 func (w *World) doorClosed(l *Level, f *Feature) {
 	reopen := false
+	if p := w.player; p != nil && w.current == l.ID && p.Cell() == f.Cell {
+		reopen = true
+		if w.chance(3, 10) {
+			w.hurtPlayer(1, "a door")
+		}
+	}
 	for _, t := range l.ThingsAt(f.Cell) {
 		if t.Template.Kind != content.ThingCreature || t.HitPoints <= 0 {
 			w.removeThing(l, t, "crushed")
@@ -329,6 +335,9 @@ func (w *World) teleportCell(l *Level, f *Feature, depth int) {
 	for _, t := range l.ThingsAt(f.Cell) {
 		w.entered(l, t, depth+1)
 	}
+	if p := w.player; p != nil && w.current == l.ID && p.Cell() == f.Cell {
+		w.teleportPlayer(l, f, depth+1)
+	}
 }
 
 // openedBelow drops what is on a trapdoor that has opened: objects fall to its destination and
@@ -341,6 +350,9 @@ func (w *World) openedBelow(l *Level, f *Feature, depth int) {
 	}
 	for _, t := range l.ThingsAt(f.Cell) {
 		w.entered(l, t, depth+1)
+	}
+	if p := w.player; p != nil && w.current == l.ID && p.Cell() == f.Cell {
+		w.fallPlayer(f, -1)
 	}
 }
 

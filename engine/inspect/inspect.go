@@ -282,3 +282,45 @@ func sortedKeys[V any](m map[string]V) []string {
 	slices.Sort(keys)
 	return keys
 }
+
+// SlotName names inventory slot i.
+func SlotName(i int) string {
+	switch {
+	case i < sim.Shelves:
+		return fmt.Sprintf("shelf %d", i)
+	case i >= sim.SlotPack:
+		return fmt.Sprintf("pack %d", i-sim.SlotPack)
+	}
+	return [...]string{"head", "arms", "left hand", "right hand", "feet", "quiver", "body", "neck"}[i-sim.Shelves]
+}
+
+// Player describes the player: where it stands, its points, and what it holds and carries.
+func Player(p *content.Pack, pl *sim.Player) []string {
+	c := pl.Cell()
+	lines := []string{
+		fmt.Sprintf("Player at (%d, %d) in cell (%d, %d), facing %d", pl.U, pl.V, c[0], c[1], pl.Facing),
+		fmt.Sprintf("  hit points %d/%d, magic points %d/%d", pl.HitPoints, pl.MaxHitPoints, pl.MagicPoints, pl.MaxMagicPoints),
+	}
+	if len(pl.Attributes) > 0 {
+		a := pl.Attributes
+		agility, _ := pl.Agility(p)
+		lines = append(lines, fmt.Sprintf("  STR %d AGI %d (%d loaded) END %d ACC %d TAL %d POW %d",
+			a[sim.AttrStrength], a[sim.AttrAgility], agility, a[sim.AttrEndurance], a[sim.AttrAccuracy], a[sim.AttrTalent], a[sim.AttrPower]))
+	}
+	lines = append(lines, fmt.Sprintf("  carrying %d, interval %+d ticks from the base", pl.Carried(p), pl.IntervalTicks(p)))
+	hand := "nothing"
+	if pl.Hand != nil {
+		hand = object(p, pl.Hand)
+	}
+	lines = append(lines, "  hand: "+hand)
+	n := sim.SlotCount
+	if bag := pl.Pack(p); bag != nil {
+		n = sim.SlotPack + len(bag.Contents)
+	}
+	for i := range n {
+		if o := pl.Slot(p, i); o != nil {
+			lines = append(lines, fmt.Sprintf("  %s: %s", SlotName(i), object(p, o)))
+		}
+	}
+	return lines
+}

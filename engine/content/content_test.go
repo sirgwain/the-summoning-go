@@ -41,7 +41,7 @@ func testPack() *Pack {
 
 	p.Floors["floors.a"] = &FloorSet{ID: "floors.a", Sprite: "sprite.tiles", Variants: 2}
 	p.Walls["walls.a"] = &WallSet{ID: "walls.a", Sprite: "sprite.tiles", Offset: Offset{0, -8},
-		Shapes: []*WallShape{{Frame: 0, Diagonal: true}, nil, {Frame: 2, Face: true}}}
+		Shapes: []*WallShape{{Frame: 0, Diagonal: CornerBottom}, nil, {Frame: 2, Face: true}}}
 	p.Looks["look.plate"] = &Look{ID: "look.plate", Layer: LayerFloor, States: map[string][]LookPart{
 		"up":   {{Sprite: "sprite.tiles", Frame: 0, Offset: Offset{-16, 8}}},
 		"down": {{Sprite: "sprite.tiles", Frame: 1, Offset: Offset{-16, 8}}},

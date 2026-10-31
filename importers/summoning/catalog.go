@@ -32,6 +32,7 @@ var engineMessages = map[string]struct {
 	content.MsgSlotWrongItem: {0x8F, true},
 	content.MsgSlotStuck:     {0x87, true},
 	content.MsgNoDropHere:    {0x72, false},
+	content.MsgNoRoom:        {0x7F, false},
 }
 
 // ms converts a duration in ticks to milliseconds.
@@ -170,6 +171,8 @@ const (
 	slowSpeed            = 2
 	creatureSpeed        = 8
 	creatureWeight       = 100
+	creatureFootprint    = 16
+	trapFootprint        = 20
 	behaviorNeverHostile = 0x0004
 	behaviorCorpse       = 0x0010
 	behaviorHostile      = 0x0100
@@ -200,7 +203,7 @@ func (im *importer) creature(n int) (string, error) {
 
 	t := &content.Thing{
 		ID: id, Kind: content.ThingCreature, Sprite: sid, Speed: creatureSpeed,
-		IntervalMS: ms(rec.Interval()), Weight: creatureWeight,
+		IntervalMS: ms(rec.Interval()), Weight: creatureWeight, Footprint: creatureFootprint,
 		HitPoints: content.Dice{Count: rec.HitDice(), Sides: 10, Bonus: 4 * rec.HitBonus()},
 		Stats:     map[string]int{"resistance": rec.Resistance(), "bonus": rec.Bonus(), "accuracy": rec.Accuracy()},
 	}
@@ -312,7 +315,7 @@ func (im *importer) boulder(res int) (string, error) {
 	}
 	im.pack.Things[id] = &content.Thing{
 		ID: id, Kind: content.ThingBoulder, Sprite: sid, Speed: boulderSpeed, IntervalMS: ms(boulderInterval),
-		Weight: creatureWeight, Animations: im.fitAnimations(id, anims, len(b.Frames)),
+		Weight: creatureWeight, Footprint: creatureFootprint, Animations: im.fitAnimations(id, anims, len(b.Frames)),
 	}
 	return id, nil
 }
@@ -330,6 +333,7 @@ func (im *importer) trap(res int) (string, error) {
 	im.anchor(sid, blockAnchor)
 	im.pack.Things[id] = &content.Thing{
 		ID: id, Kind: content.ThingTrap, Sprite: sid, IntervalMS: ms(trapInterval), Weight: creatureWeight,
+		Footprint:  trapFootprint,
 		Animations: im.fitAnimations(id, map[string]content.Animation{"idle": {Frames: []int{0}}}, len(b.Frames)),
 	}
 	return id, nil

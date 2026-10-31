@@ -35,6 +35,9 @@ type World struct {
 	events  []Event
 	// randomItems are the items a random object is chosen from.
 	randomItems []string
+	// player is the player, nil when the pack has none; status the step of the next status tick.
+	player *Player
+	status int64
 }
 
 // New returns a world for pack p at its start level. The seed makes its random choices
@@ -49,6 +52,10 @@ func New(p *content.Pack, seed uint64) (*World, error) {
 	if err := w.enter(p.Manifest.Start.Level); err != nil {
 		return nil, err
 	}
+	if w.player = w.newPlayer(); w.player != nil {
+		w.place(p.Manifest.Start.Cell, true)
+	}
+	w.status = Steps(statusTicks)
 	w.events = nil
 	return w, nil
 }
@@ -71,9 +78,18 @@ func (w *World) Update(cmds []input.Command) []Event {
 	for _, c := range cmds {
 		w.apply(c)
 	}
+	if p := w.player; p != nil && w.step >= p.next {
+		w.updatePlayer()
+	}
+	w.rollBoulders(w.Current())
 	for _, id := range sortedKeys(w.levels) {
 		w.advance(w.levels[id])
 	}
+	if w.player != nil && w.step >= w.status {
+		w.status = w.step + Steps(statusTicks)
+		w.statusTick()
+	}
+	w.see()
 	w.step++
 	events := w.events
 	w.events = nil

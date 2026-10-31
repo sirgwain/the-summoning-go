@@ -38,6 +38,12 @@ func (p *Pack) Verify() error {
 			if shape != nil && (shape.Frame < 0 || (n >= 0 && shape.Frame >= n)) {
 				v.fail("wall set %s: shape %d uses frame %d of %d", id, s, shape.Frame, n)
 			}
+			if shape == nil || shape.Diagonal == "" {
+				continue
+			}
+			if _, _, ok := CornerSigns(shape.Diagonal); !ok {
+				v.fail("wall set %s: shape %d fills unknown corner %q", id, s, shape.Diagonal)
+			}
 		}
 	}
 	for _, id := range sortedKeys(p.Looks) {
@@ -81,6 +87,13 @@ func (v *verifier) manifest() {
 		v.fail("pack.json: start level %q not found", m.Start.Level)
 	} else if !l.InBounds(m.Start.Cell) {
 		v.fail("pack.json: start cell %v outside %s", m.Start.Cell, l.ID)
+	}
+	if m.Player != "" {
+		if t, ok := v.p.Things[m.Player]; !ok {
+			v.fail("pack.json: player %q not found", m.Player)
+		} else if t.Kind != ThingPlayer {
+			v.fail("pack.json: player %q is a %s, not a player", m.Player, t.Kind)
+		}
 	}
 }
 
@@ -186,7 +199,7 @@ func (v *verifier) itemRecord(i *Item) {
 func (v *verifier) thing(t *Thing) {
 	owner := "thing " + t.ID
 	switch t.Kind {
-	case ThingCreature, ThingBoulder, ThingTrap:
+	case ThingCreature, ThingBoulder, ThingTrap, ThingPlayer:
 	default:
 		v.fail("%s: unknown kind %q", owner, t.Kind)
 	}
@@ -196,8 +209,8 @@ func (v *verifier) thing(t *Thing) {
 	if t.Facing < 0 || t.Facing > 7 {
 		v.fail("%s: facing %d", owner, t.Facing)
 	}
-	if t.Speed < 0 || t.IntervalMS < 0 || t.Weight < 0 {
-		v.fail("%s: negative speed, interval or weight", owner)
+	if t.Speed < 0 || t.IntervalMS < 0 || t.Weight < 0 || t.Footprint < 0 {
+		v.fail("%s: negative speed, interval, weight or footprint", owner)
 	}
 	for _, b := range t.Behaviors {
 		if !behaviors[b] {
@@ -536,6 +549,9 @@ func (lv *levelVerifier) placedThing(t *PlacedThing) {
 			lv.fail("%s: only boulders roll", what)
 		}
 		lv.direction(what, t.Rolling.Direction)
+	}
+	if tmpl.Kind == ThingPlayer {
+		lv.fail("%s: a level does not place the player", what)
 	}
 	if len(t.Items) > 0 && tmpl.Kind != ThingCreature {
 		lv.fail("%s: only creatures carry items", what)

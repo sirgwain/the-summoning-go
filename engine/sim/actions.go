@@ -73,9 +73,8 @@ func (w *World) act(l *Level, a content.Action, depth int) {
 		}
 	case a.Roll != nil:
 		if t := l.Thing(a.Roll.Thing); t != nil {
-			r := content.Rolling{Direction: a.Roll.Direction, Shuttle: a.Roll.Shuttle}
-			t.Rolling = &r
-			w.emit(Event{Kind: EventNotYet, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "rolling boulders"})
+			w.startBoulder(t, a.Roll.Direction, a.Roll.Shuttle)
+			w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "rolling"})
 		}
 	case a.Stop != nil:
 		if t := l.Thing(*a.Stop); t != nil {
@@ -170,14 +169,75 @@ func (w *World) apply(cmd input.Command) {
 			refuse(content.Cell{}, "no exit "+c.Feature)
 			return
 		}
+		if w.player != nil {
+			w.travel(f.To)
+			return
+		}
 		if err := w.enter(f.To.Level); err != nil {
 			refuse(f.Cell, err.Error())
 		}
 	case input.GoTo:
+		if w.player != nil {
+			if dest, err := w.load(c.Level); err != nil {
+				refuse(content.Cell{}, err.Error())
+			} else {
+				w.travel(&content.Destination{Level: c.Level, Cell: w.arrival(dest)})
+			}
+			return
+		}
 		if err := w.enter(c.Level); err != nil {
 			refuse(content.Cell{}, err.Error())
 		}
+	case input.Walk, input.PickUp, input.PutDown, input.Swap, input.Activate, input.PlacePlayer:
+		w.playerCommand(c)
 	}
+}
+
+// playerCommand carries out a command of the player's.
+func (w *World) playerCommand(cmd input.Command) {
+	p, l := w.player, w.Current()
+	if p == nil {
+		w.emit(Event{Kind: EventRefused, Level: l.ID, Detail: "no player"})
+		return
+	}
+	switch c := cmd.(type) {
+	case input.Walk:
+		if c.Direction >= 0 && c.Direction < len(Dirs) {
+			p.want = c.Direction
+		}
+	case input.PickUp:
+		w.pickUp()
+	case input.PutDown:
+		w.putDown()
+	case input.Swap:
+		w.swap(c.Slot)
+	case input.Activate:
+		w.activate()
+	case input.PlacePlayer:
+		if !l.InBounds(c.Cell) || l.Blocked(c.Cell) {
+			w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: c.Cell, Detail: "the player cannot stand there"})
+			return
+		}
+		w.weigh(l, p.Cell(), -p.weight(), 0)
+		w.place(c.Cell, false)
+		w.playerEntered(l, c.Cell, 0)
+	}
+}
+
+// arrival is where the player arrives on level l when no exit says: the pack's start cell on the
+// start level, otherwise the first open cell in row order.
+func (w *World) arrival(l *Level) content.Cell {
+	if s := w.pack.Manifest.Start; s.Level == l.ID {
+		return s.Cell
+	}
+	for x := range l.Def.Size[0] {
+		for y := range l.Def.Size[1] {
+			if c := (content.Cell{x, y}); !l.Blocked(c) && l.byCell[c] == nil {
+				return c
+			}
+		}
+	}
+	return content.Cell{}
 }
 
 // newThingID returns an id for a new thing of kind not yet used in l.

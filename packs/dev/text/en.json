@@ -14,6 +14,7 @@
     "msg.mouth": "Welcome to the hall of *mechanisms*.",
     "msg.mouth.after": "The *socket* is complete.",
     "msg.no_drop": "It sinks out of sight.",
+    "msg.no_room": "There is no room for the {item}.",
     "msg.slot_stuck": "Nothing more fits in the {item}'s place.",
     "msg.wrong_item": "The {item} doesn't fit."
   }

@@ -24,9 +24,14 @@ type Step struct {
 	Select      *content.Cell `json:"select,omitempty"`
 	SelectThing string        `json:"select_thing,omitempty"`
 	// Keys are pressed in this update and held through it. Hold keys are held without being
-	// pressed, for Shift with a click or for panning.
+	// pressed, for Shift with a click, for panning or for walking.
 	Keys []string `json:"keys,omitempty"`
 	Hold []string `json:"hold,omitempty"`
+	// For holds the step's keys and hold keys through this many updates from At, pressing them
+	// only in the first; 0 means 1.
+	For int64 `json:"for,omitempty"`
+	// Play switches to playing (true) or to the tools (false).
+	Play *bool `json:"play,omitempty"`
 	// Click taps the left button on a cell, centering the view on it first if it is hidden.
 	Click *content.Cell `json:"click,omitempty"`
 	// Wheel scrolls, positive to zoom in.
@@ -88,13 +93,25 @@ type Runner struct {
 	at   int64
 	// first and last are the steps of the update being run.
 	first, last int
+	// held are earlier steps whose keys are still held.
+	held []Step
 }
 
 // NewRunner returns a runner for script s that writes its files relative to dir.
 func NewRunner(s Script, dir string) *Runner { return &Runner{script: s, dir: dir} }
 
-// Done reports whether every step has run.
-func (r *Runner) Done() bool { return r.next >= len(r.script) }
+// Done reports whether every step has run and no keys are still held.
+func (r *Runner) Done() bool {
+	if r.next < len(r.script) {
+		return false
+	}
+	for _, st := range r.held {
+		if r.at+1 < st.At+st.For {
+			return false
+		}
+	}
+	return true
+}
 
 // Before runs the update's steps on v and returns its input. Call it before each update, and
 // After after it.
@@ -105,7 +122,23 @@ func (r *Runner) Before(v *Viewer) (Input, error) {
 	}
 	r.last = r.next
 	in := Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: image.Pt(-1, -1)}
+	held := r.held[:0]
+	for _, st := range r.held {
+		if r.at < st.At+st.For {
+			held = append(held, st)
+			for _, k := range append(slices.Clone(st.Keys), st.Hold...) {
+				in.Held[Key(k)] = true
+			}
+		}
+	}
+	r.held = held
 	for _, st := range r.script[r.first:r.last] {
+		if st.For > 1 {
+			r.held = append(r.held, st)
+		}
+		if st.Play != nil {
+			v.SetPlay(*st.Play)
+		}
 		if st.Center != nil {
 			v.CenterOn(*st.Center)
 		}

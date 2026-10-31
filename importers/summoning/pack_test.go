@@ -98,6 +98,11 @@ func importFixture() *Source {
 	resources[24] = rawBank(4, 1, 1, 0, plus(90))
 	resources[25] = rawBank(6, 2, 2, 0, plus(110))
 	resources[26] = rawBank(10, 1, 1, 0, plus(120))
+	// The player's figure: the body (character animation base 16), the legs (17), the body look
+	// (16 + 25h) and the head look (18, the wall bank, standing in for one).
+	resources[16] = rawBank(48, 2, 1, 0, plus(130))
+	resources[17] = rawBank(48, 1, 1, 0, plus(180))
+	resources[16+bodyLook] = rawBank(32, 1, 1, 0, plus(230))
 
 	level := fixture{}.u8(3, 4)
 	level = level.u16(0, 2, 3, 4, 6, 7)
@@ -360,7 +365,7 @@ func TestImportComposesTiles(t *testing.T) {
 		t.Error("shape 5 caps composed wrong")
 	}
 
-	if !w.Shapes[0].Diagonal || w.Shapes[1].Diagonal || !w.Shapes[1].Face || w.Shapes[2].Face || !w.Shapes[3].Face {
+	if w.Shapes[0].Diagonal != content.CornerBottom || w.Shapes[1].Diagonal != "" || w.Shapes[5].Diagonal != content.CornerTop || !w.Shapes[1].Face || w.Shapes[2].Face || !w.Shapes[3].Face {
 		t.Errorf("wall shape properties %+v %+v %+v %+v", *w.Shapes[0], *w.Shapes[1], *w.Shapes[2], *w.Shapes[3])
 	}
 
@@ -413,5 +418,45 @@ func TestWallChecksAs(t *testing.T) {
 	// Vertical doors on both sides: left, then right of the result.
 	if got, want := wallChecksAs(l, 0, 1, 5), checkRightDoor[checkLeftDoor[5]]; got != want {
 		t.Errorf("between doors: %d, want %d", got, want)
+	}
+}
+
+func TestImportPlayer(t *testing.T) {
+	p, _, err := Import(importFixture())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Manifest.Player != playerID {
+		t.Fatalf("manifest player %q", p.Manifest.Player)
+	}
+	tm := p.Things[playerID]
+	if tm.Kind != content.ThingPlayer || tm.Speed != 8 || tm.IntervalMS != ms(5) || tm.HitPoints.Bonus != 56 || tm.Stats["agility"] != 20 {
+		t.Errorf("player template %+v", tm)
+	}
+	if got := tm.Animations["walk.0"].Frames; !reflect.DeepEqual(got, []int{9, 17, 25, 33, 41, 1}) {
+		t.Errorf("walk.0 frames %v", got)
+	}
+	if got := tm.Animations["idle.7"].Frames; !reflect.DeepEqual(got, []int{8}) {
+		t.Errorf("idle.7 frames %v", got)
+	}
+	b := p.Sprites[tm.Sprite]
+	if b.FrameSize != (content.Offset{24, 19}) || b.Frames != 48 || *b.Anchor != creatureAnchor {
+		t.Fatalf("player sprite %v, %d frames, anchor %v", b.FrameSize, b.Frames, *b.Anchor)
+	}
+	// Frame 9 (group 1, step 1): the body's frame 9 at row 13, the legs' at row 18, the body
+	// look's frame 8 + 1 at row 5, the head's frame 1 at (8, 0).
+	at := func(x, y int) uint8 {
+		r := b.FrameRect(9)
+		return b.Sheet.ColorIndexAt(r.Min.X+x, r.Min.Y+y)
+	}
+	for _, c := range []struct {
+		x, y int
+		want uint8
+	}{
+		{0, 13, 130 + 9}, {0, 18, 180 + 9}, {0, 5, 230 + 9}, {8, 0, 1 + 1},
+	} {
+		if got := at(c.x, c.y); got != c.want {
+			t.Errorf("frame 9 at (%d, %d) = %d, want %d", c.x, c.y, got, c.want)
+		}
 	}
 }

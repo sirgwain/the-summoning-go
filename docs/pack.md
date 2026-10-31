@@ -1,6 +1,6 @@
 # Content pack format
 
-Status: v1, 2026-10-30. Covers what Milestones 1 (Viewer) and 2 (World) need: the manifest,
+Status: v1, 2026-10-31. Covers what Milestones 1 (Viewer), 2 (World) and 4 (Walk) need: the manifest,
 palettes, sprites, floor and wall sets, text, engine messages, item and thing templates, looks, and
 levels with their floor types, features, procedures, things and objects. Later milestones extend it.
 The Go types are in `engine/content`.
@@ -57,12 +57,14 @@ A record's file is named after its id without the kind prefix (`item.dagger` is
   "format": 1,
   "depends": [],
   "palette": "palette.0",
-  "start": { "level": "level.00", "cell": [16, 15] }
+  "start": { "level": "level.00", "cell": [16, 15] },
+  "player": "thing.player"
 }
 ```
 
 `format` is this document's version; the loader rejects a format it does not know. `palette` is the
-palette gameplay draws with.
+palette gameplay draws with. `player` is the thing template of kind `player` the player is made
+from; a pack without one runs its levels with no player.
 
 ## Palettes
 
@@ -159,9 +161,9 @@ caps already in it.
   "sprite": "sprite.walls.1056",
   "offset": [0, -8],
   "shapes": [
-    { "frame": 0, "diagonal": true },
+    { "frame": 0, "diagonal": "bottom" },
     { "frame": 1, "face": true },
-    { "frame": 2, "diagonal": true },
+    { "frame": 2, "diagonal": "left" },
     { "frame": 3, "face": true },
     null
   ]
@@ -170,8 +172,10 @@ caps already in it.
 
 - `shapes[s]` describes shape `s`, or is `null` when the set has no such shape. `offset` places each
   image relative to the cell's tile box (the caps rise 8 pixels above it).
-- `diagonal` marks a wall that fills half its cell; walking diagonally into it slides along it.
-  Which half it fills is added with Walk.
+- `diagonal` marks a wall that fills half its cell, and names the corner of the cell's diamond
+  it fills: `top`, `right`, `bottom` or `left` (on screen; `top` is toward −u and −v, `bottom`
+  toward +u and +v, `right` toward −u and +v, `left` toward +u and −v). Walking along one axis
+  into it, toward that corner, slides along it (`docs/spec/entities.md`, Moving).
 - `face` marks a straight wall whose face can carry a decoration or a wall feature (an exit, a
   mouth).
 - The shapes and their properties are the set's own. The engine reads the properties, never the
@@ -207,7 +211,8 @@ text to UTF-8.
     "lever_stuck": "msg.134",
     "slot_wrong_item": "msg.143",
     "slot_stuck": "msg.135",
-    "no_drop_here": "msg.114"
+    "no_drop_here": "msg.114",
+    "no_room": "msg.127"
   }
 }
 ```
@@ -264,20 +269,29 @@ keys.
 }
 ```
 
-- `kind` is `creature`, `boulder` or `trap`. The kind decides what the engine does with the thing;
-  later milestones add kinds (things in flight, conjured things).
+- `kind` is `creature`, `boulder`, `trap` or `player`. The kind decides what the engine does with
+  the thing; later milestones add kinds (things in flight, conjured things). A `player` template is
+  named by `pack.json` and never placed by a level.
 - `sprite` is drawn with its anchor at the thing's ground point. `animations`, as on a sprite, are
   the thing's own; a name the thing does not have comes from its sprite. Animations are found by
   name: `idle.d`, `walk.d`, `attack.d` and `roll.d` for direction `d`, and `idle` and `dead`. A
-  missing animation falls back to `idle.d`, then `idle`, then frame 0.
+  missing animation falls back to `idle.d`, then `idle`, then frame 0. `walk.d` and `roll.d` step
+  one frame per move the thing makes, not by time.
 - `facing` is the starting direction, `speed` the step in world units, `interval_ms` the time
   between updates.
+- `footprint` is the side, in world units, of the square around the ground point the thing takes
+  up: two things whose footprints overlap collide. Boulders and traps also test the footprint's
+  corners against the terrain. 0 means 16.
 - `weight` is what the thing adds to a plate it stands on; 0 presses nothing.
 - `hit_points` are rolled when the thing is placed. A creature with none is placed as a corpse.
+  `magic_points` (players) are rolled the same way.
 - `behaviors` (creatures): `hostile` from the start, `never_hostile`, `leaves_corpse` when it dies,
   `resists_teleport` (teleporters, pits and plates leave it alone), `invulnerable`. Combat behaviors
   and resistances are added with Fight. What the game sets in play (talked to, dead) is world state.
-- `stats` are named numbers the pack's rule set reads; the engine does not interpret them.
+- `stats` are named numbers the pack's rule set reads; the engine does not interpret them, except a
+  `player`'s attributes `strength`, `agility`, `endurance`, `accuracy`, `talent` and `power`,
+  from which its speed is worked out (`docs/spec/player.md`, Speed), and its starting
+  `interval_bonus` in ticks; a player without attributes walks at its base interval.
 - A conversation, portrait and loot are added with dialogue and combat.
 
 ## Looks
@@ -366,9 +380,8 @@ keys.
   a level diffs well.
 - `floor_halves` says which halves of each floor are drawn: 1 the upper, 2 the lower, 3 both, 0
   neither. A half not drawn is blanked in a box set and left out in a diamond set. Without it,
-  every floor is drawn whole. For now the importer computes it as if the whole level were visible (`docs/spec/world.md`, Floor halves); once
-  visibility exists (Milestone 4, Walk) the rule moves into content and the renderer applies it to
-  what the player sees.
+  every floor is drawn whole. The importer computes it as if the whole level were visible
+  (`docs/spec/world.md`, Floor halves). In play only visible cells are drawn at all.
 - `overlays` are fixed floor art (hazard tiles), drawn after all floors and before anything
   standing. `decorations` are drawn on their cell's wall face right after it. `props` (not shown)
   are fixed art standing in a cell, drawn back to front with the walls. Offsets are from the cell.
@@ -387,7 +400,9 @@ A floor type is a floor set variant and what the floor does. All fields but `var
 | `sinks` | Objects put down here are lost, except on a plate that is up |
 | `avoided` | Creatures do not walk onto it |
 
-Effects apply in Walk; `sinks` applies in World, to dropped objects.
+`enter` and `depth` act on the player as it enters, `tick` and depth 4 on every status tick
+(`docs/spec/world.md`, Liquids); `sinks` acts on dropped objects. `avoided` applies to creatures
+with Fight.
 
 ### Features
 

@@ -5,5 +5,6 @@
   "facing": 0,
   "speed": 8,
   "interval_ms": 110,
+  "footprint": 16,
   "weight": 100
 }

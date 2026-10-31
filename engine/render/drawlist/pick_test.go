@@ -65,11 +65,11 @@ func TestSimScene(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := Build(p, SimScene(w.Current()), Options{}), Build(p, LevelScene(p, l), Options{}); !reflect.DeepEqual(got, want) {
+	if got, want := Build(p, SimScene(w, w.Current()), Options{}), Build(p, LevelScene(p, l), Options{}); !reflect.DeepEqual(got, want) {
 		t.Fatalf("a new world draws differently from its level:\n%v\n%v", got, want)
 	}
 	w.Update([]input.Command{input.Use{Cell: content.Cell{0, 0}}, input.Remove{Cell: content.Cell{0, 0}}})
-	for _, c := range Build(p, SimScene(w.Current()), Options{}) {
+	for _, c := range Build(p, SimScene(w, w.Current()), Options{}) {
 		if c.Sprite == "tiny" {
 			t.Error("a taken object is still drawn")
 		}

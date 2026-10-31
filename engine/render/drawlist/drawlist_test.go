@@ -168,3 +168,46 @@ func TestBounds(t *testing.T) {
 		t.Errorf("Bounds = %v, want %v", got, want)
 	}
 }
+
+func TestVisibleCellsOnly(t *testing.T) {
+	p, l := testPack()
+	s := LevelScene(p, l)
+	s.Visible = func(c content.Cell) bool { return c == content.Cell{0, 0} }
+	for _, c := range Build(p, s, Options{}) {
+		switch c.Sprite {
+		case "wall", "exit", "plate", "hazard", "deco", "npc":
+			t.Errorf("drew %s %d of a cell not visible", c.Sprite, c.Frame)
+		}
+	}
+	var floors int
+	for _, c := range Build(p, s, Options{}) {
+		if c.Sprite == "floor" {
+			floors++
+		}
+	}
+	if floors != 1 {
+		t.Errorf("drew %d floors, want the visible one", floors)
+	}
+}
+
+func TestThingSteppingAnimation(t *testing.T) {
+	p, l := testPack()
+	p.Things["guard"].Animations["walk.4"] = content.Animation{Frames: []int{0, 1}}
+	s := LevelScene(p, l)
+	frame := func(anim string, phase int) int {
+		s.Things[0].Anim, s.Things[0].Phase = anim, phase
+		for _, c := range Build(p, s, Options{}) {
+			if c.Thing == s.Things[0].ID {
+				return c.Frame
+			}
+		}
+		t.Fatal("the guard is not drawn")
+		return -1
+	}
+	if f := frame("walk.4", 3); f != 1 {
+		t.Errorf("walk step 3 drew frame %d, want 1", f)
+	}
+	if f := frame("roll.4", 3); f != 2 {
+		t.Errorf("a missing animation drew frame %d, want the idle frame 2", f)
+	}
+}

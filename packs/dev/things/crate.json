@@ -1,0 +1,9 @@
+{
+  "id": "thing.crate",
+  "kind": "trap",
+  "sprite": "sprite.crate",
+  "facing": 0,
+  "interval_ms": 2200,
+  "footprint": 20,
+  "weight": 100
+}

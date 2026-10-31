@@ -115,6 +115,51 @@ The engine places a thing by its **ground point**, the point that decides its ce
 
 Exit markers and mouths do not move; the engine models them as cell features drawn at `(8, −20)` from the cell's tile box (rules.md, Import).
 
+The player stands like a creature: its standing offset and feet are both `(10, 28)`, so its ground point is its feet and its sprite's anchor is `(18, 19)`.
+
+### Directions and facing
+
+The engine keeps every facing, the player's included, as a direction of the README's table. The player's facing `p` (player.md) is table direction `d = (p + 7) mod 8`. The even directions move along one world axis (the screen diagonals); the odd ones move along both (the screen axes).
+
+### Footprints
+
+Each thing template has a **footprint**: a square of world units centered on its ground point, `footprint` units on a side. Two footprints overlap when their open intervals overlap on both axes. Footprints replace the per-kind rectangles above, which the game measures in view pixels around the sprite; the engine measures in world units around the ground point, so a thing collides the same wherever it is drawn. The importer sets 16 for the player, creatures and boulders and 20 for traps.
+
+### Moving
+
+A move by `(du, dv)` is made in this order:
+
+1. **Terrain.** The player and creatures test their ground point. The `u` step shrinks by 1 toward 0 until the ground point moved by it alone is accepted; then the `v` step the same way, from the original `u`. Boulders and traps test the four corners of their footprint, `footprint/2 − 1` from the ground point on each axis, all moved by the whole step; if any is refused the move is refused. A point is accepted when its cell is inside the level, not blocked (a wall, no floor, or a door that is not open) and not refused by its feature (below).
+2. **Things.** While the moved footprint overlaps another thing's, both steps shrink by 2 toward 0, to nothing at worst. The player and creatures ignore things in flight; what they overlap first is the **blocker**.
+3. **Push.** If the player's step shrank to nothing against a blocker that can be pushed, the player pushes it (below).
+4. **Slide.** If the player moved nothing, met no thing, and walked along one axis (an even direction) into a diagonal wall whose filled corner (world.md, Import) lies ahead, it slides 4 units along the other axis, away from that corner.
+
+Features refuse the player's ground point at their cell, with an effect:
+
+- a wall cell holding an **exit** is refused, and when the player walks into it along an axis (an even direction) the player takes the exit (rules.md);
+- a **pit**, or an open **trapdoor**, is refused, and the player falls through it (rules.md);
+- a closed **door** is blocked like a wall.
+
+Creatures are refused by pits and open trapdoors unless they resist teleporting, and by floors their template avoids. Boulders and traps are not refused by features.
+
+A move that changes the thing's cell runs the effects of the cell it leaves and the one it enters: plates, teleporters, floor effects, exit markers (rules.md, world.md).
+
+### Pushing
+
+The player pushes a trap, a corpse (a creature with no hit points) or a conjured thing by moving it the player's whole step, recursively through a line of pushable things; if the line moves, the player then moves as far as the first thing did. A push makes the player wait 3 ticks more before its next update. A levitating player cannot push corpses.
+
+A boulder is not pushed. Walking into a rolling boulder hurts the player 2d3, unless it rolls the way the player walks. Walking into a boulder along an axis (an even direction) then starts it rolling the way the player walks: a resting boulder stops when blocked, and a rolling one only turns.
+
+### Boulders
+
+A rolling boulder moves its `speed` along its direction each update (`interval_ms`). When the move is refused, or meets a thing, it hurts the thing it met, if any, 3d4. A boulder that stops when blocked then stops, and starts a boulder it met rolling in its own direction. A shuttling boulder starts a boulder it met the same way, and reverses. Rolling and shuttling are the `roll` action's (rules.md); `stop` stops it.
+
+Boulder animations are named `roll.d` for direction `d`. The importer makes `roll.0` and `roll.4` frames 0–4, `roll.2` and `roll.6` frames 5–9, forward for directions 0 and 2 and backward for 4 and 6, one frame per update.
+
+### The player's update
+
+The player's update comes every `interval_ms` of its template (player.md, Speed). In it, if a walk was asked for since the last update, the player turns to that direction and moves its template's `speed` along it, half that along directions 1 and 5 (screen left and right). A walk that moves shows the walk animation's next frame; after 8 updates without walking the player shows its idle frame. A blocked step that meets a creature touches it (combat, later).
+
 ## Unknowns
 
-- The player's spawn offset within the arrival cell when changing level, and the scroll the view does on arrival (three styles: drop, rise and slide), are specified with scenes.
+- The player's spawn offset within the arrival cell when changing level, and the scroll the view does on arrival (three styles: drop, rise and slide), are specified with scenes. The engine places the player at the arrival cell's center.

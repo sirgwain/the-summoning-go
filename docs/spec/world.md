@@ -126,7 +126,11 @@ Visibility is recomputed whenever the map changes (a door moves, a wall is remov
 
 From the vision cell, a scanline flood fill marks every cell reachable through cells whose terrain is above 11h (anything but walls and closed doors), moving along rows and to the rows on either side. The first blocking cell met on each side of every run is marked visible too, and the fill does not pass it. The result is the room the player is in, with its walls.
 
+The fill reaches diagonal neighbors as well: each run marks the blocking cells at its ends, and the rows on either side are searched from the column of one end to the other, those ends included. So the visible cells are every open cell joined to the vision cell through open cells, each step to any of the eight neighbors, together with every blocking cell next to one of them, diagonally included. The vision cell itself always counts as open.
+
 The game also swaps the shapes of some visible walls according to which of their neighbors are visible, so that walls seen from behind look closed. This specification does not cover that; walls are drawn with the shapes the level gives them.
+
+**Engine model.** The simulation keeps, for the current level, the cells visible from the player's vision cell, computed as above with "open" meaning not blocked: a cell with floor, no wall, and no door that is not open. Each cell that has been visible is **seen**, kept with the level. Only visible cells are drawn: their floors, walls, feature looks, objects and things standing in them. Floor halves (pack.md) are fixed per cell; a half under a wall is drawn only when its cell is visible.
 
 ## Level map
 
@@ -160,7 +164,11 @@ The header's liquid kind:
 | Fire (2) | enters for 2d2 fire damage; every status tick 2d2 fire | variant 0, every status tick 2d2 fire |
 | Deep water | depths 1–4; objects sink | variant 0; objects sink |
 
-**Wall shapes.** Shapes 0, 2, 4 and 5 are diagonal; 1 and 3 are faces.
+**Wall shapes.** Shapes 0, 2, 4 and 5 are diagonal; 1 and 3 are faces. A diagonal wall fills the half of its cell at one corner of the cell's diamond, which decides which way the player slides along it (entities.md, Moving):
+
+| Shape | 0 | 2 | 4 | 5 |
+| --- | --- | --- | --- | --- |
+| Filled corner | bottom (+u, +v) | left (+u, −v) | right (−u, +v) | top (−u, −v) |
 
 **Features.** A cell's terrain and its placement (formats.md) make its feature (rules.md, Import). Hazard tiles (29h–35h) stay fixed art.
 

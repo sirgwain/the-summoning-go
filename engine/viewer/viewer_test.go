@@ -2,6 +2,7 @@ package viewer
 
 import (
 	"encoding/json"
+	"fmt"
 	"image"
 	"os"
 	"path/filepath"
@@ -11,7 +12,9 @@ import (
 
 	"github.com/sirgwain/the-summoning-go/devpack"
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/input"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
+	"github.com/sirgwain/the-summoning-go/engine/render/drawlist"
 )
 
 func newViewer(t *testing.T) *Viewer {
@@ -228,5 +231,89 @@ func TestParseScript(t *testing.T) {
 	s, _ = ParseScript([]byte(`[{"at": 0, "select_thing": "nobody"}]`))
 	if err := NewRunner(s, t.TempDir()).Run(v); err == nil {
 		t.Error("selecting a missing thing did not fail")
+	}
+}
+
+// TestPlayScript plays the dev pack by script, walking with held keys to lever A and using it;
+// then by key presses picks a rock up, shelves it and puts it down.
+func TestPlayScript(t *testing.T) {
+	// The player steps every n updates: 12 steps up and right (−u) from the start, then 4 up and
+	// left (−v).
+	n := newViewer(t).World.PlayerInterval()
+	v := run(t, fmt.Sprintf(`[
+		{"at": 0, "play": true},
+		{"at": 1, "hold": ["W", "D"], "for": %d},
+		{"at": %d, "hold": ["W", "A"], "for": %d},
+		{"at": %d, "keys": ["E"]}
+	]`, 12*n, 12*n+1, 4*n, 16*n+3))
+	if !v.Play || v.SeeAll {
+		t.Fatal("the script did not switch to playing")
+	}
+	p := v.World.Player()
+	if c := p.Cell(); c != devpack.LeverA {
+		t.Fatalf("walked to %v (%d, %d)", c, p.U, p.V)
+	}
+	if f := feature(t, v, "lever.a"); f.Shows != "on" {
+		t.Errorf("E did not pull lever A: %s", f.Shows)
+	}
+	if got := v.Dump().World.Player; got == nil || got.Cell != p.Cell() {
+		t.Errorf("the dump's player %+v", got)
+	}
+
+	v = newViewer(t)
+	v.SetPlay(true)
+	v.World.Update([]input.Command{input.PlacePlayer{Cell: devpack.RocksB[0]}})
+	key := func(k Key) {
+		v.Update(Input{Held: map[Key]bool{k: true}, Pressed: map[Key]bool{k: true}})
+	}
+	key("G")
+	if p := v.World.Player(); p.Hand == nil || p.Hand.Item != devpack.ItemRock {
+		t.Fatalf("G did not pick up the rock: %v", p.Hand)
+	}
+	key("Digit1")
+	if p := v.World.Player(); p.Hand != nil || p.Slots[0] == nil {
+		t.Fatal("1 did not put the rock on shelf 0")
+	}
+	key("Digit1")
+	key("F")
+	if p := v.World.Player(); p.Hand != nil || len(v.World.Current().Objects[devpack.RocksB[0]]) != 1 {
+		t.Error("F did not put the rock down")
+	}
+	if !slices.ContainsFunc(v.PanelLines(), func(s string) bool { return strings.HasPrefix(s, "Player at") }) {
+		t.Error("the panel does not show the player")
+	}
+}
+
+func TestScreenDirections(t *testing.T) {
+	for _, c := range []struct{ x, y, d int }{{0, -1, 7}, {1, -1, 0}, {1, 0, 1}, {1, 1, 2}, {0, 1, 3}, {-1, 1, 4}, {-1, 0, 5}, {-1, -1, 6}} {
+		if d := screenDirection(c.x, c.y); d != c.d {
+			t.Errorf("screen (%d, %d) walks %d, want %d", c.x, c.y, d, c.d)
+		}
+	}
+}
+
+// TestViewFollowsPlayer checks the view stays put while the player walks in its middle, and
+// scrolls with the player once it walks out of it.
+func TestViewFollowsPlayer(t *testing.T) {
+	v := newViewer(t)
+	v.SetPlay(true)
+	start := v.Origin
+	walk := func(k Key, steps int) {
+		for range steps * int(v.World.PlayerInterval()) {
+			v.Update(Input{Held: map[Key]bool{k: true}, Pressed: map[Key]bool{}})
+		}
+	}
+	walk("D", 2)
+	if v.Origin != start {
+		t.Fatalf("the view moved from %v to %v while the player walked in its middle", start, v.Origin)
+	}
+	walk("D", 30)
+	p := v.World.Player()
+	rel := drawlist.RefPoint(p.U, p.V).Sub(v.Origin)
+	if v.Origin == start {
+		t.Fatal("the view did not scroll after the player")
+	}
+	if buf := v.BufferSize(); rel.X > buf.X*3/4+8 {
+		t.Errorf("the player at %v went past the view's middle (%v)", rel, buf)
 	}
 }

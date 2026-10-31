@@ -24,6 +24,9 @@ type Level struct {
 
 	byID   map[string]*Feature
 	byCell map[content.Cell]*Feature
+	// visible and seen are the player's visibility, by cell index; nil while the player has not
+	// been on the level.
+	visible, seen []bool
 }
 
 // Feature is a feature's state: its definition's fields as they are now, plus what the
@@ -67,6 +70,10 @@ type Thing struct {
 	HitPoints int
 	Items     []*Object
 	Rolling   *content.Rolling
+	// Phase counts the moves the thing has made, for its walk and roll animations.
+	Phase int
+	// next is the step of its next update.
+	next int64
 }
 
 // Cell returns the cell the thing stands in.

@@ -3,6 +3,7 @@
   "messages": {
     "lever_stuck": "msg.lever_stuck",
     "no_drop_here": "msg.no_drop",
+    "no_room": "msg.no_room",
     "slot_stuck": "msg.slot_stuck",
     "slot_wrong_item": "msg.wrong_item"
   }

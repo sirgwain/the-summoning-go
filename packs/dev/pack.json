@@ -8,5 +8,6 @@
   "start": {
     "level": "level.hall",
     "cell": [10, 4]
-  }
+  },
+  "player": "thing.player"
 }

@@ -57,6 +57,35 @@ type FollowExit struct{ Feature string }
 // GoTo makes a level the current one.
 type GoTo struct{ Level string }
 
+// Player commands: what the player does (docs/spec/entities.md, docs/spec/items.md).
+
+// Walk asks the player to walk a step along a direction at its next update. A presentation
+// sends it every update while the walk is held.
+type Walk struct{ Direction int }
+
+// PickUp takes the top object of the player's cell into the hand, or the first empty shelf.
+type PickUp struct{}
+
+// PutDown puts the hand's object down on the player's cell.
+type PutDown struct{}
+
+// Swap exchanges the hand with an inventory slot.
+type Swap struct{ Slot int }
+
+// Activate uses the lever in the player's cell, or the nearest mouth in reach.
+type Activate struct{}
+
+// PlacePlayer moves the player to a cell of the current level, running the cell's effects. It is
+// a debug command.
+type PlacePlayer struct{ Cell content.Cell }
+
+func (Walk) command()        {}
+func (PickUp) command()      {}
+func (PutDown) command()     {}
+func (Swap) command()        {}
+func (Activate) command()    {}
+func (PlacePlayer) command() {}
+
 func (Use) command()        {}
 func (Drop) command()       {}
 func (Remove) command()     {}

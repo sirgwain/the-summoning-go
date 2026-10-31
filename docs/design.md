@@ -62,7 +62,7 @@ terms and is complete enough to implement from on its own.
 ## Repository layout
 
 ```
-cmd/                   cobra commands: play, import, pack, verify
+cmd/                   cobra commands: play, view, import, devpack (pack, verify later)
 cmd/editor/            the editor, a separate binary built on engine/render and engine/ui
 engine/sim/            the simulation: world, entities, movement, rules, spells, AI, inventory,
                        dialogue, scenes. No Ebitengine import.
@@ -129,9 +129,10 @@ not of position.
   neighboring cell without triggering it.
 - **Terrain.** A move is tested at the ground point against the terrain. If blocked, the step shrinks a unit
   at a time until it fits, so a character slides up to a wall rather than stopping short.
-- **Entities.** Each kind has a collision rectangle. A move that would overlap another entity's
-  rectangle backs off.
-- **Diagonal walls.** Walking diagonally into a diagonal wall slides along it.
+- **Entities.** Each template has a footprint, a square of world units around its ground point. A
+  move that would overlap another entity's footprint backs off.
+- **Diagonal walls.** A diagonal wall names the corner of its cell it fills; walking along an axis
+  into that corner slides along it.
 - **Pushing.** The player pushes pushable things (bodies, boulders, conjured objects) ahead,
   recursively, at an exertion cost.
 - Projectiles and rolling things test their corners instead of the ground point.
@@ -288,12 +289,14 @@ The file formats are in [pack.md](pack.md).
 
 ## Input
 
-`input.Command` names what the player does (move, turn, use, attack, cast, pick up…). Keys, mouse and
-gamepad bind to commands in a user configuration. Replays record commands.
+`input.Command` names what the player does (walk, pick up, put down, swap a slot, use; attack and
+cast later). Keys, mouse and gamepad bind to commands in a user configuration. Replays record
+commands. A walk is asked for each update the walk is held, and taken at the player's next update.
 
 **Debug commands** act on the world directly, without a player: use the lever at a cell, drop or
 remove an object on a cell, place an entity on a cell (running the cell's enter and leave effects),
-switch a cell's feature on, off or over, run a procedure, follow an exit. They go through the same
+switch a cell's feature on, off or over, run a procedure, follow an exit, put the player on a cell.
+They go through the same
 command path as the player's, so the viewer can test a level's mechanisms before the player exists
 and the editor's play-test can use them later. A game build can leave them unbound.
 

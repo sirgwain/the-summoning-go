@@ -72,8 +72,11 @@ var (
 	DoorB         = content.Cell{5, 9}
 	SlotC         = content.Cell{7, 15}
 	DoorC         = content.Cell{5, 15}
-	SealedDoor    = content.Cell{5, 22}
+	DoorD         = content.Cell{5, 22}
 	ExitD         = content.Cell{2, 22}
+	SealedDoor    = content.Cell{5, 25}
+	LeverD        = content.Cell{16, 22}
+	Sphere        = content.Cell{15, 22}
 	Teleporter    = content.Cell{12, 3}
 	LeverTele     = content.Cell{13, 1}
 	Pit           = content.Cell{12, 7}
@@ -85,6 +88,11 @@ var (
 	SocketWall    = content.Cell{14, 22}
 	LeverBoulder  = content.Cell{12, 26}
 	WestExit      = content.Cell{9, 0}
+	RocksB        = [2]content.Cell{{8, 8}, {8, 10}}
+	GemB          = content.Cell{2, 9}
+	GemC          = content.Cell{2, 15}
+	Sack          = content.Cell{8, 17}
+	CrateStart    = content.Cell{8, 6}
 )
 
 // hall is the main level: a hall with a closet behind each door along its back wall and the
@@ -93,22 +101,26 @@ var (
 //	Closet A: lever A opens and closes door A; a sword inside.
 //	Closet B: plate B (100) holds door B open; two rocks (60 each) and things can press it.
 //	Closet C: slot C takes the key (in the sack) and opens door C.
-//	Closet D: the door sealed by the sphere; the exit down to the cellar inside.
-//	The socket takes the two gems from closets B and C and opens the wall behind it, where the
-//	sphere lies, and changes what the mouth says.
+//	The socket takes the two gems from closets B and C and opens the wall behind it into a nook,
+//	and changes what the mouth says. Lever D in the nook opens door D.
+//	Closet D: the exit down to the cellar.
+//	Closet E: a door sealed by the sphere, which lies in the nook; a potion inside. Opening it
+//	needs a throw.
 //	Elsewhere: a teleporter and the lever that arms it, a pit and a trapdoor down to the cellar
 //	(a lever opens the trapdoor), a mouth, a mark, deep water that swallows objects, lava, a
-//	guard, a ghost that teleporters leave alone, a boulder and a lever that rolls it, and an
-//	exit in the west wall.
+//	guard, a ghost that teleporters leave alone, a crate to push, a boulder and a lever that
+//	rolls it, and an exit in the west wall.
+//
+// The player starts by closet A. Every closet but E opens by playing.
 func hall(p *content.Pack) {
 	l := &content.Level{ID: Hall, Floors: floorSet, Walls: wallSet, FloorTypes: floorTypes()}
 	grid(l, []string{
 		"############################",
-		"#,,,,,#,,,,,#,,,,,#,,,,,,,,#",
-		"#,,,,,#,,,,,#,,,,,#,,,,,,,,#",
-		"#,,,,,#,,,,,#,,,,,#,,,,,,,,#",
-		"#,,,,,#,,,,,#,,,,,#,,,,,,,,#",
-		"###.#####.#####.######.#####",
+		"#,,,,,#,,,,,#,,,,,#,,,,#,,,#",
+		"#,,,,,#,,,,,#,,,,,#,,,,#,,,#",
+		"#,,,,,#,,,,,#,,,,,#,,,,#,,,#",
+		"#,,,,,#,,,,,#,,,,,#,,,,#,,,#",
+		"###.#####.#####.######.##.##",
 		"#..........................#",
 		"#..........................#",
 		"#..........................#",
@@ -128,7 +140,7 @@ func hall(p *content.Pack) {
 	lever := func(id string, c content.Cell, on, off string) *content.Feature {
 		return &content.Feature{ID: id, Kind: content.FeatureLever, Cell: c, Look: lookLever, Armed: true, OnTurnOn: on, OnTurnOff: off}
 	}
-	sealed := door("door.d", SealedDoor)
+	sealed := door("door.e", SealedDoor)
 	sealed.SealedBy = ItemSphere
 	l.Features = []*content.Feature{
 		lever("lever.a", LeverA, "open_a", "close_a"),
@@ -137,6 +149,8 @@ func hall(p *content.Pack) {
 		door("door.b", DoorB),
 		{ID: "slot.c", Kind: content.FeatureSlot, Cell: SlotC, Look: lookSlot, Armed: true, Accepts: ItemKey, OnInsert: "open_c"},
 		door("door.c", DoorC),
+		door("door.d", DoorD),
+		lever("lever.d", LeverD, "open_d", "close_d"),
 		sealed,
 		{ID: "exit.d", Kind: content.FeatureExit, Cell: ExitD, Look: lookExitFloor, To: &content.Destination{Level: Cellar, Cell: content.Cell{6, 4}}},
 		{ID: "teleporter", Kind: content.FeatureTeleporter, Cell: Teleporter, Look: lookTeleporter, Armed: true,
@@ -157,6 +171,8 @@ func hall(p *content.Pack) {
 		"open_b":            {{On: ptr("door.b")}},
 		"close_b":           {{Off: ptr("door.b")}},
 		"open_c":            {{On: ptr("door.c")}},
+		"open_d":            {{On: ptr("door.d")}},
+		"close_d":           {{Off: ptr("door.d")}},
 		"toggle_teleporter": {{Toggle: ptr("teleporter")}},
 		"open_trapdoor":     {{On: ptr("trapdoor")}},
 		"close_trapdoor":    {{Off: ptr("trapdoor")}},
@@ -171,6 +187,7 @@ func hall(p *content.Pack) {
 		{ID: "guard", Thing: ThingGuard, Cell: content.Cell{9, 20}, Items: []content.Object{{Item: ItemPotion}}},
 		{ID: "ghost", Thing: ThingGhost, Cell: content.Cell{11, 21}, Facing: ptr(1)},
 		{ID: "boulder", Thing: ThingBoulder, Cell: content.Cell{9, 24}},
+		{ID: "crate", Thing: ThingCrate, Cell: CrateStart},
 	}
 	object := func(c content.Cell, item string, contents ...string) *content.FloorObject {
 		o := &content.FloorObject{Cell: c, Object: content.Object{Item: item}}
@@ -181,13 +198,14 @@ func hall(p *content.Pack) {
 	}
 	l.Objects = []*content.FloorObject{
 		object(content.Cell{2, 3}, ItemSword),
-		object(content.Cell{2, 9}, ItemRedGem),
-		object(content.Cell{2, 15}, ItemBlueGem),
-		object(content.Cell{8, 8}, ItemRock),
-		object(content.Cell{8, 10}, ItemRock),
-		object(content.Cell{8, 17}, ItemSack, ItemKey),
+		object(GemB, ItemRedGem),
+		object(GemC, ItemBlueGem),
+		object(RocksB[0], ItemRock),
+		object(RocksB[1], ItemRock),
+		object(Sack, ItemSack, ItemKey),
 		object(content.Cell{9, 18}, ItemBag),
-		object(content.Cell{15, 22}, ItemSphere),
+		object(Sphere, ItemSphere),
+		object(content.Cell{2, 25}, ItemPotion),
 		object(content.Cell{13, 8}, content.RandomItem),
 	}
 	p.Levels[l.ID] = l

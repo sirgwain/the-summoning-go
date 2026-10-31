@@ -30,7 +30,12 @@ type Scene struct {
 	Features    []Feature
 	Objects     []Object
 	Things      []Thing
+	// Visible reports whether a cell is drawn; nil draws every cell.
+	Visible func(content.Cell) bool
 }
+
+// shows reports whether the scene draws cell c.
+func (s Scene) shows(c content.Cell) bool { return s.Visible == nil || s.Visible(c) }
 
 // Feature is a feature to draw: its look, in a state of the look.
 type Feature struct {
@@ -54,6 +59,10 @@ type Thing struct {
 	Template string
 	U, V     int
 	Facing   int
+	// Anim names an animation the thing is stepping through, Phase its step; empty draws it
+	// standing still.
+	Anim  string
+	Phase int
 }
 
 // LevelScene returns level l as its definition places it.
@@ -130,7 +139,7 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 	}
 	for _, c := range cellsBackToFront(l.Size[0]+1, l.Size[1]+1) {
 		box := TileBox(c).Add(image.Pt(off[0], off[1]))
-		if !l.InBounds(c) || s.Floor[c[0]][c[1]] == content.NoFrame {
+		if !l.InBounds(c) || s.Floor[c[0]][c[1]] == content.NoFrame || !s.shows(c) {
 			if !floors.Diamond() {
 				cmds = append(cmds, Cmd{X: box.X, Y: box.Y})
 			}
@@ -156,13 +165,15 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 		}
 	}
 	for _, o := range l.Overlays {
-		cmds = append(cmds, placed(o))
+		if s.shows(o.Cell) {
+			cmds = append(cmds, placed(o))
+		}
 	}
 	looks := map[string][]Feature{}
 	wallLooks := map[content.Cell]Feature{}
 	for _, f := range s.Features {
 		look, ok := p.Looks[f.Look]
-		if !ok {
+		if !ok || !s.shows(f.Cell) {
 			continue
 		}
 		looks[look.Layer] = append(looks[look.Layer], f)
@@ -175,6 +186,9 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 	}
 	shown := map[content.Cell]int{}
 	for _, o := range s.Objects {
+		if !s.shows(o.Cell) {
+			continue
+		}
 		if shown[o.Cell]++; shown[o.Cell] > maxFloorObjects {
 			continue
 		}
@@ -195,7 +209,7 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 	}
 	for _, c := range cellsBackToFront(l.Size[0], l.Size[1]) {
 		shape := s.Wall[c[0]][c[1]]
-		if shape == content.NoFrame {
+		if shape == content.NoFrame || !s.shows(c) {
 			continue
 		}
 		box := TileBox(c)
@@ -215,11 +229,14 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 		items = append(items, standing{depth: f.Cell[0] + f.Cell[1], top: TileBox(f.Cell).Y + 1, cmds: featureCmds(p, f)})
 	}
 	for _, t := range s.Things {
-		if cmd, cell, ok := thingCmd(p, t); ok {
+		if cmd, cell, ok := thingCmd(p, t); ok && s.shows(cell) {
 			items = append(items, standing{depth: cell[0] + cell[1], top: cmd.Y, cmds: []Cmd{cmd}})
 		}
 	}
 	for _, pr := range l.Props {
+		if !s.shows(pr.Cell) {
+			continue
+		}
 		cmd := placed(pr)
 		items = append(items, standing{depth: pr.Cell[0] + pr.Cell[1], top: TileBox(pr.Cell).Y + 1, cmds: []Cmd{cmd}})
 	}
@@ -308,7 +325,9 @@ func thingCmd(p *content.Pack, t Thing) (Cmd, content.Cell, bool) {
 		return Cmd{}, content.Cell{}, false
 	}
 	frame := 0
-	if a, ok := p.Animation(tmpl, fmt.Sprintf("idle.%d", t.Facing), "idle"); ok {
+	if a, ok := p.Animation(tmpl, t.Anim); ok && t.Anim != "" && len(a.Frames) > 0 {
+		frame = a.Frames[t.Phase%len(a.Frames)]
+	} else if a, ok := p.Animation(tmpl, fmt.Sprintf("idle.%d", t.Facing), "idle"); ok && len(a.Frames) > 0 {
 		frame = a.Frames[0]
 	}
 	anchor, _ := sprite.AnchorOf(frame)

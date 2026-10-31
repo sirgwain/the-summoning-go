@@ -428,7 +428,7 @@ func TestMouthAndProcedureActions(t *testing.T) {
 	if w.pack.Levels["level.00"].Features[2].OnTurnOn != "open" {
 		t.Error("the simulation changed the pack")
 	}
-	if ev := do(w, input.Run{Procedure: "roll"}); !has(ev, EventNotYet, "") || w.Current().Thing("boulder").Rolling == nil {
+	if ev := do(w, input.Run{Procedure: "roll"}); !has(ev, EventThing, "rolling") || w.Current().Thing("boulder").Rolling == nil {
 		t.Errorf("roll: %v", ev)
 	}
 }

@@ -91,8 +91,11 @@ const (
 
 var gemOffsets = [gemCount]content.Offset{{11, 1}, {3, 1}, {21, 1}, {19, 6}, {1, 6}, {9, 7}}
 
-// diagonalShapes are the wall shapes that fill half their cell (world.md, Terrain).
-var diagonalShapes = [wallShapes]bool{0: true, 2: true, 4: true, 5: true}
+// diagonalShapes are the corners filled by the wall shapes that fill half their cell (world.md,
+// Import).
+var diagonalShapes = [wallShapes]string{
+	0: content.CornerBottom, 2: content.CornerLeft, 4: content.CornerRight, 5: content.CornerTop,
+}
 
 const sheetColumns = 16
 
@@ -171,6 +174,9 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 	im.palette = im.pack.Palettes[paletteID(0)]
 	im.text(text)
 	if err := im.items(); err != nil {
+		return nil, nil, err
+	}
+	if err := im.player(); err != nil {
 		return nil, nil, err
 	}
 

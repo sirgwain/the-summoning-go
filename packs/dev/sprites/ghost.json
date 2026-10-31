@@ -2,7 +2,7 @@
   "id": "sprite.ghost",
   "frame_size": [24, 40],
   "columns": 8,
-  "frames": 8,
+  "frames": 24,
   "transparent": 255,
   "anchor": [12, 36],
   "animations": {
@@ -32,6 +32,38 @@
     },
     "idle.7": {
       "frames": [7]
+    },
+    "walk.0": {
+      "frames": [8, 0, 16, 0],
+      "ms": 275
+    },
+    "walk.1": {
+      "frames": [9, 1, 17, 1],
+      "ms": 275
+    },
+    "walk.2": {
+      "frames": [10, 2, 18, 2],
+      "ms": 275
+    },
+    "walk.3": {
+      "frames": [11, 3, 19, 3],
+      "ms": 275
+    },
+    "walk.4": {
+      "frames": [12, 4, 20, 4],
+      "ms": 275
+    },
+    "walk.5": {
+      "frames": [13, 5, 21, 5],
+      "ms": 275
+    },
+    "walk.6": {
+      "frames": [14, 6, 22, 6],
+      "ms": 275
+    },
+    "walk.7": {
+      "frames": [15, 7, 23, 7],
+      "ms": 275
     }
   }
 }

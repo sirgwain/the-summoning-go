@@ -21,16 +21,38 @@ import (
 )
 
 func init() {
+	rootCmd.AddCommand(newViewCmd(false), newViewCmd(true))
+}
+
+// newViewCmd returns the view command, or with play the play command, which opens the same
+// window driving the player.
+func newViewCmd(play bool) *cobra.Command {
 	var level, screenshot, script, out string
 	var scale, shotTicks int
 	var magnify bool
 	var at, sel []int
 	var seed uint64
+	use, short, long := "view [pack-dir]", "Look around a content pack's levels and work their mechanisms",
+		`Opens a window showing a pack's levels in the game's projection, running the simulation.
+Tab switches to playing (see summoning play --help).
+`
+	if play {
+		use, short, long = "play [pack-dir]", "Play a content pack's levels",
+			`Opens a window playing a pack: the player starts where the pack says and the view follows it,
+showing what the player sees.
+
+Arrows or WASD walk, two together along a diagonal. G picks up the top object of the player's
+cell, F puts down what is in hand, E uses the lever underfoot or a mouth beside the player. 1-9
+and 0 swap the hand with shelves 0-9 (with Shift, 10-19), R and L with the right and left hands,
+F1-F8 with the pack (the bag in the right hand). V shows the whole level, Tab switches to the
+viewer's tools (see summoning view --help), clicking a cell inspects it.
+`
+	}
 	viewCmd := &cobra.Command{
-		Use:   "view [pack-dir]",
-		Short: "Look around a content pack's levels and work their mechanisms",
-		Long: `Opens a window showing a pack's levels in the game's projection, running the simulation
-without a player.
+		Use:   use,
+		Short: short,
+		Long: long + `
+The tools:
 
 Arrows or WASD (with Shift, faster) or dragging with the mouse move the view. Scrolling zooms
 around the cursor, as do + and - around the center. Page Up and Page Down (or [ and ]) change
@@ -83,6 +105,12 @@ of live input, and exits when it ends. Its files are written under --out.`,
 			if err != nil {
 				return err
 			}
+			if play {
+				if v.World.Player() == nil {
+					return fmt.Errorf("pack %s has no player", pack.Manifest.ID)
+				}
+				v.SetPlay(true)
+			}
 			if center != nil {
 				v.CenterOn(*center)
 			}
@@ -118,7 +146,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 	viewCmd.Flags().StringVar(&out, "out", ".", "directory for a script's screenshots and dumps")
 	viewCmd.Flags().StringVar(&screenshot, "screenshot", "", "save a frame to this PNG file and exit")
 	viewCmd.Flags().IntVar(&shotTicks, "screenshot-ticks", 0, "updates to run before the screenshot")
-	rootCmd.AddCommand(viewCmd)
+	return viewCmd
 }
 
 const windowWidth, windowHeight = 1280, 800

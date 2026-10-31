@@ -41,6 +41,9 @@ type Viewer struct {
 	Shown  string
 	// Magnify draws floor objects with their inventory image.
 	Magnify bool
+	// Play drives the player with the keys and keeps the view on it, instead of the tools.
+	// SeeAll draws every cell rather than only what the player sees.
+	Play, SeeAll bool
 	// Origin is the view pixel at the buffer's top-left; Scale the screen pixels per view pixel.
 	Origin image.Point
 	Scale  int
@@ -68,6 +71,9 @@ type Viewer struct {
 	press, drag *image.Point
 	// wheel accumulates scrolling not yet turned into zoom steps.
 	wheel float64
+	// seen is where the view last saw the player, in view pixels, and on which level.
+	seen      image.Point
+	seenLevel string
 }
 
 // New returns a viewer of pack p, running a world with seed, showing level (the start level if
@@ -80,6 +86,7 @@ func New(p *content.Pack, seed uint64, level string, scale int, magnify bool, sc
 	v := &Viewer{
 		Pack: p, World: w, Scale: max(1, min(scale, MaxScale)), Magnify: magnify, Screen: screen,
 		Levels: sortedIDs(p.Levels), Items: sortedIDs(p.Items), Things: sortedIDs(p.Things),
+		SeeAll: true,
 	}
 	if level != "" && level != w.Current().ID {
 		w.Update([]input.Command{input.GoTo{Level: level}})
@@ -103,7 +110,11 @@ func sortedIDs[V any](m map[string]V) []string {
 // rebuild rebuilds the draw commands from the world, recentering when the level changed.
 func (v *Viewer) rebuild() {
 	l := v.World.Current()
-	v.Cmds = drawlist.Build(v.Pack, drawlist.SimScene(l), drawlist.Options{Magnify: v.Magnify})
+	scene := drawlist.SimScene(v.World, l)
+	if v.SeeAll {
+		scene.Visible = nil
+	}
+	v.Cmds = drawlist.Build(v.Pack, scene, drawlist.Options{Magnify: v.Magnify})
 	v.Bounds = drawlist.Bounds(l.Def)
 	v.Version++
 	if v.Shown != l.ID {
@@ -113,8 +124,51 @@ func (v *Viewer) rebuild() {
 	}
 }
 
-// Recenter centers the view on the start cell on the start level, else on the level.
+// SetPlay switches between playing, with the keys driving the player and the view showing what
+// it sees, and the tools. It does nothing to a pack without a player.
+func (v *Viewer) SetPlay(play bool) {
+	if play && v.World.Player() == nil {
+		return
+	}
+	v.Play, v.SeeAll = play, !play
+	v.rebuild()
+	v.Recenter()
+}
+
+// follow scrolls the view after the player as the game does (docs/spec/player.md, View): it
+// stays put while the player is in the middle half of the view, scrolls along an axis by as far
+// as the player moved when a move leaves it outside, and centers on a player outside the view.
+func (v *Viewer) follow() {
+	p := v.World.Player()
+	if p == nil {
+		return
+	}
+	at := drawlist.RefPoint(p.U, p.V)
+	moved := at.Sub(v.seen)
+	v.seen = at
+	buf := v.BufferSize()
+	rel := at.Sub(v.Origin)
+	if v.seenLevel != v.Shown || !rel.In(image.Rectangle{Max: buf}) {
+		v.Recenter()
+		return
+	}
+	lo, hi := buf.Div(4), buf.Mul(3).Div(4)
+	if rel.X < lo.X && moved.X < 0 || rel.X > hi.X && moved.X > 0 {
+		v.Origin.X += moved.X
+	}
+	if rel.Y < lo.Y && moved.Y < 0 || rel.Y > hi.Y && moved.Y > 0 {
+		v.Origin.Y += moved.Y
+	}
+}
+
+// Recenter centers the view on the player while playing, else on the start cell on the start
+// level, else on the level.
 func (v *Viewer) Recenter() {
+	if p := v.World.Player(); v.Play && p != nil {
+		v.seen, v.seenLevel = drawlist.RefPoint(p.U, p.V), v.Shown
+		v.Origin = v.seen.Sub(v.BufferSize().Div(2))
+		return
+	}
 	if s := v.Pack.Manifest.Start; s.Level == v.Shown {
 		v.CenterOn(s.Cell)
 		return
@@ -185,8 +239,17 @@ func (v *Viewer) Update(in Input) {
 	case in.pressed("M"):
 		v.Magnify = !v.Magnify
 		v.rebuild()
+	case in.pressed(KeyTab):
+		v.SetPlay(!v.Play)
+	case in.pressed("V"):
+		v.SeeAll = !v.SeeAll
+		v.rebuild()
 	}
-	cmds = append(cmds, v.keys(in)...)
+	if v.Play {
+		cmds = append(cmds, v.playKeys(in)...)
+	} else {
+		cmds = append(cmds, v.keys(in)...)
+	}
 
 	if v.Paused && len(cmds) == 0 && !in.pressed("N") {
 		return
@@ -195,6 +258,9 @@ func (v *Viewer) Update(in Input) {
 	v.log(events)
 	if len(events) > 0 {
 		v.rebuild()
+	}
+	if v.Play {
+		v.follow()
 	}
 	// The selection follows the selected thing, and drops it when it leaves the level.
 	if v.Thing != "" {
@@ -216,8 +282,11 @@ func (v *Viewer) levelIndex() int {
 	return 0
 }
 
-// pan moves the view by the arrow and WASD keys.
+// pan moves the view by the arrow and WASD keys, unless they walk the player.
 func (v *Viewer) pan(in Input) {
+	if v.Play {
+		return
+	}
 	speed := panSpeed
 	if in.held(KeyShift) {
 		speed = panSpeedFat
@@ -353,6 +422,69 @@ func (v *Viewer) keys(in Input) []input.Command {
 	return nil
 }
 
+// packKeys are the function keys that reach pack slots while playing.
+const packKeys = 8
+
+// playKeys turns the keys into the player's commands: arrows or WASD walk, two together along a
+// diagonal; G picks up, F puts down, E uses; digits swap the hand with shelves 0–9 (with Shift,
+// 10–19), R and L with the right and left hands, F1–F8 with the pack.
+func (v *Viewer) playKeys(in Input) []input.Command {
+	var cmds []input.Command
+	var x, y int
+	if in.held(KeyArrowLeft, "A") {
+		x--
+	}
+	if in.held(KeyArrowRight, "D") {
+		x++
+	}
+	if in.held(KeyArrowUp, "W") {
+		y--
+	}
+	if in.held(KeyArrowDown, "S") {
+		y++
+	}
+	if x != 0 || y != 0 {
+		cmds = append(cmds, input.Walk{Direction: screenDirection(x, y)})
+	}
+	switch {
+	case in.pressed("G"):
+		cmds = append(cmds, input.PickUp{})
+	case in.pressed("F"):
+		cmds = append(cmds, input.PutDown{})
+	case in.pressed("E"):
+		cmds = append(cmds, input.Activate{})
+	case in.pressed("R"):
+		cmds = append(cmds, input.Swap{Slot: sim.SlotRightHand})
+	case in.pressed("L"):
+		cmds = append(cmds, input.Swap{Slot: sim.SlotLeftHand})
+	}
+	for d := range 10 {
+		if in.pressed(Key(fmt.Sprintf("Digit%d", (d+1)%10))) {
+			slot := d
+			if in.held(KeyShift) {
+				slot += 10
+			}
+			cmds = append(cmds, input.Swap{Slot: slot})
+		}
+	}
+	for f := range packKeys {
+		if in.pressed(Key(fmt.Sprintf("F%d", f+1))) {
+			cmds = append(cmds, input.Swap{Slot: sim.SlotPack + f})
+		}
+	}
+	return cmds
+}
+
+// screenDirection returns the table direction that walks toward screen direction (x, y), each
+// −1, 0 or 1 and not both 0: the player's facing p, clockwise from screen up, walks table
+// direction (p + 7) mod 8 (docs/spec/player.md, Facing and walking).
+func screenDirection(x, y int) int {
+	facings := map[[2]int]int{
+		{0, -1}: 0, {1, -1}: 1, {1, 0}: 2, {1, 1}: 3, {0, 1}: 4, {-1, 1}: 5, {-1, 0}: 6, {-1, -1}: 7,
+	}
+	return (facings[[2]int{x, y}] + 7) % 8
+}
+
 // log adds what happened to the event log, leaving out sounds.
 func (v *Viewer) log(events []sim.Event) {
 	for _, e := range events {
@@ -408,7 +540,26 @@ func (v *Viewer) PanelLines() []string {
 	if v.Paused {
 		status += "  PAUSED"
 	}
+	if v.Play {
+		status += "  PLAYING"
+	}
 	lines := []string{status}
+	if p := v.World.Player(); v.Play && p != nil {
+		lines = append(lines, inspect.Player(v.Pack, p)...)
+		lines = append(lines, "", "Arrows/WASD walk (two keys: diagonal)",
+			"G pick up  F put down  E use  1-0 shelf (Shift 10-19)",
+			"R right hand  L left hand  F1-F8 pack  V see all",
+			"Tab tools  Space pause  N step  M magnify")
+		if v.Selected != nil {
+			lines = append(lines, "")
+			lines = append(lines, inspect.Cell(v.Pack, l, *v.Selected)...)
+		}
+		n := v.panelWidth()/CharWidth - 1
+		for i, s := range lines {
+			lines[i] = clip(s, n)
+		}
+		return lines
+	}
 	if v.Hover != nil {
 		lines = append(lines, fmt.Sprintf("under the mouse: (%d, %d)", v.Hover[0], v.Hover[1]))
 	}
@@ -433,7 +584,8 @@ func (v *Viewer) PanelLines() []string {
 		"U use  T toggle  1-9 run hook  E follow exit",
 		"O drop object  X take object  P place thing",
 		"Shift+click move thing  Space pause  N step",
-		"[ ] level  M magnify  Home recenter")
+		"[ ] level  M magnify  Home recenter  V see all",
+		"Tab play")
 	n := v.panelWidth()/CharWidth - 1
 	for i, s := range lines {
 		lines[i] = clip(s, n)
@@ -457,6 +609,7 @@ type Dump struct {
 	Item     string              `json:"item,omitempty"`
 	Template string              `json:"template,omitempty"`
 	Paused   bool                `json:"paused,omitempty"`
+	Play     bool                `json:"play,omitempty"`
 	Scale    int                 `json:"scale"`
 	Origin   [2]int              `json:"origin"`
 	Events   []string            `json:"events,omitempty"`
@@ -466,7 +619,7 @@ type Dump struct {
 // Dump returns the viewer's state and the world's.
 func (v *Viewer) Dump() *Dump {
 	d := &Dump{
-		Tick: v.Ticks, Shown: v.Shown, Selected: v.Selected, Thing: v.Thing, Paused: v.Paused,
+		Tick: v.Ticks, Shown: v.Shown, Selected: v.Selected, Thing: v.Thing, Paused: v.Paused, Play: v.Play,
 		Scale: v.Scale, Origin: [2]int{v.Origin.X, v.Origin.Y}, Events: v.Events,
 		World: inspect.State(v.World),
 	}

@@ -19,7 +19,7 @@ const paletteID = "palette.dev"
 func Build() *content.Pack {
 	p := content.NewPack(content.Manifest{
 		ID: "dev", Name: "Dev pack", Version: "0.1.0", Format: content.Format, Depends: []string{},
-		Palette: paletteID, Start: content.Start{Level: Hall, Cell: HallStart},
+		Palette: paletteID, Start: content.Start{Level: Hall, Cell: HallStart}, Player: ThingPlayer,
 	})
 	p.Palettes[paletteID] = palette()
 	art(p)
@@ -39,6 +39,7 @@ const (
 	spriteIcons    = "sprite.items.icons"
 	spriteFloor    = "sprite.items.floor"
 	spriteBoulder  = "sprite.boulder"
+	spriteCrate    = "sprite.crate"
 
 	floorSet = "floors.dev"
 	wallSet  = "walls.dev"
@@ -80,7 +81,7 @@ func art(p *content.Pack) {
 	p.Walls[wallSet] = &content.WallSet{ID: wallSet, Sprite: spriteWalls, Offset: blockOffset, Shapes: []*content.WallShape{
 		shapeBlock:     {Frame: shapeBlock},
 		shapeFaceLeft:  {Frame: shapeFaceLeft, Face: true},
-		shapeDiagonal:  {Frame: shapeDiagonal, Diagonal: true},
+		shapeDiagonal:  {Frame: shapeDiagonal, Diagonal: content.CornerBottom},
 		shapeFaceRight: {Frame: shapeFaceRight, Face: true},
 	}}
 	bank(p, spriteDoors, doors(), nil)
@@ -92,9 +93,19 @@ func art(p *content.Pack) {
 		b.Animations = map[string]content.Animation{"idle": {Frames: []int{2}}}
 		for d := range 8 {
 			b.Animations[fmt.Sprintf("idle.%d", d)] = content.Animation{Frames: []int{d}}
+			b.Animations[fmt.Sprintf("walk.%d", d)] = content.Animation{Frames: []int{8 + d, d, 16 + d, d}, MS: content.Fixed(275)}
 		}
 	}
-	bank(p, spriteBoulder, []*canvas{boulder()}, &content.Offset{16, 29})
+	b := bank(p, spriteBoulder, boulders(), &content.Offset{16, 29})
+	b.Animations = map[string]content.Animation{}
+	for d := 0; d < 8; d += 2 {
+		frames := []int{0, 1, 2, 3}
+		if d >= 4 {
+			frames = []int{3, 2, 1, 0}
+		}
+		b.Animations[fmt.Sprintf("roll.%d", d)] = content.Animation{Frames: frames, MS: content.Fixed(110)}
+	}
+	bank(p, spriteCrate, []*canvas{crate()}, &content.Offset{20, 30})
 
 	part := func(sprite string, frame int, off content.Offset) []content.LookPart {
 		return []content.LookPart{{Sprite: sprite, Frame: frame, Offset: off}}
@@ -136,6 +147,7 @@ func text(p *content.Pack) {
 		"msg.wrong_item":  "The {item} doesn't fit.",
 		"msg.slot_stuck":  "Nothing more fits in the {item}'s place.",
 		"msg.no_drop":     "It sinks out of sight.",
+		"msg.no_room":     "There is no room for the {item}.",
 		"msg.mouth":       "Welcome to the hall of *mechanisms*.",
 		"msg.mouth.after": "The *socket* is complete.",
 	}
@@ -146,6 +158,7 @@ func text(p *content.Pack) {
 	p.Messages = &content.Messages{ID: "messages", Messages: map[string]string{
 		content.MsgLeverStuck: "msg.lever_stuck", content.MsgSlotWrongItem: "msg.wrong_item",
 		content.MsgSlotStuck: "msg.slot_stuck", content.MsgNoDropHere: "msg.no_drop",
+		content.MsgNoRoom: "msg.no_room",
 	}}
 }
 
@@ -172,7 +185,16 @@ const (
 	ThingGuard   = "thing.guard"
 	ThingGhost   = "thing.ghost"
 	ThingBoulder = "thing.boulder"
+	ThingCrate   = "thing.crate"
+	ThingPlayer  = "thing.player"
 )
+
+// StarterAttributes are the player's attributes, an agile fighter, and its interval bonus,
+// standing in for the boots a new character wears: it walks a step every 2 ticks.
+var StarterAttributes = map[string]int{
+	"strength": 18, "agility": 20, "endurance": 18, "accuracy": 16, "talent": 16, "power": 16,
+	"interval_bonus": -2,
+}
 
 func records(p *content.Pack) {
 	stats := map[string]struct {
@@ -202,5 +224,10 @@ func records(p *content.Pack) {
 		Facing: 3, Speed: 8, IntervalMS: 330, Weight: 100, HitPoints: content.Dice{Bonus: 12},
 		Behaviors: []string{content.BehaviorNeverHostile, content.BehaviorResistsTeleport}}
 	p.Things[ThingBoulder] = &content.Thing{ID: ThingBoulder, Kind: content.ThingBoulder, Sprite: spriteBoulder,
-		Speed: 8, IntervalMS: 110, Weight: 100}
+		Speed: 8, IntervalMS: 110, Weight: 100, Footprint: 16}
+	p.Things[ThingCrate] = &content.Thing{ID: ThingCrate, Kind: content.ThingTrap, Sprite: spriteCrate,
+		IntervalMS: 2200, Weight: 100, Footprint: 20}
+	p.Things[ThingPlayer] = &content.Thing{ID: ThingPlayer, Kind: content.ThingPlayer, Sprite: "sprite.player",
+		Facing: 3, Speed: 8, IntervalMS: 275, Weight: 100, Footprint: 16,
+		HitPoints: content.Dice{Bonus: 56}, MagicPoints: content.Dice{Bonus: 52}, Stats: StarterAttributes}
 }

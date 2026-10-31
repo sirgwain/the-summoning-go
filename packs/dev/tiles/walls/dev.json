@@ -12,7 +12,7 @@
     },
     {
       "frame": 2,
-      "diagonal": true
+      "diagonal": "bottom"
     },
     {
       "frame": 3,

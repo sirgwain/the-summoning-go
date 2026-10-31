@@ -30,6 +30,7 @@ const (
 	KeyNumpadSubtract Key = "NumpadSubtract"
 	KeyHome           Key = "Home"
 	KeySpace          Key = "Space"
+	KeyTab            Key = "Tab"
 )
 
 // Keys are every key the viewer reads; a shell need only report these.
@@ -37,13 +38,16 @@ var Keys = func() []Key {
 	keys := []Key{
 		KeyArrowLeft, KeyArrowRight, KeyArrowUp, KeyArrowDown, KeyShift, KeyPageUp, KeyPageDown,
 		KeyBracketLeft, KeyBracketRight, KeyEqual, KeyMinus, KeyNumpadAdd, KeyNumpadSubtract,
-		KeyHome, KeySpace,
+		KeyHome, KeySpace, KeyTab,
 	}
-	for _, c := range "ACDEIMNOPSTUWX" {
+	for _, c := range "ACDEFGILMNOPRSTUVWX" {
 		keys = append(keys, Key(c))
 	}
-	for d := '1'; d <= '9'; d++ {
+	for d := '0'; d <= '9'; d++ {
 		keys = append(keys, Key("Digit"+string(d)))
+	}
+	for f := 1; f <= packKeys; f++ {
+		keys = append(keys, Key(fmt.Sprintf("F%d", f)))
 	}
 	return keys
 }()

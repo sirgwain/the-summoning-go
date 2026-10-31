@@ -72,3 +72,51 @@ kind and number otherwise (`sprite.res.1045`, `thing.npc.12`).
 names would be guesswork; numbered ids are stable and an author can rename them.
 
 **Revisit if** names can be found for them, for example from a creature's conversation script name.
+
+## Footprints in world units
+
+**Choice.** Things collide by a square footprint in world units around their ground point, one
+size per template. The game measures each kind's rectangle in view pixels around its sprite.
+
+**Why.** Ground points are the engine's way of placing things; a footprint around one collides
+the same however the thing is drawn, and an author sets one number.
+
+**Revisit if** play shows things meeting at visibly different distances than in the game, for
+example boulders against the player.
+
+## Putting down where the player stands
+
+**Choice.** The player puts objects down on its own cell only. A sealed door, which a cell cannot be
+stood on while closed, is opened by a thrown sphere, so the dev pack's sealed door waits for
+throwing (Fight).
+
+**Why.** That is the game's rule for dropping; reaching another cell is what throwing is for.
+
+**Revisit if** a puzzle needs placing an object on a neighboring cell without throwing it.
+
+## Worn slots after Walk
+
+**Choice.** Walk gives the player a hand, twenty shelves, the two hands and the pack. The worn
+slots refuse objects until Fight adds what each takes and what wearing does.
+
+**Why.** What a worn slot takes depends on item categories and powers the pack does not describe
+yet.
+
+## Floor halves stay fixed
+
+**Choice.** A level's floor halves are computed once, as if every cell were visible, and play draws
+only the visible cells. The game recomputes each wall's halves from which neighbors are visible.
+
+**Why.** The visible room's walls already show the halves that face it; the difference is a wall
+between two rooms, which shows both halves while only one room is visible. Recomputing would bring
+the game's check-direction tables into content.
+
+**Revisit if** the leftover halves are noticeable in play.
+
+## Moving the player between levels from tools
+
+**Choice.** With a player, the viewer's level change and exit following move the player: to the
+exit's cell, or to the start cell on the start level and the first open cell elsewhere.
+
+**Why.** The current level is where the player is; a tool that changed level without it would leave
+the player standing at its old position on another map.

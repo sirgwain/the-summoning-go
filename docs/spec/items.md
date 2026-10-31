@@ -62,9 +62,17 @@ The player has slots:
 | 27 | Neck |
 | 28+ | Pack: the contents of the bag held in the right hand, one slot per capacity |
 
-Pack slots exist only up to the right-hand bag's capacity and take what fits in it. Putting an object in a worn slot (20–27) starts its power if it lasts while worn, and adds its armor; taking it off ends both. Picking an object up puts it in the first empty shelf; with none, message 7Fh. An arrow picked up goes into the quiver when it fits.
+Pack slots exist only up to the right-hand bag's capacity and take what fits in it. Putting an object in a worn slot (20–27) starts its power and adds its armor; taking it off ends both, so the speed powers (09h–0Bh) speed the player only while worn. The Leather Boots (24h) every character starts in have power 0Ah: interval −2 while worn. Picking an object up puts it in the first empty shelf; with none, message 7Fh. An arrow picked up goes into the quiver when it fits.
 
 Objects given by the game (conversations, powers) go into the first empty shelf, or are dropped at the player's feet.
+
+**The hand.** Besides its slots the player has a hand, the object held on the pointer. Taking an object from the floor puts it in the hand; clicking a slot swaps the hand with the slot; putting down puts the hand's object on the floor (rules.md, The player and the features).
+
+**Engine model.** The player has a hand and slots numbered as above. Commands:
+
+- **Pick up** takes the top object of the player's cell: into the hand when it is empty, else into the first empty shelf, else message 7Fh (`no_room`) and it stays on the floor. Taking it off the floor lifts its weight off a plate.
+- **Put down** puts the hand's object down on the player's cell.
+- **Swap** exchanges the hand with a slot. Shelves and the two hands take anything. A pack slot takes an object whose size is at most the bag's largest, and never the bag itself; putting an object in the first free pack slot adds it to the bag's contents, and taking one out removes it, so the contents stay in order. The worn slots (20, 21, 24–27) are added with Fight, along with what each takes.
 
 ## Floor
 
