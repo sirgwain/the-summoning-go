@@ -47,7 +47,8 @@ puts what is in hand on (worn, or in the right hand). J and K strike with the ri
 hands, with Shift their second action; T throws what the right hand holds, Shift+T the left's. 1-9
 and 0 swap the hand with shelves 0-9 (with Shift, 10-19), R and L with the right and left hands,
 F1-F8 with the pack (the bag in the left hand). V shows the whole level, Tab switches to the
-viewer's tools (see summoning view --help), clicking a cell inspects it.
+viewer's tools (see summoning view --help), clicking a cell inspects it, ~ hides or shows the
+text.
 `
 	}
 	viewCmd := &cobra.Command{
@@ -303,6 +304,9 @@ func (s *shell) drawTools(screen *ebiten.Image) {
 		for i, line := range lines {
 			ebitenutil.DebugPrintAt(screen, line, r.Min.X+viewer.Margin/2, r.Min.Y+i*viewer.LineHeight)
 		}
+	}
+	if v.HideText {
+		return
 	}
 	text(v.PanelRect(), v.PanelLines())
 	if r := v.LogRect(); !r.Empty() {

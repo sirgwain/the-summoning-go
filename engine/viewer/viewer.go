@@ -42,8 +42,9 @@ type Viewer struct {
 	// Magnify draws floor objects with their inventory image.
 	Magnify bool
 	// Play drives the player with the keys and keeps the view on it, instead of the tools.
-	// SeeAll draws every cell rather than only what the player sees.
-	Play, SeeAll bool
+	// SeeAll draws every cell rather than only what the player sees. HideText hides the panel and
+	// the event log.
+	Play, SeeAll, HideText bool
 	// Origin is the view pixel at the buffer's top-left; Scale the screen pixels per view pixel.
 	Origin image.Point
 	Scale  int
@@ -241,6 +242,8 @@ func (v *Viewer) Update(in Input) {
 		v.rebuild()
 	case in.pressed(KeyTab):
 		v.SetPlay(!v.Play)
+	case in.pressed(KeyBackquote):
+		v.HideText = !v.HideText
 	case in.pressed("V"):
 		v.SeeAll = !v.SeeAll
 		v.rebuild()
@@ -526,13 +529,16 @@ func (v *Viewer) panelWidth() int { return min(panelWidth, v.Screen.X/2) }
 
 // PanelRect is where the inspector panel is drawn.
 func (v *Viewer) PanelRect() image.Rectangle {
+	if v.HideText {
+		return image.Rectangle{}
+	}
 	w := v.panelWidth()
 	return image.Rect(v.Screen.X-w, 0, v.Screen.X, len(v.PanelLines())*LineHeight+Margin)
 }
 
 // LogRect is where the event log is drawn, empty when there are no events.
 func (v *Viewer) LogRect() image.Rectangle {
-	if len(v.Events) == 0 {
+	if len(v.Events) == 0 || v.HideText {
 		return image.Rectangle{}
 	}
 	h := len(v.Events)*LineHeight + Margin
@@ -568,7 +574,7 @@ func (v *Viewer) PanelLines() []string {
 			"T throw from the right hand (Shift: left)",
 			"1-0 shelf (Shift 10-19)  R right hand  L left hand",
 			"F1-F8 pack  V see all",
-			"Tab tools  Space pause  N step  M magnify")
+			"Tab tools  Space pause  N step  M magnify  ~ text")
 		if v.Selected != nil {
 			lines = append(lines, "")
 			lines = append(lines, inspect.Cell(v.Pack, l, *v.Selected)...)
@@ -604,7 +610,7 @@ func (v *Viewer) PanelLines() []string {
 		"O drop object  X take object  P place thing",
 		"Shift+click move thing  Space pause  N step",
 		"[ ] level  M magnify  Home recenter  V see all",
-		"Tab play")
+		"Tab play  ~ hide this text")
 	n := v.panelWidth()/CharWidth - 1
 	for i, s := range lines {
 		lines[i] = clip(s, n)
