@@ -413,6 +413,8 @@ original data.
 
 ## Milestones
 
+Progress, and the work each milestone has left or handed on, is in [design-notes.md](design-notes.md).
+
 1. **Viewer.** Import levels, sprites and palettes; draw a level with the palette shader in the
    isometric projection; move a camera.
 2. **World.** The level's mechanisms, without a player. Import cell features, procedures, item and
