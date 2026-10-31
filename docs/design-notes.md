@@ -90,6 +90,9 @@ a whole fight.
 
 ### 8. Remaster UI
 
+- Play uses the game's key layout (Space and Q for the hands, X and Z to throw, F take, G put
+  down, Enter lever, E talk, H recenter, P pause; 1–4 and R wait for spells). The inventory's
+  stand-in keys are on Ctrl until the inventory has its panel and the mouse works it.
 - Panels from the game's art, the quickbar, hotkeys, an inventory the mouse works, magnified floor
   objects as a game setting, and the custom outline font. Play mode's text panel is a stand-in.
 

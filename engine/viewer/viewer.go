@@ -230,20 +230,14 @@ func (v *Viewer) Update(in Input) {
 	cmds := v.mouse(in)
 
 	switch {
-	case in.pressed(KeyPageDown, KeyBracketRight):
-		cmds = append(cmds, input.GoTo{Level: v.Levels[(v.levelIndex()+1)%len(v.Levels)]})
-	case in.pressed(KeyPageUp, KeyBracketLeft):
-		cmds = append(cmds, input.GoTo{Level: v.Levels[(v.levelIndex()+len(v.Levels)-1)%len(v.Levels)]})
 	case in.pressed(KeyEqual, KeyNumpadAdd):
 		v.zoomAt(1, v.Screen.Div(2))
 	case in.pressed(KeyMinus, KeyNumpadSubtract):
 		v.zoomAt(-1, v.Screen.Div(2))
-	case in.pressed(KeyHome):
-		v.Recenter()
 	case in.pressed("M"):
 		v.Magnify = !v.Magnify
 		v.rebuild()
-	case in.pressed(KeyTab):
+	case in.pressed(KeyF12):
 		v.SetPlay(!v.Play)
 	case in.pressed(KeyBackquote):
 		v.HideDebug = !v.HideDebug
@@ -254,10 +248,12 @@ func (v *Viewer) Update(in Input) {
 	if v.Play {
 		cmds = append(cmds, v.playKeys(in)...)
 	} else {
+		cmds = append(cmds, v.levelKeys(in)...)
 		cmds = append(cmds, v.keys(in)...)
 	}
 
-	if v.Paused && len(cmds) == 0 && !in.pressed("N") {
+	// Paused, the tools still send their commands; play stops altogether. N steps either.
+	if v.Paused && (v.Play || len(cmds) == 0) && !in.pressed("N") {
 		return
 	}
 	events := v.World.Update(cmds)
@@ -432,54 +428,80 @@ func (v *Viewer) keys(in Input) []input.Command {
 // packKeys are the function keys that reach pack slots while playing.
 const packKeys = 8
 
-// playKeys turns the keys into the player's commands: arrows or WASD walk, two together along a
-// diagonal; G picks up, F puts down, E uses, Q puts on; J and K act with the right and left hands
-// (with Shift, their second action); digits swap the hand with shelves 0–9 (with Shift, 10–19),
-// R and L with the right and left hands, F1–F8 with the pack.
+// playKeys turns the keys into the player's commands, laid out as the game's are:
+//
+//   - WASD or the arrows walk, two held for a diagonal; Home, PgUp, End and PgDn walk the
+//     diagonals.
+//   - Space acts with the right hand (Shift+Space its second action) and X throws from it; Q acts
+//     with the left hand (Shift+Q) and Z throws from it.
+//   - F takes from the floor, G puts down, Enter pulls the lever underfoot, E talks (for now uses
+//     a mouth), H recenters the view, P pauses.
+//
+// Until the inventory has its panel, Ctrl reaches it: Ctrl+1–0 swap the hand with shelves 0–9
+// (with Shift, 10–19), Ctrl+R and Ctrl+L with the right and left hands, Ctrl+W puts the hand's
+// object on, Ctrl+F1–F8 swap with the pack.
 func (v *Viewer) playKeys(in Input) []input.Command {
+	if in.held(KeyControl) {
+		return v.inventoryKeys(in)
+	}
 	var cmds []input.Command
 	var x, y int
-	if in.held(KeyArrowLeft, "A") {
+	if in.held(KeyArrowLeft, "A", KeyHome, KeyEnd) {
 		x--
 	}
-	if in.held(KeyArrowRight, "D") {
+	if in.held(KeyArrowRight, "D", KeyPageUp, KeyPageDown) {
 		x++
 	}
-	if in.held(KeyArrowUp, "W") {
+	if in.held(KeyArrowUp, "W", KeyHome, KeyPageUp) {
 		y--
 	}
-	if in.held(KeyArrowDown, "S") {
+	if in.held(KeyArrowDown, "S", KeyEnd, KeyPageDown) {
 		y++
 	}
 	if x != 0 || y != 0 {
 		cmds = append(cmds, input.Walk{Direction: screenDirection(x, y)})
 	}
-	switch {
-	case in.pressed("G"):
-		cmds = append(cmds, input.PickUp{})
-	case in.pressed("F"):
-		cmds = append(cmds, input.PutDown{})
-	case in.pressed("E"):
-		cmds = append(cmds, input.Activate{})
-	case in.pressed("R"):
-		cmds = append(cmds, input.Swap{Slot: sim.SlotRightHand})
-	case in.pressed("L"):
-		cmds = append(cmds, input.Swap{Slot: sim.SlotLeftHand})
-	case in.pressed("Q"):
-		cmds = append(cmds, input.PutOn{})
-	}
 	action := 0
 	if in.held(KeyShift) {
 		action = 1
 	}
-	if in.pressed("J") {
-		cmds = append(cmds, input.Strike{Hand: 0, Action: action})
+	for _, k := range []struct {
+		key Key
+		cmd input.Command
+	}{
+		{KeySpace, input.Strike{Hand: 0, Action: action}},
+		{"Q", input.Strike{Hand: 1, Action: action}},
+		{"X", input.Throw{Hand: 0}},
+		{"Z", input.Throw{Hand: 1}},
+		{"F", input.PickUp{}},
+		{"G", input.PutDown{}},
+		{KeyEnter, input.Activate{}},
+		{"E", input.Activate{}},
+	} {
+		if in.pressed(k.key) {
+			cmds = append(cmds, k.cmd)
+		}
 	}
-	if in.pressed("K") {
-		cmds = append(cmds, input.Strike{Hand: 1, Action: action})
+	switch {
+	case in.pressed("H"):
+		v.Recenter()
+	case in.pressed("P"):
+		v.Paused = !v.Paused
 	}
-	if in.pressed("T") {
-		cmds = append(cmds, input.Throw{Hand: action})
+	return cmds
+}
+
+// inventoryKeys are the keys held with Ctrl while playing: the inventory's stand-in until it has
+// its panel.
+func (v *Viewer) inventoryKeys(in Input) []input.Command {
+	var cmds []input.Command
+	switch {
+	case in.pressed("R"):
+		cmds = append(cmds, input.Swap{Slot: sim.SlotRightHand})
+	case in.pressed("L"):
+		cmds = append(cmds, input.Swap{Slot: sim.SlotLeftHand})
+	case in.pressed("W"):
+		cmds = append(cmds, input.PutOn{})
 	}
 	for d := range 10 {
 		if in.pressed(Key(fmt.Sprintf("Digit%d", (d+1)%10))) {
@@ -496,6 +518,20 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 		}
 	}
 	return cmds
+}
+
+// levelKeys are the tools' keys that change level and recenter: Page Up and Page Down or [ and ],
+// and Home.
+func (v *Viewer) levelKeys(in Input) []input.Command {
+	switch {
+	case in.pressed(KeyPageDown, KeyBracketRight):
+		return []input.Command{input.GoTo{Level: v.Levels[(v.levelIndex()+1)%len(v.Levels)]}}
+	case in.pressed(KeyPageUp, KeyBracketLeft):
+		return []input.Command{input.GoTo{Level: v.Levels[(v.levelIndex()+len(v.Levels)-1)%len(v.Levels)]}}
+	case in.pressed(KeyHome):
+		v.Recenter()
+	}
+	return nil
 }
 
 // screenDirection returns the table direction that walks toward screen direction (x, y), each
@@ -572,13 +608,14 @@ func (v *Viewer) PanelLines() []string {
 	lines := []string{status}
 	if p := v.World.Player(); v.Play && p != nil {
 		lines = append(lines, inspect.Player(v.Pack, p)...)
-		lines = append(lines, "", "Arrows/WASD walk (two keys: diagonal)",
-			"G pick up  F put down  E use  Q put on",
-			"J K act right, left (Shift: 2nd action)",
-			"T throw from the right hand (Shift: left)",
-			"1-0 shelf (Shift 10-19)  R right hand  L left hand",
-			"F1-F8 pack  V see all",
-			"Tab tools  Space pause  N step  M magnify  ~ debug")
+		lines = append(lines, "", "WASD/arrows walk (two: diagonal), Home PgUp End PgDn",
+			"Space right hand (Shift: 2nd)  X throw right",
+			"Q left hand (Shift: 2nd)  Z throw left",
+			"F take  G put down  Enter lever  E talk/use",
+			"Ctrl+1-0 shelf (Shift 10-19)  Ctrl+R/L hands",
+			"Ctrl+W put on  Ctrl+F1-F8 pack",
+			"H recenter  P pause  N step  M magnify",
+			"V see all  F12 tools  ~ debug")
 		if v.Selected != nil {
 			lines = append(lines, "")
 			lines = append(lines, inspect.Cell(v.Pack, l, *v.Selected)...)
@@ -614,7 +651,7 @@ func (v *Viewer) PanelLines() []string {
 		"O drop object  X take object  P place thing",
 		"Shift+click move thing  Space pause  N step",
 		"[ ] level  M magnify  Home recenter  V see all",
-		"Tab play  ~ hide the debug overlay")
+		"F12 play  ~ hide the debug overlay")
 	n := v.panelWidth()/CharWidth - 1
 	for i, s := range lines {
 		lines[i] = clip(s, n)

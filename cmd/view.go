@@ -34,21 +34,26 @@ func newViewCmd(play bool) *cobra.Command {
 	var seed uint64
 	use, short, long := "view [pack-dir]", "Look around a content pack's levels and work their mechanisms",
 		`Opens a window showing a pack's levels in the game's projection, running the simulation.
-Tab switches to playing (see summoning play --help).
+F12 switches to playing (see summoning play --help).
 `
 	if play {
 		use, short, long = "play [pack-dir]", "Play a content pack's levels",
 			`Opens a window playing a pack: the player starts where the pack says and the view follows it,
 showing what the player sees.
 
-Arrows or WASD walk, two together along a diagonal. G picks up the top object of the player's
-cell, F puts down what is in hand, E uses the lever underfoot or a mouth beside the player, Q
-puts what is in hand on (worn, or in the right hand). J and K strike with the right and left
-hands, with Shift their second action; T throws what the right hand holds, Shift+T the left's. 1-9
-and 0 swap the hand with shelves 0-9 (with Shift, 10-19), R and L with the right and left hands,
-F1-F8 with the pack (the bag in the left hand). V shows the whole level, Tab switches to the
-viewer's tools (see summoning view --help), clicking a cell inspects it, ~ hides or shows the
-debug overlay: the text, and the outlines of the selection and the cell under the mouse.
+The keys are laid out as the game's. WASD or the arrows walk, two together along a diagonal;
+Home, PgUp, End and PgDn walk the diagonals. Space acts with the right hand and Shift+Space does
+its second action, X throws what it holds; Q, Shift+Q and Z do the same with the left hand. F
+takes the top object of the player's cell, G puts down what is in hand, Enter pulls the lever
+underfoot, E uses a mouth beside the player (and will talk), H recenters the view, P pauses.
+
+Until the inventory has its panel, Ctrl reaches it: Ctrl+1-9 and 0 swap the hand with shelves
+0-9 (with Shift, 10-19), Ctrl+R and Ctrl+L with the right and left hands, Ctrl+W puts what is in
+hand on (worn, or in the right hand), Ctrl+F1-F8 swap with the pack (the bag in the left hand).
+
+V shows the whole level, F12 switches to the viewer's tools (see summoning view --help),
+clicking a cell inspects it, ~ hides or shows the debug overlay: the text, and the outlines of
+the selection and the cell under the mouse.
 `
 	}
 	viewCmd := &cobra.Command{

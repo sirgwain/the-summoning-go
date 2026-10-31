@@ -32,6 +32,10 @@ const (
 	KeySpace          Key = "Space"
 	KeyTab            Key = "Tab"
 	KeyBackquote      Key = "Backquote"
+	KeyEnd            Key = "End"
+	KeyEnter          Key = "Enter"
+	KeyControl        Key = "Control"
+	KeyF12            Key = "F12"
 )
 
 // Keys are every key the viewer reads; a shell need only report these.
@@ -39,9 +43,9 @@ var Keys = func() []Key {
 	keys := []Key{
 		KeyArrowLeft, KeyArrowRight, KeyArrowUp, KeyArrowDown, KeyShift, KeyPageUp, KeyPageDown,
 		KeyBracketLeft, KeyBracketRight, KeyEqual, KeyMinus, KeyNumpadAdd, KeyNumpadSubtract,
-		KeyHome, KeySpace, KeyTab, KeyBackquote,
+		KeyHome, KeySpace, KeyTab, KeyBackquote, KeyEnd, KeyEnter, KeyControl, KeyF12,
 	}
-	for _, c := range "ACDEFGIJKLMNOPQRSTUVWX" {
+	for _, c := range "ACDEFGHIJKLMNOPQRSTUVWXZ" {
 		keys = append(keys, Key(c))
 	}
 	for d := '0'; d <= '9'; d++ {

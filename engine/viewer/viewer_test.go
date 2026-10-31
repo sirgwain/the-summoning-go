@@ -237,7 +237,8 @@ func TestParseScript(t *testing.T) {
 }
 
 // TestPlayScript plays the dev pack by script, walking with held keys to lever A and using it;
-// then by key presses picks a rock up, shelves it and puts it down.
+// then by key presses picks a rock up (F), shelves it (Ctrl+1), takes it back and puts it down
+// (G).
 func TestPlayScript(t *testing.T) {
 	// The player steps every n updates: 12 steps up and right (−u) from the start, then 4 up and
 	// left (−v).
@@ -265,21 +266,25 @@ func TestPlayScript(t *testing.T) {
 	v = newViewer(t)
 	v.SetPlay(true)
 	v.World.Update([]input.Command{input.PlacePlayer{Cell: devpack.RocksB[0]}})
-	key := func(k Key) {
-		v.Update(Input{Held: map[Key]bool{k: true}, Pressed: map[Key]bool{k: true}})
+	key := func(k Key, held ...Key) {
+		in := Input{Held: map[Key]bool{k: true}, Pressed: map[Key]bool{k: true}}
+		for _, h := range held {
+			in.Held[h] = true
+		}
+		v.Update(in)
 	}
-	key("G")
-	if p := v.World.Player(); p.Hand == nil || p.Hand.Item != devpack.ItemRock {
-		t.Fatalf("G did not pick up the rock: %v", p.Hand)
-	}
-	key("Digit1")
-	if p := v.World.Player(); p.Hand != nil || p.Slots[0] == nil {
-		t.Fatal("1 did not put the rock on shelf 0")
-	}
-	key("Digit1")
 	key("F")
+	if p := v.World.Player(); p.Hand == nil || p.Hand.Item != devpack.ItemRock {
+		t.Fatalf("F did not pick up the rock: %v", p.Hand)
+	}
+	key("Digit1", KeyControl)
+	if p := v.World.Player(); p.Hand != nil || p.Slots[0] == nil {
+		t.Fatal("Ctrl+1 did not put the rock on shelf 0")
+	}
+	key("Digit1", KeyControl)
+	key("G")
 	if p := v.World.Player(); p.Hand != nil || len(v.World.Current().Objects[devpack.RocksB[0]]) != 1 {
-		t.Error("F did not put the rock down")
+		t.Error("G did not put the rock down")
 	}
 	if !slices.ContainsFunc(v.PanelLines(), func(s string) bool { return strings.HasPrefix(s, "Player at") }) {
 		t.Error("the panel does not show the player")
@@ -329,5 +334,45 @@ func TestToggleDebug(t *testing.T) {
 	v.Update(Input{Held: map[Key]bool{KeyBackquote: true}, Pressed: map[Key]bool{KeyBackquote: true}})
 	if v.HideDebug || v.PanelRect().Empty() {
 		t.Error("~ did not show the text again")
+	}
+}
+
+// TestGameKeys checks the play keys follow the game's layout.
+func TestGameKeys(t *testing.T) {
+	v := newViewer(t)
+	v.SetPlay(true)
+	press := func(k Key, held ...Key) []input.Command {
+		in := Input{Held: map[Key]bool{k: true}, Pressed: map[Key]bool{k: true}}
+		for _, h := range held {
+			in.Held[h] = true
+		}
+		return v.playKeys(in)
+	}
+	for _, c := range []struct {
+		key  Key
+		held []Key
+		want input.Command
+	}{
+		{KeySpace, nil, input.Strike{Hand: 0, Action: 0}},
+		{KeySpace, []Key{KeyShift}, input.Strike{Hand: 0, Action: 1}},
+		{"Q", nil, input.Strike{Hand: 1, Action: 0}},
+		{"Q", []Key{KeyShift}, input.Strike{Hand: 1, Action: 1}},
+		{"X", nil, input.Throw{Hand: 0}},
+		{"Z", nil, input.Throw{Hand: 1}},
+		{"F", nil, input.PickUp{}},
+		{"G", nil, input.PutDown{}},
+		{KeyEnter, nil, input.Activate{}},
+		{KeyHome, nil, input.Walk{Direction: 6}},     // up and left: −v
+		{KeyPageUp, nil, input.Walk{Direction: 0}},   // up and right: −u
+		{KeyEnd, nil, input.Walk{Direction: 4}},      // down and left: +u
+		{KeyPageDown, nil, input.Walk{Direction: 2}}, // down and right: +v
+		{"W", []Key{KeyControl}, input.PutOn{}},
+		{"Digit3", []Key{KeyControl, KeyShift}, input.Swap{Slot: 12}},
+		{"F2", []Key{KeyControl}, input.Swap{Slot: 29}},
+	} {
+		got := press(c.key, c.held...)
+		if len(got) != 1 || got[0] != c.want {
+			t.Errorf("%s with %v: %v, want %v", c.key, c.held, got, c.want)
+		}
 	}
 }
