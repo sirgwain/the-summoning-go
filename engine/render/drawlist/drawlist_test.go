@@ -68,33 +68,33 @@ func testPack() (*content.Pack, *content.Level) {
 
 func TestBuild(t *testing.T) {
 	p, l := testPack()
-	got := Build(p, l, Options{})
+	got := Build(p, LevelScene(p, l), Options{})
 	want := []Cmd{
 		// Floors back to front, row by row and left to right, with the cells past the far edges
 		// blanked.
-		{"floor", 1, 0, 0, Whole},
-		{"floor", 0, -32, 16, Whole},
-		{"floor", 0, 32, 16, Whole},
-		{"", 0, -64, 32, Whole},
-		{"floor", 0, 0, 32, Whole},
-		{"", 0, 64, 32, Whole},
-		{"", 0, -32, 48, Whole},
-		{"", 0, 32, 48, Whole},
-		{"", 0, 0, 64, Whole},
+		{"floor", 1, 0, 0, Whole, ""},
+		{"floor", 0, -32, 16, Whole, ""},
+		{"floor", 0, 32, 16, Whole, ""},
+		{"", 0, -64, 32, Whole, ""},
+		{"floor", 0, 0, 32, Whole, ""},
+		{"", 0, 64, 32, Whole, ""},
+		{"", 0, -32, 48, Whole, ""},
+		{"", 0, 32, 48, Whole, ""},
+		{"", 0, 0, 64, Whole, ""},
 		// Overlays, then floor looks in their state.
-		{"hazard", 2, 0, 32, Whole},
-		{"plate", 1, -16, 40, Whole},
+		{"hazard", 2, 0, 32, Whole, ""},
+		{"plate", 1, -16, 40, Whole, ""},
 		// The key centered in (0, 0).
-		{"tiny", 0, 12, 13, Whole},
+		{"tiny", 0, 12, 13, Whole, ""},
 		// Row 0: the lever and the door; then row 1: the exit look in place of its wall and
 		// decoration, and the wall with its decoration.
-		{"lever", 1, 4, 2, Whole},
-		{"door", 0, -17, -3, Whole},
-		{"exit", 1, -32, 0, Whole},
-		{"wall", 1, 32, 8, Whole},
-		{"deco", 4, 40, 24, Whole},
+		{"lever", 1, 4, 2, Whole, ""},
+		{"door", 0, -17, -3, Whole, ""},
+		{"exit", 1, -32, 0, Whole, ""},
+		{"wall", 1, 32, 8, Whole, ""},
+		{"deco", 4, 40, 24, Whole, ""},
 		// Row 2: the guard, facing 4, its anchor at the reference point (34, 51).
-		{"npc", 2, 16, 32, Whole},
+		{"npc", 2, 16, 32, Whole, "guard"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got\n%v\nwant\n%v", got, want)
@@ -104,15 +104,15 @@ func TestBuild(t *testing.T) {
 func TestBuildFloorHalves(t *testing.T) {
 	p, l := testPack()
 	l.FloorHalves = content.Grid{{content.HalvesBoth, content.HalfLower}, {0, content.HalvesBoth}}
-	got := Build(p, l, Options{})[:5]
+	got := Build(p, LevelScene(p, l), Options{})[:5]
 	want := []Cmd{
-		{"floor", 1, 0, 0, Whole},
+		{"floor", 1, 0, 0, Whole, ""},
 		// (1, 0): both halves blanked.
-		{"", 0, -32, 16, UpperHalf},
-		{"", 0, -32, 32, LowerHalf},
+		{"", 0, -32, 16, UpperHalf, ""},
+		{"", 0, -32, 32, LowerHalf, ""},
 		// (0, 1): only the lower half drawn.
-		{"", 0, 32, 16, UpperHalf},
-		{"floor", 0, 32, 32, LowerHalf},
+		{"", 0, 32, 16, UpperHalf, ""},
+		{"floor", 0, 32, 32, LowerHalf, ""},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got\n%v\nwant\n%v", got, want)
@@ -121,7 +121,7 @@ func TestBuildFloorHalves(t *testing.T) {
 
 func TestBuildMagnified(t *testing.T) {
 	p, l := testPack()
-	for _, c := range Build(p, l, Options{Magnify: true}) {
+	for _, c := range Build(p, LevelScene(p, l), Options{Magnify: true}) {
 		if c.Sprite == "icon" && (c.X != 8 || c.Y != 8) {
 			t.Errorf("magnified key at (%d, %d), want (8, 8)", c.X, c.Y)
 		}

@@ -67,26 +67,32 @@ type LevelView struct {
 	bounds image.Rectangle
 }
 
-// NewLevelView prepares level l for drawing.
-func NewLevelView(p *content.Pack, s *Sprites, l *content.Level, opts drawlist.Options) (*LevelView, error) {
-	v := &LevelView{
-		cmds:   drawlist.Build(p, l, opts),
-		blank:  ebiten.NewImage(drawlist.TileSize, drawlist.TileSize),
-		bounds: drawlist.Bounds(l),
-	}
+// NewLevelView prepares a scene for drawing.
+func NewLevelView(p *content.Pack, s *Sprites, scene drawlist.Scene, opts drawlist.Options) (*LevelView, error) {
+	v := &LevelView{blank: ebiten.NewImage(drawlist.TileSize, drawlist.TileSize)}
 	v.blank.Fill(color.White)
-	v.images = make([]*ebiten.Image, len(v.cmds))
-	for i, c := range v.cmds {
+	if err := v.Set(p, s, scene, opts); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// Set replaces what the view draws with scene.
+func (v *LevelView) Set(p *content.Pack, s *Sprites, scene drawlist.Scene, opts drawlist.Options) error {
+	cmds := drawlist.Build(p, scene, opts)
+	images := make([]*ebiten.Image, len(cmds))
+	for i, c := range cmds {
 		img := v.blank
 		if c.Sprite != "" {
 			var err error
 			if img, err = s.Frame(c.Sprite, c.Frame); err != nil {
-				return nil, fmt.Errorf("level %s: %w", l.ID, err)
+				return fmt.Errorf("level %s: %w", scene.Level.ID, err)
 			}
 		}
-		v.images[i] = part(img, c.Part)
+		images[i] = part(img, c.Part)
 	}
-	return v, nil
+	v.cmds, v.images, v.bounds = cmds, images, drawlist.Bounds(scene.Level)
+	return nil
 }
 
 // part returns the part of img a command draws.
@@ -102,6 +108,9 @@ func part(img *ebiten.Image, p drawlist.Part) *ebiten.Image {
 	}
 	return img.SubImage(b).(*ebiten.Image)
 }
+
+// Cmds returns the commands the view draws, back to front.
+func (v *LevelView) Cmds() []drawlist.Cmd { return v.cmds }
 
 // Bounds returns the view-pixel rectangle the level covers.
 func (v *LevelView) Bounds() image.Rectangle { return v.bounds }
