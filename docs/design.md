@@ -120,19 +120,20 @@ not of position.
 
 - **World units.** A position is in world units, 32 to a cell (the original's world pixels), held as
   integers. An entity moves in eight directions by a step from its kind.
-- **Standing cell.** The cell an entity stands on is the cell under its feet point, an offset from its
-  position set per kind. That cell decides terrain effects and fires enter and leave events, so a
-  character can stand partly over a neighboring cell without triggering it.
-- **Terrain.** A move is tested at the feet against the terrain. If blocked, the step shrinks a unit
+- **Ground point.** An entity's position is the point where it stands on the ground, and its sprite
+  has an anchor drawn at that point. The cell under the ground point is the entity's cell: it
+  decides terrain effects and fires enter and leave events, so a character can stand partly over a
+  neighboring cell without triggering it.
+- **Terrain.** A move is tested at the ground point against the terrain. If blocked, the step shrinks a unit
   at a time until it fits, so a character slides up to a wall rather than stopping short.
 - **Entities.** Each kind has a collision rectangle. A move that would overlap another entity's
   rectangle backs off.
 - **Diagonal walls.** Walking diagonally into a diagonal wall slides along it.
 - **Pushing.** The player pushes pushable things (bodies, boulders, conjured objects) ahead,
   recursively, at an exertion cost.
-- Projectiles and rolling things test their corners instead of a feet point.
+- Projectiles and rolling things test their corners instead of the ground point.
 
-The step sizes, rectangles and feet offsets are content, per kind.
+The step sizes and rectangles are content, per template.
 - **Visibility and activity.** What the player can see (line of sight on the grid) and which entities
   are active (a radius around the player) are simulation concepts, independent of how large the view
   on screen is.
@@ -159,6 +160,11 @@ Puzzles and story logic are rules: an event, conditions and actions.
 - Standard puzzle pieces (pressure plate, lever, keyhole, object hole, teleporter, door, magic mouth,
   rolling ball) are content templates built from rules, so a level author places a pressure plate and
   sets a few fields rather than writing rules by hand.
+- **First form.** The engine starts with those pieces as typed cell features (door, lever, weight
+  plate, item slot, teleporter, exit, trapdoor, gem socket, mouth), each with its own state, and with
+  **procedures**: named action lists from the registry that features run when they fire (a lever's
+  procedure a and b, a plate's going down and up). The Summoning's level procedures import one to
+  one as procedures. General event and condition rules come later, over the same actions.
 
 ### Characters, stats and combat
 
@@ -201,13 +207,15 @@ Puzzles and story logic are rules: an event, conditions and actions.
 ```
 pack.json                  id, version, dependencies, load order
 palettes/                  palettes and remap tables
-sprites/<bank>.png         8-bit indexed PNG sheet; <bank>.json frames, offsets, animations
+sprites/<bank>.png         8-bit indexed PNG sheet; <bank>.json frames, anchors, animations
 tiles/                     floor and wall sets
 fonts/
 text/<lang>.json           strings by ID
+messages.json              the engine's own messages, by key, pointing at strings
 attributes.json            the stat model
 items/<id>.json            item templates
-creatures/<id>.json        NPC and monster templates
+things/<id>.json           templates for creatures, boulders, traps and other standing things
+looks/<id>.json            how cell features draw in each state
 spells/<id>.json
 templates/<id>.json        puzzle-piece templates (plate, lever, teleporter…)
 levels/<id>/level.json     grid, placements, rules
@@ -218,7 +226,10 @@ audio/sfx/<id>.ogg
 
 The file formats are in [pack.md](pack.md).
 
-- **Stable string IDs** (`creature.guard`, `item.healing_potion`). Mods override and add by ID.
+- **The engine's own terms.** The format is designed as if no game existed before it: names, ground
+  points, named states and hooks, never an original game's codes or byte layouts. Importers
+  translate.
+- **Stable string IDs** (`thing.guard`, `item.healing_potion`). Mods override and add by ID.
 - **Indexed PNGs** keep palette effects working on edited art. A true-color sprite is allowed and
   simply opts out of palette effects.
 - **Levels** are the engine's own JSON, edited with the editor.
@@ -242,7 +253,7 @@ The file formats are in [pack.md](pack.md).
   ((y − x), (x + y) / 2) from the view's origin. Walls rise from their cell's diamond. The cell size
   is content.
 - **Draw order.** Floors first, then walls, objects and entities in one list sorted back to front
-  by their depth (x + y of their feet), each frame.
+  by their depth (x + y of their ground points), each frame.
 - **Walls** are one sprite per cell, from a **wall set**: one sprite for each wall shape (straight,
   corner, end, diagonal…), with its face, upper part and edge caps already composed. The importer
   composes the original's pieces into wall sets. A wall whose look changes in play (a door, a secret
@@ -263,6 +274,9 @@ The file formats are in [pack.md](pack.md).
 - A quickbar for potions and other usable items, bound to number keys.
 - Spell gestures with the mouse, plus hotkeys and a spell list.
 - Conversations with keyword entry and a list of known keywords.
+- **Magnify floor objects**, a game setting: objects lying on the floor draw with their larger
+  inventory image instead of their small floor image, so they are easier to see and to click.
+  An item template carries both images (`docs/spec/items.md`). Presentation only.
 - A level map, always available, with no item needed: a minimap in a corner of the view, and a
   full-screen map on a key. Both show only the cells the player has seen. A level can refuse the
   map (`docs/spec/world.md`): the minimap then hides, and opening the map shows the level's message
@@ -273,6 +287,12 @@ The file formats are in [pack.md](pack.md).
 
 `input.Command` names what the player does (move, turn, use, attack, cast, pick up…). Keys, mouse and
 gamepad bind to commands in a user configuration. Replays record commands.
+
+**Debug commands** act on the world directly, without a player: use the lever at a cell, drop or
+remove an object on a cell, place an entity on a cell (running the cell's enter and leave effects),
+switch a cell's feature on, off or over, run a procedure, follow an exit. They go through the same
+command path as the player's, so the viewer can test a level's mechanisms before the player exists
+and the editor's play-test can use them later. A game build can leave them unbound.
 
 ## Audio
 
@@ -361,9 +381,15 @@ original data.
 
 1. **Viewer.** Import levels, sprites and palettes; draw a level with the palette shader in the
    isometric projection; move a camera.
-2. **Walk.** Player entity, movement and collision, objects on cells, pick up and drop.
-3. **Puzzles.** Rule registry, puzzle templates, imported rules; a level whose puzzles can be solved.
-4. **Fight.** Attributes, combat pipeline, creatures and AI, projectiles.
+2. **World.** The level's mechanisms, without a player. Import cell features, procedures, item and
+   creature templates, and what each level places (creatures and their inventories, boulders,
+   traps, exit markers, mouths, objects on floors and in containers). The simulation holds every
+   level's state and runs doors, levers, plates, item slots, teleporters, trapdoors, pits, the gem
+   socket and deep water. The viewer draws the simulation's state, selects a cell or an entity with
+   the mouse and shows its stats and state, and triggers mechanisms by debug commands.
+3. **Walk.** Player entity, movement and collision, pushing, visibility, rolling boulders; pick up,
+   drop and use; a level whose puzzles can be solved by playing it.
+4. **Fight.** Attributes, combat pipeline, creature AI and animation, projectiles and arrow traps.
 5. **Magic and talk.** Spells and gestures, dialogue and keywords.
 6. **Game.** Scenes, character creation, saves, audio; *The Summoning* playable from start to end.
 7. **Remaster UI.** Wide view, panels, quickbar, hotkeys.
@@ -384,3 +410,7 @@ original data.
   memorization and casting rules stay the game's.
 - **Map:** built into the UI rather than tied to the Palimpsest. Levels can refuse it with a
   message or a conversation.
+- **World before player:** the level's mechanisms are built and tested through debug commands
+  before the player, movement and combat exist.
+- **Rules first as features and procedures:** typed puzzle pieces running action lists; general
+  rules come later over the same actions.

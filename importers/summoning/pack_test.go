@@ -51,7 +51,7 @@ func importFixture() *Source {
 	)
 	level = level.
 		u8(0, 1, 0, 0, uint8(PlaceDecoration), 3).
-		u8(0, 2, 0, 0, uint8(PlaceExit), 0, 1, 1, 1).
+		u8(0, 2, 0, 0, uint8(PlaceExit), 0, 0, 2, 3).
 		u8(2, 1, 0, 0, uint8(PlaceDoor), doorVertical).
 		u8(2, 2, 0, 0, uint8(PlaceTeleporter), teleporterArmed, 0, 0, 0, 0).
 		u8(1, 3, 0, 0, uint8(PlaceTeleporter), 0, 0, 0, 0, 0).
@@ -92,11 +92,18 @@ func TestImport(t *testing.T) {
 	if want := (content.Grid{{2, 2, 3, 2}, {3, 3, 3, 3}, {3, 3, 3, n}}); !reflect.DeepEqual(l.FloorHalves, want) {
 		t.Errorf("floor halves %v, want %v", l.FloorHalves, want)
 	}
-	if l.Floors != "floors.20" || l.Walls != "walls.18" || l.ExitWalls != "exitwalls.25" {
-		t.Errorf("sets %s %s %s", l.Floors, l.Walls, l.ExitWalls)
+	if l.Floors != "floors.20" || l.Walls != "walls.18" {
+		t.Errorf("sets %s %s", l.Floors, l.Walls)
 	}
-	if want := []content.Cell{{0, 2}}; !reflect.DeepEqual(l.Exits, want) {
-		t.Errorf("exits %v", l.Exits)
+	if want := []content.FloorType{{Variant: 0}, {Variant: 1}}; !reflect.DeepEqual(l.FloorTypes, want) {
+		t.Errorf("floor types %+v", l.FloorTypes)
+	}
+	wantFeatures := []*content.Feature{{
+		ID: "exit.0.2", Kind: content.FeatureExit, Cell: content.Cell{0, 2}, Look: "look.exit.25.3",
+		To: &content.Destination{Level: "level.00", Cell: content.Cell{2, 3}},
+	}}
+	if !reflect.DeepEqual(l.Features, wantFeatures) {
+		t.Errorf("features %+v", l.Features)
 	}
 
 	wantOverlays := []content.Placed{
@@ -155,9 +162,17 @@ func TestImportComposesTiles(t *testing.T) {
 		t.Error("shape 5 caps composed wrong")
 	}
 
-	e := p.Walls["exitwalls.25"]
-	if e.Shapes[1] != 0 || e.Shapes[3] != 1 || e.Shapes[0] != content.NoFrame || e.Offset != (content.Offset{0, -2}) {
-		t.Fatalf("exit wall set %+v", e)
+	if !w.Shapes[0].Diagonal || w.Shapes[1].Diagonal || !w.Shapes[1].Face || w.Shapes[2].Face || !w.Shapes[3].Face {
+		t.Errorf("wall shape properties %+v %+v %+v %+v", *w.Shapes[0], *w.Shapes[1], *w.Shapes[2], *w.Shapes[3])
+	}
+
+	left, right := p.Looks["look.exit.25.1"], p.Looks["look.exit.25.3"]
+	if left == nil || right == nil || right.Layer != content.LayerWall {
+		t.Fatalf("exit looks %+v %+v", left, right)
+	}
+	e := right.States[content.FeatureExit][0]
+	if e.Frame != 1 || e.Offset != (content.Offset{0, -2}) || left.States[content.FeatureExit][0].Frame != 0 {
+		t.Fatalf("exit look parts %+v", e)
 	}
 	// The exit in shape 3 walls is exit shape 4: frames 3, 4 and 5 stacked.
 	if pixel(t, p, e.Sprite, 1, 0, 0) != 113 || pixel(t, p, e.Sprite, 1, 0, 2) != 114 || pixel(t, p, e.Sprite, 1, 0, 5) != 115 {

@@ -139,3 +139,4 @@ The player changes level by an exit, a pit, a conversation or a spell. The curre
 ## Unknowns
 
 - The exact way a teleported creature spins and how long the player's teleport effect lasts.
+- Whether the objects and creatures a level places on a plate count toward its counter when the level first loads. Until known, the engine adds their weight at load without running any procedure, so the plate starts in the state its terrain shows.

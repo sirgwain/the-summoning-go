@@ -83,9 +83,13 @@ const (
 	doorOpen        = 4
 	doorFirstSealed = 5
 	teleporterArmed = 0x80
+	teleporterExit  = 0xFF
 )
 
 var gemOffsets = [gemCount]content.Offset{{11, 1}, {3, 1}, {21, 1}, {19, 6}, {1, 6}, {9, 7}}
+
+// diagonalShapes are the wall shapes that fill half their cell (world.md, Terrain).
+var diagonalShapes = [wallShapes]bool{0: true, 2: true, 4: true, 5: true}
 
 const sheetColumns = 16
 
@@ -291,7 +295,7 @@ func (im *importer) wallSet(id int) (string, error) {
 	capY := -caps.Height
 	box := image.Rect(0, capY, b.Width, 2*b.Height)
 	frames := make([][]byte, wallShapes)
-	shapes := make([]int, wallShapes)
+	shapes := make([]*content.WallShape, wallShapes)
 	for s := range wallShapes {
 		var parts []part
 		if im.init.WallTops[s]&WallTopLeftCap != 0 {
@@ -302,7 +306,7 @@ func (im *importer) wallSet(id int) (string, error) {
 		}
 		parts = append(parts, part{b, s, content.Offset{0, 0}}, part{b, s + wallShapes, content.Offset{0, b.Height}})
 		frames[s] = compose(box, b.Transparent, parts)
-		shapes[s] = s
+		shapes[s] = &content.WallShape{Frame: s, Diagonal: diagonalShapes[s], Face: s == 1 || s == 3}
 	}
 	sid := "sprite." + wid
 	im.addSprite(sid, frames, box.Dx(), box.Dy(), b.Transparent)
@@ -310,11 +314,12 @@ func (im *importer) wallSet(id int) (string, error) {
 	return wid, nil
 }
 
-// exitWallSet composes the exit-wall bank's two exits, for wall shapes 1 and 3.
-func (im *importer) exitWallSet(id int) (string, error) {
-	wid := fmt.Sprintf("exitwalls.%d", id)
-	if _, ok := im.pack.Walls[wid]; ok {
-		return wid, nil
+// exitLook returns the look of an exit in a wall of shape 1 or 3, composing the exit-wall bank's
+// two exits into one sprite the first time.
+func (im *importer) exitLook(id, wallShape int) (string, error) {
+	lid := fmt.Sprintf("look.exit.%d.%d", id, wallShape)
+	if _, ok := im.pack.Looks[lid]; ok {
+		return lid, nil
 	}
 	b, err := im.bank(id)
 	if err != nil {
@@ -324,23 +329,27 @@ func (im *importer) exitWallSet(id int) (string, error) {
 		return "", fmt.Errorf("exit-wall bank %d: %d frames", id, len(b.Frames))
 	}
 	box := image.Rect(0, -b.Height, b.Width, 2*b.Height)
-	shapes := make([]int, wallShapes)
-	for i := range shapes {
-		shapes[i] = content.NoFrame
+	sid := fmt.Sprintf("sprite.exitwalls.%d", id)
+	exits := []struct{ terrain, shape int }{{1, exitShapeLeft}, {3, exitShapeRight}}
+	if _, ok := im.pack.Sprites[sid]; !ok {
+		var frames [][]byte
+		for _, e := range exits {
+			frames = append(frames, compose(box, b.Transparent, []part{
+				{b, e.shape - 1, content.Offset{0, -b.Height}},
+				{b, e.shape, content.Offset{0, 0}},
+				{b, e.shape + 1, content.Offset{0, b.Height}},
+			}))
+		}
+		im.addSprite(sid, frames, box.Dx(), box.Dy(), b.Transparent)
 	}
-	var frames [][]byte
-	for _, e := range []struct{ terrain, shape int }{{1, exitShapeLeft}, {3, exitShapeRight}} {
-		shapes[e.terrain] = len(frames)
-		frames = append(frames, compose(box, b.Transparent, []part{
-			{b, e.shape - 1, content.Offset{0, -b.Height}},
-			{b, e.shape, content.Offset{0, 0}},
-			{b, e.shape + 1, content.Offset{0, b.Height}},
-		}))
+	for i, e := range exits {
+		at := content.Offset{box.Min.X, box.Min.Y}
+		im.pack.Looks[fmt.Sprintf("look.exit.%d.%d", id, e.terrain)] = &content.Look{
+			ID: fmt.Sprintf("look.exit.%d.%d", id, e.terrain), Layer: content.LayerWall,
+			States: map[string][]content.LookPart{content.FeatureExit: {{Sprite: sid, Frame: i, Offset: at}}},
+		}
 	}
-	sid := "sprite." + wid
-	im.addSprite(sid, frames, box.Dx(), box.Dy(), b.Transparent)
-	im.pack.Walls[wid] = &content.WallSet{ID: wid, Sprite: sid, Offset: content.Offset{box.Min.X, box.Min.Y}, Shapes: shapes}
-	return wid, nil
+	return lid, nil
 }
 
 // place adds frame of resource id at cell, if the bank has that frame.
@@ -368,6 +377,9 @@ func (im *importer) level(index int, l *Level) (*content.Level, error) {
 	var err error
 	if cl.Floors, err = im.floorSet(im.terrain(int(h.FloorBank))); err != nil {
 		return nil, err
+	}
+	for k := range im.pack.Floors[cl.Floors].Variants {
+		cl.FloorTypes = append(cl.FloorTypes, content.FloorType{Variant: k})
 	}
 	if cl.Walls, err = im.wallSet(im.terrain(int(h.WallBank))); err != nil {
 		return nil, err
@@ -456,14 +468,18 @@ func (im *importer) feature(cl *content.Level, l *Level, p *Placement) error {
 			im.report.addf("exit in a wall of shape %d; drawn as a wall", t)
 			return nil
 		}
-		if cl.ExitWalls == "" {
-			id, err := im.exitWallSet(im.terrain(int(h.ExitWallBank)))
-			if err != nil {
-				return err
-			}
-			cl.ExitWalls = id
+		to, ok := exitDestination(p)
+		if !ok {
+			im.report.addf("in-level teleporter in a wall; drawn as a wall")
+			return nil
 		}
-		cl.Exits = append(cl.Exits, c)
+		look, err := im.exitLook(im.terrain(int(h.ExitWallBank)), t)
+		if err != nil {
+			return err
+		}
+		cl.Features = append(cl.Features, &content.Feature{
+			ID: fmt.Sprintf("exit.%d.%d", c[0], c[1]), Kind: content.FeatureExit, Cell: c, Look: look, To: to,
+		})
 
 	case p.Type == PlaceDecoration:
 		if t != 1 && t != 3 {
@@ -481,6 +497,21 @@ func (im *importer) feature(cl *content.Level, l *Level, p *Placement) error {
 		return im.door(cl, h, c, p.Extra[0])
 	}
 	return nil
+}
+
+// exitDestination returns where an exit placement leads: a level exit, or a teleporter record of
+// kind FFh (rules.md, Exits).
+func exitDestination(p *Placement) (*content.Destination, bool) {
+	var level, x, y byte
+	switch {
+	case p.Type == PlaceExit:
+		level, x, y = p.Extra[1], p.Extra[2], p.Extra[3]
+	case p.Type == PlaceTeleporter && p.Extra[0] == teleporterExit:
+		level, x, y = p.Extra[1], p.Extra[2], p.Extra[3]
+	default:
+		return nil, false
+	}
+	return &content.Destination{Level: levelID(int(level)), Cell: content.Cell{int(x), int(y)}}, true
 }
 
 // door adds a door's two sprites at its initial stage. They are placed from the reference point

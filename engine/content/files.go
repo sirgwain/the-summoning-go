@@ -23,6 +23,11 @@ const (
 	spritesDir   = "sprites"
 	floorsDir    = "tiles/floors"
 	wallsDir     = "tiles/walls"
+	looksDir     = "looks"
+	itemsDir     = "items"
+	thingsDir    = "things"
+	textDir      = "text"
+	messagesFile = "messages.json"
 	levelsDir    = "levels"
 	levelFile    = "level.json"
 )
@@ -79,13 +84,27 @@ func Load(fsys fs.FS) (*Pack, error) {
 	}); err != nil {
 		return nil, err
 	}
-	if err := loadEach(fsys, levelsDir+"/*/"+levelFile, func(name string) error {
-		l := &Level{}
-		if err := readJSON(fsys, name, l); err != nil {
-			return err
+	if err := loadRecords(fsys, looksDir+"/*.json", p.Looks, func(l *Look) string { return l.ID }); err != nil {
+		return nil, err
+	}
+	if err := loadRecords(fsys, itemsDir+"/*.json", p.Items, func(i *Item) string { return i.ID }); err != nil {
+		return nil, err
+	}
+	if err := loadRecords(fsys, thingsDir+"/*.json", p.Things, func(t *Thing) string { return t.ID }); err != nil {
+		return nil, err
+	}
+	if err := loadRecords(fsys, textDir+"/*.json", p.Texts, func(t *Text) string { return t.ID }); err != nil {
+		return nil, err
+	}
+	if _, err := fs.Stat(fsys, messagesFile); err == nil {
+		p.Messages = &Messages{}
+		if err := readJSON(fsys, messagesFile, p.Messages); err != nil {
+			return nil, err
 		}
-		return add(p.Levels, l.ID, l, name)
-	}); err != nil {
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return nil, err
+	}
+	if err := loadRecords(fsys, levelsDir+"/*/"+levelFile, p.Levels, func(l *Level) string { return l.ID }); err != nil {
 		return nil, err
 	}
 
@@ -93,6 +112,17 @@ func Load(fsys fs.FS) (*Pack, error) {
 		return nil, err
 	}
 	return p, nil
+}
+
+// loadRecords reads every file matching pattern as a record of type T into m.
+func loadRecords[T any](fsys fs.FS, pattern string, m map[string]*T, id func(*T) string) error {
+	return loadEach(fsys, pattern, func(name string) error {
+		v := new(T)
+		if err := readJSON(fsys, name, v); err != nil {
+			return err
+		}
+		return add(m, id(v), v, name)
+	})
 }
 
 func loadEach(fsys fs.FS, pattern string, load func(name string) error) error {
@@ -187,8 +217,35 @@ func Write(p *Pack, dir string) error {
 			return err
 		}
 	}
+	if err := writeRecords(dir, looksDir, "look.", p.Looks); err != nil {
+		return err
+	}
+	if err := writeRecords(dir, itemsDir, "item.", p.Items); err != nil {
+		return err
+	}
+	if err := writeRecords(dir, thingsDir, "thing.", p.Things); err != nil {
+		return err
+	}
+	if err := writeRecords(dir, textDir, "text.", p.Texts); err != nil {
+		return err
+	}
+	if p.Messages != nil {
+		if err := writeJSON(dir, messagesFile, p.Messages); err != nil {
+			return err
+		}
+	}
 	for _, id := range sortedKeys(p.Levels) {
 		if err := writeJSON(dir, path.Join(levelsDir, fileName(id, "level."), levelFile), p.Levels[id]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// writeRecords writes each record of m to dir/<id without prefix>.json.
+func writeRecords[T any](root, dir, prefix string, m map[string]*T) error {
+	for _, id := range sortedKeys(m) {
+		if err := writeJSON(root, path.Join(dir, fileName(id, prefix)+".json"), m[id]); err != nil {
 			return err
 		}
 	}
@@ -204,13 +261,13 @@ func writeJSON(dir, name string, v any) error {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 	data = numberArray.ReplaceAllFunc(data, func(m []byte) []byte {
-		return space.ReplaceAll(m, []byte(" "))
+		return bytes.ReplaceAll(space.ReplaceAll(m, nil), []byte(","), []byte(", "))
 	})
 	return writeFile(dir, name, append(data, '\n'))
 }
 
 // numberArray matches an indented JSON array holding only numbers, which writeJSON puts on one
-// line.
+// line as [1, 2, 3].
 var (
 	numberArray = regexp.MustCompile(`\[\s*-?\d+(?:,\s*-?\d+)*\s*\]`)
 	space       = regexp.MustCompile(`\s+`)
@@ -224,152 +281,11 @@ func writeFile(dir, name string, data []byte) error {
 	return os.WriteFile(full, data, 0o644)
 }
 
-func sortedKeys[T any](m map[string]*T) []string {
+func sortedKeys[V any](m map[string]V) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	return keys
-}
-
-// Verify checks that every reference in the pack resolves and every record is consistent.
-func (p *Pack) Verify() error {
-	var errs []error
-	fail := func(format string, args ...any) { errs = append(errs, fmt.Errorf(format, args...)) }
-
-	m := p.Manifest
-	if _, ok := p.Palettes[m.Palette]; !ok {
-		fail("pack.json: palette %q not found", m.Palette)
-	}
-	for _, id := range sortedKeys(p.Palettes) {
-		errs = append(errs, p.Palettes[id].verify()...)
-	}
-	if l, ok := p.Levels[m.Start.Level]; !ok {
-		fail("pack.json: start level %q not found", m.Start.Level)
-	} else if !l.InBounds(m.Start.Cell) {
-		fail("pack.json: start cell %v outside %s", m.Start.Cell, l.ID)
-	}
-
-	for _, id := range sortedKeys(p.Sprites) {
-		b := p.Sprites[id]
-		if b.FrameSize[0] <= 0 || b.FrameSize[1] <= 0 || b.Columns <= 0 || b.Frames < 0 {
-			fail("sprite bank %s: bad layout", id)
-			continue
-		}
-		if b.Transparent != nil && (*b.Transparent < 0 || *b.Transparent > 255) {
-			fail("sprite bank %s: transparent index %d", id, *b.Transparent)
-		}
-		if b.Frames > 0 && !b.FrameRect(b.Frames-1).In(b.Sheet.Bounds()) {
-			fail("sprite bank %s: %d frames do not fit the %v sheet", id, b.Frames, b.Sheet.Bounds().Size())
-		}
-	}
-	frames := func(owner, sprite string) int {
-		b, ok := p.Sprites[sprite]
-		if !ok {
-			fail("%s: sprite bank %q not found", owner, sprite)
-			return -1
-		}
-		return b.Frames
-	}
-
-	for _, id := range sortedKeys(p.Floors) {
-		f := p.Floors[id]
-		if n := frames("floor set "+id, f.Sprite); n >= 0 && f.Variants > n {
-			fail("floor set %s: %d variants, sprite bank has %d frames", id, f.Variants, n)
-		}
-	}
-	for _, id := range sortedKeys(p.Walls) {
-		w := p.Walls[id]
-		n := frames("wall set "+id, w.Sprite)
-		for s, fr := range w.Shapes {
-			if fr != NoFrame && (fr < 0 || (n >= 0 && fr >= n)) {
-				fail("wall set %s: shape %d uses frame %d of %d", id, s, fr, n)
-			}
-		}
-	}
-
-	for _, id := range sortedKeys(p.Levels) {
-		errs = append(errs, p.verifyLevel(p.Levels[id], frames)...)
-	}
-	return errors.Join(errs...)
-}
-
-func (p *Pack) verifyLevel(l *Level, frames func(owner, sprite string) int) []error {
-	var errs []error
-	fail := func(format string, args ...any) {
-		errs = append(errs, fmt.Errorf("level %s: "+format, append([]any{l.ID}, args...)...))
-	}
-
-	floors, ok := p.Floors[l.Floors]
-	if !ok {
-		fail("floor set %q not found", l.Floors)
-	}
-	walls, ok := p.Walls[l.Walls]
-	if !ok {
-		fail("wall set %q not found", l.Walls)
-	}
-	var exitWalls *WallSet
-	if l.ExitWalls != "" {
-		if exitWalls, ok = p.Walls[l.ExitWalls]; !ok {
-			fail("exit wall set %q not found", l.ExitWalls)
-		}
-	} else if len(l.Exits) > 0 {
-		fail("exits but no exit wall set")
-	}
-
-	checkGrid := func(name string, g Grid, valid func(v int) bool) {
-		if len(g) != l.Size[0] {
-			fail("%s has %d rows, want %d", name, len(g), l.Size[0])
-			return
-		}
-		for x, row := range g {
-			if len(row) != l.Size[1] {
-				fail("%s row %d has %d cells, want %d", name, x, len(row), l.Size[1])
-				continue
-			}
-			for y, v := range row {
-				if v != NoFrame && !valid(v) {
-					fail("%s (%d, %d): %d out of range", name, x, y, v)
-				}
-			}
-		}
-	}
-	checkGrid("floor", l.Floor, func(v int) bool { return floors == nil || v < floors.Variants })
-	checkGrid("wall", l.Wall, func(v int) bool { return walls == nil || (v < len(walls.Shapes) && walls.Shapes[v] != NoFrame) })
-	if l.FloorHalves != nil {
-		checkGrid("floor_halves", l.FloorHalves, func(v int) bool { return v <= HalvesBoth })
-	}
-
-	for _, c := range l.Exits {
-		if !l.InBounds(c) {
-			fail("exit %v outside the level", c)
-			continue
-		}
-		if len(l.Wall) != l.Size[0] || len(l.Wall[c[0]]) != l.Size[1] {
-			continue
-		}
-		s := l.Wall[c[0]][c[1]]
-		if s == NoFrame {
-			fail("exit %v is not a wall", c)
-		} else if exitWalls != nil && (s >= len(exitWalls.Shapes) || exitWalls.Shapes[s] == NoFrame) {
-			fail("exit %v: exit wall set has no shape %d", c, s)
-		}
-	}
-
-	for _, layer := range []struct {
-		kind string
-		list []Placed
-	}{{"overlay", l.Overlays}, {"decoration", l.Decorations}, {"prop", l.Props}} {
-		kind := layer.kind
-		for _, pl := range layer.list {
-			if !l.InBounds(pl.Cell) {
-				fail("%s at %v outside the level", kind, pl.Cell)
-			}
-			if n := frames("level "+l.ID, pl.Sprite); n >= 0 && (pl.Frame < 0 || pl.Frame >= n) {
-				fail("%s at %v: frame %d of %d in %s", kind, pl.Cell, pl.Frame, n, pl.Sprite)
-			}
-		}
-	}
-	return errs
 }

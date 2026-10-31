@@ -4,6 +4,7 @@ package drawlist
 
 import (
 	"image"
+	"slices"
 	"sort"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
@@ -41,9 +42,11 @@ func TileBox(c content.Cell) image.Point {
 	return image.Pt(32*(b-a), 16*(a+b))
 }
 
-// Build returns the commands that draw level l, back to front: every floor, then every overlay,
-// then walls (each followed by its decorations) and props, ordered by screen row (a + b) and
-// within a row by their top edge. Floors are drawn by the halves the level says show, the other
+// Build returns the commands that draw level l, back to front: every floor, then every overlay
+// and floor-layer feature look, then walls (each followed by its decorations), props and
+// standing feature looks, ordered by screen row (a + b) and within a row by their top edge. A
+// wall-layer feature look is drawn in place of its cell's wall and decorations. Features are drawn
+// in the states the level gives them. Floors are drawn by the halves the level says show, the other
 // halves blanked; a cell with no floor, and each cell just past the level's far edges, blanks
 // its tile box.
 func Build(p *content.Pack, l *content.Level) []Cmd {
@@ -56,7 +59,7 @@ func Build(p *content.Pack, l *content.Level) []Cmd {
 			cmds = append(cmds, Cmd{X: box.X, Y: box.Y})
 			continue
 		}
-		v, halves := l.Floor[c[0]][c[1]], l.Halves(c)
+		v, halves := l.FloorTypes[l.Floor[c[0]][c[1]]].Variant, l.Halves(c)
 		if halves == content.HalvesBoth {
 			cmds = append(cmds, Cmd{Sprite: floors.Sprite, Frame: v, X: box.X, Y: box.Y})
 			continue
@@ -76,6 +79,21 @@ func Build(p *content.Pack, l *content.Level) []Cmd {
 	for _, o := range l.Overlays {
 		cmds = append(cmds, placed(o))
 	}
+	looks := map[string][]*content.Feature{}
+	wallLooks := map[content.Cell]*content.Feature{}
+	for _, f := range l.Features {
+		look, ok := p.Looks[f.Look]
+		if !ok {
+			continue
+		}
+		looks[look.Layer] = append(looks[look.Layer], f)
+		if look.Layer == content.LayerWall {
+			wallLooks[f.Cell] = f
+		}
+	}
+	for _, f := range looks[content.LayerFloor] {
+		cmds = append(cmds, featureCmds(p, f)...)
+	}
 
 	type standing struct {
 		depth, top int
@@ -83,10 +101,6 @@ func Build(p *content.Pack, l *content.Level) []Cmd {
 	}
 	var items []standing
 
-	exits := map[content.Cell]bool{}
-	for _, e := range l.Exits {
-		exits[e] = true
-	}
 	decorations := map[content.Cell][]content.Placed{}
 	for _, d := range l.Decorations {
 		decorations[d.Cell] = append(decorations[d.Cell], d)
@@ -96,19 +110,21 @@ func Build(p *content.Pack, l *content.Level) []Cmd {
 		if s == content.NoFrame {
 			continue
 		}
-		set := p.Walls[l.Walls]
-		if exits[c] {
-			set = p.Walls[l.ExitWalls]
-		}
 		box := TileBox(c)
 		item := standing{depth: c[0] + c[1], top: box.Y}
-		item.cmds = append(item.cmds, Cmd{Sprite: set.Sprite, Frame: set.Shapes[s], X: box.X + set.Offset[0], Y: box.Y + set.Offset[1]})
-		if !exits[c] {
+		if f, ok := wallLooks[c]; ok {
+			item.cmds = featureCmds(p, f)
+		} else {
+			set := p.Walls[l.Walls]
+			item.cmds = append(item.cmds, Cmd{Sprite: set.Sprite, Frame: set.Shape(s).Frame, X: box.X + set.Offset[0], Y: box.Y + set.Offset[1]})
 			for _, d := range decorations[c] {
 				item.cmds = append(item.cmds, placed(d))
 			}
 		}
 		items = append(items, item)
+	}
+	for _, f := range looks[content.LayerStand] {
+		items = append(items, standing{depth: f.Cell[0] + f.Cell[1], top: TileBox(f.Cell).Y + 1, cmds: featureCmds(p, f)})
 	}
 	for _, pr := range l.Props {
 		cmd := placed(pr)
@@ -122,6 +138,23 @@ func Build(p *content.Pack, l *content.Level) []Cmd {
 	})
 	for _, it := range items {
 		cmds = append(cmds, it.cmds...)
+	}
+	return cmds
+}
+
+// featureCmds draws feature f's look in its state; a socket adds the look of each filled place.
+func featureCmds(p *content.Pack, f *content.Feature) []Cmd {
+	look := p.Looks[f.Look]
+	parts := look.States[f.LookState()]
+	if f.Kind == content.FeatureSocket && f.LookState() != "full" {
+		for _, i := range f.Set {
+			parts = slices.Concat(parts, look.States[content.SocketSetState(i)])
+		}
+	}
+	box := TileBox(f.Cell)
+	cmds := make([]Cmd, len(parts))
+	for i, pt := range parts {
+		cmds[i] = Cmd{Sprite: pt.Sprite, Frame: pt.Frame, X: box.X + pt.Offset[0], Y: box.Y + pt.Offset[1]}
 	}
 	return cmds
 }

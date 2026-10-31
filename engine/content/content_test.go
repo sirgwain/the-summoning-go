@@ -32,13 +32,61 @@ func testPack() *Pack {
 	p.Sprites["sprite.tiles"] = &SpriteBank{ID: "sprite.tiles", FrameSize: Offset{2, 2}, Columns: cols, Frames: 3, Transparent: &transparent, Sheet: sheet}
 
 	p.Floors["floors.a"] = &FloorSet{ID: "floors.a", Sprite: "sprite.tiles", Variants: 2}
-	p.Walls["walls.a"] = &WallSet{ID: "walls.a", Sprite: "sprite.tiles", Offset: Offset{0, -8}, Shapes: []int{0, NoFrame, 2}}
+	p.Sprites["sprite.npc"] = &SpriteBank{ID: "sprite.npc", FrameSize: Offset{2, 2}, Columns: cols, Frames: 3, Transparent: &transparent, Sheet: sheet,
+		Anchor: &Offset{1, 2},
+		Animations: map[string]Animation{
+			"walk.2": {Frames: []int{0, 1}, MS: Fixed(330)},
+			"idle":   {Frames: []int{0, 1, 2}, MS: Duration{110, 440}, Mode: AnimRandom},
+		}}
 
-	l := &Level{ID: "level.00", Name: "", Size: [2]int{2, 3}, Floors: "floors.a", Walls: "walls.a", ExitWalls: "walls.a"}
+	p.Floors["floors.a"] = &FloorSet{ID: "floors.a", Sprite: "sprite.tiles", Variants: 2}
+	p.Walls["walls.a"] = &WallSet{ID: "walls.a", Sprite: "sprite.tiles", Offset: Offset{0, -8},
+		Shapes: []*WallShape{{Frame: 0, Diagonal: true}, nil, {Frame: 2, Face: true}}}
+	p.Looks["look.plate"] = &Look{ID: "look.plate", Layer: LayerFloor, States: map[string][]LookPart{
+		"up":   {{Sprite: "sprite.tiles", Frame: 0, Offset: Offset{-16, 8}}},
+		"down": {{Sprite: "sprite.tiles", Frame: 1, Offset: Offset{-16, 8}}},
+	}}
+	p.Looks["look.exit"] = &Look{ID: "look.exit", Layer: LayerWall, States: map[string][]LookPart{
+		"exit": {{Sprite: "sprite.tiles", Frame: 2}},
+	}}
+
+	p.Texts["text.en"] = &Text{ID: "text.en", Strings: map[string]string{
+		"item.bag.name": "Bag", "item.key.name": "Key", "msg.stuck": "It will not budge.",
+	}}
+	p.Messages = &Messages{ID: "messages", Messages: map[string]string{MsgLeverStuck: "msg.stuck"}}
+	p.Items["item.bag"] = &Item{ID: "item.bag", Name: "item.bag.name", Weight: 2, Size: 3,
+		Container: &Container{Capacity: 2, Largest: 3, Weightless: true}, Tags: []string{"bag"},
+		Icon: Image{"sprite.tiles", 0}, Floor: Image{"sprite.tiles", 1}}
+	p.Items["item.key"] = &Item{ID: "item.key", Name: "item.key.name", Weight: 1, Size: 1, Random: true,
+		Icon: Image{"sprite.tiles", 2}, Floor: Image{"sprite.tiles", 2}}
+	p.Things["thing.guard"] = &Thing{ID: "thing.guard", Kind: ThingCreature, Sprite: "sprite.npc", Facing: 2,
+		Speed: 8, IntervalMS: 330, Weight: 100, HitPoints: Dice{3, 10, 8},
+		Behaviors: []string{BehaviorHostile}, Stats: map[string]int{"accuracy": 10}}
+	p.Things["thing.boulder"] = &Thing{ID: "thing.boulder", Kind: ThingBoulder, Sprite: "sprite.npc", Speed: 8, IntervalMS: 220, Weight: 100}
+
+	l := &Level{ID: "level.00", Name: "", Size: [2]int{2, 3}, Floors: "floors.a", Walls: "walls.a"}
+	l.FloorTypes = []FloorType{{Variant: 0}, {Variant: 1, Enter: &Effect{Damage: Dice{2, 2, 0}, Type: "fire"}, Sinks: true}}
 	l.Floor = Grid{{0, 1, 0}, {NoFrame, 0, 0}}
 	l.Wall = Grid{{NoFrame, NoFrame, 2}, {0, NoFrame, NoFrame}}
-	l.Exits = []Cell{{0, 2}}
 	l.Overlays = []Placed{{Cell: Cell{1, 1}, Sprite: "sprite.tiles", Frame: 1, Offset: Offset{-16, 8}}}
+	l.Features = []*Feature{
+		{ID: "plate.0.1", Kind: FeaturePlate, Cell: Cell{0, 1}, Look: "look.plate", Armed: true, Threshold: 50, OnPress: "p0", OnRelease: "p1"},
+		{ID: "exit.0.2", Kind: FeatureExit, Cell: Cell{0, 2}, Look: "look.exit", To: &Destination{Level: "level.00", Cell: Cell{1, 2}}},
+		{ID: "slot.1.1", Kind: FeatureSlot, Cell: Cell{1, 1}, Accepts: "item.key", Armed: true, OnInsert: "p0"},
+	}
+	none := (*string)(nil)
+	l.Procedures = map[string][]Action{
+		"p0": {{SetFloor: &SetFloor{Cell: Cell{1, 0}, Type: 1}}, {Roll: &Roll{Thing: "boulder.1.2", Direction: 2}}},
+		"p1": {{SetHook: &SetHook{Feature: "plate.0.1", Hook: HookPress, Procedure: none}}, {Create: &Create{Cell: Cell{1, 2}, Item: "item.key"}}},
+	}
+	facing := 4
+	l.Things = []*PlacedThing{
+		{ID: "creature.1.1", Thing: "thing.guard", Cell: Cell{1, 1}, Offset: &Offset{-6, 12}, Facing: &facing, Items: []Object{{Item: "item.key"}}},
+		{ID: "boulder.1.2", Thing: "thing.boulder", Cell: Cell{1, 2}, Rolling: &Rolling{Direction: 0, Shuttle: true}},
+	}
+	l.Objects = []*FloorObject{
+		{Cell: Cell{0, 0}, Object: Object{Item: "item.bag", Contents: []Object{{Item: RandomItem}, {Item: "item.key"}}}},
+	}
 	p.Levels[l.ID] = l
 	return p
 }
@@ -60,8 +108,23 @@ func TestWriteLoad(t *testing.T) {
 	if !reflect.DeepEqual(got.Palettes["palette.0"], want.Palettes["palette.0"]) {
 		t.Errorf("palette %+v, want %+v", got.Palettes["palette.0"].Effects, want.Palettes["palette.0"].Effects)
 	}
-	if !reflect.DeepEqual(got.Levels, want.Levels) || !reflect.DeepEqual(got.Floors, want.Floors) || !reflect.DeepEqual(got.Walls, want.Walls) {
-		t.Error("tile sets or levels differ")
+	for name, eq := range map[string]bool{
+		"levels":   reflect.DeepEqual(got.Levels, want.Levels),
+		"floors":   reflect.DeepEqual(got.Floors, want.Floors),
+		"walls":    reflect.DeepEqual(got.Walls, want.Walls),
+		"looks":    reflect.DeepEqual(got.Looks, want.Looks),
+		"items":    reflect.DeepEqual(got.Items, want.Items),
+		"things":   reflect.DeepEqual(got.Things, want.Things),
+		"texts":    reflect.DeepEqual(got.Texts, want.Texts),
+		"messages": reflect.DeepEqual(got.Messages, want.Messages),
+	} {
+		if !eq {
+			t.Errorf("%s differ", name)
+		}
+	}
+	gn, wn := got.Sprites["sprite.npc"], want.Sprites["sprite.npc"]
+	if !reflect.DeepEqual(gn.Anchor, wn.Anchor) || !reflect.DeepEqual(gn.Animations, wn.Animations) {
+		t.Errorf("sprite anchor or animations %+v, want %+v", gn.Animations, wn.Animations)
 	}
 	gb, wb := got.Sprites["sprite.tiles"], want.Sprites["sprite.tiles"]
 	if gb.Columns != wb.Columns || gb.Frames != wb.Frames || *gb.Transparent != *wb.Transparent {
@@ -82,8 +145,31 @@ func TestWriteLoad(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(level), `". 0 0"`) {
-		t.Errorf("floor grid not written one row per line:\n%s", level)
+	for _, want := range []string{`". 0 0"`, `"damage": "2d2"`, `"procedure": null`} {
+		if !strings.Contains(string(level), want) {
+			t.Errorf("level.json has no %s:\n%s", want, level)
+		}
+	}
+	sprite, err := os.ReadFile(filepath.Join(dir, "sprites", "npc.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(sprite), `"ms": [110, 440]`) || !strings.Contains(string(sprite), `"ms": 330`) {
+		t.Errorf("durations not written as a number and a range:\n%s", sprite)
+	}
+}
+
+func TestDice(t *testing.T) {
+	for s, want := range map[string]Dice{"3d10+8": {3, 10, 8}, "2d2": {2, 2, 0}, "5": {0, 0, 5}} {
+		d, err := ParseDice(s)
+		if err != nil || d != want || d.String() != s {
+			t.Errorf("%s: %+v %v", s, d, err)
+		}
+	}
+	for _, s := range []string{"", "d6", "3d", "3d0", "x", "1d6+"} {
+		if _, err := ParseDice(s); err == nil {
+			t.Errorf("%q: no error", s)
+		}
 	}
 }
 
@@ -113,20 +199,57 @@ func TestVerify(t *testing.T) {
 		break_ func(p *Pack)
 		want   string
 	}{
-		"missing palette":  {func(p *Pack) { p.Manifest.Palette = "palette.9" }, "palette"},
-		"start outside":    {func(p *Pack) { p.Manifest.Start.Cell = Cell{5, 5} }, "start cell"},
-		"missing sprite":   {func(p *Pack) { p.Floors["floors.a"].Sprite = "sprite.none" }, "not found"},
-		"too many floors":  {func(p *Pack) { p.Floors["floors.a"].Variants = 4 }, "variants"},
-		"bad floor value":  {func(p *Pack) { p.Levels["level.00"].Floor[0][0] = 2 }, "out of range"},
-		"missing shape":    {func(p *Pack) { p.Levels["level.00"].Wall[0][0] = 1 }, "out of range"},
-		"short grid":       {func(p *Pack) { p.Levels["level.00"].Wall = p.Levels["level.00"].Wall[:1] }, "rows"},
-		"exit not a wall":  {func(p *Pack) { p.Levels["level.00"].Exits = []Cell{{0, 0}} }, "not a wall"},
-		"overlay frame":    {func(p *Pack) { p.Levels["level.00"].Overlays[0].Frame = 3 }, "frame 3"},
-		"sheet too small":  {func(p *Pack) { p.Sprites["sprite.tiles"].Frames = 5 }, "do not fit"},
-		"exit without set": {func(p *Pack) { p.Levels["level.00"].ExitWalls = "" }, "no exit wall set"},
-		"rotate too far":   {func(p *Pack) { p.Palettes["palette.0"].Effects[0].First = 250 }, "outside the palette"},
-		"no period":        {func(p *Pack) { p.Palettes["palette.0"].Effects[1].PeriodMS = 0 }, "period"},
-		"unknown effect":   {func(p *Pack) { p.Palettes["palette.0"].Effects[1].Kind = "fade" }, "unknown kind"},
+		"missing palette": {func(p *Pack) { p.Manifest.Palette = "palette.9" }, "palette"},
+		"start outside":   {func(p *Pack) { p.Manifest.Start.Cell = Cell{5, 5} }, "start cell"},
+		"missing sprite":  {func(p *Pack) { p.Floors["floors.a"].Sprite = "sprite.none" }, "not found"},
+		"too many floors": {func(p *Pack) { p.Floors["floors.a"].Variants = 4 }, "variants"},
+		"bad floor value": {func(p *Pack) { p.Levels["level.00"].Floor[0][0] = 2 }, "out of range"},
+		"missing shape":   {func(p *Pack) { p.Levels["level.00"].Wall[0][0] = 1 }, "out of range"},
+		"short grid":      {func(p *Pack) { p.Levels["level.00"].Wall = p.Levels["level.00"].Wall[:1] }, "rows"},
+		"overlay frame":   {func(p *Pack) { p.Levels["level.00"].Overlays[0].Frame = 3 }, "frame 3"},
+		"sheet too small": {func(p *Pack) { p.Sprites["sprite.tiles"].Frames = 5 }, "do not fit"},
+		"floor type":      {func(p *Pack) { p.Levels["level.00"].Floor[0][0] = 2 }, "out of range"},
+		"floor variant":   {func(p *Pack) { p.Levels["level.00"].FloorTypes[1].Variant = 2 }, "variant 2"},
+		"anim frame": {func(p *Pack) {
+			p.Sprites["sprite.npc"].Animations["walk.2"] = Animation{Frames: []int{7}, MS: Fixed(1)}
+		}, "frame 7"},
+		"anim mode": {func(p *Pack) {
+			p.Sprites["sprite.npc"].Animations["idle"] = Animation{Frames: []int{0}, Mode: "bounce"}
+		}, "unknown mode"},
+		"anchors":         {func(p *Pack) { p.Sprites["sprite.npc"].Anchors = []Offset{{0, 0}} }, "anchors"},
+		"look layer":      {func(p *Pack) { p.Looks["look.plate"].Layer = "sky" }, "unknown layer"},
+		"look frame":      {func(p *Pack) { p.Looks["look.plate"].States["up"][0].Frame = 9 }, "frame 9"},
+		"item text":       {func(p *Pack) { p.Items["item.key"].Name = "item.nope" }, "not in text.en"},
+		"item icon":       {func(p *Pack) { p.Items["item.key"].Icon.Sprite = "sprite.none" }, "not found"},
+		"thing kind":      {func(p *Pack) { p.Things["thing.guard"].Kind = "ghost" }, "unknown kind"},
+		"behavior":        {func(p *Pack) { p.Things["thing.guard"].Behaviors = []string{"sleepy"} }, "unknown behavior"},
+		"message key":     {func(p *Pack) { p.Messages.Messages["hello"] = "msg.stuck" }, "unknown message"},
+		"message text":    {func(p *Pack) { p.Messages.Messages[MsgLeverStuck] = "msg.nope" }, "not in text.en"},
+		"feature kind":    {func(p *Pack) { p.Levels["level.00"].Features[0].Kind = "fountain" }, "unknown kind"},
+		"feature cell":    {func(p *Pack) { p.Levels["level.00"].Features[1].Cell = Cell{0, 1} }, "share cell"},
+		"feature dup":     {func(p *Pack) { p.Levels["level.00"].Features[1].ID = "plate.0.1" }, "duplicate feature"},
+		"look state":      {func(p *Pack) { p.Levels["level.00"].Features[0].Look = "look.exit" }, `no state "up"`},
+		"hook procedure":  {func(p *Pack) { p.Levels["level.00"].Features[0].OnPress = "p9" }, `procedure "p9"`},
+		"wrong hook":      {func(p *Pack) { p.Levels["level.00"].Features[0].OnInsert = "p0" }, "no hook on_insert"},
+		"slot item":       {func(p *Pack) { p.Levels["level.00"].Features[2].Accepts = "item.nope" }, "not found"},
+		"exit level":      {func(p *Pack) { p.Levels["level.00"].Features[1].To.Level = "level.09" }, "not found"},
+		"exit cell":       {func(p *Pack) { p.Levels["level.00"].Features[1].To.Cell = Cell{9, 9} }, "outside"},
+		"two ops":         {func(p *Pack) { a := &p.Levels["level.00"].Procedures["p0"][0]; a.Stop = new(string) }, "2 operations"},
+		"action target":   {func(p *Pack) { p.Levels["level.00"].Procedures["p1"][0].SetHook.Feature = "door.9" }, `feature "door.9"`},
+		"action hook":     {func(p *Pack) { p.Levels["level.00"].Procedures["p1"][0].SetHook.Hook = HookInsert }, "no hook on_insert"},
+		"roll creature":   {func(p *Pack) { p.Levels["level.00"].Procedures["p0"][1].Roll.Thing = "creature.1.1" }, "not a boulder"},
+		"set floor type":  {func(p *Pack) { p.Levels["level.00"].Procedures["p0"][0].SetFloor.Type = 5 }, "floor type 5"},
+		"thing template":  {func(p *Pack) { p.Levels["level.00"].Things[0].Thing = "thing.nope" }, "not found"},
+		"creature rolls":  {func(p *Pack) { p.Levels["level.00"].Things[0].Rolling = &Rolling{} }, "only boulders"},
+		"boulder carries": {func(p *Pack) { p.Levels["level.00"].Things[1].Items = []Object{{Item: "item.key"}} }, "only creatures"},
+		"not a container": {func(p *Pack) { p.Levels["level.00"].Objects[0].Item = "item.key" }, "not a container"},
+		"over capacity": {func(p *Pack) {
+			o := p.Levels["level.00"].Objects[0]
+			o.Contents = append(o.Contents, Object{Item: "item.key"})
+		}, "capacity"},
+		"rotate too far": {func(p *Pack) { p.Palettes["palette.0"].Effects[0].First = 250 }, "outside the palette"},
+		"no period":      {func(p *Pack) { p.Palettes["palette.0"].Effects[1].PeriodMS = 0 }, "period"},
+		"unknown effect": {func(p *Pack) { p.Palettes["palette.0"].Effects[1].Kind = "fade" }, "unknown kind"},
 	}
 	if err := testPack().Verify(); err != nil {
 		t.Fatalf("valid pack: %v", err)

@@ -14,7 +14,7 @@ OBJECTS holds 254 templates of 15 bytes. An object is an instance of a template 
 | 6, 7 | Damage codes of actions 0 and 1 (combat.md) |
 | 8 | Damage code of action 2; its nibbles + 3 also give hand delays |
 | 9 | Charges (the starting value of objects that have one) |
-| 10 | Image within the object banks |
+| 10 | Image `i`: the small image is resource small-object base + `i`, the tiny image resource tiny-object base + `i` (INIT) |
 | 11 | Flags: 80h never chosen as a random object; other bits select the worn look |
 | 12 | Use handler: 80h set means it has a power, the low bits the power number |
 | 13 | Category: bits 0–5 the category; 40h a weapon; 80h two-handed |
@@ -67,6 +67,12 @@ Objects given by the game (conversations, powers) go into the first empty shelf,
 ## Floor
 
 Each cell holds a list of objects on its floor; at most eight are drawn. Objects dropped or thrown land on the floor. Objects left on a level stay there.
+
+An object on the floor is drawn with its tiny image (about 8×6 pixels; the small 16×16 image is the inventory icon), centered in its cell's tile box: an image `w × h` has its top-left at `(16 − ⌊w/2⌋, 16 − ⌊h/2⌋)` from the box's corner (world.md). The objects of a cell are drawn in list order, each over the last, after the cell's floor and overlays and before anything standing.
+
+**Magnified.** With magnifying on, objects on the floor are drawn with their small image instead, centered the same way, so they are easier to see and to pick up.
+
+**Engine model.** Magnifying is a game setting the player turns on or off; it changes only how floor objects are drawn and where they can be clicked, never the simulation.
 
 ## Hands and actions
 
@@ -179,6 +185,7 @@ Throwing is not possible in water of depth 3 or more.
 
 ## Unknowns
 
+- Whether the game also magnifies floor objects on its own, for example while the player has timed sight (player.md) or by interaction variable 98 (dialogue.md).
 - Which bank the thrown-look frames index.
 - The worn-look flags in byte 11 and the image tables; specified with character drawing.
 - Category 6, and the hand delay formula beyond what is given.
