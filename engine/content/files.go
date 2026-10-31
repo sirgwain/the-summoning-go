@@ -26,6 +26,7 @@ const (
 	looksDir     = "looks"
 	itemsDir     = "items"
 	thingsDir    = "things"
+	portraitsDir = "portraits"
 	textDir      = "text"
 	messagesFile = "messages.json"
 	levelsDir    = "levels"
@@ -91,6 +92,9 @@ func Load(fsys fs.FS) (*Pack, error) {
 		return nil, err
 	}
 	if err := loadRecords(fsys, thingsDir+"/*.json", p.Things, func(t *Thing) string { return t.ID }); err != nil {
+		return nil, err
+	}
+	if err := loadRecords(fsys, portraitsDir+"/*.json", p.Portraits, func(t *Portrait) string { return t.ID }); err != nil {
 		return nil, err
 	}
 	if err := loadRecords(fsys, textDir+"/*.json", p.Texts, func(t *Text) string { return t.ID }); err != nil {
@@ -224,6 +228,9 @@ func Write(p *Pack, dir string) error {
 		return err
 	}
 	if err := writeRecords(dir, thingsDir, "thing.", p.Things); err != nil {
+		return err
+	}
+	if err := writeRecords(dir, portraitsDir, "portrait.", p.Portraits); err != nil {
 		return err
 	}
 	if err := writeRecords(dir, textDir, "text.", p.Texts); err != nil {

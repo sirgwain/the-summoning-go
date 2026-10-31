@@ -42,7 +42,7 @@ The payload decompresses to `frames * height * width*8` palette indexes: frames 
 - **RLE (1).** Read a signed byte `c`. If `c >= 0`, copy the next `c+1` bytes. If `c < 0`, repeat the next byte `1−c` times.
 - **LZSS (3).** A 4096-byte ring buffer, bytes 0..FEDh filled with FEh; writing starts at FEEh. Read a flag byte and use its bits least significant first. A 1 bit: copy one literal byte to the output and the ring. A 0 bit: read bytes `a, b`; position `a | (b & F0h) << 4`, length `(b & 0Fh) + 3`; copy that many bytes from the ring at the position (wrapping at 4096), each written to the output and the ring as it is copied. Stop when the output is full.
 
-Frames one pixel high exist: some banks are backgrounds stored as one frame per scanline, which are stacked to form the image.
+**Strips.** Frames one pixel high exist: some banks (backgrounds, the portraits) store an image as one frame per scanline, frame 0 at the top. The game draws such a bank by drawing every frame, each a frame's height below the last; the importer stacks the frames into one image the same way.
 
 ### Font (type 2)
 
@@ -224,6 +224,31 @@ u8 rgb[blocks][16][3]   // 6-bit components, 0..63
 
 Eight full 256-color palettes start at blocks 0, 10h, 20h, … 70h. Convert a component with `c * 255 / 63` rounded. Gameplay uses palette 0 unless a scene says otherwise.
 
+## F
+
+The portraits and the premade characters.
+
+```text
+u16 portrait_count     // 42
+u16 unknown            // 0
+u16 unknown            // 49
+u16 premade_count      // 3
+byte portrait[portrait_count][8]
+byte premade[premade_count][35]
+```
+
+Portrait row `i` describes portrait `i`, whose picture is the people bank `people base + i` (INIT), a strip of 48 one-pixel frames (above): a 48×48 face.
+
+| Byte | Meaning |
+| --- | --- |
+| 0 | 1: the panel draws the portrait flipped left to right |
+| 1–4 | Figure colors: the palette colors the player's figure draws its colors E0h–E3h in (player.md, Portrait) |
+| 5 | The portrait of the other sex |
+| 6 | The talk portrait: shown for the player in a conversation with a creature that has the player's portrait |
+| 7 | 1: female |
+
+A premade character: `name[26]` (NUL-padded), portrait, the six attributes in order, school, weapon class. Character creation (scenes.md) uses them.
+
 ## CODES
 
 The copy-protection images: 1-bit PCX files (version 5, RLE). The engine does not use them.
@@ -249,8 +274,10 @@ Resources the game uses by a fixed number rather than through a level header or 
 | NPC base + 4Dh | The look the player takes when transformed (spells.md) |
 | small-object base + image | An object's inventory image (items.md) |
 | tiny-object base + image | An object's floor image (items.md) |
+| people base + portrait | A portrait (F) |
 
 ## Unknowns
 
 - Header words 1Ch–3Fh, and the second byte of each decoration pair.
+- F's header words 2 and 4. The people banks past the 42 portraits are the creatures' conversation portraits (creatures.md).
 - The meaning of the INIT tables beyond the ones named (figure frame shifts, base color map): their use belongs to character drawing and is specified with it.

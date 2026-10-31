@@ -63,8 +63,10 @@ type GoTo struct{ Level string }
 // sends it every update while the walk is held.
 type Walk struct{ Direction int }
 
-// PickUp takes the top object of the player's cell into the hand, or the first empty shelf.
-type PickUp struct{}
+// PickUp takes the top object of the player's cell to the first empty shelf (an arrow into a
+// worn quiver with room), as the take key does; with Hand, onto the pointer when the hand is
+// empty, as clicking the player does.
+type PickUp struct{ Hand bool }
 
 // PutDown puts the hand's object down on the player's cell.
 type PutDown struct{}

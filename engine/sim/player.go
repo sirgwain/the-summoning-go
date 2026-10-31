@@ -65,6 +65,8 @@ type Player struct {
 	Attributes map[string]int
 	// IntervalBonus is the ticks worn objects and powers add to the interval.
 	IntervalBonus int
+	// Portrait is the player's portrait, which gives its figure's colors.
+	Portrait string
 	// Hand is the object held on the pointer; Slots the inventory's fixed slots.
 	Hand  *Object
 	Slots [SlotCount]*Object
@@ -154,7 +156,7 @@ func (w *World) newPlayer() *Player {
 	if tmpl == nil {
 		return nil
 	}
-	p := &Player{Template: tmpl, Facing: tmpl.Facing, want: -1, Attributes: map[string]int{}}
+	p := &Player{Template: tmpl, Portrait: tmpl.Portrait, Facing: tmpl.Facing, want: -1, Attributes: map[string]int{}}
 	for i := range p.Skills {
 		p.Skills[i].Threshold = skillThreshold
 	}
@@ -608,9 +610,10 @@ func (w *World) statusTick() {
 	w.statusTickPlayer()
 }
 
-// pickUp takes the top object of the player's cell into the hand, or the first empty shelf
+// pickUp takes the top object of the player's cell: onto the pointer when toHand and the hand is
+// empty, else an arrow into a worn quiver with room and anything else to the first empty shelf
 // (docs/spec/items.md, Engine model).
-func (w *World) pickUp() {
+func (w *World) pickUp(toHand bool) {
 	p, l := w.player, w.Current()
 	c := p.Cell()
 	objs := l.Objects[c]
@@ -619,12 +622,13 @@ func (w *World) pickUp() {
 		return
 	}
 	o := objs[len(objs)-1]
-	if w.intoQuiver(o) {
+	toHand = toHand && p.Hand == nil
+	if !toHand && w.intoQuiver(o) {
 		w.takeFloorObject(l, c)
 		return
 	}
 	slot := -1
-	if p.Hand != nil {
+	if !toHand {
 		for i := range Shelves {
 			if p.Slots[i] == nil {
 				slot = i
@@ -728,13 +732,17 @@ func (w *World) swap(i int) {
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "swapped"})
 }
 
-// activate uses the lever in the player's cell, or else the nearest mouth in reach
-// (docs/spec/rules.md, The player and the features).
+// activate uses the lever in the player's cell, or puts the key a keyhole there takes into it,
+// or else uses the nearest mouth in reach (docs/spec/rules.md, The player and the features).
 func (w *World) activate() {
 	p, l := w.player, w.Current()
 	c := p.Cell()
 	if f := l.byCell[c]; f != nil && f.Kind == content.FeatureLever {
 		w.use(l, c)
+		return
+	}
+	if f := l.byCell[c]; f != nil && f.Kind == content.FeatureSlot && f.Keyhole {
+		w.useKey(l, f)
 		return
 	}
 	var best *Feature
@@ -769,4 +777,66 @@ func (w *World) startInventory() {
 			w.putOn(o)
 		}
 	}
+}
+
+// useKey puts the key keyhole f takes into it from what the player carries: the hand, the
+// shelves, the hands, then the bag in the left hand. A key the keyhole refuses stays where it was.
+func (w *World) useKey(l *Level, f *Feature) {
+	p := w.player
+	take, ok := w.findCarried(f.Accepts)
+	if !ok {
+		w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: f.Cell, Detail: "no " + f.Accepts + " for the keyhole"})
+		return
+	}
+	o, putBack := take()
+	if !w.drop(l, f.Cell, o, byPlayer, 0) {
+		putBack()
+		return
+	}
+	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "used a key"})
+}
+
+// findCarried finds an object of item among what the player carries, in the order useKey gives,
+// and returns a function that takes it out and returns it with a function that puts it back.
+func (w *World) findCarried(item string) (func() (*Object, func()), bool) {
+	p := w.player
+	if p.Hand != nil && p.Hand.Item == item {
+		return func() (*Object, func()) {
+			o := p.Hand
+			p.Hand = nil
+			return o, func() { p.Hand = o }
+		}, true
+	}
+	order := make([]int, 0, Shelves+2)
+	for i := range Shelves {
+		order = append(order, i)
+	}
+	order = append(order, SlotRightHand, SlotLeftHand)
+	for _, i := range order {
+		if o := p.Slots[i]; o != nil && o.Item == item {
+			return func() (*Object, func()) {
+				p.Slots[i] = nil
+				if i >= Shelves {
+					w.takeOff(o)
+				}
+				return o, func() {
+					p.Slots[i] = o
+					if i >= Shelves {
+						w.putOn(o)
+					}
+				}
+			}, true
+		}
+	}
+	if bag := p.Pack(w.pack); bag != nil {
+		for k, o := range bag.Contents {
+			if o.Item == item {
+				return func() (*Object, func()) {
+					bag.Contents = append(bag.Contents[:k:k], bag.Contents[k+1:]...)
+					return o, func() { bag.Contents = append(bag.Contents[:k:k], append([]*Object{o}, bag.Contents[k:]...)...) }
+				}, true
+			}
+		}
+	}
+	return nil, false
 }

@@ -219,7 +219,7 @@ func TestHallPlays(t *testing.T) {
 
 	for _, rock := range RocksB {
 		p.to(content.Cell{rock[0], PlateB[1]}, rock)
-		p.do(input.PickUp{})
+		p.do(input.PickUp{Hand: true})
 		p.to(content.Cell{rock[0], PlateB[1]}, PlateB)
 		p.do(input.PutDown{})
 	}
@@ -229,11 +229,11 @@ func TestHallPlays(t *testing.T) {
 		t.Fatal("the rocks on plate B did not hold door B open")
 	}
 	p.to(GemB)
-	p.do(input.PickUp{})
+	p.do(input.PickUp{Hand: true})
 	p.do(input.Swap{Slot: 0})
 
 	p.to(content.Cell{6, GemB[1]}, content.Cell{6, Sack[1]}, Sack)
-	p.do(input.PickUp{})
+	p.do(input.PickUp{Hand: true})
 	p.do(input.Swap{Slot: sim.SlotLeftHand})
 	p.do(input.Swap{Slot: sim.SlotPack})
 	if h := w.Player().Hand; h == nil || h.Item != ItemKey {
@@ -246,7 +246,7 @@ func TestHallPlays(t *testing.T) {
 		t.Fatal("the key did not open door C")
 	}
 	p.to(GemC)
-	p.do(input.PickUp{})
+	p.do(input.PickUp{Hand: true})
 
 	p.to(content.Cell{6, GemC[1]}, content.Cell{6, Socket[1]}, Socket)
 	p.do(input.PutDown{})
@@ -263,7 +263,7 @@ func TestHallPlays(t *testing.T) {
 	}
 	// The sphere thrown at door E unseals it.
 	p.to(Sphere)
-	p.do(input.PickUp{})
+	p.do(input.PickUp{Hand: true})
 	p.do(input.Swap{Slot: sim.SlotRightHand})
 	p.to(content.Cell{6, Sphere[1]}, content.Cell{6, SealedDoor[1]})
 	p.w.Player().Facing = 0
@@ -328,5 +328,58 @@ func TestCellarFight(t *testing.T) {
 	}
 	if p.Experience == 0 || p.Skills[sim.SkillWeapon].Practice+p.Skills[sim.SkillWeapon].Level < 2 {
 		t.Errorf("experience %d, sword skill %+v", p.Experience, p.Skills[sim.SkillWeapon])
+	}
+}
+
+// TestEnterUsesKey stands the player on keyhole C with the key it takes: Enter puts the key in
+// from a shelf, or from the sack in the left hand. As an object hole the slot is left a mystery,
+// and a disarmed keyhole keeps the key where it was.
+func TestEnterUsesKey(t *testing.T) {
+	setup := func(t *testing.T, keyhole, armed bool) (*sim.World, *sim.Level) {
+		t.Helper()
+		w, err := sim.New(Build(), 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		w.Update([]input.Command{input.GoTo{Level: "level.hall"}, input.PlacePlayer{Cell: SlotC}})
+		l := w.Current()
+		f := l.FeatureAt(SlotC)
+		f.Keyhole, f.Armed = keyhole, armed
+		return w, l
+	}
+	enter := func(w *sim.World) {
+		w.Update([]input.Command{input.Activate{}})
+		for range 120 {
+			w.Update(nil)
+		}
+	}
+
+	w, l := setup(t, true, true)
+	w.Player().Slots[7] = &sim.Object{Item: ItemKey}
+	enter(w)
+	if w.Player().Slots[7] != nil || l.Blocked(DoorC) {
+		t.Errorf("Enter on the keyhole: shelf 7 %v, door C blocked %v", w.Player().Slots[7], l.Blocked(DoorC))
+	}
+
+	w, l = setup(t, true, true)
+	sack := &sim.Object{Item: ItemSack, Contents: []*sim.Object{{Item: ItemRock}, {Item: ItemKey}}}
+	w.Player().Slots[sim.SlotLeftHand] = sack
+	enter(w)
+	if len(sack.Contents) != 1 || sack.Contents[0].Item != ItemRock || l.Blocked(DoorC) {
+		t.Errorf("Enter with the key in the sack: %v, door C blocked %v", sack.Contents, l.Blocked(DoorC))
+	}
+
+	w, l = setup(t, false, true)
+	w.Player().Slots[0] = &sim.Object{Item: ItemKey}
+	enter(w)
+	if w.Player().Slots[0] == nil || !l.Blocked(DoorC) {
+		t.Error("Enter put the key in an object hole")
+	}
+
+	w, l = setup(t, true, false)
+	w.Player().Slots[0] = &sim.Object{Item: ItemKey}
+	enter(w)
+	if w.Player().Slots[0] == nil || !l.Blocked(DoorC) {
+		t.Error("a disarmed keyhole took the key")
 	}
 }

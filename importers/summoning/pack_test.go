@@ -102,6 +102,8 @@ func importFixture() *Source {
 	resources[26] = rawBank(10, 1, 1, 0, plus(120))
 	// The player's figure: the body (character animation base 16), the legs (17), the body look
 	// (16 + 25h) and the head look (18, the wall bank, standing in for one).
+	// Portraits 0 and 1 (people base 13): strips of frames, a row each.
+	resources[14] = rawBank(3, 1, 1, 0, plus(14))
 	resources[16] = rawBank(48, 2, 1, 0, plus(130))
 	resources[17] = rawBank(48, 1, 1, 0, plus(180))
 	resources[16+bodyLook] = rawBank(56, 1, 1, 0, plus(150))
@@ -140,8 +142,17 @@ func importFixture() *Source {
 
 	return &Source{
 		Colors: colors, Init: in, Resource: container(resources...), Levels: container(level),
-		Text: textFixture(), Objects: objectsFixture(), NPC: npcFixture(),
+		Text: textFixture(), Objects: objectsFixture(), NPC: npcFixture(), F: portraitsFixture(),
 	}
+}
+
+// portraitsFixture is F with two portraits of each other's sex, each the other's other and talk
+// portrait: 0, mirrored, and 1, female. One premade character follows.
+func portraitsFixture() []byte {
+	f := fixture{}.u16(2, 0, 49, 1)
+	f = f.u8(1, 5, 6, 7, 8, 1, 1, 0)
+	f = f.u8(0, 1, 2, 3, 4, 0, 0, 1)
+	return f.zeros(premadeSize)
 }
 
 func TestImport(t *testing.T) {
@@ -217,7 +228,7 @@ func TestImportFeatures(t *testing.T) {
 		{ID: "plate.1.2", Kind: content.FeaturePlate, Cell: cell(1, 2), Look: "look.plate.21", Armed: true, Threshold: 50, OnPress: "p1"},
 		{ID: "teleporter.1.3", Kind: content.FeatureTeleporter, Cell: cell(1, 3), Look: "look.teleporter.21",
 			Destinations: []content.Cell{cell(1, 3), cell(1, 3)}},
-		{ID: "slot.2.0", Kind: content.FeatureSlot, Cell: cell(2, 0), Look: "look.slot.24.0", Accepts: "item.key", Armed: true, OnInsert: "p0"},
+		{ID: "slot.2.0", Kind: content.FeatureSlot, Cell: cell(2, 0), Look: "look.slot.24.0", Accepts: "item.key", Keyhole: true, Armed: true, OnInsert: "p0"},
 		{ID: "door.2.1", Kind: content.FeatureDoor, Cell: cell(2, 1), Look: "look.door.23.v", State: content.DoorClosed},
 		// Jumps (0, 0) and (−1, +1).
 		{ID: "teleporter.2.2", Kind: content.FeatureTeleporter, Cell: cell(2, 2), Look: "look.teleporter.21", Armed: true,
@@ -461,6 +472,20 @@ func TestImportPlayer(t *testing.T) {
 	// Facing 1 (direction 0) strikes with the left hand in frame 30h + 8 + 1.
 	if got := tm.Animations["attack.left.0"].Frames; !reflect.DeepEqual(got, []int{0x30 + 8 + 1}) {
 		t.Errorf("attack.left.0 frames %v", got)
+	}
+	if tm.Portrait != "portrait.0" {
+		t.Errorf("player portrait %q", tm.Portrait)
+	}
+	want0 := &content.Portrait{ID: "portrait.0", Image: content.Image{Sprite: "sprite.portrait.13"}, Mirrored: true,
+		FigureColors: []int{5, 6, 7, 8}, Other: "portrait.1", Talk: "portrait.1"}
+	want1 := &content.Portrait{ID: "portrait.1", Image: content.Image{Sprite: "sprite.portrait.14"},
+		FigureColors: []int{1, 2, 3, 4}, Female: true, Other: "portrait.0", Talk: "portrait.0"}
+	if got := p.Portraits; len(got) != 2 || !reflect.DeepEqual(got["portrait.0"], want0) || !reflect.DeepEqual(got["portrait.1"], want1) {
+		t.Errorf("portraits %+v %+v", got["portrait.0"], got["portrait.1"])
+	}
+	// Portrait 1's three frames of 8×1 stack into one image of 8×3.
+	if b := p.Sprites["sprite.portrait.14"]; b == nil || b.Frames != 1 || b.FrameSize != (content.Offset{8, 3}) {
+		t.Errorf("portrait sprite %+v", b)
 	}
 	b := p.Sprites[tm.Sprite]
 	if b.FrameSize != (content.Offset{24, 19}) || b.Frames != 72 || *b.Anchor != creatureAnchor {

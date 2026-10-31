@@ -494,3 +494,18 @@ func crate() *canvas {
 	c.line(cx, base-h+10, cx, base+10, wood)
 	return c
 }
+
+// portrait draws the player's face, 48 pixels square: shoulders, a face, hair and eyes.
+func portrait() *canvas {
+	c := newCanvas(48, 48, clear)
+	c.fill(ellipse(24, 50, 22, 12), solid(blue+3))
+	c.rect(20, 32, 27, 40, tan+3)
+	c.fill(ellipse(24, 22, 11, 14), solid(tan+5))
+	c.outline(ellipse(24, 22, 11, 14), tan+1)
+	c.fill(func(x, y float64) bool { return ellipse(24, 16, 13, 10)(x, y) && y < 15 }, solid(gold+4))
+	for _, x := range []int{19, 28} {
+		c.rect(x, 21, x+1, 22, black)
+	}
+	c.line(21, 30, 27, 30, red+2)
+	return c
+}

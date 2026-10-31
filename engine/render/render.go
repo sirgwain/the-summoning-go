@@ -150,10 +150,14 @@ package main
 
 var Palette [256]vec4
 var Fixed [256]vec4
+var Clear float
 
 func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 	c := imageSrc0At(srcPos)
 	if c.a == 0 {
+		if Clear > 0.5 {
+			return vec4(0)
+		}
 		return vec4(0, 0, 0, 1)
 	}
 	if c.g > 0.5 {
@@ -195,12 +199,45 @@ func setUniform(u []float32, colors [256]color.RGBA) {
 	}
 }
 
-// Present draws src onto dst through the palette, scaled by a whole number.
+// Present draws src onto dst through the palette, scaled by a whole number. What src leaves
+// undrawn shows black.
 func (pr *Presenter) Present(dst, src *ebiten.Image, scale int) {
+	pr.present(dst, src, scale, image.Point{}, false)
+}
+
+// PresentAt draws src onto dst through the palette at point at, scaled by a whole number. What
+// src leaves undrawn stays as dst has it.
+func (pr *Presenter) PresentAt(dst, src *ebiten.Image, scale int, at image.Point) {
+	pr.present(dst, src, scale, at, true)
+}
+
+func (pr *Presenter) present(dst, src *ebiten.Image, scale int, at image.Point, clear bool) {
 	var op ebiten.DrawRectShaderOptions
 	op.Images[0] = src
-	op.Uniforms = map[string]any{"Palette": pr.palette, "Fixed": pr.fixed}
+	c := float32(0)
+	if clear {
+		c = 1
+	}
+	op.Uniforms = map[string]any{"Palette": pr.palette, "Fixed": pr.fixed, "Clear": c}
 	op.GeoM.Scale(float64(scale), float64(scale))
+	op.GeoM.Translate(float64(at.X), float64(at.Y))
 	b := src.Bounds()
 	dst.DrawRectShader(b.Dx(), b.Dy(), pr.shader, &op)
+}
+
+// DrawImage draws the frame of image img into the index image dst at (x, y), flipped left to
+// right when mirrored.
+func (s *Sprites) DrawImage(dst *ebiten.Image, img content.Image, x, y int, mirrored bool) error {
+	f, err := s.Frame(img.Sprite, img.Frame)
+	if err != nil {
+		return err
+	}
+	var op ebiten.DrawImageOptions
+	if mirrored {
+		op.GeoM.Scale(-1, 1)
+		op.GeoM.Translate(float64(f.Bounds().Dx()), 0)
+	}
+	op.GeoM.Translate(float64(x), float64(y))
+	dst.DrawImage(f, &op)
+	return nil
 }

@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/input"
 )
 
 // Step is what a script does at one update (docs/design.md, Testing). Every field is optional;
@@ -32,8 +33,16 @@ type Step struct {
 	For int64 `json:"for,omitempty"`
 	// Play switches to playing (true) or to the tools (false).
 	Play *bool `json:"play,omitempty"`
+	// PlacePlayer puts the player on a cell of the shown level, by the debug command.
+	PlacePlayer *content.Cell `json:"place_player,omitempty"`
 	// Click taps the left button on a cell, centering the view on it first if it is hidden.
 	Click *content.Cell `json:"click,omitempty"`
+	// ClickPlayer taps on the player's figure; Slot on the hotbar's box for a slot; Action on the
+	// hotbar's button for [hand, action]. Right makes the step's tap the right button's.
+	ClickPlayer bool  `json:"click_player,omitempty"`
+	Slot        *int  `json:"slot,omitempty"`
+	Action      []int `json:"action,omitempty"`
+	Right       bool  `json:"right,omitempty"`
 	// Wheel scrolls, positive to zoom in.
 	Wheel float64 `json:"wheel,omitempty"`
 	// Shot saves the screen after the update, and Dump the viewer's state, to these files.
@@ -139,6 +148,13 @@ func (r *Runner) Before(v *Viewer) (Input, error) {
 		if st.Play != nil {
 			v.SetPlay(*st.Play)
 		}
+		if st.PlacePlayer != nil {
+			v.World.Update([]input.Command{input.PlacePlayer{Cell: *st.PlacePlayer}})
+			v.rebuild()
+			if v.Play {
+				v.Recenter()
+			}
+		}
 		if st.Center != nil {
 			v.CenterOn(*st.Center)
 		}
@@ -156,18 +172,74 @@ func (r *Runner) Before(v *Viewer) (Input, error) {
 		for _, k := range st.Keys {
 			in.Held[Key(k)], in.Pressed[Key(k)] = true, true
 		}
+		tap := func(pt image.Point) {
+			in.Cursor = pt
+			if st.Right {
+				in.Right = Button{Pressed: true, Released: true}
+			} else {
+				in.Left = Button{Pressed: true, Released: true}
+			}
+		}
+		if st.ClickPlayer {
+			p := v.World.Player()
+			if p == nil {
+				return in, fmt.Errorf("update %d: no player to click", r.at)
+			}
+			c := p.Cell()
+			st.Click = &c
+		}
 		if st.Click != nil {
 			pt := v.CellPoint(*st.Click)
-			if !pt.In(image.Rectangle{Max: v.Screen}) || pt.In(v.PanelRect()) || pt.In(v.LogRect()) {
+			if !pt.In(image.Rectangle{Max: v.Screen}) || v.covered(pt) {
 				v.CenterOn(*st.Click)
 				pt = v.CellPoint(*st.Click)
 			}
-			in.Cursor = pt
-			in.Left = Button{Pressed: true, Released: true}
+			tap(pt)
+		}
+		if st.Slot != nil || st.Action != nil {
+			pt, err := hotbarPoint(v, st)
+			if err != nil {
+				return in, fmt.Errorf("update %d: %w", r.at, err)
+			}
+			tap(pt)
 		}
 		in.Wheel += st.Wheel
 	}
 	return in, nil
+}
+
+// covered reports whether screen point pt is under the panel, the log or the hotbar.
+func (v *Viewer) covered(pt image.Point) bool {
+	if pt.In(v.PanelRect()) || pt.In(v.LogRect()) {
+		return true
+	}
+	h := v.Hotbar()
+	return h != nil && pt.In(h.Rect)
+}
+
+// hotbarPoint returns the middle of the hotbar box or button a step taps.
+func hotbarPoint(v *Viewer, st Step) (image.Point, error) {
+	h := v.Hotbar()
+	if h == nil {
+		return image.Point{}, fmt.Errorf("no hotbar while not playing")
+	}
+	mid := func(r image.Rectangle) image.Point { return r.Min.Add(r.Max).Div(2) }
+	if st.Slot != nil {
+		r, ok := h.SlotRect(*st.Slot)
+		if !ok {
+			return image.Point{}, fmt.Errorf("the hotbar has no slot %d", *st.Slot)
+		}
+		return mid(r), nil
+	}
+	if len(st.Action) != 2 {
+		return image.Point{}, fmt.Errorf("action wants [hand, action]")
+	}
+	for _, a := range h.Actions {
+		if a.Hand == st.Action[0] && a.Action == st.Action[1] {
+			return mid(h.Screen(a.Rect)), nil
+		}
+	}
+	return image.Point{}, fmt.Errorf("the hotbar has no action %v", st.Action)
 }
 
 // After writes the update's dumps and returns the paths of the screenshots to take.

@@ -356,7 +356,8 @@ func (lb *levelBuilder) terrainFeatures() error {
 				if lb.index == specialSlotLevel && c == specialSlotCell && a == 0 {
 					a = specialSlotProcedure
 				}
-				f = &content.Feature{Kind: content.FeatureSlot, Accepts: accepts, Armed: trig.Extra[triggerDisarmed] == 0, OnInsert: lb.hook(c, a)}
+				f = &content.Feature{Kind: content.FeatureSlot, Accepts: accepts, Armed: trig.Extra[triggerDisarmed] == 0,
+					Keyhole: t == terrainSlot, OnInsert: lb.hook(c, a)}
 				if trig.Extra[triggerProcB] != noProcedure {
 					lb.im.report.addf("slot procedure b: not used (rules.md, Unknowns)")
 				}

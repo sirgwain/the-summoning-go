@@ -62,15 +62,23 @@ The player has slots:
 | 27 | Neck |
 | 28+ | Pack: the contents of the bag held in the left hand, one slot per capacity |
 
-Pack slots exist only up to the right-hand bag's capacity and take what fits in it. Putting an object in a worn slot (20–27, the hands included) adds its armor and, when its use handler has 80h, starts its power; taking it off ends both. Ending undoes the powers marked "lasts while worn" and the speed powers (09h–0Bh), so a worn object's speed counts only while worn. The Leather Boots (24h) every character starts in have power 0Ah with 80h: interval −2 while worn. Picking an object up puts it in the first empty shelf; with none, message 7Fh. An arrow picked up goes into the quiver when it fits.
+Pack slots exist only up to the right-hand bag's capacity and take what fits in it. Putting an object in a worn slot (20–27, the hands included) adds its armor and, when its use handler has 80h, starts its power; taking it off ends both. Ending undoes the powers marked "lasts while worn" and the speed powers (09h–0Bh), so a worn object's speed counts only while worn. The Leather Boots (24h) every character starts in have power 0Ah with 80h: interval −2 while worn. Taking an object from the floor with the take key puts it in the first empty shelf; with none, message 7Fh and it stays on the floor. An arrow taken goes into the quiver when it fits.
 
 Objects given by the game (conversations, powers) go into the first empty shelf, or are dropped at the player's feet.
 
-**The hand.** Besides its slots the player has a hand, the object held on the pointer. Taking an object from the floor puts it in the hand; clicking a slot swaps the hand with the slot; putting down puts the hand's object on the floor (rules.md, The player and the features).
+**The hand.** Besides its slots the player has a hand, the object held on the pointer. Taking an object from the floor with the mouse puts it in the hand; clicking a slot swaps the hand with the slot; putting down puts the hand's object on the floor (rules.md, The player and the features).
+
+**The mouse.** With the left button:
+
+- Clicking the player's figure with an empty pointer takes the top object of the player's cell onto the pointer (pick up).
+- Clicking the player's figure with an object on the pointer puts it down on the player's cell (put down), so an object meant for a keyhole, a socket or a plate goes in by standing on it and clicking the player.
+- Clicking a slot (a shelf, a hand, a worn slot, a pack slot) swaps the pointer's object with the slot's.
+
+With the right button, an object on the pointer goes to the first empty shelf; with an empty pointer, clicking the player's figure takes the top object underfoot straight to the first empty shelf. With no empty shelf the right button does nothing.
 
 **Engine model.** The player has a hand and slots numbered as above. Commands:
 
-- **Pick up** takes the top object of the player's cell: into the hand when it is empty, else into the first empty shelf, else message 7Fh (`no_room`) and it stays on the floor. Taking it off the floor lifts its weight off a plate.
+- **Pick up** takes the top object of the player's cell, as the take key does: an arrow into a worn quiver with room, anything else into the first empty shelf, else message 7Fh (`no_room`) and it stays on the floor. **Pick up into the hand**, as clicking the player with an empty pointer does, takes it onto the pointer instead; with an object already in hand it is a plain pick up. Taking it off the floor lifts its weight off a plate.
 - **Put down** puts the hand's object down on the player's cell.
 - **Swap** exchanges the hand with a slot. Shelves and the two hands take anything. A pack slot takes an object whose size is at most the bag's largest, and never the bag itself; putting an object in the first free pack slot adds it to the bag's contents, and taking one out removes it, so the contents stay in order. The worn slots (20, 21, 24–27) are added with Fight, along with what each takes.
 

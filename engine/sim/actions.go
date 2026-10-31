@@ -206,7 +206,7 @@ func (w *World) playerCommand(cmd input.Command) {
 			p.want = c.Direction
 		}
 	case input.PickUp:
-		w.pickUp()
+		w.pickUp(c.Hand)
 	case input.PutDown:
 		w.putDown()
 	case input.Swap:

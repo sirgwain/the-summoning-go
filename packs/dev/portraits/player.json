@@ -1,0 +1,8 @@
+{
+  "id": "portrait.player",
+  "image": {
+    "sprite": "sprite.portrait",
+    "frame": 0
+  },
+  "figure_colors": [75, 76, 78, 79]
+}

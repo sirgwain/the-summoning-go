@@ -11,6 +11,8 @@ import (
 // Source holds the data files the importer reads.
 type Source struct {
 	Colors, Init, Resource, Levels, Text, Objects, NPC []byte
+	// F holds the portraits and premade characters; without it there are no portraits.
+	F []byte
 }
 
 // ReadSource reads the data files from dir.
@@ -21,7 +23,7 @@ func ReadSource(dir string) (*Source, error) {
 		dst  *[]byte
 	}{
 		{FileColors, &s.Colors}, {FileInit, &s.Init}, {FileResource, &s.Resource}, {FileLevels, &s.Levels},
-		{FileText, &s.Text}, {FileObjects, &s.Objects}, {FileNPC, &s.NPC},
+		{FileText, &s.Text}, {FileObjects, &s.Objects}, {FileNPC, &s.NPC}, {FileClassData, &s.F},
 	} {
 		data, err := ReadDataFile(dir, f.name)
 		if err != nil {
@@ -179,6 +181,13 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 	}
 	if err := im.player(); err != nil {
 		return nil, nil, err
+	}
+	if src.F != nil {
+		rows, err := ReadPortraits(src.F)
+		if err != nil {
+			return nil, nil, err
+		}
+		im.portraits(rows)
 	}
 
 	for i, l := range levels {

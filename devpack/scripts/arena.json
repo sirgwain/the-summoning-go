@@ -1,6 +1,6 @@
 [
   {"at": 0, "play": true, "shot": "arena-start.png"},
-  {"at": 1, "keys": ["F"]},
+  {"at": 1, "click_player": true},
   {"at": 2, "keys": ["W"], "hold": ["Control"]},
   {"at": 3, "hold": ["S", "D"], "for": 1},
   {"at": 20, "keys": ["Space"]},

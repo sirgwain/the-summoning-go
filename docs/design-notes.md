@@ -18,7 +18,12 @@ it once done.
    rolling boulders; visibility and seen cells; exits, pits, teleporters, plates and floor
    effects; picking up, putting down, the hand, shelves, hands and pack; using levers and mouths;
    `summoning play`, with the view following the player as the game's does. The dev pack's hall
-   is solved by playing it (`TestHallPlays`).
+   is solved by playing it (`TestHallPlays`). The hotbar (`engine/viewer/hotbar.go`): portrait,
+   gauges, both hands with their action buttons and the twenty shelves; the mouse takes and puts
+   down by clicking the player, swaps the pointer with a box, and sends the pointer's object to a
+   shelf with the right button, through the slot code the inventory panel will share
+   (`slots.go`); a key goes into a keyhole by mouse (`TestKeyIntoSlotWithMouse`). Portraits
+   import from F and give the figure its colors E0h–E3h.
 
 ## In progress: 5. Fight
 
@@ -57,7 +62,7 @@ a whole fight.
 - Animated objects' patterns (drawn still), teleported creatures spinning.
 - Messages hidden by "quiet combat"; held objects hidden in water 3 deep or more; worn looks
   (head and body armor). The player's figure and held layers draw with the palette's own
-  colors, unanimated (`drawlist.Cmd.Fixed`); character creation sets them from the portrait.
+  colors, unanimated (`drawlist.Cmd.Fixed`), and the portrait's figure colors.
 - Damage numbers are drawn with the debug font until the UI has its own (Remaster UI).
 - See a fight on the imported game on screen. The dev pack's arena fight runs through the viewer
   in `TestArenaFight`; watch it with
@@ -77,28 +82,44 @@ a whole fight.
 
 - See above. Also confusion in walking, and haste and battle rage in the speed formula.
 
-### 6. Magic and talk
+### 6. Inventory
 
+- The inventory panel: the mannequin with the worn slots (head, arms, hands, feet, quiver, body,
+  neck), the pack of the bag in the left hand, the stats (attributes, skills, armor, experience),
+  the chosen object's details. Built on the hotbar's `SlotBox` and pointer code; the game's object
+  icons, no panel art. It replaces the Ctrl stand-in keys (Ctrl+R/L hands, Ctrl+W put on,
+  Ctrl+F1–F8 pack).
+- Hotbar action buttons as the game's action icons rather than words.
+- The pointer's object drawn over the hotbar's cursor in scripts (scripts park the cursor off
+  screen between clicks).
+
+### 7. Magic and talk
+
+- Spells on the hotbar: the memorized spells, cast by clicking.
 - Spells and gestures, `shoot_spell`, conjured things (pushable, timed), wall spells (Gateway).
-- Dialogue: talking to creatures, keywords, conversation actions and the procedures they run.
+- Dialogue: talking to creatures, keywords, conversation actions and the procedures they run;
+  the creatures' conversation portraits (the people banks after the player's 42) and the
+  player's talk portrait.
 
-### 7. Game
+### 8. Game
 
 - Scenes: the intro, character creation (which replaces the starting attributes and bonus the
-  importer writes, and sets the figure's colors E0h–E3h from the portrait: the presenter's fixed
-  table), story screens, endings, and the three arrival styles when changing level.
+  importer writes, and chooses the portrait in place of portrait 0; F's premade characters),
+  changing sex (the other-sex portrait), story screens, endings, and the three arrival styles
+  when changing level.
 - Saves, audio (music and effects as Ogg with loop points), the level map and its refusals.
 - Level names, which the import leaves empty.
 
-### 8. Remaster UI
+### 9. Remaster UI
 
 - Play uses the game's key layout (Space and Q for the hands, X and Z to throw, F take, G put
-  down, Enter lever, E talk, H recenter, P pause; 1–4 and R wait for spells). The inventory's
-  stand-in keys are on Ctrl until the inventory has its panel and the mouse works it.
-- Panels from the game's art, the quickbar, hotkeys, an inventory the mouse works, magnified floor
-  objects as a game setting, and the custom outline font. Play mode's text panel is a stand-in.
+  down, Enter lever, E talk, H recenter, P pause; 1–4 and R wait for spells).
+- Panels from the game's art (the hotbar and inventory panel draw plain boxes until then),
+  hotkeys for the hotbar's objects, magnified floor objects as a game setting, and the custom
+  outline font (the hotbar's labels and tooltips use the debug font). Play mode's text panel is a
+  stand-in.
 
-### 9. Modding
+### 10. Modding
 
 - Override packs, `summoning verify` as a command, and the editor.
 

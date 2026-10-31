@@ -274,14 +274,13 @@ func TestPlayScript(t *testing.T) {
 		v.Update(in)
 	}
 	key("F")
-	if p := v.World.Player(); p.Hand == nil || p.Hand.Item != devpack.ItemRock {
-		t.Fatalf("F did not pick up the rock: %v", p.Hand)
+	if p := v.World.Player(); p.Hand != nil || p.Slots[0] == nil || p.Slots[0].Item != devpack.ItemRock {
+		t.Fatalf("F did not put the rock on shelf 0: hand %v, shelf %v", p.Hand, p.Slots[0])
 	}
 	key("Digit1", KeyControl)
-	if p := v.World.Player(); p.Hand != nil || p.Slots[0] == nil {
-		t.Fatal("Ctrl+1 did not put the rock on shelf 0")
+	if p := v.World.Player(); p.Hand == nil || p.Slots[0] != nil {
+		t.Fatal("Ctrl+1 did not take the rock off shelf 0")
 	}
-	key("Digit1", KeyControl)
 	key("G")
 	if p := v.World.Player(); p.Hand != nil || len(v.World.Current().Objects[devpack.RocksB[0]]) != 1 {
 		t.Error("G did not put the rock down")

@@ -48,8 +48,9 @@ type Viewer struct {
 	// Origin is the view pixel at the buffer's top-left; Scale the screen pixels per view pixel.
 	Origin image.Point
 	Scale  int
-	// Screen is the size of the screen in pixels.
+	// Screen is the size of the screen in pixels; Cursor where the mouse was at the last update.
 	Screen image.Point
+	Cursor image.Point
 	// Cmds draw the shown level, back to front, covering Bounds. Version counts their rebuilds,
 	// so a shell knows when to reload them.
 	Cmds    []drawlist.Cmd
@@ -225,6 +226,7 @@ func (v *Viewer) CellPoint(c content.Cell) image.Point {
 // advances the world with the commands the input makes.
 func (v *Viewer) Update(in Input) {
 	v.Ticks++
+	v.Cursor = in.Cursor
 	v.pan(in)
 	v.scroll(in)
 	cmds := v.mouse(in)
@@ -309,12 +311,16 @@ func (v *Viewer) pan(in Input) {
 	}
 }
 
-// mouse tracks the cell under the cursor, drags the view, and turns a left click into a
-// selection, or with Shift into moving the selected thing to the clicked cell. A click is a
-// release near its press; a press and release between two updates (a tap) counts too.
+// mouse tracks the cell under the cursor, drags the view, and turns clicks into commands. A
+// left click selects a cell or a thing, or with Shift moves the selected thing to the clicked
+// cell. While playing, clicks on the hotbar and on the player work objects with the hand instead
+// (slots.go), and a right click puts the hand's object on a shelf. A click is a release near its
+// press; a press and release between two updates (a tap) counts too.
 func (v *Viewer) mouse(in Input) []input.Command {
 	cursor := in.Cursor
-	if cursor.In(image.Rectangle{Max: v.Screen}) && !cursor.In(v.PanelRect()) {
+	bar := v.Hotbar()
+	onBar := bar != nil && cursor.In(bar.Rect)
+	if cursor.In(image.Rectangle{Max: v.Screen}) && !cursor.In(v.PanelRect()) && !onBar {
 		c := drawlist.CellAt(v.ViewPoint(cursor))
 		v.Hover = &c
 	} else {
@@ -323,6 +329,9 @@ func (v *Viewer) mouse(in Input) []input.Command {
 
 	if in.Left.Pressed || in.Right.Pressed {
 		v.press, v.drag = &cursor, &cursor
+		if onBar {
+			v.drag = nil
+		}
 	}
 	if v.drag != nil && (in.Left.Held || in.Right.Held) {
 		v.Origin = v.Origin.Sub(cursor.Sub(*v.drag).Div(v.Scale))
@@ -330,21 +339,34 @@ func (v *Viewer) mouse(in Input) []input.Command {
 		next := v.drag.Add(moved)
 		v.drag = &next
 	}
-	if in.Right.Released {
+	clicked := func() bool {
+		press := cursor
+		if v.press != nil {
+			press = *v.press
+		}
 		v.press, v.drag = nil, nil
+		d := cursor.Sub(press)
+		return d.X*d.X+d.Y*d.Y <= clickSlop*clickSlop && !cursor.In(v.PanelRect())
 	}
-	if !in.Left.Released {
+	if in.Right.Released {
+		switch {
+		case !clicked() || !v.Play || bar == nil:
+			return nil
+		case onBar:
+			return bar.click(v, cursor, true)
+		}
+		return v.rightClick(v.onPlayer(v.ViewPoint(cursor)))
+	}
+	if !in.Left.Released || !clicked() {
 		return nil
 	}
-	press := cursor
-	if v.press != nil {
-		press = *v.press
-	}
-	v.press, v.drag = nil, nil
-	if d := cursor.Sub(press); d.X*d.X+d.Y*d.Y > clickSlop*clickSlop || cursor.In(v.PanelRect()) {
-		return nil
+	if onBar {
+		return bar.click(v, cursor, false)
 	}
 	pt := v.ViewPoint(cursor)
+	if v.Play && v.onPlayer(pt) {
+		return v.clickPlayer()
+	}
 	c := drawlist.CellAt(pt)
 	if in.held(KeyShift) && v.Thing != "" {
 		return []input.Command{input.Move{Thing: v.Thing, Cell: c}}
@@ -434,8 +456,8 @@ const packKeys = 8
 //     diagonals.
 //   - Space acts with the right hand (Shift+Space its second action) and X throws from it; Q acts
 //     with the left hand (Shift+Q) and Z throws from it.
-//   - F takes from the floor, G puts down, Enter pulls the lever underfoot, E talks (for now uses
-//     a mouth), H recenters the view, P pauses.
+//   - F takes from the floor, G puts down, Enter pulls the lever underfoot or uses a key on the
+//     keyhole underfoot, E talks (for now uses a mouth), H recenters the view, P pauses.
 //
 // Until the inventory has its panel, Ctrl reaches it: Ctrl+1–0 swap the hand with shelves 0–9
 // (with Shift, 10–19), Ctrl+R and Ctrl+L with the right and left hands, Ctrl+W puts the hand's
@@ -582,7 +604,11 @@ func (v *Viewer) LogRect() image.Rectangle {
 		return image.Rectangle{}
 	}
 	h := len(v.Events)*LineHeight + Margin
-	return image.Rect(0, v.Screen.Y-h, v.Screen.X-v.panelWidth(), v.Screen.Y)
+	bottom := v.Screen.Y
+	if bar := v.Hotbar(); bar != nil {
+		bottom = bar.Rect.Min.Y - Margin
+	}
+	return image.Rect(0, bottom-h, v.Screen.X-v.panelWidth(), bottom)
 }
 
 // LogLines are the event log's lines, clipped to its width.
@@ -611,7 +637,9 @@ func (v *Viewer) PanelLines() []string {
 		lines = append(lines, "", "WASD/arrows walk (two: diagonal), Home PgUp End PgDn",
 			"Space right hand (Shift: 2nd)  X throw right",
 			"Q left hand (Shift: 2nd)  Z throw left",
-			"F take  G put down  Enter lever  E talk/use",
+			"F take  G put down  Enter lever/key  E talk/use",
+			"Click the player: take / put down; click a slot:",
+			"swap with the hand; right click: hand to a shelf",
 			"Ctrl+1-0 shelf (Shift 10-19)  Ctrl+R/L hands",
 			"Ctrl+W put on  Ctrl+F1-F8 pack",
 			"H recenter  P pause  N step  M magnify",

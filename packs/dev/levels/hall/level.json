@@ -106,6 +106,7 @@
       "look": "look.slot",
       "armed": true,
       "accepts": "item.key",
+      "keyhole": true,
       "on_insert": "open_c"
     },
     {

@@ -55,6 +55,9 @@ func (p *Pack) Verify() error {
 	for _, id := range sortedKeys(p.Things) {
 		v.thing(p.Things[id])
 	}
+	for _, id := range sortedKeys(p.Portraits) {
+		v.portrait(p.Portraits[id])
+	}
 	if m := p.Messages; m != nil {
 		for _, key := range sortedKeys(m.Messages) {
 			if !messageKeys[key] {
@@ -252,6 +255,29 @@ func (v *verifier) thing(t *Thing) {
 	for _, b := range t.Behaviors {
 		if !behaviors[b] {
 			v.fail("%s: unknown behavior %q", owner, b)
+		}
+	}
+	if t.Portrait != "" {
+		if _, ok := v.p.Portraits[t.Portrait]; !ok {
+			v.fail("%s: portrait %q not found", owner, t.Portrait)
+		}
+	}
+}
+
+func (v *verifier) portrait(pt *Portrait) {
+	owner := "portrait " + pt.ID
+	v.frame(owner, pt.Image.Sprite, pt.Image.Frame)
+	for _, ref := range []string{pt.Other, pt.Talk} {
+		if _, ok := v.p.Portraits[ref]; ref != "" && !ok {
+			v.fail("%s: portrait %q not found", owner, ref)
+		}
+	}
+	if len(pt.FigureColors) > 256-FigureColor {
+		v.fail("%s: %d figure colors", owner, len(pt.FigureColors))
+	}
+	for _, c := range pt.FigureColors {
+		if c < 0 || c > 255 {
+			v.fail("%s: figure color %d", owner, c)
 		}
 	}
 }

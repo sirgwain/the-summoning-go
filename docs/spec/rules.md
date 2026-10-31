@@ -140,7 +140,7 @@ The player changes level by an exit, a pit, a conversation or a spell. The curre
 
 What the player does to a level's features, in the engine's terms:
 
-- **Using.** The player uses the lever in its own cell (Levers). With no lever there, it uses the nearest mouth whose cell is the player's or one of its eight neighbors, which says its message. With neither, nothing happens.
+- **Using.** The player uses the lever in its own cell (Levers). On a keyhole (terrain 17h) instead, the engine adds a convenience the game does not have: using puts the key the keyhole takes into it, from what the player carries (the hand, then the shelves in order, the right and left hands, then the bag in the left hand), as if the player had put it down there (Item slots); a refusal leaves the key where it was, and without the key nothing happens. Object holes (18h) get no such help: what goes in them is the player's to work out. With no lever or keyhole, the player uses the nearest mouth whose cell is the player's or one of its eight neighbors, which says its message. With none, nothing happens.
 - **Putting down.** The player puts the object in its hand down on its own cell, handled as Dropping objects says; a refusal keeps it in hand.
 - **Plates.** The player weighs 100 on the plate of its cell, unless levitating.
 - **Teleporters.** The player entering an armed teleporter's cell is moved to its destination, keeping its place in the cell, with a teleport sound.
@@ -155,7 +155,7 @@ Each cell's feature is named `<kind>.<x>.<y>` and made from its terrain and plac
 | Terrain | Placement | Feature | State and fields |
 | --- | --- | --- | --- |
 | 10h, 11h, 15h, 1Bh | door (4) | `door` | stage 0 `closed`, 4 `open`; 5–7 `closed`, sealed by the Rainbow, Energy or Shadow Sphere; bit 20h opened by a spell; look by bit 40h |
-| 17h, 18h | trigger (7) | `slot` | accepts the threshold's template; procedure a is `on_insert` |
+| 17h, 18h | trigger (7) | `slot` | accepts the threshold's template; procedure a is `on_insert`; `keyhole` at 17h |
 | 19h, 1Ah | trigger (7) | `lever` | on at 1Ah; procedure a is `on_turn_on`, b `on_turn_off` |
 | 1Fh, 20h | trigger (7) | `plate` | down at 20h; the threshold; a is `on_press`, b `on_release` |
 | 21h–23h | any | `mark` | rune `1`–`3` |

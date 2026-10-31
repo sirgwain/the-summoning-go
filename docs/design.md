@@ -219,6 +219,7 @@ messages.json              the engine's own messages, by key, pointing at string
 attributes.json            the stat model
 items/<id>.json            item templates
 things/<id>.json           templates for creatures, boulders, traps and other standing things
+portraits/<id>.json        faces, and the figure colors they give the player
 looks/<id>.json            how cell features draw in each state
 spells/<id>.json
 templates/<id>.json        puzzle-piece templates (plate, lever, teleporter…)
@@ -274,8 +275,17 @@ The file formats are in [pack.md](pack.md).
 - **Text** uses a custom outline font drawn for the project to match the original's lettering,
   rendered at native resolution with Ebitengine's `text/v2`. The font is content, so a game can
   supply its own.
+- **Hotbar.** A bar along the bottom of the play view, always shown: the player's portrait, gauges
+  for hit points, magic points and load, the two hands with their action buttons, the twenty
+  shelves in two rows of ten, and later the memorized spells. It is how the mouse plays: clicking
+  the player takes and puts down, clicking a box swaps it with the object on the pointer
+  (`docs/spec/items.md`, The mouse).
+- **Inventory panel.** Opened on demand: the figure (a mannequin) with its worn slots, the pack of
+  the bag in the left hand, the player's stats and the chosen object's details. It shares the
+  hotbar's slot boxes and the code that moves objects between the pointer, slots and floor; the
+  hotbar leaves out the mannequin and the stats.
 - Collapsible character, inventory and spell panels; the world view takes the freed space.
-- A quickbar for potions and other usable items, bound to number keys.
+- Number keys for the hotbar's usable objects.
 - Spell gestures with the mouse, plus hotkeys and a spell list.
 - Conversations with keyword entry and a list of known keywords.
 - **Magnify floor objects**, a game setting: objects lying on the floor draw with their larger
@@ -426,12 +436,16 @@ Progress, and the work each milestone has left or handed on, is in [design-notes
 3. **Harness.** What [Testing](#testing) describes: input read as a snapshot per update, the
    viewer's controls without Ebitengine, scripts, state dumps, and the dev pack.
 4. **Walk.** Player entity, movement and collision, pushing, visibility, rolling boulders; pick up,
-   drop and use; a level whose puzzles can be solved by playing it.
+   drop and use; the hotbar, with the mouse taking objects, moving them between the pointer and
+   the shelves and hands, and putting them down (a key into a keyhole); the portraits, which give
+   the player's figure its colors; a level whose puzzles can be solved by playing it.
 5. **Fight.** Attributes, combat pipeline, creature AI and animation, projectiles and arrow traps.
-6. **Magic and talk.** Spells and gestures, dialogue and keywords.
-7. **Game.** Scenes, character creation, saves, audio; *The Summoning* playable from start to end.
-8. **Remaster UI.** Wide view, panels, quickbar, hotkeys.
-9. **Modding.** Override packs and `verify`, then the editor.
+6. **Inventory.** The inventory panel over the hotbar's slot code: the mannequin with the worn
+   slots, the pack, the stats, an object's details; the game's object icons, without its panel art.
+7. **Magic and talk.** Spells and gestures, dialogue and keywords; spells on the hotbar.
+8. **Game.** Scenes, character creation, saves, audio; *The Summoning* playable from start to end.
+9. **Remaster UI.** Wide view, panels from the game's art, hotkeys.
+10. **Modding.** Override packs and `verify`, then the editor.
 
 ## Decisions
 

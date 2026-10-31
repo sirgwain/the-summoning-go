@@ -299,11 +299,17 @@ func TestPickUpSwapAndPutDown(t *testing.T) {
 	p, l := w.Player(), w.Current()
 	l.Objects[cell{1, 2}] = append(l.Objects[cell{1, 2}], &Object{Item: "item.rock"})
 	walk(w, 2, 4)
+	// The take key puts the first rock on a shelf; taking into the hand puts the second there.
+	l.Objects[cell{1, 2}] = append(l.Objects[cell{1, 2}], &Object{Item: "item.rock"})
 	w.Update([]input.Command{input.PickUp{}})
-	w.Update([]input.Command{input.PickUp{}})
-	if p.Hand == nil || p.Slots[0] == nil || len(l.Objects[cell{1, 2}]) != 0 {
+	if p.Hand != nil || p.Slots[0] == nil {
+		t.Fatalf("the take key: hand %v, shelf %v", p.Hand, p.Slots[0])
+	}
+	w.Update([]input.Command{input.PickUp{Hand: true}})
+	if p.Hand == nil || p.Slots[0] == nil || len(l.Objects[cell{1, 2}]) != 1 {
 		t.Fatalf("hand %v, shelf %v, floor %v", p.Hand, p.Slots[0], l.Objects[cell{1, 2}])
 	}
+	l.Objects[cell{1, 2}] = nil
 	w.Update([]input.Command{input.PutDown{}})
 	if p.Hand != nil || len(l.Objects[cell{1, 2}]) != 1 {
 		t.Fatal("the rock was not put down")

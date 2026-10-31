@@ -175,8 +175,10 @@ type Feature struct {
 	Armed     bool `json:"armed,omitempty"`
 	Down      bool `json:"down,omitempty"`
 	Threshold int  `json:"threshold,omitempty"`
-	// Accepts is the item a slot takes.
+	// Accepts is the item a slot takes. Keyhole marks a slot whose item is plainly a key: using
+	// the slot puts it in from what the player carries. Other slots are object holes.
 	Accepts string `json:"accepts,omitempty"`
+	Keyhole bool   `json:"keyhole,omitempty"`
 
 	// Teleporter.
 	Destinations []Cell `json:"destinations,omitempty"`

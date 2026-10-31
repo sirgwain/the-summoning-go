@@ -2,8 +2,8 @@
 
 Status: v1, 2026-10-31. Covers what Milestones 1 (Viewer), 2 (World), 4 (Walk) and 5 (Fight)
 need: the manifest,
-palettes, sprites, floor and wall sets, text, engine messages, item and thing templates, looks, and
-levels with their floor types, features, procedures, things and objects. Later milestones extend it.
+palettes, sprites, floor and wall sets, text, engine messages, item and thing templates, portraits,
+looks, and levels with their floor types, features, procedures, things and objects. Later milestones extend it.
 The Go types are in `engine/content`.
 
 The format is the engine's own. It describes a game in the engine's terms (ground points, named
@@ -92,7 +92,7 @@ Exactly 256 colors, plus optional `effects` that animate them:
 
 Effects run on presentation time from when the view starts, so anything drawn in those colors
 animates without being redrawn. The player's figure, and the items drawn in its hands, are the exception: they
-are drawn with the palette's own colors, without its effects. Fades, flashes and remaps are added with scenes.
+are drawn with the palette's own colors, without its effects, and with its portrait's figure colors. Fades, flashes and remaps are added with scenes.
 
 ## Sprites
 
@@ -328,7 +328,31 @@ keys.
   `player`'s attributes `strength`, `agility`, `endurance`, `accuracy`, `talent` and `power`,
   from which its speed is worked out (`docs/spec/player.md`, Speed), and its starting
   `interval_bonus` in ticks; a player without attributes walks at its base interval.
-- A conversation, portrait and loot are added with dialogue and combat.
+- `portrait` (players) is the player's portrait, which also gives its figure's colors.
+- A conversation and loot are added with dialogue and combat.
+
+## Portraits
+
+`portraits/<name>.json`: a face, shown in panels and conversations.
+
+```json
+{
+  "id": "portrait.0",
+  "image": { "sprite": "sprite.portrait.799", "frame": 0 },
+  "mirrored": true,
+  "figure_colors": [101, 103, 106, 107],
+  "other": "portrait.39",
+  "talk": "portrait.39"
+}
+```
+
+- `image` is the picture; `mirrored` draws it flipped left to right in the player's panel.
+- `figure_colors` are palette colors: a player with this portrait has its figure's colors 224,
+  225, … drawn in them, in order (its hair and skin), with the palette's own colors rather than
+  its effects.
+- `female` gives the sex; `other` is the portrait of the other sex, and `talk` the one a
+  conversation shows for the player when the creature talked to has this portrait too. Both
+  default to this portrait.
 
 ## Looks
 
@@ -454,7 +478,7 @@ runs nothing.
 | `door` | `state` (`closed`, `open`, `opening`, `closing`), `sealed_by` (an item), `opened_by_spell` | | `closed`, `1` .. `n`, `open`, `sealed` |
 | `lever` | `on`, `armed` | `on_turn_on`, `on_turn_off` | `off`, `on` |
 | `plate` | `down`, `armed`, `threshold` | `on_press`, `on_release` | `up`, `down` |
-| `slot` | `accepts` (an item), `armed` | `on_insert` | `slot` |
+| `slot` | `accepts` (an item), `armed`, `keyhole` | `on_insert` | `slot` |
 | `teleporter` | `armed`, `destinations` (two cells), `next` 0 or 1, `turn` (eighths of a turn for things in flight), `fly_over` | | `armed`, `disarmed` |
 | `exit` | `to` (a level and a cell) | | `exit` |
 | `pit` | `to` | | `pit` |
@@ -468,6 +492,8 @@ runs nothing.
 - An `exit` on a wall cell is in the wall's face, drawn with a `wall` layer look and taken by
   walking into the face. An `exit` on a floor cell is a marker, taken by walking onto it. A `mouth`
   stands on a floor cell, drawn up against the wall behind it.
+- A `keyhole` slot takes a key: using it puts that key in from what the player carries. A slot
+  without it is an object hole, which gives no hint of what it takes.
 - A socket draws `full` when every place is set; otherwise `empty` and `set.i` for each set place.
 - A plate's counter starts at the weight of what the level places on it.
 - How each kind behaves is in `docs/spec/rules.md`.

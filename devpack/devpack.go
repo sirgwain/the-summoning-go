@@ -41,6 +41,7 @@ const (
 	spriteFloor    = "sprite.items.floor"
 	spriteBoulder  = "sprite.boulder"
 	spriteCrate    = "sprite.crate"
+	spritePortrait = "sprite.portrait"
 
 	spriteSwordBehind = "sprite.sword.held.behind"
 	spriteSwordFront  = "sprite.sword.held.front"
@@ -70,7 +71,8 @@ var figures = []struct {
 }{
 	{"guard", blue + 1, tan + 5},
 	{"ghost", purple + 3, gray + 13},
-	{"player", green + 1, tan + 5},
+	// The player's head is drawn in the first figure colors, which its portrait sets.
+	{"player", green + 1, water + 2},
 	{"brute", red + 1, tan + 3},
 	{"goblin", green + 4, green + 6},
 }
@@ -123,6 +125,9 @@ func art(p *content.Pack) {
 		b.Animations[fmt.Sprintf("roll.%d", d)] = content.Animation{Frames: frames, MS: content.Fixed(110)}
 	}
 	bank(p, spriteCrate, []*canvas{crate()}, &content.Offset{20, 30})
+	bank(p, spritePortrait, []*canvas{portrait()}, nil)
+	p.Portraits[PortraitPlayer] = &content.Portrait{ID: PortraitPlayer, Image: content.Image{Sprite: spritePortrait},
+		FigureColors: []int{tan + 2, tan + 3, tan + 5, tan + 6}}
 
 	part := func(sprite string, frame int, off content.Offset) []content.LookPart {
 		return []content.LookPart{{Sprite: sprite, Frame: frame, Offset: off}}
@@ -221,6 +226,8 @@ const (
 	ThingBrute   = "thing.brute"
 	ThingGoblin  = "thing.goblin"
 	ThingPlayer  = "thing.player"
+	// PortraitPlayer is the player's portrait.
+	PortraitPlayer = "portrait.player"
 )
 
 // StarterAttributes are the player's attributes, an agile fighter, and its starting skills. It
@@ -289,5 +296,6 @@ func records(p *content.Pack) {
 	p.Things[ThingPlayer] = &content.Thing{ID: ThingPlayer, Kind: content.ThingPlayer, Sprite: "sprite.player",
 		Facing: 3, Speed: 8, IntervalMS: 275, Weight: 100, Footprint: 16,
 		HitPoints: content.Dice{Bonus: 56}, MagicPoints: content.Dice{Bonus: 52}, Stats: StarterAttributes,
-		Inventory: []content.InventoryObject{{Slot: 24, Object: content.Object{Item: ItemBoots}}}}
+		Inventory: []content.InventoryObject{{Slot: 24, Object: content.Object{Item: ItemBoots}}},
+		Portrait:  PortraitPlayer}
 }

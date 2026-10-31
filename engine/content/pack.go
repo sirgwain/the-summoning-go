@@ -12,15 +12,16 @@ const Format = 1
 
 // Pack is a loaded content pack. Records are keyed by id.
 type Pack struct {
-	Manifest Manifest
-	Palettes map[string]*Palette
-	Sprites  map[string]*SpriteBank
-	Floors   map[string]*FloorSet
-	Walls    map[string]*WallSet
-	Looks    map[string]*Look
-	Items    map[string]*Item
-	Things   map[string]*Thing
-	Texts    map[string]*Text
+	Manifest  Manifest
+	Palettes  map[string]*Palette
+	Sprites   map[string]*SpriteBank
+	Floors    map[string]*FloorSet
+	Walls     map[string]*WallSet
+	Looks     map[string]*Look
+	Items     map[string]*Item
+	Things    map[string]*Thing
+	Portraits map[string]*Portrait
+	Texts     map[string]*Text
 	// Messages is messages.json, or nil when the pack has none.
 	Messages *Messages
 	Levels   map[string]*Level
@@ -29,16 +30,17 @@ type Pack struct {
 // NewPack returns an empty pack with the given manifest.
 func NewPack(m Manifest) *Pack {
 	return &Pack{
-		Manifest: m,
-		Palettes: map[string]*Palette{},
-		Sprites:  map[string]*SpriteBank{},
-		Floors:   map[string]*FloorSet{},
-		Walls:    map[string]*WallSet{},
-		Looks:    map[string]*Look{},
-		Items:    map[string]*Item{},
-		Things:   map[string]*Thing{},
-		Texts:    map[string]*Text{},
-		Levels:   map[string]*Level{},
+		Manifest:  m,
+		Palettes:  map[string]*Palette{},
+		Sprites:   map[string]*SpriteBank{},
+		Floors:    map[string]*FloorSet{},
+		Walls:     map[string]*WallSet{},
+		Looks:     map[string]*Look{},
+		Items:     map[string]*Item{},
+		Things:    map[string]*Thing{},
+		Portraits: map[string]*Portrait{},
+		Texts:     map[string]*Text{},
+		Levels:    map[string]*Level{},
 	}
 }
 

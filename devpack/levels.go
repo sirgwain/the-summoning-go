@@ -147,7 +147,7 @@ func hall(p *content.Pack) {
 		door("door.a", DoorA),
 		{ID: "plate.b", Kind: content.FeaturePlate, Cell: PlateB, Look: lookPlate, Armed: true, Threshold: 100, OnPress: "open_b", OnRelease: "close_b"},
 		door("door.b", DoorB),
-		{ID: "slot.c", Kind: content.FeatureSlot, Cell: SlotC, Look: lookSlot, Armed: true, Accepts: ItemKey, OnInsert: "open_c"},
+		{ID: "slot.c", Kind: content.FeatureSlot, Cell: SlotC, Look: lookSlot, Armed: true, Accepts: ItemKey, Keyhole: true, OnInsert: "open_c"},
 		door("door.c", DoorC),
 		door("door.d", DoorD),
 		lever("lever.d", LeverD, "open_d", "close_d"),

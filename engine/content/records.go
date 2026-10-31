@@ -196,6 +196,8 @@ type Thing struct {
 	Spell int `json:"spell,omitempty"`
 	// Inventory is what a player starts with.
 	Inventory []InventoryObject `json:"inventory,omitempty"`
+	// Portrait is a player's portrait, which also gives its figure's colors.
+	Portrait string `json:"portrait,omitempty"`
 	// Animations are the thing's own; a name it does not have comes from its sprite.
 	Animations map[string]Animation `json:"animations,omitempty"`
 }
@@ -331,4 +333,24 @@ var messageKeys = map[string]bool{
 	MsgNoRoomToShoot:         true,
 	MsgCannotThrow:           true,
 	MsgCannotAct:             true,
+}
+
+// FigureColor is the first of the colors a player's figure draws in its portrait's FigureColors.
+const FigureColor = 224
+
+// Portrait is a character's face: the picture shown in panels and conversations, and the colors
+// a player with it is drawn in.
+type Portrait struct {
+	ID    string `json:"id"`
+	Image Image  `json:"image"`
+	// Mirrored draws the image flipped left to right in the player's panel.
+	Mirrored bool `json:"mirrored,omitempty"`
+	// FigureColors are the palette colors the player's figure draws its colors FigureColor,
+	// FigureColor+1, … in (hair and skin).
+	FigureColors []int `json:"figure_colors,omitempty"`
+	Female       bool  `json:"female,omitempty"`
+	// Other is the portrait of the other sex; Talk the one a conversation shows for the player
+	// when the creature talked to has this portrait too. Empty means this one.
+	Other string `json:"other,omitempty"`
+	Talk  string `json:"talk,omitempty"`
 }
