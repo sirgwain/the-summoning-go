@@ -467,7 +467,7 @@ func (im *importer) level(index int, l *Level) (*content.Level, error) {
 			}
 		}
 	}
-	cl.FloorHalves = floorHalves(l, im.init.Directions)
+	cl.FloorHalves, cl.UpperSight, cl.LowerSight = floorHalves(l, im.init.Directions)
 
 	if err := lb.placements(); err != nil {
 		return nil, err
@@ -480,6 +480,7 @@ func (im *importer) level(index int, l *Level) (*content.Level, error) {
 	}
 	lb.procedures()
 	lb.finish()
+	doorSight(cl)
 	return cl, nil
 }
 

@@ -102,17 +102,6 @@ slots refuse objects until Fight adds what each takes and what wearing does.
 **Why.** What a worn slot takes depends on item categories and powers the pack does not describe
 yet.
 
-## Floor halves stay fixed
-
-**Choice.** A level's floor halves are computed once, as if every cell were visible, and play draws
-only the visible cells. The game recomputes each wall's halves from which neighbors are visible.
-
-**Why.** The visible room's walls already show the halves that face it; the difference is a wall
-between two rooms, which shows both halves while only one room is visible. Recomputing would bring
-the game's check-direction tables into content.
-
-**Revisit if** the leftover halves are noticeable in play.
-
 ## Moving the player between levels from tools
 
 **Choice.** With a player, the viewer's level change and exit following move the player: to the

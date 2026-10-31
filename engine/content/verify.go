@@ -299,6 +299,11 @@ func (lv *levelVerifier) verify() {
 	if l.FloorHalves != nil {
 		lv.grid("floor_halves", l.FloorHalves, func(v int) bool { return v <= HalvesBoth })
 	}
+	for name, g := range map[string]Grid{"upper_sight": l.UpperSight, "lower_sight": l.LowerSight} {
+		if g != nil {
+			lv.grid(name, g, func(v int) bool { return v < 8 })
+		}
+	}
 
 	for _, layer := range []struct {
 		kind string

@@ -178,6 +178,16 @@ func TestImport(t *testing.T) {
 	if want := (content.Grid{{2, 2, 3, 2}, {3, 3, 3, 3}, {3, 3, 3, n}}); !reflect.DeepEqual(l.FloorHalves, want) {
 		t.Errorf("floor halves %v, want %v", l.FloorHalves, want)
 	}
+	// Wall (0, 2), shape 3, shows its upper half while (0, 1) is seen and its lower while (0, 3)
+	// is; the vertical door at (2, 1) checks as 11h, up (0) and down (4), and shows whole open.
+	for _, c := range []struct {
+		cell         content.Cell
+		upper, lower int
+	}{{content.Cell{0, 2}, 6, 2}, {content.Cell{2, 1}, 0, 4}, {content.Cell{1, 1}, n, n}} {
+		if u, lo := l.Sight(c.cell); u != c.upper || lo != c.lower {
+			t.Errorf("sight of %v: %d, %d, want %d, %d", c.cell, u, lo, c.upper, c.lower)
+		}
+	}
 	if l.Floors != "floors.20" || l.Walls != "walls.18" {
 		t.Errorf("sets %s %s", l.Floors, l.Walls)
 	}

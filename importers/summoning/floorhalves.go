@@ -1,6 +1,10 @@
 package summoning
 
-import "github.com/sirgwain/the-summoning-go/engine/content"
+import (
+	"strings"
+
+	"github.com/sirgwain/the-summoning-go/engine/content"
+)
 
 // Floor halves (world.md, Floor halves).
 
@@ -38,9 +42,11 @@ func hazardShowsLower(t int) bool {
 }
 
 // floorHalves computes which halves of each cell's floor are drawn, taking every cell on the
-// map as visible.
-func floorHalves(l *Level, dirs [8]Direction) content.Grid {
-	halves := content.NewGrid(l.Rows, l.Columns)
+// map as visible, and for walls and closed doors the check directions whose sight shows each
+// half in play (world.md, Visibility).
+func floorHalves(l *Level, dirs [8]Direction) (halves, upper, lower content.Grid) {
+	halves = content.NewGrid(l.Rows, l.Columns)
+	upper, lower = content.NewGrid(l.Rows, l.Columns), content.NewGrid(l.Rows, l.Columns)
 	counts := func(x, y, dir int) bool {
 		if dir == noCheck {
 			return false
@@ -70,9 +76,11 @@ func floorHalves(l *Level, dirs [8]Direction) content.Grid {
 				h := 0
 				if counts(x, y, checks[0]) {
 					h |= content.HalfUpper
+					upper[x][y] = checks[0]
 				}
 				if counts(x, y, checks[1]) {
 					h |= content.HalfLower
+					lower[x][y] = checks[1]
 				}
 				halves[x][y] = h
 			default:
@@ -80,7 +88,24 @@ func floorHalves(l *Level, dirs [8]Direction) content.Grid {
 			}
 		}
 	}
-	return halves
+	return halves, upper, lower
+}
+
+// doorSight gives every door that is not sealed the check directions of a closed door of its
+// orientation, and lets its floor show whole when open, whatever its starting state.
+func doorSight(cl *content.Level) {
+	for _, f := range cl.Features {
+		if f.Kind != content.FeatureDoor || f.SealedBy != "" {
+			continue
+		}
+		checks := floorChecks[terrainDoorHorizontal]
+		if strings.HasSuffix(f.Look, ".v") {
+			checks = floorChecks[terrainDoorVertical]
+		}
+		x, y := f.Cell[0], f.Cell[1]
+		cl.FloorHalves[x][y] = content.HalvesBoth
+		cl.UpperSight[x][y], cl.LowerSight[x][y] = checks[0], checks[1]
+	}
 }
 
 // wallChecksAs returns the shape whose check directions wall s at (x, y) uses.

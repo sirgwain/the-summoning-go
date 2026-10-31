@@ -211,3 +211,48 @@ func TestThingSteppingAnimation(t *testing.T) {
 		t.Errorf("a missing animation drew frame %d, want the idle frame 2", f)
 	}
 }
+
+// TestFloorSight hides the halves of a closed door's floor whose sight neighbors are not visible,
+// and shows the floor whole once the door opens.
+func TestFloorSight(t *testing.T) {
+	p, l := testPack()
+	l.Wall = content.Grid{{content.NoFrame, content.NoFrame}, {content.NoFrame, content.NoFrame}}
+	l.Features = []*content.Feature{{ID: "door", Kind: content.FeatureDoor, Cell: content.Cell{0, 0}, State: content.DoorClosed}}
+	l.Overlays, l.Decorations, l.Props, l.Objects, l.Things = nil, nil, nil, nil, nil
+	n := content.NoFrame
+	// The door's upper half shows while (0, 1) is visible (direction 2), its lower while (1, 0) is
+	// (direction 4).
+	l.UpperSight = content.Grid{{2, n}, {n, n}}
+	l.LowerSight = content.Grid{{4, n}, {n, n}}
+	parts := func(state string, visible ...content.Cell) []Part {
+		s := LevelScene(p, l)
+		s.Features[0].State = state
+		s.Visible = func(c content.Cell) bool {
+			if c == (content.Cell{0, 0}) {
+				return true
+			}
+			for _, v := range visible {
+				if c == v {
+					return true
+				}
+			}
+			return false
+		}
+		var out []Part
+		for _, c := range Build(p, s, Options{}) {
+			if c.Sprite == "floor" && c.X == 0 && (c.Y == 0 || c.Y == HalfHeight) {
+				out = append(out, c.Part)
+			}
+		}
+		return out
+	}
+	if got := parts(content.DoorClosed, content.Cell{0, 1}); !reflect.DeepEqual(got, []Part{UpperHalf}) {
+		t.Errorf("closed door, (0, 1) visible: %v", got)
+	}
+	if got := parts(content.DoorClosed); len(got) != 0 {
+		t.Errorf("closed door, nothing beyond visible: %v", got)
+	}
+	if got := parts(content.DoorOpen); !reflect.DeepEqual(got, []Part{Whole}) {
+		t.Errorf("open door: %v", got)
+	}
+}

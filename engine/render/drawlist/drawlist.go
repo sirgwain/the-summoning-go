@@ -45,6 +45,35 @@ type Flight struct {
 // flightHeight is how high above its ground point an object in flight is drawn, in pixels.
 const flightHeight = 16
 
+// sightDirs are the cells' steps in each direction (docs/pack.md, Conventions).
+var sightDirs = [8][2]int{{-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}}
+
+// halves returns which halves of cell c's floor the scene draws: the level's halves, and under a
+// wall or a closed door, only those whose sight neighbor is visible; an open or moving door's
+// floor whole (docs/spec/world.md, Visibility). doors are the door states by cell.
+func (s Scene) halves(c content.Cell, doors map[content.Cell]string) int {
+	l := s.Level
+	h := l.Halves(c)
+	state, door := doors[c]
+	if door && state != content.DoorClosed && state != "sealed" {
+		return content.HalvesBoth
+	}
+	if s.Visible == nil || (!door || state != content.DoorClosed) && s.Wall[c[0]][c[1]] == content.NoFrame {
+		return h
+	}
+	upper, lower := l.Sight(c)
+	for _, half := range []struct{ bit, dir int }{{content.HalfUpper, upper}, {content.HalfLower, lower}} {
+		if half.dir == content.NoFrame {
+			continue
+		}
+		d := sightDirs[half.dir]
+		if !s.Visible(content.Cell{c[0] + d[0], c[1] + d[1]}) {
+			h &^= half.bit
+		}
+	}
+	return h
+}
+
 // shows reports whether the scene draws cell c.
 func (s Scene) shows(c content.Cell) bool { return s.Visible == nil || s.Visible(c) }
 
@@ -159,6 +188,12 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 	if floors.Diamond() {
 		off = content.DiamondOffset
 	}
+	doors := map[content.Cell]string{}
+	for _, f := range s.Features {
+		if f.Kind == content.FeatureDoor {
+			doors[f.Cell] = f.State
+		}
+	}
 	for _, c := range cellsBackToFront(l.Size[0]+1, l.Size[1]+1) {
 		box := TileBox(c).Add(image.Pt(off[0], off[1]))
 		if !l.InBounds(c) || s.Floor[c[0]][c[1]] == content.NoFrame || !s.shows(c) {
@@ -167,7 +202,7 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 			}
 			continue
 		}
-		v, halves := l.FloorTypes[s.Floor[c[0]][c[1]]].Variant, l.Halves(c)
+		v, halves := l.FloorTypes[s.Floor[c[0]][c[1]]].Variant, s.halves(c, doors)
 		if halves == content.HalvesBoth {
 			cmds = append(cmds, Cmd{Sprite: floors.Sprite, Frame: v, X: box.X, Y: box.Y})
 			continue

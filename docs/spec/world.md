@@ -130,7 +130,9 @@ The fill reaches diagonal neighbors as well: each run marks the blocking cells a
 
 The game also swaps the shapes of some visible walls according to which of their neighbors are visible, so that walls seen from behind look closed. This specification does not cover that; walls are drawn with the shapes the level gives them.
 
-**Engine model.** The simulation keeps, for the current level, the cells visible from the player's vision cell, computed as above with "open" meaning not blocked: a cell with floor, no wall, and no door that is not open. Each cell that has been visible is **seen**, kept with the level. Only visible cells are drawn: their floors, walls, feature looks, objects and things standing in them. Floor halves (pack.md) are fixed per cell; a half under a wall is drawn only when its cell is visible.
+**Engine model.** The simulation keeps, for the current level, the cells visible from the player's vision cell, computed as above with "open" meaning not blocked: a cell with floor, no wall, and no door that is not open. Each cell that has been visible is **seen**, kept with the level. Only visible cells are drawn: their floors, walls, feature looks, objects and things standing in them. A level's floor halves (pack.md) say which halves each cell may ever show, as if every cell were visible; under a wall, or a closed door that is not sealed, each half also shows only while the neighbor in its check direction (Floor halves) is visible, the check directions being kept with the level. A door that is open or moving shows its floor whole, as the game draws terrain 15h and 1Bh.
+
+**Import.** The check directions of walls are as Floor halves gives them, with the walls beside closed doors checking as the table above says for the doors as the level starts. A door cell checks as a closed door of its orientation (10h horizontal, 11h vertical), whatever its starting state; a sealed door's floor shows whole.
 
 ## Level map
 

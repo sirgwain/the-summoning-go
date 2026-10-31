@@ -9,6 +9,19 @@ const (
 	HalvesBoth = HalfUpper | HalfLower
 )
 
+// Sight returns the directions of the neighbors whose sight shows the upper and lower halves of
+// cell c's floor, NoFrame for none.
+func (l *Level) Sight(c Cell) (upper, lower int) {
+	upper, lower = NoFrame, NoFrame
+	if l.UpperSight != nil {
+		upper = l.UpperSight[c[0]][c[1]]
+	}
+	if l.LowerSight != nil {
+		lower = l.LowerSight[c[0]][c[1]]
+	}
+	return upper, lower
+}
+
 // Halves returns which halves of cell c's floor are drawn.
 func (l *Level) Halves(c Cell) int {
 	if l.FloorHalves == nil {
@@ -34,6 +47,11 @@ type Level struct {
 	// FloorHalves says which halves of each cell's floor are drawn (HalfUpper, HalfLower); the
 	// others are blanked. Nil draws every floor whole.
 	FloorHalves Grid `json:"floor_halves,omitempty"`
+	// UpperSight and LowerSight give, for the floor under a wall or closed door, the direction of
+	// the neighbor that must be visible for each half to show; NoFrame for none. Nil for none at
+	// all.
+	UpperSight Grid `json:"upper_sight,omitempty"`
+	LowerSight Grid `json:"lower_sight,omitempty"`
 	// Overlays are drawn after all floors and before anything standing.
 	Overlays []Placed `json:"overlays,omitempty"`
 	// Decorations are drawn on their cell's wall, right after it.

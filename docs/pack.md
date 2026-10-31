@@ -417,6 +417,9 @@ keys.
   neither. A half not drawn is blanked in a box set and left out in a diamond set. Without it,
   every floor is drawn whole. The importer computes it as if the whole level were visible
   (`docs/spec/world.md`, Floor halves). In play only visible cells are drawn at all.
+- `upper_sight` and `lower_sight` give, for the floor under a wall or a closed door, the direction
+  of the neighbor that must be visible for that half to show in play, `.` for none (the half shows
+  whenever `floor_halves` lets it). An open or moving door's floor shows whole.
 - `overlays` are fixed floor art (hazard tiles), drawn after all floors and before anything
   standing. `decorations` are drawn on their cell's wall face right after it. `props` (not shown)
   are fixed art standing in a cell, drawn back to front with the walls. Offsets are from the cell.
