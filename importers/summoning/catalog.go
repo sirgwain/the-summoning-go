@@ -22,17 +22,41 @@ var sealingSpheres = [3]int{0xC9, 0xCB, 0xCD}
 // categoryTags are the tags of the categories an item can be recognized by (items.md, Import).
 var categoryTags = map[int]string{1: "body_armor", 4: "quiver", 7: "arrows", 8: "bottle"}
 
-// engineMessages are the TEXT records the engine's own messages use, and whether the message
-// takes an item's name.
+// engineMessages are the TEXT records the engine's own messages use, and the placeholders their
+// format codes (%s, %d, %q) become, in order.
 var engineMessages = map[string]struct {
-	text     int
-	itemName bool
+	text int
+	args []string
 }{
-	content.MsgLeverStuck:    {0x86, false},
-	content.MsgSlotWrongItem: {0x8F, true},
-	content.MsgSlotStuck:     {0x87, true},
-	content.MsgNoDropHere:    {0x72, false},
-	content.MsgNoRoom:        {0x7F, false},
+	content.MsgLeverStuck:    {0x86, nil},
+	content.MsgSlotWrongItem: {0x8F, []string{"item"}},
+	content.MsgSlotStuck:     {0x87, []string{"item"}},
+	content.MsgNoDropHere:    {0x72, nil},
+	content.MsgNoRoom:        {0x7F, nil},
+	content.MsgNotACreature:  {0x5A, nil},
+	content.MsgCannotHurt:    {0x5D, nil},
+	content.MsgMiss:          {0x5B, []string{"score"}},
+	content.MsgHit:           {0x5C, []string{"score", "damage"}},
+	content.MsgCreatureHits:  {0x7D, []string{"score", "damage"}},
+	content.MsgCreatureMiss:  {0x7E, []string{"score"}},
+	content.MsgWeaponBreaks:  {0x8A, []string{"item"}},
+	content.MsgSkillUp:       {0x44, []string{"skill"}},
+	content.MsgLevelUp:       {0xA5, nil},
+}
+
+// placeholders replaces s's format codes, in order, with the named placeholders.
+func placeholders(s string, args []string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		if s[i] == '%' && i+1 < len(s) && strings.IndexByte("sdq", s[i+1]) >= 0 && len(args) > 0 {
+			b.WriteString("{" + args[0] + "}")
+			args = args[1:]
+			i++
+			continue
+		}
+		b.WriteByte(s[i])
+	}
+	return b.String()
 }
 
 // ms converts a duration in ticks to milliseconds.
@@ -58,8 +82,8 @@ func (im *importer) text(strs []string) {
 			im.report.addf("message %s: no TEXT record %d", key, msg.text)
 			continue
 		}
-		if msg.itemName {
-			t.Strings[id] = strings.ReplaceAll(s, "%s", "{item}")
+		if msg.args != nil {
+			t.Strings[id] = placeholders(s, msg.args)
 		}
 		m.Messages[key] = id
 	}
@@ -111,9 +135,93 @@ func (im *importer) items() error {
 		if tm.TwoHanded() {
 			it.Tags = append(it.Tags, "two_handed")
 		}
+		if i == templateSilverSword {
+			it.Tags = append(it.Tags, "silver")
+		}
+		im.fighting(i, tm, it)
 		im.pack.Items[id] = it
 	}
 	return nil
+}
+
+// Item templates and categories the fighting fields name (items.md, combat.md).
+const (
+	templateRustedBlade = 0x63
+	templateWarMonger   = 0x64
+	templateSilverSword = 0xBF
+	categoryBodyArmor   = 1
+	categoryFirstWeapon = 9
+	categoryLastWeapon  = 12
+	unwearingValue      = 30000
+	bodyArmorValue      = 7500
+)
+
+// wearByCategory are the worn slots of categories 0–5; the rest go in a hand (items.md,
+// Engine model).
+var wearByCategory = []string{content.WearHead, content.WearBody, content.WearFeet, content.WearArms, content.WearQuiver, content.WearNeck}
+
+// dice returns damage code c as dice: (c >> 4) + 1 dice of (c & 0Fh) + 1 sides; 00h is none.
+func dice(c int) content.Dice {
+	if c == 0 {
+		return content.Dice{}
+	}
+	return content.Dice{Count: c>>4 + 1, Sides: c&0x0F + 1}
+}
+
+// fighting sets item it's armor, wear, weapon class, value, actions and power from template i.
+func (im *importer) fighting(i int, tm *ObjectTemplate, it *content.Item) {
+	cat := tm.Category()
+	it.Armor = tm.Armor()
+	it.Wear = content.WearHand
+	if cat < len(wearByCategory) {
+		it.Wear = wearByCategory[cat]
+	}
+	switch {
+	case tm.Weapon():
+		if cat >= categoryFirstWeapon && cat <= categoryLastWeapon {
+			class := cat - categoryFirstWeapon
+			it.WeaponClass = &class
+		}
+		switch {
+		case i == templateRustedBlade || i == templateWarMonger || i == templateSilverSword:
+			it.Durability = unwearingValue
+		case tm.Weight() == 10:
+			it.Durability = 6000
+		default:
+			it.Durability = tm.Weight() * 250
+		}
+	case cat == categoryBodyArmor:
+		it.Durability = bodyArmorValue
+	default:
+		it.Charges = tm.Charges()
+	}
+	for a := range 2 {
+		icon := tm.ActionIcon(a)
+		act := content.ItemAction{Damage: dice(tm.DamageCode(a)), Delay: (tm.DelayCode()>>4)&0x0F + 3}
+		if a == 1 {
+			act.Delay = tm.DelayCode()&0x0F + 3
+		}
+		switch {
+		case icon >= 100 && icon < 255:
+			act.Kind, act.Skill = content.ActionAttack, icon%10
+			switch icon / 10 * 10 {
+			case 110:
+				act.Kind = content.ActionAttackBoth
+			case 120:
+				act.Kind, act.Skill = content.ActionFire, 0
+			}
+		case icon == 9 || icon == 10:
+			act.Kind = content.ActionUseUp
+		case icon >= 11 && icon <= 20:
+			act.Kind = content.ActionUse
+		default:
+			continue
+		}
+		it.Actions = append(it.Actions, act)
+	}
+	if p, ok := tm.Power(); ok {
+		it.Power = p
+	}
 }
 
 // slug lowercases s and joins its runs of letters and digits with underscores.
@@ -164,24 +272,31 @@ var (
 
 // NPC record values (creatures.md).
 const (
-	stationaryCaster     = 2
-	firstPattern         = 100
-	patternFixed         = 100
-	slowBank             = 0x12
-	slowSpeed            = 2
-	creatureSpeed        = 8
-	creatureWeight       = 100
-	creatureFootprint    = 16
-	trapFootprint        = 20
-	behaviorNeverHostile = 0x0004
-	behaviorCorpse       = 0x0010
-	behaviorHostile      = 0x0100
-	behaviorResists      = 0x0200
-	behaviorInvulnerable = 0x1000
-	boulderSpeed         = 8
-	boulderInterval      = 4
-	trapInterval         = 128
-	boulderRollFrames    = 10
+	stationaryCaster      = 2
+	firstPattern          = 100
+	patternFixed          = 100
+	slowBank              = 0x12
+	slowSpeed             = 2
+	creatureSpeed         = 8
+	creatureWeight        = 100
+	creatureFootprint     = 16
+	trapFootprint         = 20
+	behaviorNeverHostile  = 0x0004
+	behaviorCorpse        = 0x0010
+	behaviorHostile       = 0x0100
+	behaviorResists       = 0x0200
+	behaviorInvulnerable  = 0x1000
+	behaviorPoisonous     = 0x0040
+	behaviorContact       = 0x0080
+	behaviorPhysicalOnly  = 0x0400
+	behaviorDeathBlow     = 0x0800
+	behaviorResistsFire   = 0x2000
+	behaviorResistsLight  = 0x4000
+	behaviorResistsPoison = 0x8000
+	boulderSpeed          = 8
+	boulderInterval       = 4
+	trapInterval          = 128
+	boulderRollFrames     = 10
 )
 
 // creature returns the thing template of NPC record n, adding it the first time.
@@ -201,14 +316,30 @@ func (im *importer) creature(n int) (string, error) {
 	}
 	im.anchor(sid, creatureAnchor)
 
+	expBonus := 4*rec.HitBonus() + 13*rec.Bonus() + rec.Accuracy() + rec.Resistance()
+	if rec.Spell() != 0 {
+		expBonus += 247
+	}
+	if rec.Behavior()&behaviorPoisonous != 0 {
+		expBonus += 123
+	}
 	t := &content.Thing{
-		ID: id, Kind: content.ThingCreature, Sprite: sid, Speed: creatureSpeed,
+		Attack: dice(rec.Attack()), Spell: rec.Spell(),
+		Experience: content.Dice{Count: rec.HitDice(), Sides: 10, Bonus: expBonus},
+		ID:         id, Kind: content.ThingCreature, Sprite: sid, Speed: creatureSpeed,
 		IntervalMS: ms(rec.Interval()), Weight: creatureWeight, Footprint: creatureFootprint,
 		HitPoints: content.Dice{Count: rec.HitDice(), Sides: 10, Bonus: 4 * rec.HitBonus()},
 		Stats:     map[string]int{"resistance": rec.Resistance(), "bonus": rec.Bonus(), "accuracy": rec.Accuracy()},
 	}
 	if t.HitPoints.Count == 0 {
 		t.HitPoints.Sides = 0
+	}
+	if t.Experience.Count == 0 {
+		t.Experience.Sides = 0
+	}
+	if v := rec.Vulnerability(); v >= categoryFirstWeapon && v <= categoryLastWeapon {
+		class := v - categoryFirstWeapon
+		t.Vulnerability = &class
 	}
 	if rec.Bank() == slowBank {
 		t.Speed = slowSpeed
@@ -223,6 +354,13 @@ func (im *importer) creature(n int) (string, error) {
 		{behaviorCorpse, content.BehaviorLeavesCorpse},
 		{behaviorResists, content.BehaviorResistsTeleport},
 		{behaviorInvulnerable, content.BehaviorInvulnerable},
+		{behaviorPoisonous, content.BehaviorPoisonous},
+		{behaviorContact, content.BehaviorHurtsOnContact},
+		{behaviorDeathBlow, content.BehaviorDeathBlow},
+		{behaviorPhysicalOnly, content.BehaviorPhysicalOnly},
+		{behaviorResistsFire, content.BehaviorResistsFire},
+		{behaviorResistsLight, content.BehaviorResistsLight},
+		{behaviorResistsPoison, content.BehaviorResistsPoison},
 	} {
 		if beh&b.bits != 0 {
 			t.Behaviors = append(t.Behaviors, b.name)
@@ -235,6 +373,7 @@ func (im *importer) creature(n int) (string, error) {
 	switch {
 	case frames >= firstPattern:
 		t.Speed = 0
+		t.Behaviors = append(t.Behaviors, content.BehaviorAnimated)
 		f := 0
 		if frames == patternFixed {
 			f = d0
@@ -245,6 +384,7 @@ func (im *importer) creature(n int) (string, error) {
 		}
 	case frames == stationaryCaster:
 		t.Facing = 2
+		t.Behaviors = append(t.Behaviors, content.BehaviorStationary)
 		anims["idle.2"], anims["idle.6"] = still(0), still(1)
 	default:
 		t.Facing = 2 * (d0 % 4)

@@ -72,6 +72,12 @@ type Thing struct {
 	Rolling   *content.Rolling
 	// Phase counts the moves the thing has made, for its walk and roll animations.
 	Phase int
+	// Hostile, Poisoned and Moving are a creature's state; Pose an action's pose for its next
+	// update ("attack").
+	Hostile, Poisoned, Moving bool
+	Pose                      string
+	// walkDir (0..3, 4 resting) and walkCount are a walker's current walk.
+	walkDir, walkCount int
 	// next is the step of its next update.
 	next int64
 }
@@ -89,10 +95,24 @@ func (t *Thing) weight() int {
 	return t.Template.Weight
 }
 
-// Object is an object: its item, and what it holds if it is a container.
+// Object is an object: its item, its value (durability, charges or count), and what it holds if
+// it is a container.
 type Object struct {
 	Item     string
+	Value    int
 	Contents []*Object
+}
+
+// newObject makes an object of item, with the item's starting value.
+func (w *World) newObject(item string) *Object {
+	o := &Object{Item: item}
+	if it := w.pack.Items[item]; it != nil {
+		o.Value = it.Durability
+		if o.Value == 0 {
+			o.Value = it.Charges
+		}
+	}
+	return o
 }
 
 // Weight returns the object's weight with what it holds (docs/spec/items.md, Weight and
@@ -142,7 +162,7 @@ func newLevel(w *World, def *content.Level) *Level {
 	}
 	for _, pt := range def.Things {
 		tmpl := w.pack.Things[pt.Thing]
-		t := &Thing{ID: pt.ID, Template: tmpl, Facing: tmpl.Facing, HitPoints: w.roll(tmpl.HitPoints)}
+		t := w.newThing(pt.ID, tmpl)
 		t.U, t.V = cellCenter(pt.Cell)
 		if pt.Offset != nil {
 			t.U, t.V = t.U+pt.Offset[0], t.V+pt.Offset[1]
@@ -173,16 +193,23 @@ func newLevel(w *World, def *content.Level) *Level {
 	return l
 }
 
+// newThing makes a thing of template tmpl, rolling its hit points.
+func (w *World) newThing(id string, tmpl *content.Thing) *Thing {
+	return &Thing{ID: id, Template: tmpl, Facing: tmpl.Facing, HitPoints: w.roll(tmpl.HitPoints),
+		Hostile: tmpl.Has(content.BehaviorHostile), walkDir: restDir}
+}
+
 // object makes an object from its definition, choosing random ones; it returns nil for a random
 // object when the pack has no item to choose.
 func (w *World) object(o content.Object) *Object {
-	obj := &Object{Item: o.Item}
-	if o.Item == content.RandomItem {
+	item := o.Item
+	if item == content.RandomItem {
 		if len(w.randomItems) == 0 {
 			return nil
 		}
-		obj.Item = w.randomItems[w.rng.IntN(len(w.randomItems))]
+		item = w.randomItems[w.rng.IntN(len(w.randomItems))]
 	}
+	obj := w.newObject(item)
 	for _, c := range o.Contents {
 		if co := w.object(c); co != nil {
 			obj.Contents = append(obj.Contents, co)

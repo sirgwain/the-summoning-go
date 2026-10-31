@@ -1,0 +1,21 @@
+{
+  "id": "thing.brute",
+  "kind": "creature",
+  "sprite": "sprite.brute",
+  "facing": 3,
+  "speed": 8,
+  "interval_ms": 330,
+  "weight": 100,
+  "hit_points": "2d10+4",
+  "behaviors": [
+    "hostile",
+    "leaves_corpse"
+  ],
+  "stats": {
+    "accuracy": 12,
+    "bonus": 1,
+    "resistance": 1
+  },
+  "attack": "1d6",
+  "experience": "2d10+30"
+}

@@ -34,7 +34,7 @@ func walkPack(rows ...string) *content.Pack {
 	p.Things["thing.trap"] = &content.Thing{ID: "thing.trap", Kind: content.ThingTrap, Weight: 100, Footprint: 20}
 	p.Things["thing.boulder"] = &content.Thing{ID: "thing.boulder", Kind: content.ThingBoulder, Speed: 8, Weight: 100}
 	p.Things["thing.guard"] = &content.Thing{ID: "thing.guard", Kind: content.ThingCreature, Weight: 100,
-		HitPoints: content.Dice{Bonus: 20}}
+		HitPoints: content.Dice{Bonus: 20}, Behaviors: []string{content.BehaviorStationary}}
 	p.Items["item.rock"] = &content.Item{ID: "item.rock", Weight: 60, Size: 3}
 	p.Items["item.key"] = &content.Item{ID: "item.key", Weight: 1, Size: 1}
 	p.Items["item.bag"] = &content.Item{ID: "item.bag", Weight: 1, Size: 2,
@@ -331,9 +331,9 @@ func TestPack(t *testing.T) {
 		"####")
 	p := w.Player()
 	p.Hand = &Object{Item: "item.bag"}
-	w.Update([]input.Command{input.Swap{Slot: SlotRightHand}})
+	w.Update([]input.Command{input.Swap{Slot: SlotLeftHand}})
 	if p.Pack(w.Pack()) == nil {
-		t.Fatal("the bag in the right hand is not a pack")
+		t.Fatal("the bag in the left hand is not a pack")
 	}
 	p.Hand = &Object{Item: "item.rock"}
 	if ev := w.Update([]input.Command{input.Swap{Slot: SlotPack}}); !has(ev, EventRefused, "") {

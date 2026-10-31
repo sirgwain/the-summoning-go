@@ -1,10 +1,19 @@
 {
   "id": "messages",
   "messages": {
+    "cannot_hurt": "msg.not_hurt",
+    "creature_hits": "msg.struck",
+    "creature_misses": "msg.missed",
+    "hit": "msg.hit",
+    "level_up": "msg.level_up",
     "lever_stuck": "msg.lever_stuck",
+    "miss": "msg.miss",
     "no_drop_here": "msg.no_drop",
     "no_room": "msg.no_room",
+    "not_a_creature": "msg.nothing_hit",
+    "skill_up": "msg.skill_up",
     "slot_stuck": "msg.slot_stuck",
-    "slot_wrong_item": "msg.wrong_item"
+    "slot_wrong_item": "msg.wrong_item",
+    "weapon_breaks": "msg.breaks"
   }
 }

@@ -40,7 +40,7 @@ var Keys = func() []Key {
 		KeyBracketLeft, KeyBracketRight, KeyEqual, KeyMinus, KeyNumpadAdd, KeyNumpadSubtract,
 		KeyHome, KeySpace, KeyTab,
 	}
-	for _, c := range "ACDEFGILMNOPRSTUVWX" {
+	for _, c := range "ACDEFGIJKLMNOPQRSTUVWX" {
 		keys = append(keys, Key(c))
 	}
 	for d := '0'; d <= '9'; d++ {

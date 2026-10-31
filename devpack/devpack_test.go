@@ -234,7 +234,7 @@ func TestHallPlays(t *testing.T) {
 
 	p.to(content.Cell{6, GemB[1]}, content.Cell{6, Sack[1]}, Sack)
 	p.do(input.PickUp{})
-	p.do(input.Swap{Slot: sim.SlotRightHand})
+	p.do(input.Swap{Slot: sim.SlotLeftHand})
 	p.do(input.Swap{Slot: sim.SlotPack})
 	if h := w.Player().Hand; h == nil || h.Item != ItemKey {
 		t.Fatalf("took %v out of the sack", h)
@@ -267,5 +267,55 @@ func TestHallPlays(t *testing.T) {
 	}
 	if w.Current().ID != Cellar {
 		t.Errorf("exit D led to %s", w.Current().ID)
+	}
+}
+
+// TestCellarFight fights the cellar's brute with the sword, wearing the mail: the brute chases
+// the player, the player strikes back until it is a corpse, and it drops its key.
+func TestCellarFight(t *testing.T) {
+	w, err := sim.New(Build(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.Update([]input.Command{input.GoTo{Level: Cellar}})
+	p, l := w.Player(), w.Current()
+	p.Hand = &sim.Object{Item: ItemSword, Value: 2500}
+	w.Update([]input.Command{input.PutOn{}})
+	p.Hand = &sim.Object{Item: ItemMail, Value: 7500}
+	w.Update([]input.Command{input.PutOn{}})
+	if p.Slots[sim.SlotRightHand] == nil || p.ArmorClass != 4 {
+		t.Fatalf("not armed: right hand %v, armor %d", p.Slots[sim.SlotRightHand], p.ArmorClass)
+	}
+	brute := l.Thing("brute")
+	for range 5000 {
+		if brute.HitPoints == 0 || p.Dead {
+			break
+		}
+		du, dv := brute.U-p.U, brute.V-p.V
+		d := 2
+		switch {
+		case abs(du) >= abs(dv) && du < 0:
+			d = 0
+		case abs(du) >= abs(dv):
+			d = 4
+		case dv < 0:
+			d = 6
+		}
+		cmds := []input.Command{input.Strike{}}
+		if abs(du)+abs(dv) > 24 {
+			cmds = []input.Command{input.Walk{Direction: d}}
+		} else {
+			p.Facing = d
+		}
+		w.Update(cmds)
+	}
+	if p.Dead || brute.HitPoints != 0 {
+		t.Fatalf("the fight did not end with the brute dead: player %d, brute %d hit points", p.HitPoints, brute.HitPoints)
+	}
+	if l.Thing("brute") == nil || len(l.Objects[brute.Cell()]) == 0 {
+		t.Error("the brute left no corpse or no key")
+	}
+	if p.Experience == 0 || p.Skills[sim.SkillWeapon].Practice+p.Skills[sim.SkillWeapon].Level < 2 {
+		t.Errorf("experience %d, sword skill %+v", p.Experience, p.Skills[sim.SkillWeapon])
 	}
 }

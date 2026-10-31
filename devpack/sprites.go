@@ -335,6 +335,16 @@ var itemArt = []struct {
 		c.fill(ellipse(.5*s, .62*s, .36*s, .32*s), solid(purple+3))
 		c.rect(int(.4*s), int(.18*s), int(.6*s), int(.34*s), gold+5)
 	}},
+	{"boots", func(c *canvas, s float64) {
+		c.rect(int(.25*s), int(.2*s), int(.45*s), int(.75*s), wood+2)
+		c.rect(int(.25*s), int(.65*s), int(.6*s), int(.8*s), wood+1)
+		c.rect(int(.55*s), int(.2*s), int(.75*s), int(.75*s), wood+3)
+		c.rect(int(.55*s), int(.65*s), int(.9*s), int(.8*s), wood+2)
+	}},
+	{"mail", func(c *canvas, s float64) {
+		c.fill(ellipse(.5*s, .55*s, .32*s, .36*s), func(x, y int) byte { return byte(gray + 8 + (x+y)%3) })
+		c.rect(int(.4*s), int(.15*s), int(.6*s), int(.25*s), black)
+	}},
 	{"potion", func(c *canvas, s float64) {
 		c.fill(ellipse(.5*s, .62*s, .3*s, .3*s), solid(red+4))
 		c.rect(int(.42*s), int(.12*s), int(.58*s), int(.36*s), gray+10)
@@ -368,10 +378,13 @@ const figureW, figureH = 24, 40
 
 var figureAnchor = content.Offset{12, 36}
 
+// figureCorpse is the frame of a figure lying dead.
+const figureCorpse = 3 * 8
+
 // figure draws a figure facing each direction, standing (frames 0–7) and in two strides
-// (frames 8–15 and 16–23), one leg forward in each.
+// (frames 8–15 and 16–23), one leg forward in each; and lying dead (frame 24).
 func figure(body, skin byte) []*canvas {
-	out := make([]*canvas, 3*8)
+	out := make([]*canvas, 3*8, 3*8+1)
 	for i := range out {
 		d, pose := i%8, i/8
 		c := newCanvas(figureW, figureH, clear)
@@ -399,7 +412,10 @@ func figure(body, skin byte) []*canvas {
 		}
 		out[i] = c
 	}
-	return out
+	dead := newCanvas(figureW, figureH, clear)
+	dead.fill(ellipse(12, 34, 11, 4), solid(body))
+	dead.fill(ellipse(4, 33, 3.5, 3), solid(skin))
+	return append(out, dead)
 }
 
 // boulderFrames is how many frames a boulder's roll turns through.

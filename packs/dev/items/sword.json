@@ -11,5 +11,22 @@
   "floor": {
     "sprite": "sprite.items.floor",
     "frame": 5
-  }
+  },
+  "durability": 2500,
+  "wear": "hand",
+  "weapon_class": 0,
+  "actions": [
+    {
+      "kind": "attack",
+      "damage": "2d6",
+      "delay": 4,
+      "skill": 1
+    },
+    {
+      "kind": "attack",
+      "damage": "1d10",
+      "delay": 3,
+      "skill": 2
+    }
+  ]
 }

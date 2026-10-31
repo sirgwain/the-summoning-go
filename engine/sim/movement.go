@@ -1,6 +1,7 @@
 package sim
 
 import (
+	"github.com/sirgwain/the-summoning-go/engine/combat"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 )
 
@@ -181,9 +182,9 @@ func (w *World) rollBoulders(l *Level) {
 		if b != nil {
 			hurt := w.roll(content.Dice{Count: 3, Sides: 4})
 			if b.thing == nil {
-				w.hurtPlayer(hurt, "boulder")
+				w.hurtPlayer(hurt, combat.Physical, "boulder")
 			} else {
-				w.hurtThing(l, b.thing, hurt)
+				w.hurtThing(l, b.thing, hurt, combat.Physical)
 				if b.thing.Template.Kind == content.ThingBoulder {
 					w.startBoulder(b.thing, d, false)
 				}
@@ -196,13 +197,4 @@ func (w *World) rollBoulders(l *Level) {
 			w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "stopped"})
 		}
 	}
-}
-
-// hurtThing takes n hit points from thing t, unless it cannot be hurt.
-func (w *World) hurtThing(l *Level, t *Thing, n int) {
-	if t.Template.Has(content.BehaviorInvulnerable) || t.HitPoints <= 0 {
-		return
-	}
-	t.HitPoints = max(0, t.HitPoints-n)
-	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "hurt"})
 }

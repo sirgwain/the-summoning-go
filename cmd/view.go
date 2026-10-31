@@ -42,9 +42,11 @@ Tab switches to playing (see summoning play --help).
 showing what the player sees.
 
 Arrows or WASD walk, two together along a diagonal. G picks up the top object of the player's
-cell, F puts down what is in hand, E uses the lever underfoot or a mouth beside the player. 1-9
+cell, F puts down what is in hand, E uses the lever underfoot or a mouth beside the player, Q
+puts what is in hand on (worn, or in the right hand). J and K strike with the right and left
+hands, with Shift their second action. 1-9
 and 0 swap the hand with shelves 0-9 (with Shift, 10-19), R and L with the right and left hands,
-F1-F8 with the pack (the bag in the right hand). V shows the whole level, Tab switches to the
+F1-F8 with the pack (the bag in the left hand). V shows the whole level, Tab switches to the
 viewer's tools (see summoning view --help), clicking a cell inspects it.
 `
 	}

@@ -90,11 +90,12 @@ func TestClickSelectsThingAndShiftClickMovesIt(t *testing.T) {
 }
 
 func TestDropChosenItemInSlot(t *testing.T) {
-	// Items are in id order; the key is third.
+	// Items are in id order; the key is fourth.
 	v := run(t, `[
 		{"at": 0, "select": [7, 15], "keys": ["I"]},
 		{"at": 1, "keys": ["I"]},
-		{"at": 2, "keys": ["O"]}]`)
+		{"at": 2, "keys": ["I"]},
+		{"at": 3, "keys": ["O"]}]`)
 	if d := v.Dump(); d.Item != devpack.ItemKey {
 		t.Fatalf("item %q", d.Item)
 	}
@@ -219,7 +220,7 @@ func TestParseScript(t *testing.T) {
 		t.Errorf("script %+v", s)
 	}
 	for _, bad := range []string{
-		`[{"at": 0, "keys": ["Q"]}]`,
+		`[{"at": 0, "keys": ["Y"]}]`,
 		`[{"at": 0, "clik": [1, 1]}]`,
 		`[{"at": -1}]`,
 	} {

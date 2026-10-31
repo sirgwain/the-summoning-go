@@ -1,0 +1,20 @@
+{
+  "id": "item.mail",
+  "name": "item.mail.name",
+  "weight": 20,
+  "size": 3,
+  "tags": [
+    "body_armor"
+  ],
+  "icon": {
+    "sprite": "sprite.items.icons",
+    "frame": 9
+  },
+  "floor": {
+    "sprite": "sprite.items.floor",
+    "frame": 9
+  },
+  "armor": 4,
+  "durability": 7500,
+  "wear": "body"
+}

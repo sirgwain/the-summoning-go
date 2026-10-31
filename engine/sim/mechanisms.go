@@ -3,6 +3,8 @@ package sim
 import (
 	"slices"
 
+	"github.com/sirgwain/the-summoning-go/engine/combat"
+
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 )
@@ -60,7 +62,7 @@ func (w *World) doorClosed(l *Level, f *Feature) {
 	if p := w.player; p != nil && w.current == l.ID && p.Cell() == f.Cell {
 		reopen = true
 		if w.chance(3, 10) {
-			w.hurtPlayer(1, "a door")
+			w.hurtPlayer(1, combat.Physical, "a door")
 		}
 	}
 	for _, t := range l.ThingsAt(f.Cell) {

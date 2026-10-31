@@ -25,6 +25,12 @@ type PlayerState struct {
 	Facing      int          `json:"facing"`
 	HitPoints   int          `json:"hit_points"`
 	MagicPoints int          `json:"magic_points"`
+	Level       int          `json:"level"`
+	Experience  int          `json:"experience"`
+	ArmorClass  int          `json:"armor_class,omitempty"`
+	Skills      []sim.Skill  `json:"skills"`
+	Poisoned    bool         `json:"poisoned,omitempty"`
+	Dead        bool         `json:"dead,omitempty"`
 	// Hand is the object held; Slots the inventory's filled slots by name.
 	Hand  *content.Object           `json:"hand,omitempty"`
 	Slots map[string]content.Object `json:"slots,omitempty"`
@@ -60,6 +66,7 @@ type ThingState struct {
 	At        [2]int           `json:"at"`
 	Facing    int              `json:"facing"`
 	HitPoints int              `json:"hit_points"`
+	Hostile   bool             `json:"hostile,omitempty"`
 	Items     []content.Object `json:"items,omitempty"`
 	Rolling   *content.Rolling `json:"rolling,omitempty"`
 }
@@ -82,7 +89,8 @@ func State(w *sim.World) *WorldState {
 	s := &WorldState{Step: w.Step(), Current: w.Current().ID, Levels: map[string]*LevelState{}}
 	if pl := w.Player(); pl != nil {
 		ps := &PlayerState{Cell: pl.Cell(), At: [2]int{pl.U, pl.V}, Facing: pl.Facing,
-			HitPoints: pl.HitPoints, MagicPoints: pl.MagicPoints}
+			HitPoints: pl.HitPoints, MagicPoints: pl.MagicPoints, Level: pl.Level, Experience: pl.Experience,
+			ArmorClass: pl.ArmorClass, Skills: pl.Skills[:], Poisoned: pl.Poisoned, Dead: pl.Dead}
 		if pl.Hand != nil {
 			o := objects([]*sim.Object{pl.Hand})[0]
 			ps.Hand = &o
@@ -118,7 +126,7 @@ func levelState(l *sim.Level) *LevelState {
 	for _, t := range l.Things {
 		s.Things = append(s.Things, ThingState{
 			ID: t.ID, Thing: t.Template.ID, Cell: t.Cell(), At: [2]int{t.U, t.V},
-			Facing: t.Facing, HitPoints: t.HitPoints, Items: objects(t.Items), Rolling: t.Rolling,
+			Facing: t.Facing, HitPoints: t.HitPoints, Hostile: t.Hostile, Items: objects(t.Items), Rolling: t.Rolling,
 		})
 	}
 	for c, objs := range l.Objects {

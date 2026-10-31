@@ -1,0 +1,571 @@
+package sim
+
+import (
+	"strconv"
+
+	"github.com/sirgwain/the-summoning-go/engine/combat"
+	"github.com/sirgwain/the-summoning-go/engine/content"
+)
+
+// Fighting constants (docs/spec/creatures.md, docs/spec/combat.md).
+const (
+	// wakeDistance is how far from the player, in half the Manhattan distance, creatures move.
+	wakeDistance = 320
+	// restDir is the walk direction that rests.
+	restDir = 4
+	// poseUpdates is how many updates a strike's pose shows.
+	poseUpdates = 2
+	// bareHandsDelay is an empty hand's delay.
+	bareHandsDelay = 2
+	// poisonChance is the 1 in n chance each update that poison hurts.
+	poisonChance = 40
+	// unwearing is the durability that never wears.
+	unwearing = 30000
+	// bodyArmorValue is body armor's full value; its armor falls by 1 for each bodyArmorStep below.
+	bodyArmorValue = 7500
+	bodyArmorStep  = 500
+)
+
+// Skill is a weapon class's or school's level, its practice and the practice the next level needs.
+type Skill struct {
+	Level     int `json:"level"`
+	Practice  int `json:"practice"`
+	Threshold int `json:"threshold"`
+}
+
+// Skill indexes: weapon classes 0–3, then schools 0–3.
+const (
+	SkillWeapon = 0
+	SkillSchool = 4
+	Skills      = 8
+)
+
+// Thing poses.
+const (
+	PoseAttack = "attack"
+)
+
+// rulesFor returns the rule set pack p names; the Summoning's is the only one.
+func rulesFor(*content.Pack) combat.Rules { return summoningRules }
+
+// creatureDefense is what creature t's template does to damage.
+func creatureDefense(t *Thing) combat.CreatureDefense {
+	tm := t.Template
+	return combat.CreatureDefense{
+		Invulnerable: tm.Has(content.BehaviorInvulnerable), PhysicalOnly: tm.Has(content.BehaviorPhysicalOnly),
+		ResistsFire: tm.Has(content.BehaviorResistsFire), ResistsLightning: tm.Has(content.BehaviorResistsLight),
+		ResistsPoison:      tm.Has(content.BehaviorResistsPoison),
+		VulnerableToArrows: tm.Vulnerability != nil && *tm.Vulnerability == content.ArrowClass,
+	}
+}
+
+// alive reports whether t is a living creature.
+func alive(t *Thing) bool { return t.Template.Kind == content.ThingCreature && t.HitPoints > 0 }
+
+// hurtThing hurts thing t by d of kind k: only living creatures are hurt, through their
+// defenses, and one at 0 dies (docs/spec/combat.md, Hurting a creature). It returns the hit
+// points taken.
+func (w *World) hurtThing(l *Level, t *Thing, d int, k combat.Kind) int {
+	if !alive(t) {
+		return 0
+	}
+	d = w.rules.HurtCreature(d, k, creatureDefense(t))
+	if d <= 0 {
+		return 0
+	}
+	t.HitPoints = max(0, t.HitPoints-d)
+	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "hurt", Damage: d})
+	if k == combat.Poison && !t.Template.Has(content.BehaviorResistsPoison) {
+		t.Poisoned = true
+	}
+	if t.HitPoints == 0 {
+		w.creatureDies(l, t)
+	}
+	return d
+}
+
+// creatureDies drops what creature t carries, gives the player its experience, and leaves its
+// corpse or removes it (docs/spec/creatures.md, Death).
+func (w *World) creatureDies(l *Level, t *Thing) {
+	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "died"})
+	t.Hostile, t.Poisoned, t.Pose = false, false, ""
+	if w.player != nil {
+		w.gainExperience(w.roll(t.Template.Experience))
+	}
+	if !t.Template.Has(content.BehaviorLeavesCorpse) {
+		w.removeThing(l, t, "removed")
+		return
+	}
+	items := t.Items
+	t.Items = nil
+	for _, o := range items {
+		w.drop(l, t.Cell(), o, byWorld, 0)
+	}
+}
+
+// turnHostile makes creature t hostile, unless it never is.
+func (w *World) turnHostile(t *Thing) {
+	if t.Template.Has(content.BehaviorNeverHostile) || t.Template.Has(content.BehaviorInvulnerable) {
+		return
+	}
+	t.Hostile = true
+}
+
+// updateCreatures runs the updates due of level l's walking creatures (docs/spec/creatures.md,
+// Walkers).
+func (w *World) updateCreatures(l *Level) {
+	for _, t := range append([]*Thing(nil), l.Things...) {
+		if !alive(t) || w.step < t.next || l.Thing(t.ID) != t {
+			continue
+		}
+		t.next = w.step + stepsMS(t.Template.IntervalMS)
+		t.Moving = false
+		if t.Pose != "" {
+			t.Pose = ""
+		}
+		if t.Poisoned && w.chance(1, poisonChance) {
+			w.hurtThing(l, t, 1+w.rng.IntN(2), combat.Physical)
+			if !alive(t) {
+				continue
+			}
+		}
+		if !t.Template.Has(content.BehaviorAnimated) && !t.Template.Has(content.BehaviorStationary) {
+			w.walkCreature(l, t)
+		}
+	}
+}
+
+// walkCreature counts down creature t's walk, picks a new one when it runs out, and steps.
+func (w *World) walkCreature(l *Level, t *Thing) {
+	p := w.player
+	if p == nil || w.current != l.ID || (abs(t.U-p.U)+abs(t.V-p.V))/2 > wakeDistance {
+		return
+	}
+	if t.walkCount--; t.walkCount <= 0 {
+		if t.Hostile && !p.Dead {
+			t.walkDir, t.walkCount = towards(t.U, t.V, p.U, p.V), 1
+		} else {
+			t.walkDir, t.walkCount = w.rng.IntN(5), 5+w.rng.IntN(5)
+			if t.walkDir == restDir {
+				t.walkCount += 10
+			}
+		}
+	}
+	if t.walkDir == restDir {
+		return
+	}
+	d := 2 * t.walkDir
+	t.Facing = d
+	speed := t.Template.Speed
+	if speed == 0 {
+		speed = 8
+	}
+	du, dv := Dirs[d][0]*speed, Dirs[d][1]*speed
+	for ; du != 0 && !w.creatureAccepts(l, t, t.U+du, t.V); du -= sign(du) {
+	}
+	for ; dv != 0 && !w.creatureAccepts(l, t, t.U, t.V+dv); dv -= sign(dv) {
+	}
+	var hit *body
+	for du != 0 || dv != 0 {
+		b := w.blocker(l, t, false, t.U+du, t.V+dv, t.Template.Size(), nil)
+		if b == nil {
+			break
+		}
+		hit = b
+		du, dv = toward0(du, backOff), toward0(dv, backOff)
+	}
+	if hit == nil && (du != 0 || dv != 0) {
+		w.moveThingBy(l, t, du, dv)
+		t.Moving = true
+		return
+	}
+	if hit == nil {
+		hit = w.blocker(l, t, false, t.U+Dirs[d][0]*speed, t.V+Dirs[d][1]*speed, t.Template.Size(), nil)
+	}
+	switch {
+	case hit != nil && hit.thing == nil && t.Hostile && !p.Dead:
+		t.Facing = 2 * towards(t.U, t.V, p.U, p.V)
+		w.creatureStrikes(l, t)
+		t.walkDir, t.walkCount = restDir, 10+w.rng.IntN(5)
+	case hit != nil && hit.thing == nil && t.Template.Has(content.BehaviorHurtsOnContact):
+		w.hurtPlayer(1, combat.Physical, t.ID)
+		if t.Template.Has(content.BehaviorPoisonous) {
+			p.Poisoned = true
+		}
+	case t.Hostile:
+		t.walkDir, t.walkCount = w.rng.IntN(4), 5+w.rng.IntN(5)
+	default:
+		t.walkDir, t.walkCount = (t.walkDir+2)%4, 5+w.rng.IntN(5)
+	}
+}
+
+// creatureAccepts reports whether creature t's ground point may stand at (u, v).
+func (w *World) creatureAccepts(l *Level, t *Thing, u, v int) bool {
+	c := cellOf(u, v)
+	if l.Blocked(c) {
+		return false
+	}
+	if ft := l.FloorType(c); ft != nil && ft.Avoided {
+		return false
+	}
+	f := l.byCell[c]
+	if f != nil && (f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor && f.Open) {
+		return t.Template.Has(content.BehaviorResistsTeleport)
+	}
+	return true
+}
+
+// towards returns the four-way direction (0..3) from (u, v) that best closes the larger of the
+// two axis gaps to (tu, tv).
+func towards(u, v, tu, tv int) int {
+	du, dv := tu-u, tv-v
+	if abs(du) >= abs(dv) {
+		if du < 0 {
+			return 0
+		}
+		return 2
+	}
+	if dv > 0 {
+		return 1
+	}
+	return 3
+}
+
+// behind reports whether a striker facing d strikes a target facing facing from behind.
+func behind(d, facing int) bool { return d&^1 == facing&^1 }
+
+// creatureStrikes is creature t striking the player (docs/spec/combat.md, Creatures attack).
+func (w *World) creatureStrikes(l *Level, t *Thing) {
+	p := w.player
+	t.Pose = PoseAttack
+	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "strikes"})
+	if t.Template.Has(content.BehaviorDeathBlow) {
+		w.killPlayer(t.ID)
+		return
+	}
+	r := w.rules.CreatureStrikes(w.rng, combat.CreatureStrike{
+		Accuracy: t.Template.Stats["accuracy"], Bonus: t.Template.Stats["bonus"], Damage: t.Template.Attack,
+		Behind: behind(t.Facing, p.Facing), PlayerAgility: p.Attributes[AttrAgility],
+	})
+	if !r.Hit {
+		w.messageNumbers(l, t.Cell(), content.MsgCreatureMiss, r.Score, 0)
+		return
+	}
+	w.messageNumbers(l, t.Cell(), content.MsgCreatureHits, r.Score, r.Damage)
+	if r.Damage > 0 {
+		w.hurtPlayer(r.Damage, combat.Physical, t.ID)
+		if t.Template.Has(content.BehaviorPoisonous) && w.chance(2, 8) {
+			p.Poisoned = true
+		}
+	}
+}
+
+// messageNumbers shows engine message key with a strike's numbers.
+func (w *World) messageNumbers(l *Level, c content.Cell, key string, score, damage int) {
+	text := ""
+	if m := w.pack.Messages; m != nil {
+		text = m.Messages[key]
+	}
+	w.emit(Event{Kind: EventMessage, Level: l.ID, Cell: c, Text: text, Detail: key, Score: score, Damage: damage})
+}
+
+// strike is the player acting with hand (0 right, 1 left) by its object's action
+// (docs/spec/items.md, Hands and actions).
+func (w *World) strike(hand, action int) {
+	p, l := w.player, w.Current()
+	refuse := func(why string) {
+		w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: p.Cell(), Detail: why})
+	}
+	switch {
+	case p.Dead:
+		refuse("the player is dead")
+		return
+	case hand < 0 || hand > 1:
+		refuse("no such hand")
+		return
+	case p.Delays[hand] > 0:
+		refuse("the hand is not ready")
+		return
+	}
+	o := p.Slots[SlotRightHand+hand]
+	if o == nil {
+		if action != 0 {
+			refuse("bare hands have one action")
+			return
+		}
+		p.Delays[hand] = bareHandsDelay
+		w.swing(hand, nil, content.ItemAction{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 2}})
+		return
+	}
+	it := w.pack.Items[o.Item]
+	if action < 0 || action >= len(it.Actions) {
+		refuse("the " + o.Item + " has no such action")
+		return
+	}
+	a := it.Actions[action]
+	class := -1
+	if it.WeaponClass != nil {
+		class = *it.WeaponClass
+	}
+	switch a.Kind {
+	case content.ActionAttack, content.ActionAttackBoth:
+		if class >= 0 && p.Skills[SkillWeapon+class].Level < a.Skill {
+			refuse("not skilled enough")
+			return
+		}
+	default:
+		w.emit(Event{Kind: EventNotYet, Level: l.ID, Cell: p.Cell(), Item: o.Item, Detail: "the " + a.Kind + " action"})
+		return
+	}
+	p.Delays[hand] = a.Delay
+	if hasTag(it, "two_handed") {
+		p.Delays[1-hand] = max(p.Delays[1-hand], a.Delay)
+	}
+	if a.Kind == content.ActionAttackBoth {
+		hand = 2
+	}
+	w.swing(hand, o, a)
+}
+
+func hasTag(it *content.Item, tag string) bool {
+	for _, t := range it.Tags {
+		if t == tag {
+			return true
+		}
+	}
+	return false
+}
+
+// swing strikes with object o (nil for bare hands) by action a, swinging hand (2 for both): at
+// the first creature one step ahead (docs/spec/combat.md, The player attacks).
+func (w *World) swing(hand int, o *Object, a content.ItemAction) {
+	p, l := w.player, w.Current()
+	p.Pose, p.poseLeft = []string{"attack", "attack.left", "attack.both"}[hand], poseUpdates
+	speed := p.Template.Speed
+	if speed == 0 {
+		speed = 8
+	}
+	d := p.Facing
+	b := w.blocker(l, nil, true, p.U+Dirs[d][0]*speed, p.V+Dirs[d][1]*speed, p.Template.Size(), nil)
+	switch {
+	case b == nil || b.thing == nil || !alive(b.thing):
+		w.message(l, p.Cell(), content.MsgNotACreature, "")
+		return
+	case b.thing.Template.Has(content.BehaviorAnimated):
+		w.message(l, p.Cell(), content.MsgCannotHurt, "")
+		return
+	}
+	t := b.thing
+	var it *content.Item
+	class := -1
+	if o != nil {
+		it = w.pack.Items[o.Item]
+		if it.WeaponClass != nil {
+			class = *it.WeaponClass
+		}
+	}
+	s := combat.PlayerStrike{
+		Agility: p.Attributes[AttrAgility], Endurance: p.Attributes[AttrEndurance],
+		Accuracy: p.Attributes[AttrAccuracy], Strength: p.Attributes[AttrStrength],
+		Weapon: o != nil, Damage: a.Damage, Behind: behind(d, t.Facing),
+		CreatureAccuracy: t.Template.Stats["accuracy"], Resistance: t.Template.Stats["resistance"],
+		Vulnerable:   class >= 0 && t.Template.Vulnerability != nil && *t.Template.Vulnerability == class,
+		PhysicalOnly: t.Template.Has(content.BehaviorPhysicalOnly),
+	}
+	if class >= 0 {
+		s.Skill = p.Skills[SkillWeapon+class].Level
+	}
+	if it != nil && hasTag(it, "silver") && len(it.Actions) > 1 {
+		s.Hurts = &it.Actions[1].Damage
+	}
+	r := w.rules.PlayerStrikes(w.rng, s)
+	if !r.Hit {
+		w.messageNumbers(l, p.Cell(), content.MsgMiss, r.Score, 0)
+		return
+	}
+	w.messageNumbers(l, p.Cell(), content.MsgHit, r.Score, r.Damage)
+	w.turnHostile(t)
+	if r.Damage == 0 {
+		return
+	}
+	if o != nil {
+		w.wearWeapon(hand, o, r.Damage)
+	}
+	w.hurtThing(l, t, r.Damage, combat.Physical)
+	if class >= 0 {
+		w.practice(SkillWeapon+class, 1)
+	}
+}
+
+// wearWeapon wears the weapon in hand by n; one worn past what is left breaks
+// (docs/spec/combat.md, Wear).
+func (w *World) wearWeapon(hand int, o *Object, n int) {
+	if o.Value >= unwearing {
+		return
+	}
+	n = w.rules.Wear(n)
+	if n <= o.Value {
+		o.Value -= n
+		return
+	}
+	p, l := w.player, w.Current()
+	for i := range 2 {
+		if p.Slots[SlotRightHand+i] == o {
+			p.Slots[SlotRightHand+i] = nil
+		}
+	}
+	w.message(l, p.Cell(), content.MsgWeaponBreaks, o.Item)
+	w.wornChanged()
+}
+
+// practice adds n practice to skill i, raising its level at the threshold (docs/spec/player.md,
+// Skills).
+func (w *World) practice(i, n int) {
+	p := w.player
+	s := &p.Skills[i]
+	s.Practice += n
+	if s.Practice < s.Threshold {
+		return
+	}
+	s.Level++
+	s.Practice -= s.Threshold
+	s.Threshold = w.rules.SkillThreshold(s.Threshold)
+	w.emit(Event{Kind: EventMessage, Level: w.current, Cell: p.Cell(), Text: w.messageText(content.MsgSkillUp),
+		Detail: content.MsgSkillUp, Item: "skill." + strconv.Itoa(i)})
+	w.gainExperience(w.rules.SkillExperience())
+}
+
+func (w *World) messageText(key string) string {
+	if m := w.pack.Messages; m != nil {
+		return m.Messages[key]
+	}
+	return ""
+}
+
+// gainExperience adds experience, raising the player's level as far as it reaches
+// (docs/spec/player.md, Experience and levels).
+func (w *World) gainExperience(n int) {
+	p := w.player
+	if p == nil || n <= 0 {
+		return
+	}
+	p.Experience += n
+	for p.Level < w.rules.MaxLevel() && p.Experience >= p.NextLevel {
+		p.Level++
+		hit, magic := w.rules.LevelGain(p.Level)
+		h, m := w.roll(hit), w.roll(magic)
+		p.MaxHitPoints += h
+		p.HitPoints += h
+		p.MaxMagicPoints += m
+		p.MagicPoints += m
+		p.NextLevel = w.rules.LevelThreshold(p.Level)
+		w.message(w.Current(), p.Cell(), content.MsgLevelUp, "")
+	}
+}
+
+// killPlayer kills the player outright.
+func (w *World) killPlayer(by string) {
+	p := w.player
+	p.HitPoints = 0
+	w.playerDies(by)
+}
+
+// playerDies marks the player dead (docs/spec/player.md, Dying).
+func (w *World) playerDies(by string) {
+	p := w.player
+	if p.Dead {
+		return
+	}
+	p.Dead, p.want = true, -1
+	w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "died, killed by " + by})
+}
+
+// armorOf returns the armor worn object o adds: body armor's falls by 1 for each 500 its value is
+// below full, but not below half (docs/spec/items.md, Armor).
+func (w *World) armorOf(o *Object) int {
+	it := w.pack.Items[o.Item]
+	if it == nil || it.Armor == 0 {
+		return 0
+	}
+	if it.Wear != content.WearBody {
+		return it.Armor
+	}
+	return max(it.Armor-(bodyArmorValue-min(o.Value, bodyArmorValue))/bodyArmorStep, it.Armor/2)
+}
+
+// wornChanged recomputes the player's armor class from what it wears and holds.
+func (w *World) wornChanged() {
+	p := w.player
+	p.ArmorClass = 0
+	for i := Shelves; i < SlotCount; i++ {
+		if o := p.Slots[i]; o != nil {
+			p.ArmorClass += w.armorOf(o)
+		}
+	}
+}
+
+// Speed powers (docs/spec/items.md, Powers).
+const (
+	powerSpeed1        = 0x09
+	powerSpeed2        = 0x0A
+	powerSpeed2Lasting = 0x0B
+)
+
+// startPower starts the power of an object put on; endPower ends it when taken off. Only the
+// speed powers act yet; the others come with statuses and spells.
+func (w *World) startPower(power, sign int) {
+	p := w.player
+	switch power {
+	case powerSpeed1:
+		p.IntervalBonus -= sign
+	case powerSpeed2, powerSpeed2Lasting:
+		p.IntervalBonus -= 2 * sign
+	}
+}
+
+// putOn and takeOff start and end what object o does worn in slot i.
+func (w *World) putOn(o *Object) {
+	if it := w.pack.Items[o.Item]; it != nil {
+		w.startPower(it.Power, 1)
+	}
+	w.wornChanged()
+}
+
+func (w *World) takeOff(o *Object) {
+	if it := w.pack.Items[o.Item]; it != nil {
+		w.startPower(it.Power, -1)
+	}
+	w.wornChanged()
+}
+
+// wearSlots are the worn slots by the wear an item names; hands are slots of their own.
+var wearSlots = map[string]int{
+	content.WearHead: SlotHead, content.WearArms: SlotArms, content.WearFeet: SlotFeet,
+	content.WearQuiver: SlotQuiver, content.WearBody: SlotBody, content.WearNeck: SlotNeck,
+}
+
+// wearOf returns the wear slot name of slot i, or "".
+func wearOf(i int) string {
+	for name, s := range wearSlots {
+		if s == i {
+			return name
+		}
+	}
+	return ""
+}
+
+// putOnHand puts the hand's object on: in its worn slot, or the right hand.
+func (w *World) putOnHand() {
+	p := w.player
+	if p.Hand == nil {
+		w.emit(Event{Kind: EventRefused, Level: w.current, Cell: p.Cell(), Detail: "nothing in hand"})
+		return
+	}
+	slot := SlotRightHand
+	if it := w.pack.Items[p.Hand.Item]; it != nil {
+		if s, ok := wearSlots[it.Wear]; ok {
+			slot = s
+		}
+	}
+	w.swap(slot)
+}

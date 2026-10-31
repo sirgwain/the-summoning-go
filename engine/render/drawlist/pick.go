@@ -37,14 +37,24 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 	}
 	for _, t := range l.Things {
 		th := Thing{ID: t.ID, Template: t.Template.ID, U: t.U, V: t.V, Facing: t.Facing}
-		if t.Rolling != nil {
+		switch {
+		case t.Rolling != nil:
 			th.Anim, th.Phase = fmt.Sprintf("roll.%d", t.Rolling.Direction), t.Phase
+		case t.Template.Kind == content.ThingCreature && t.HitPoints <= 0:
+			th.Anim = "dead"
+		case t.Pose != "":
+			th.Anim = fmt.Sprintf("%s.%d", t.Pose, t.Facing)
+		case t.Moving:
+			th.Anim, th.Phase = fmt.Sprintf("walk.%d", t.Facing), t.Phase
 		}
 		s.Things = append(s.Things, th)
 	}
 	if p := w.Player(); p != nil && w.Current() == l {
 		th := Thing{ID: sim.PlayerID, Template: p.Template.ID, U: p.U, V: p.V, Facing: p.Facing}
-		if p.Walking() {
+		switch {
+		case p.Pose != "":
+			th.Anim = fmt.Sprintf("%s.%d", p.Pose, p.Facing)
+		case p.Walking():
 			th.Anim, th.Phase = fmt.Sprintf("walk.%d", p.Facing), p.Moves
 		}
 		s.Things = append(s.Things, th)

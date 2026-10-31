@@ -1,6 +1,10 @@
 package sim
 
 import (
+	"strconv"
+	"strings"
+
+	"github.com/sirgwain/the-summoning-go/engine/combat"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 )
 
@@ -13,8 +17,8 @@ const (
 	Shelves       = 20
 	SlotHead      = 20
 	SlotArms      = 21
-	SlotLeftHand  = 22
-	SlotRightHand = 23
+	SlotRightHand = 22
+	SlotLeftHand  = 23
 	SlotFeet      = 24
 	SlotQuiver    = 25
 	SlotBody      = 26
@@ -32,6 +36,8 @@ const (
 	statusTicks = 109
 	// playerWeight is what the player adds to a plate when its template gives none.
 	playerWeight = 100
+	// skillThreshold is every skill's first practice threshold.
+	skillThreshold = 10
 )
 
 // Attribute names, as a player template's stats give them (docs/spec/player.md, Attributes).
@@ -64,6 +70,18 @@ type Player struct {
 	Slots [SlotCount]*Object
 	// Moves counts the moves made, for the walk animation; Idle the updates since the last.
 	Moves, Idle int
+	// Skills are the weapon classes' and schools' levels; Experience, Level and NextLevel the
+	// player's experience, level and the experience the next level needs.
+	Skills                       [Skills]Skill
+	Experience, Level, NextLevel int
+	// ArmorClass is the armor the player wears; Delays each hand's updates until it acts again.
+	ArmorClass int
+	Delays     [2]int
+	// Poisoned and Dead are the player's conditions.
+	Poisoned, Dead bool
+	// Pose is an action's pose ("attack", "attack.left", "attack.both"), shown poseLeft updates.
+	Pose     string
+	poseLeft int
 
 	// want is the direction a walk was asked for since the last update, or −1.
 	want int
@@ -88,9 +106,9 @@ func (p *Player) weight() int {
 	return playerWeight
 }
 
-// Pack returns the container in the right hand, whose contents are the pack slots, or nil.
+// Pack returns the container in the left hand, whose contents are the pack slots, or nil.
 func (p *Player) Pack(pk *content.Pack) *Object {
-	o := p.Slots[SlotRightHand]
+	o := p.Slots[SlotLeftHand]
 	if o == nil || pk.Items[o.Item] == nil || pk.Items[o.Item].Container == nil {
 		return nil
 	}
@@ -120,13 +138,26 @@ func (w *World) newPlayer() *Player {
 		return nil
 	}
 	p := &Player{Template: tmpl, Facing: tmpl.Facing, want: -1, Attributes: map[string]int{}}
-	for k, v := range tmpl.Stats {
-		if k == StatIntervalBonus {
-			p.IntervalBonus = v
-			continue
-		}
-		p.Attributes[k] = v
+	for i := range p.Skills {
+		p.Skills[i].Threshold = skillThreshold
 	}
+	for k, v := range tmpl.Stats {
+		switch {
+		case k == StatIntervalBonus:
+			p.IntervalBonus = v
+		case strings.HasPrefix(k, "weapon.") || strings.HasPrefix(k, "school."):
+			i, err := strconv.Atoi(k[len("weapon."):])
+			if err == nil && i >= 0 && i < 4 {
+				if k[0] == 's' {
+					i += SkillSchool
+				}
+				p.Skills[i].Level = v
+			}
+		default:
+			p.Attributes[k] = v
+		}
+	}
+	p.NextLevel = w.rules.LevelThreshold(0)
 	p.MaxHitPoints = w.roll(tmpl.HitPoints)
 	p.MaxMagicPoints = w.roll(tmpl.MagicPoints)
 	p.HitPoints, p.MagicPoints = p.MaxHitPoints, p.MaxMagicPoints
@@ -169,14 +200,24 @@ func (w *World) travel(to *content.Destination) {
 	w.place(to.Cell, false)
 }
 
-// hurtPlayer takes n hit points from the player, saying what hurt it.
-func (w *World) hurtPlayer(n int, by string) {
+// hurtPlayer hurts the player by n of kind k through its defenses, saying what hurt it; worn body
+// armor wears, and at 0 hit points the player dies (docs/spec/combat.md, Hurting the player).
+func (w *World) hurtPlayer(n int, k combat.Kind, by string) {
 	p := w.player
-	if p == nil || n <= 0 {
+	if p == nil || n <= 0 || p.Dead {
 		return
 	}
-	p.HitPoints = max(0, p.HitPoints-n)
-	w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "hurt by " + by})
+	armor := p.Slots[SlotBody]
+	d, wear := w.rules.HurtPlayer(n, k, combat.PlayerDefense{ArmorClass: p.ArmorClass, BodyArmor: armor != nil})
+	if wear > 0 && armor.Value < unwearing {
+		armor.Value = max(0, armor.Value-wear)
+		w.wornChanged()
+	}
+	p.HitPoints = max(0, p.HitPoints-d)
+	w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "hurt by " + by, Damage: d})
+	if p.HitPoints == 0 {
+		w.playerDies(by)
+	}
 }
 
 // updatePlayer is the player's update: it walks if a walk was asked for (docs/spec/entities.md,
@@ -184,9 +225,24 @@ func (w *World) hurtPlayer(n int, by string) {
 func (w *World) updatePlayer() {
 	p := w.player
 	p.next = w.step + w.PlayerInterval()
+	if p.Dead {
+		return
+	}
+	for i := range p.Delays {
+		p.Delays[i] = max(0, p.Delays[i]-1)
+	}
+	if p.poseLeft > 0 {
+		if p.poseLeft--; p.poseLeft == 0 {
+			p.Pose = ""
+			w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "stands"})
+		}
+	}
+	if p.Poisoned && w.chance(1, poisonChance) {
+		w.hurtPlayer(1+w.rng.IntN(2), combat.Physical, "poison")
+	}
 	d := p.want
 	p.want = -1
-	if d < 0 {
+	if d < 0 || p.Dead {
 		if p.Idle < idleUpdates {
 			if p.Idle++; p.Idle == idleUpdates {
 				w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "idle"})
@@ -319,9 +375,14 @@ func (w *World) walk(d int) bool {
 				p.next += Steps(pushTicks)
 				w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "pushed"})
 			}
+		case alive(t) && t.Template.Has(content.BehaviorHurtsOnContact):
+			w.hurtPlayer(1, combat.Physical, t.ID)
+			if t.Template.Has(content.BehaviorPoisonous) {
+				w.player.Poisoned = true
+			}
 		case t.Template.Kind == content.ThingBoulder:
 			if t.Rolling != nil && t.Rolling.Direction != d {
-				w.hurtPlayer(w.roll(content.Dice{Count: 2, Sides: 3}), "boulder")
+				w.hurtPlayer(w.roll(content.Dice{Count: 2, Sides: 3}), combat.Physical, "boulder")
 			}
 			if d%2 == 0 {
 				w.startBoulder(t, d, false)
@@ -413,7 +474,7 @@ func (w *World) takeFeature(f *Feature, d int) {
 // carefully, along directions 1–3.
 func (w *World) fallPlayer(f *Feature, d int) {
 	if d < 1 || d > 3 {
-		w.hurtPlayer(w.roll(content.Dice{Count: 4, Sides: 5}), "falling")
+		w.hurtPlayer(w.roll(content.Dice{Count: 4, Sides: 5}), combat.Physical, "falling")
 	}
 	w.travel(f.To)
 }
@@ -428,7 +489,7 @@ func (w *World) movePlayerBy(l *Level, du, dv int) {
 	to := p.Cell()
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: to, Thing: PlayerID, Detail: "moved"})
 	if ft := l.FloorType(to); ft != nil && ft.Depth == 4 && w.chance(1, 4) {
-		w.hurtPlayer(1, "deep water")
+		w.hurtPlayer(1, combat.Physical, "deep water")
 	}
 	if from != to {
 		w.weigh(l, from, -p.weight(), 0)
@@ -475,11 +536,14 @@ func (w *World) teleportPlayer(l *Level, f *Feature, depth int) {
 func (w *World) floorEffect(e *content.Effect) {
 	p := w.player
 	if e.Damage != (content.Dice{}) {
-		by := "the floor"
+		by, k := "the floor", combat.Physical
 		if e.Type != "" {
 			by = e.Type
 		}
-		w.hurtPlayer(w.roll(e.Damage), by)
+		if e.Type == "fire" {
+			k = combat.Fire
+		}
+		w.hurtPlayer(w.roll(e.Damage), k, by)
 	}
 	if e.DrainMagic > 0 {
 		p.MagicPoints = max(0, p.MagicPoints-e.DrainMagic)
@@ -496,7 +560,7 @@ func (w *World) statusTick() {
 			w.floorEffect(ft.Tick)
 		}
 		if ft.Depth == 4 {
-			w.hurtPlayer(1, "deep water")
+			w.hurtPlayer(1, combat.Physical, "deep water")
 		}
 	}
 	if p.statusTicks++; p.statusTicks%4 == 0 && p.MagicPoints < p.MaxMagicPoints {
@@ -568,14 +632,27 @@ func (w *World) swap(i int) {
 		w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: p.Cell(), Detail: why})
 	}
 	switch {
-	case i >= 0 && i < Shelves, i == SlotLeftHand, i == SlotRightHand:
+	case i >= 0 && i < Shelves:
 		p.Hand, p.Slots[i] = p.Slots[i], p.Hand
 	case i >= Shelves && i < SlotCount:
-		refuse("worn slots come with Fight")
+		if wear := wearOf(i); wear != "" && p.Hand != nil {
+			if it := w.pack.Items[p.Hand.Item]; it == nil || it.Wear != wear {
+				refuse("that is not worn there")
+				return
+			}
+		}
+		off := p.Slots[i]
+		p.Hand, p.Slots[i] = off, p.Hand
+		if off != nil {
+			w.takeOff(off)
+		}
+		if on := p.Slots[i]; on != nil {
+			w.putOn(on)
+		}
 	case i >= SlotPack:
 		bag := p.Pack(w.pack)
 		if bag == nil {
-			refuse("no bag in the right hand")
+			refuse("no bag in the left hand")
 			return
 		}
 		box := w.pack.Items[bag.Item].Container

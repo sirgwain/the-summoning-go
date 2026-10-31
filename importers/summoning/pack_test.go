@@ -47,7 +47,7 @@ var fixtureItems = []struct {
 
 // textFixture is TEXT with the fixture's item names and the engine's messages.
 func textFixture() []byte {
-	recs := make([][]byte, 0x90)
+	recs := make([][]byte, 0xA6)
 	for i := range recs {
 		recs[i] = textRecord(fmt.Sprintf("text %d", i))
 	}
@@ -102,7 +102,7 @@ func importFixture() *Source {
 	// (16 + 25h) and the head look (18, the wall bank, standing in for one).
 	resources[16] = rawBank(48, 2, 1, 0, plus(130))
 	resources[17] = rawBank(48, 1, 1, 0, plus(180))
-	resources[16+bodyLook] = rawBank(32, 1, 1, 0, plus(230))
+	resources[16+bodyLook] = rawBank(56, 1, 1, 0, plus(150))
 
 	level := fixture{}.u8(3, 4)
 	level = level.u16(0, 2, 3, 4, 6, 7)
@@ -439,8 +439,12 @@ func TestImportPlayer(t *testing.T) {
 	if got := tm.Animations["idle.7"].Frames; !reflect.DeepEqual(got, []int{8}) {
 		t.Errorf("idle.7 frames %v", got)
 	}
+	// Facing 1 (direction 0) strikes with the left hand in frame 30h + 8 + 1.
+	if got := tm.Animations["attack.left.0"].Frames; !reflect.DeepEqual(got, []int{0x30 + 8 + 1}) {
+		t.Errorf("attack.left.0 frames %v", got)
+	}
 	b := p.Sprites[tm.Sprite]
-	if b.FrameSize != (content.Offset{24, 19}) || b.Frames != 48 || *b.Anchor != creatureAnchor {
+	if b.FrameSize != (content.Offset{24, 19}) || b.Frames != 72 || *b.Anchor != creatureAnchor {
 		t.Fatalf("player sprite %v, %d frames, anchor %v", b.FrameSize, b.Frames, *b.Anchor)
 	}
 	// Frame 9 (group 1, step 1): the body's frame 9 at row 13, the legs' at row 18, the body
@@ -453,10 +457,46 @@ func TestImportPlayer(t *testing.T) {
 		x, y int
 		want uint8
 	}{
-		{0, 13, 130 + 9}, {0, 18, 180 + 9}, {0, 5, 230 + 9}, {8, 0, 1 + 1},
+		{0, 13, 130 + 9}, {0, 18, 180 + 9}, {0, 5, 150 + 9}, {8, 0, 1 + 1},
 	} {
 		if got := at(c.x, c.y); got != c.want {
 			t.Errorf("frame 9 at (%d, %d) = %d, want %d", c.x, c.y, got, c.want)
 		}
+	}
+}
+
+func TestImportFighting(t *testing.T) {
+	p, _, err := Import(importFixture())
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := p.Items["item.dagger"]
+	if d.WeaponClass == nil || *d.WeaponClass != 0 || d.Wear != content.WearHand || d.Durability != 250 {
+		t.Errorf("dagger %+v", d)
+	}
+	if s := p.Items["item.sack"]; s.WeaponClass != nil || s.Durability != 0 {
+		t.Errorf("sack %+v", s)
+	}
+	if p.Manifest.Rules != content.RulesSummoning {
+		t.Errorf("rules %q", p.Manifest.Rules)
+	}
+	if got := placeholders("Hit! Rolled %d, damage %d", []string{"score", "damage"}); got != "Hit! Rolled {score}, damage {damage}" {
+		t.Errorf("placeholders: %q", got)
+	}
+	for c, want := range map[int]content.Dice{0: {}, 0x11: {Count: 2, Sides: 2}, 0x25: {Count: 3, Sides: 6}} {
+		if got := dice(c); got != want {
+			t.Errorf("dice(%02Xh) = %+v, want %+v", c, got, want)
+		}
+	}
+	var tm ObjectTemplate
+	tm[4], tm[5], tm[6], tm[7], tm[8], tm[13] = 142, 9, 0x15, 0, 0x21, 0x40|9
+	it := &content.Item{}
+	(&importer{}).fighting(0, &tm, it)
+	want := []content.ItemAction{
+		{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 6}, Delay: 5, Skill: 2},
+		{Kind: content.ActionUseUp, Delay: 4},
+	}
+	if !reflect.DeepEqual(it.Actions, want) {
+		t.Errorf("actions %+v, want %+v", it.Actions, want)
 	}
 }

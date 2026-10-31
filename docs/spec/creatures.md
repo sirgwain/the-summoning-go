@@ -126,6 +126,18 @@ Each NPC record `n` becomes a thing template `thing.npc.n` of kind creature:
 
 Each frame lasts the interval.
 
+## Engine model
+
+A creature template carries what fighting needs: `attack` (dice, byte 9), `vulnerability` (byte 13 holds a weapon category, 9–12, or 0 for none: the weapon class `byte 13 − 9`; arrows do more against class 3, the bows' category 0Ch), `spell` (byte 12, used with Magic), `experience` (dice, the formula above with its hit dice rolled as dice), and the behaviors `poisonous` (0040h), `hurts_on_contact` (0080h), `death_blow` (0800h), `physical_only` (0400h), `resists_fire` (2000h), `resists_lightning` (4000h), `resists_poison` (8000h), `animated` (animated objects) and `stationary` (stationary casters); stats `resistance`, `bonus` and `accuracy` as before.
+
+- **Walking.** Creature direction `d` is engine direction `2d`. A walker's step tests its ground point like the player's (entities.md, Moving) and refuses avoided floors, and pits and open trapdoors unless it resists teleporting; it then backs off from other things by 2 units per axis. A step that moves nothing is blocked; what it met is the blocker.
+- **Waking.** A creature whose ground point is farther than 320 units (half the Manhattan distance) from the player does not move.
+- **Counting.** The walk count and rests count the creature's updates (`interval_ms`).
+- **Animated objects** (pattern 100 or more) and stationary casters do not walk; the casters' casting comes with Magic.
+- **Showing.** A walking creature shows `walk.e`, stepped by its moves; attacking it shows `attack.e` for its next update; a corpse shows `dead`.
+- **Dying.** Its items drop on its cell, the player gains its experience, and it becomes a corpse (`leaves_corpse`) or is removed. Corpses weigh on plates and can be pushed.
+- **Poison.** A poisoned creature is a state of the thing, not of the template.
+
 ## Unknowns
 
 - Behavior bit 0008h.

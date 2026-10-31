@@ -88,6 +88,9 @@ func (v *verifier) manifest() {
 	} else if !l.InBounds(m.Start.Cell) {
 		v.fail("pack.json: start cell %v outside %s", m.Start.Cell, l.ID)
 	}
+	if m.Rules != "" && m.Rules != RulesSummoning {
+		v.fail("pack.json: unknown rules %q", m.Rules)
+	}
 	if m.Player != "" {
 		if t, ok := v.p.Things[m.Player]; !ok {
 			v.fail("pack.json: player %q not found", m.Player)
@@ -191,6 +194,20 @@ func (v *verifier) itemRecord(i *Item) {
 	}
 	if c := i.Container; c != nil && (c.Capacity <= 0 || c.Largest < 0) {
 		v.fail("%s: bad container %+v", owner, *c)
+	}
+	if i.Wear != "" && !wears[i.Wear] {
+		v.fail("%s: unknown wear slot %q", owner, i.Wear)
+	}
+	if c := i.WeaponClass; c != nil && (*c < 0 || *c > 3) {
+		v.fail("%s: weapon class %d", owner, *c)
+	}
+	if len(i.Actions) > 2 {
+		v.fail("%s: %d actions, at most 2", owner, len(i.Actions))
+	}
+	for n, a := range i.Actions {
+		if !actionKinds[a.Kind] || a.Delay < 0 || a.Skill < 0 {
+			v.fail("%s: action %d: bad kind %q, delay or skill", owner, n, a.Kind)
+		}
 	}
 	v.frame(owner+" icon", i.Icon.Sprite, i.Icon.Frame)
 	v.frame(owner+" floor", i.Floor.Sprite, i.Floor.Frame)

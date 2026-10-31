@@ -54,13 +54,13 @@ The player has slots:
 | 0–19 | Shelves: anything |
 | 20 | Head |
 | 21 | Arms |
-| 22 | Left hand |
-| 23 | Right hand |
+| 22 | Right hand |
+| 23 | Left hand |
 | 24 | Feet |
 | 25 | Quiver: an empty slot takes only a quiver; a filled one takes what fits in the quiver |
 | 26 | Body |
 | 27 | Neck |
-| 28+ | Pack: the contents of the bag held in the right hand, one slot per capacity |
+| 28+ | Pack: the contents of the bag held in the left hand, one slot per capacity |
 
 Pack slots exist only up to the right-hand bag's capacity and take what fits in it. Putting an object in a worn slot (20–27) starts its power and adds its armor; taking it off ends both, so the speed powers (09h–0Bh) speed the player only while worn. The Leather Boots (24h) every character starts in have power 0Ah: interval −2 while worn. Picking an object up puts it in the first empty shelf; with none, message 7Fh. An arrow picked up goes into the quiver when it fits.
 
@@ -90,13 +90,29 @@ Each hand shows the actions of the object it holds (bare hands can strike). An a
 
 | Icon | Meaning |
 | --- | --- |
-| 100–109 | Attack, available when the weapon's class skill is at least `icon % 10` |
-| 110 | Two-handed attack |
-| 120 | Fire a bow |
+| 100 and above | Attack, available when the weapon's class skill is at least `icon % 10`; `icon / 10` picks the picture, except as below |
+| 110–119 | Two-handed attack |
+| 120–129 | Fire a bow |
 | 9, 10 | Use the object up |
 | 11–20 | Use one charge |
 
 Using an action makes the hand wait its delay before the next action; each player update counts the delays down. A weapon swing is an attack (combat.md). An action that needs a quantity is unavailable when none is left.
+
+**Engine model.** An item has up to two **actions**, each a kind, damage dice and a delay:
+
+| Kind | Icons | Does |
+| --- | --- | --- |
+| `attack` | 100 and above, but for these | Strikes with the hand; needs the weapon class's skill at least `icon % 10` |
+| `attack_both` | 110–119 | Strikes with both hands; the same skill rule |
+| `fire` | 120–129 | Fires an arrow from the quiver |
+| `use_up` | 9, 10 | Uses the object up for its power |
+| `use` | 11–20 | Uses a charge for its power |
+
+The **delay** of action 0 is `(byte 8 >> 4) + 3` player updates, of action 1 `(byte 8 & 0Fh) + 3`; an item flagged two-handed (category 80h) delays both hands. A hand waits its delay before acting again, counted down on each of the player's updates. An attack adds `weight / 8` exertion (player.md). An empty hand strikes with bare hands, 2d2 damage and a delay of 2. Icon FFh is no action.
+
+**Wearing.** An item's category gives the worn slot it goes in: 0 head, 1 body, 2 feet, 3 arms, 4 quiver, 5 neck; categories 6–12 go in a hand. The engine model calls this its `wear` slot. Weapons (40h) have a weapon class, `category − 9` for categories 9–12. Putting an item on, by swapping it into its own worn slot, adds its armor and starts its power; a worn slot refuses anything whose `wear` is not that slot. The quiver slot also takes arrows into a worn quiver.
+
+**Value.** The importer writes the starting value rules above as the item's `durability` (weapons and body armor) or `charges`.
 
 **Using up.** When the last use of an object goes, it becomes a spent object: bottles (category 8) become an Empty Bottle (template 7); other objects become the next template.
 

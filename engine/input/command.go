@@ -79,6 +79,16 @@ type Activate struct{}
 // a debug command.
 type PlacePlayer struct{ Cell content.Cell }
 
+// Strike acts with a hand (0 right, 1 left) by its object's action 0 or 1: strikes with a weapon,
+// or with bare hands.
+type Strike struct{ Hand, Action int }
+
+// PutOn puts the hand's object on, in the worn slot or hand its item goes in.
+type PutOn struct{}
+
+func (Strike) command() {}
+func (PutOn) command()  {}
+
 func (Walk) command()        {}
 func (PickUp) command()      {}
 func (PutDown) command()     {}

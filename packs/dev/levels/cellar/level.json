@@ -71,10 +71,30 @@
       }
     }
   ],
+  "things": [
+    {
+      "id": "brute",
+      "thing": "thing.brute",
+      "cell": [2, 2],
+      "items": [
+        {
+          "item": "item.key"
+        }
+      ]
+    }
+  ],
   "objects": [
     {
       "cell": [5, 5],
       "item": "item.potion"
+    },
+    {
+      "cell": [6, 2],
+      "item": "item.boots"
+    },
+    {
+      "cell": [6, 3],
+      "item": "item.mail"
     }
   ]
 }

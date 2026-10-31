@@ -2,10 +2,85 @@
   "id": "sprite.player",
   "frame_size": [24, 40],
   "columns": 8,
-  "frames": 24,
+  "frames": 25,
   "transparent": 255,
   "anchor": [12, 36],
   "animations": {
+    "attack.0": {
+      "frames": [8]
+    },
+    "attack.1": {
+      "frames": [9]
+    },
+    "attack.2": {
+      "frames": [10]
+    },
+    "attack.3": {
+      "frames": [11]
+    },
+    "attack.4": {
+      "frames": [12]
+    },
+    "attack.5": {
+      "frames": [13]
+    },
+    "attack.6": {
+      "frames": [14]
+    },
+    "attack.7": {
+      "frames": [15]
+    },
+    "attack.both.0": {
+      "frames": [8]
+    },
+    "attack.both.1": {
+      "frames": [9]
+    },
+    "attack.both.2": {
+      "frames": [10]
+    },
+    "attack.both.3": {
+      "frames": [11]
+    },
+    "attack.both.4": {
+      "frames": [12]
+    },
+    "attack.both.5": {
+      "frames": [13]
+    },
+    "attack.both.6": {
+      "frames": [14]
+    },
+    "attack.both.7": {
+      "frames": [15]
+    },
+    "attack.left.0": {
+      "frames": [16]
+    },
+    "attack.left.1": {
+      "frames": [17]
+    },
+    "attack.left.2": {
+      "frames": [18]
+    },
+    "attack.left.3": {
+      "frames": [19]
+    },
+    "attack.left.4": {
+      "frames": [20]
+    },
+    "attack.left.5": {
+      "frames": [21]
+    },
+    "attack.left.6": {
+      "frames": [22]
+    },
+    "attack.left.7": {
+      "frames": [23]
+    },
+    "dead": {
+      "frames": [24]
+    },
     "idle": {
       "frames": [2]
     },

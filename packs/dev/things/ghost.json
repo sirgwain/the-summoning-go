@@ -9,6 +9,7 @@
   "hit_points": "12",
   "behaviors": [
     "never_hostile",
-    "resists_teleport"
+    "resists_teleport",
+    "stationary"
   ]
 }

@@ -67,6 +67,7 @@ var figures = []struct {
 	{"guard", blue + 1, tan + 5},
 	{"ghost", purple + 3, gray + 13},
 	{"player", green + 1, tan + 5},
+	{"brute", red + 1, tan + 3},
 }
 
 func art(p *content.Pack) {
@@ -94,6 +95,15 @@ func art(p *content.Pack) {
 		for d := range 8 {
 			b.Animations[fmt.Sprintf("idle.%d", d)] = content.Animation{Frames: []int{d}}
 			b.Animations[fmt.Sprintf("walk.%d", d)] = content.Animation{Frames: []int{8 + d, d, 16 + d, d}, MS: content.Fixed(275)}
+			b.Animations[fmt.Sprintf("attack.%d", d)] = content.Animation{Frames: []int{8 + d}}
+		}
+		b.Animations["dead"] = content.Animation{Frames: []int{figureCorpse}}
+		if f.name != "player" {
+			continue
+		}
+		for d := range 8 {
+			b.Animations[fmt.Sprintf("attack.left.%d", d)] = content.Animation{Frames: []int{16 + d}}
+			b.Animations[fmt.Sprintf("attack.both.%d", d)] = content.Animation{Frames: []int{8 + d}}
 		}
 	}
 	b := bank(p, spriteBoulder, boulders(), &content.Offset{16, 29})
@@ -148,6 +158,15 @@ func text(p *content.Pack) {
 		"msg.slot_stuck":  "Nothing more fits in the {item}'s place.",
 		"msg.no_drop":     "It sinks out of sight.",
 		"msg.no_room":     "There is no room for the {item}.",
+		"msg.nothing_hit": "There is nothing to hit.",
+		"msg.not_hurt":    "That cannot be hurt.",
+		"msg.miss":        "You miss (rolled {score}).",
+		"msg.hit":         "You hit (rolled {score}) for {damage}.",
+		"msg.struck":      "It hits you (rolled {score}) for {damage}.",
+		"msg.missed":      "It misses you (rolled {score}).",
+		"msg.breaks":      "Your {item} breaks.",
+		"msg.skill_up":    "You are better at {skill}.",
+		"msg.level_up":    "You have gained a level.",
 		"msg.mouth":       "Welcome to the hall of *mechanisms*.",
 		"msg.mouth.after": "The *socket* is complete.",
 	}
@@ -158,13 +177,17 @@ func text(p *content.Pack) {
 	p.Messages = &content.Messages{ID: "messages", Messages: map[string]string{
 		content.MsgLeverStuck: "msg.lever_stuck", content.MsgSlotWrongItem: "msg.wrong_item",
 		content.MsgSlotStuck: "msg.slot_stuck", content.MsgNoDropHere: "msg.no_drop",
-		content.MsgNoRoom: "msg.no_room",
+		content.MsgNoRoom: "msg.no_room", content.MsgNotACreature: "msg.nothing_hit", content.MsgCannotHurt: "msg.not_hurt",
+		content.MsgMiss: "msg.miss", content.MsgHit: "msg.hit", content.MsgCreatureHits: "msg.struck",
+		content.MsgCreatureMiss: "msg.missed", content.MsgWeaponBreaks: "msg.breaks", content.MsgSkillUp: "msg.skill_up",
+		content.MsgLevelUp: "msg.level_up",
 	}}
 }
 
 var itemNames = map[string]string{
 	"key": "Key", "rock": "Rock", "red_gem": "Red Gem", "blue_gem": "Blue Gem", "sphere": "Sphere",
 	"sword": "Sword", "sack": "Sack", "bag": "Bag of Lightness", "potion": "Potion",
+	"boots": "Boots of Speed", "mail": "Chain Mail",
 }
 
 // Item ids.
@@ -178,6 +201,8 @@ const (
 	ItemSack    = "item.sack"
 	ItemBag     = "item.bag"
 	ItemPotion  = "item.potion"
+	ItemBoots   = "item.boots"
+	ItemMail    = "item.mail"
 )
 
 // Thing template ids.
@@ -186,6 +211,7 @@ const (
 	ThingGhost   = "thing.ghost"
 	ThingBoulder = "thing.boulder"
 	ThingCrate   = "thing.crate"
+	ThingBrute   = "thing.brute"
 	ThingPlayer  = "thing.player"
 )
 
@@ -193,7 +219,7 @@ const (
 // standing in for the boots a new character wears: it walks a step every 2 ticks.
 var StarterAttributes = map[string]int{
 	"strength": 18, "agility": 20, "endurance": 18, "accuracy": 16, "talent": 16, "power": 16,
-	"interval_bonus": -2,
+	"interval_bonus": -2, "weapon.0": 1, "school.0": 1,
 }
 
 func records(p *content.Pack) {
@@ -206,7 +232,7 @@ func records(p *content.Pack) {
 		"blue_gem": {1, 1, false, nil}, "sphere": {6, 2, false, nil}, "sword": {10, 3, true, nil},
 		"sack":   {2, 3, false, &content.Container{Capacity: 4, Largest: 2}},
 		"bag":    {1, 2, false, &content.Container{Capacity: 4, Largest: 2, Weightless: true}},
-		"potion": {2, 1, true, nil},
+		"potion": {2, 1, true, nil}, "boots": {1, 2, false, nil}, "mail": {20, 3, false, nil},
 	}
 	for i, it := range itemArt {
 		st := stats[it.name]
@@ -217,12 +243,28 @@ func records(p *content.Pack) {
 			Icon:      content.Image{Sprite: spriteIcons, Frame: i}, Floor: content.Image{Sprite: spriteFloor, Frame: i},
 		}
 	}
+	sword := 0
+	p.Items[ItemSword].WeaponClass, p.Items[ItemSword].Wear, p.Items[ItemSword].Durability = &sword, content.WearHand, 2500
+	p.Items[ItemSword].Actions = []content.ItemAction{
+		{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 6}, Delay: 4, Skill: 1},
+		{Kind: content.ActionAttack, Damage: content.Dice{Count: 1, Sides: 10}, Delay: 3, Skill: 2},
+	}
+	p.Items[ItemBoots].Wear, p.Items[ItemBoots].Armor, p.Items[ItemBoots].Power = content.WearFeet, 1, 0x0A
+	p.Items[ItemMail].Wear, p.Items[ItemMail].Armor, p.Items[ItemMail].Durability = content.WearBody, 4, 7500
+	p.Items[ItemMail].Tags = []string{"body_armor"}
 	p.Things[ThingGuard] = &content.Thing{ID: ThingGuard, Kind: content.ThingCreature, Sprite: "sprite.guard",
 		Facing: 3, Speed: 8, IntervalMS: 330, Weight: 100, HitPoints: content.Dice{Count: 3, Sides: 6, Bonus: 4},
-		Behaviors: []string{content.BehaviorHostile, content.BehaviorLeavesCorpse}}
+		Behaviors: []string{content.BehaviorLeavesCorpse, content.BehaviorStationary},
+		Attack:    content.Dice{Count: 1, Sides: 6}, Experience: content.Dice{Count: 3, Sides: 10, Bonus: 20},
+		Stats: map[string]int{"accuracy": 10, "bonus": 1, "resistance": 0}}
 	p.Things[ThingGhost] = &content.Thing{ID: ThingGhost, Kind: content.ThingCreature, Sprite: "sprite.ghost",
 		Facing: 3, Speed: 8, IntervalMS: 330, Weight: 100, HitPoints: content.Dice{Bonus: 12},
-		Behaviors: []string{content.BehaviorNeverHostile, content.BehaviorResistsTeleport}}
+		Behaviors: []string{content.BehaviorNeverHostile, content.BehaviorResistsTeleport, content.BehaviorStationary}}
+	p.Things[ThingBrute] = &content.Thing{ID: ThingBrute, Kind: content.ThingCreature, Sprite: "sprite.brute",
+		Facing: 3, Speed: 8, IntervalMS: 330, Weight: 100, HitPoints: content.Dice{Count: 2, Sides: 10, Bonus: 4},
+		Behaviors: []string{content.BehaviorHostile, content.BehaviorLeavesCorpse},
+		Attack:    content.Dice{Count: 1, Sides: 6}, Experience: content.Dice{Count: 2, Sides: 10, Bonus: 30},
+		Stats: map[string]int{"accuracy": 12, "bonus": 1, "resistance": 1}}
 	p.Things[ThingBoulder] = &content.Thing{ID: ThingBoulder, Kind: content.ThingBoulder, Sprite: spriteBoulder,
 		Speed: 8, IntervalMS: 110, Weight: 100, Footprint: 16}
 	p.Things[ThingCrate] = &content.Thing{ID: ThingCrate, Kind: content.ThingTrap, Sprite: spriteCrate,

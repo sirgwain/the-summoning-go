@@ -98,7 +98,7 @@ For damage `d` of kind `k`, with `poison` set by poisoning attacks:
 - Behavior 1000h: immune. Record 31h: hurt only by exactly 3000.
 - Behavior 0400h: non-physical damage does 0.
 - Quarter damage: poison with 8000h, fire with 2000h, lightning with 4000h.
-- Arrows (3) do `d + d/4` against creatures whose vulnerability is 0Ch.
+- Arrows (3) do `d + d/4` against creatures whose vulnerability is 0Ch (weapon class 3).
 - The amount shows over the creature for 3 updates.
 - Poison makes the creature poisoned unless it has 8000h (creatures.md).
 - At 0 or less the creature dies (creatures.md).
@@ -114,6 +114,16 @@ An object's wear value starts at its template's durability (items.md). Wearing b
 
 - **Rusted Blade (63h)** is charged by the damage it deals. The first hit starts conversation 45h. At 250 or more it becomes **WarMonger (64h)** in the same hand, and conversation 46h starts; WarMonger's level (interaction variable) starts at 1.
 - **WarMonger** counts the damage it deals. Each time the count passes 1000 its level rises (up to 9), the count resets, and conversation 46h starts.
+
+## Engine model
+
+Combat is a module (`engine/combat`) the simulation calls with plain numbers; the pack names the rule set, and the Summoning's is this file. The simulation finds who strikes whom and applies the results; the rule set rolls and computes.
+
+- **Striking.** The player strikes the first creature whose footprint overlaps the player's moved one full step along its facing. A creature strikes the player when its own step is blocked by the player.
+- **Behind.** In engine directions: the striker's direction, rounded down to an even one, equals the target's facing.
+- **Dice.** An item action's damage and a creature's attack are dice in the pack. A damage code byte `c` imports as `((c >> 4) + 1)d((c & 0Fh) + 1)`, and 00h as no damage.
+- **Rolls.** "d20" is 1 + rand(20). Every message above is an engine message (pack.md): `miss` (5Bh, the score), `hit` (5Ch, the score and the damage), `not_a_creature` (5Ah), `cannot_hurt` (5Dh), `creature_hits` (7Dh), `creature_misses` (7Eh), `weapon_breaks` (8Ah, the item's name).
+- **What waits.** Battle rage, invisibility, blow protection, the death-blow ward, resist quarter and forty, shields and charges come with statuses; until then those terms are 0. Poisoning, armor wear and weapon wear apply now.
 
 ## Unknowns
 

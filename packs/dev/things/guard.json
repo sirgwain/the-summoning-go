@@ -8,7 +8,14 @@
   "weight": 100,
   "hit_points": "3d6+4",
   "behaviors": [
-    "hostile",
-    "leaves_corpse"
-  ]
+    "leaves_corpse",
+    "stationary"
+  ],
+  "stats": {
+    "accuracy": 10,
+    "bonus": 1,
+    "resistance": 0
+  },
+  "attack": "1d6",
+  "experience": "3d10+20"
 }

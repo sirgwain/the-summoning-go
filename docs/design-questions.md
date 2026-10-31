@@ -120,3 +120,18 @@ exit's cell, or to the start cell on the start level and the first open cell els
 
 **Why.** The current level is where the player is; a tool that changed level without it would leave
 the player standing at its old position on another map.
+
+## Creatures walk unless marked
+
+**Choice.** A creature template walks unless it is `animated` (it only animates in place and cannot
+be struck) or `stationary` (it stands and casts). The game tells these apart by its frame count.
+
+**Why.** Walking is what most creatures do; the exceptions are what an author marks.
+
+## Striking reach
+
+**Choice.** The player strikes what its footprint would overlap one full step ahead, as the game
+tests a step. With footprints of 16 that means walking right up to a creature.
+
+**Revisit if** fights feel cramped next to the game, where the rectangles in view pixels may reach
+a little differently along each axis.

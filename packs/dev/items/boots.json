@@ -1,0 +1,17 @@
+{
+  "id": "item.boots",
+  "name": "item.boots.name",
+  "weight": 1,
+  "size": 2,
+  "icon": {
+    "sprite": "sprite.items.icons",
+    "frame": 8
+  },
+  "floor": {
+    "sprite": "sprite.items.floor",
+    "frame": 8
+  },
+  "armor": 1,
+  "wear": "feet",
+  "power": 10
+}

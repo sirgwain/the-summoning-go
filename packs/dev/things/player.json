@@ -15,7 +15,9 @@
     "endurance": 18,
     "interval_bonus": -2,
     "power": 16,
+    "school.0": 1,
     "strength": 18,
-    "talent": 16
+    "talent": 16,
+    "weapon.0": 1
   }
 }

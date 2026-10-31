@@ -85,7 +85,7 @@ func (w *World) act(l *Level, a content.Action, depth int) {
 	case a.ShootSpell != nil:
 		w.emit(Event{Kind: EventNotYet, Level: l.ID, Cell: a.ShootSpell.Cell, Detail: "shooting spells"})
 	case a.Create != nil:
-		w.drop(l, a.Create.Cell, &Object{Item: a.Create.Item}, byWorld, depth)
+		w.drop(l, a.Create.Cell, w.newObject(a.Create.Item), byWorld, depth)
 	case a.SetFloor != nil:
 		c := a.SetFloor.Cell
 		l.Floor[c[0]][c[1]] = a.SetFloor.Type
@@ -114,7 +114,7 @@ func (w *World) apply(cmd input.Command) {
 		case w.pack.Items[c.Item] == nil:
 			refuse(c.Cell, "no item "+c.Item)
 		default:
-			w.drop(l, c.Cell, &Object{Item: c.Item}, byPlayer, 0)
+			w.drop(l, c.Cell, w.newObject(c.Item), byPlayer, 0)
 		}
 	case input.Remove:
 		objs := l.Objects[c.Cell]
@@ -137,7 +137,7 @@ func (w *World) apply(cmd input.Command) {
 		case tmpl == nil:
 			refuse(c.Cell, "no thing "+c.Thing)
 		default:
-			t := &Thing{ID: w.newThingID(l, tmpl.Kind), Template: tmpl, Facing: tmpl.Facing, HitPoints: w.roll(tmpl.HitPoints)}
+			t := w.newThing(w.newThingID(l, tmpl.Kind), tmpl)
 			t.U, t.V = cellCenter(c.Cell)
 			l.Things = append(l.Things, t)
 			w.emit(Event{Kind: EventThing, Level: l.ID, Cell: c.Cell, Thing: t.ID, Detail: "placed"})
@@ -188,7 +188,7 @@ func (w *World) apply(cmd input.Command) {
 		if err := w.enter(c.Level); err != nil {
 			refuse(content.Cell{}, err.Error())
 		}
-	case input.Walk, input.PickUp, input.PutDown, input.Swap, input.Activate, input.PlacePlayer:
+	case input.Walk, input.PickUp, input.PutDown, input.Swap, input.Activate, input.PlacePlayer, input.Strike, input.PutOn:
 		w.playerCommand(c)
 	}
 }
@@ -213,6 +213,10 @@ func (w *World) playerCommand(cmd input.Command) {
 		w.swap(c.Slot)
 	case input.Activate:
 		w.activate()
+	case input.Strike:
+		w.strike(c.Hand, c.Action)
+	case input.PutOn:
+		w.putOnHand()
 	case input.PlacePlayer:
 		if !l.InBounds(c.Cell) || l.Blocked(c.Cell) {
 			w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: c.Cell, Detail: "the player cannot stand there"})

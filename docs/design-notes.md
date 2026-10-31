@@ -20,6 +20,37 @@ it once done.
    `summoning play`, with the view following the player as the game's does. The dev pack's hall
    is solved by playing it (`TestHallPlays`).
 
+## In progress: 5. Fight
+
+**Done (stage 1, melee).** `engine/combat` with the Summoning's rule set; attributes, skills,
+practice, experience and levels; striking with either hand by an item's actions, with delays,
+skill requirements and bare hands; creatures that wander, chase, strike, hurt on contact, poison,
+die, drop what they carry and leave corpses; worn slots with armor class, body armor and weapon
+wear, weapons breaking, and the speed powers while worn; the player dying; poses for striking,
+walking and corpses. The importer writes item actions, armor, wear slots, values and powers,
+creature attacks, experience, vulnerabilities and behaviors, and the player's strike frames. The
+dev pack's cellar has a brute to fight (`TestCellarFight`), and boots and mail.
+
+**Left (stage 2).**
+- Throwing and firing: things in flight, landing, breaking, bows and the quiver; the sealed doors
+  that thrown spheres open (the dev pack's door E); arrow traps (`shoot_item`).
+- Using objects: `use` and `use_up` actions, charges, spent objects, and the powers table
+  (items.md, Powers). Worn objects start only the speed powers yet.
+- Statuses and timed effects (player.md, Status): levitation, invisibility, shields, battle rage,
+  haste, blow protection, death protection and ward, resistances, charges; their terms in the
+  combat formulas are 0 until then.
+- The starting inventory (player.md, Starting a new game); then the Leather Boots give the −2
+  that the template's `interval_bonus` stands in for, and `weapon.0` and `school.0` come from
+  character creation.
+- Exertion and fatigue (an attack adds `weight / 8`).
+- Practice of 2 for killing a creature of record 50 or above without a conversation; the dead bit
+  on its record. Both need records, which come with dialogue.
+- Special weapons: the Rusted Blade and WarMonger, the Staff of the Serpent's poison, creature 79h.
+- Animated objects' patterns (drawn still), stationary casters' casting (with Magic), teleported
+  creatures spinning.
+- Damage numbers over the hurt, and messages hidden by "quiet combat".
+- Play a fight on the imported game, and see the player's strike frames on screen.
+
 ## Left from Walk
 
 - **Play a real level through.** Only a short walk on level 0 of the imported game has been tried.
@@ -32,17 +63,7 @@ it once done.
 
 ### 5. Fight
 
-- Worn slots (20, 21, 24–27): what each takes by category, armor, and starting and ending worn
-  objects' powers. Then the Leather Boots give the starting player's −2 interval bonus, which the
-  template's `interval_bonus` stands in for now.
-- The starting inventory (player.md, Starting a new game).
-- Touching creatures, creature AI and `avoided` floors, combat, death of creatures and the player.
-- Confusion, haste and battle rage in the speed formula; exertion and fatigue.
-- Throwing and firing: things in flight, landing, breaking; the sealed doors that thrown spheres
-  open (the dev pack's door E waits for this); arrow traps (`shoot_item`).
-- Using objects: action icons, charges, using up, and the powers table (items.md, Powers). Many
-  powers also need statuses or spells.
-- Statuses: levitation (plates, pits, pushing corpses), fire immunity, poison, regeneration.
+- See above. Also confusion in walking, and haste and battle rage in the speed formula.
 
 ### 6. Magic and talk
 

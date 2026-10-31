@@ -49,6 +49,10 @@ A walk step moves the player's speed (8 units) in the facing, or half that when 
 
 **Engine model.** The player is a thing of kind `player` named by the pack (pack.md): its sprite, `speed` (8), `interval_ms` (the base interval, 5 ticks), `footprint`, `weight` (100), hit points and magic points. Its animations are `walk.d` and `idle.d` for table direction `d`; the importer makes `idle.d` the standing frame `p + 8` and `walk.d` the frames `p + 8, p + 16, … p + 40, p`, one per step, for the facing `p` of `d`. The template's `stats` give the six attributes by name (`strength`, `agility`, `endurance`, `accuracy`, `talent`, `power`) and the starting `bonus` (`interval_bonus`, in ticks), and `interval_ms` the base interval. The bonus is the player's own state; powers change it. Each update the player's interval is worked out as Speed says, from the attributes and what it carries (hand, slots and the contents of containers, weightless bags excepted); the ticks added to the base are converted at the tick's length. Haste, battle rage, worn bonuses and confusion come with Fight. Until character creation, the importer starts the player with STR 18, AGI 20, END 18, ACC 16, TAL 16, POW 16, so 56 hit points and 52 magic points, and a bonus of −2 standing in for the Leather Boots it starts wearing (items.md, Inventory) until worn slots come with Fight: an interval of 2 ticks.
 
+**Skills and experience** are the player's state: four weapon classes and four schools, each with a level (starting 1 for the chosen class and school, else 0), practice points and a threshold (10); experience, the player's level, and the threshold for the next (500). Practice and levels work as above; the dice per level are the importer's rules for the Summoning, kept in the combat rule set. Until character creation the importer starts the player at weapon class 0 and school 0, level 1.
+
+**Dying.** At 0 hit points the player is dead: it no longer acts, and the world reports it; what follows comes with scenes.
+
 **View.** The view does not follow the player step by step. While the player stands within the middle of the view it stays put; a move that leaves the player outside it, horizontally or vertically, scrolls the view along that axis by as far as the player moved on screen. The engine takes the middle half of the view each way. A player outside the view altogether (arriving on a level, teleported) is centered.
 
 **Figure.** The importer composes the player's sprite from the character animation banks (INIT base `C`), for the figure out of water: for frame `f` of group `g = f / 8` and step `s = f mod 8`, bank `C` frame `f` at `(0, 13)`, bank `C + 1` frame `f` at `(0, 18)`, the body look bank `C + 25h` (unarmored) frame `h[g] + s` at `(0, 5)`, and the head look bank `C + 2` frame `s` at `(8, 0)`, each later one over the earlier, with `h` = 0, 8, 16, 24, 16, 8 for groups 0–5. The figure's top-left is the player's position, so its anchor is `(18, 19)`. Worn looks, held items and colors come with character drawing.
@@ -138,7 +142,7 @@ The player starts on the level and cell from INIT, with:
 
 - Apple of Vigor (shelf slot 0), Palimpsest (slot 1);
 - on the body, a random one of templates 14–17; Leather Boots on the feet;
-- in the left hand, the weapon of the chosen class: Falchion (61h), War Axe (6Ah), Spear (67h), Bow (6Eh); with the bow, a Quiver holding 4 Arrows;
+- in the right hand, the weapon of the chosen class: Falchion (61h), War Axe (6Ah), Spear (67h), Bow (6Eh); with the bow, a Quiver holding 4 Arrows;
 - in slot 2, the scroll of the chosen school: DFh, E5h, ECh, F4h;
 - the gesture letters of the school's first spell known (spells.md).
 

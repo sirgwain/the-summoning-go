@@ -8,6 +8,8 @@ import (
 	"math/rand/v2"
 	"sort"
 
+	"github.com/sirgwain/the-summoning-go/engine/combat"
+	"github.com/sirgwain/the-summoning-go/engine/combat/summoning"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 )
@@ -38,12 +40,16 @@ type World struct {
 	// player is the player, nil when the pack has none; status the step of the next status tick.
 	player *Player
 	status int64
+	// rules is the combat rule set the pack names.
+	rules combat.Rules
 }
+
+var summoningRules combat.Rules = summoning.Rules{}
 
 // New returns a world for pack p at its start level. The seed makes its random choices
 // reproducible.
 func New(p *content.Pack, seed uint64) (*World, error) {
-	w := &World{pack: p, rng: rand.New(rand.NewPCG(seed, seed^0x9E3779B97F4A7C15)), levels: map[string]*Level{}}
+	w := &World{pack: p, rng: rand.New(rand.NewPCG(seed, seed^0x9E3779B97F4A7C15)), levels: map[string]*Level{}, rules: rulesFor(p)}
 	for _, id := range sortedKeys(p.Items) {
 		if p.Items[id].Random {
 			w.randomItems = append(w.randomItems, id)
@@ -82,6 +88,7 @@ func (w *World) Update(cmds []input.Command) []Event {
 		w.updatePlayer()
 	}
 	w.rollBoulders(w.Current())
+	w.updateCreatures(w.Current())
 	for _, id := range sortedKeys(w.levels) {
 		w.advance(w.levels[id])
 	}
@@ -182,6 +189,8 @@ type Event struct {
 	Text    string
 	Item    string
 	Detail  string
+	// Score and Damage are a strike's numbers, for its message.
+	Score, Damage int
 }
 
 func (e Event) String() string {

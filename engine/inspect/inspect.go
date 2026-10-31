@@ -5,6 +5,7 @@ package inspect
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
@@ -29,12 +30,30 @@ func ItemName(p *content.Pack, item string) string {
 	return item
 }
 
-// Message returns the words an event shows, with an item's name in place of {item}.
+// Message returns the words an event shows, with an item's name in place of {item}, a skill's
+// in place of {skill}, and a strike's numbers in place of {score} and {damage}.
 func Message(p *content.Pack, e sim.Event) string {
 	if e.Text == "" {
 		return ""
 	}
-	return strings.ReplaceAll(Text(p, e.Text), "{item}", ItemName(p, e.Item))
+	skill := e.Item
+	if n, ok := strings.CutPrefix(e.Item, "skill."); ok {
+		skill = SkillName(n)
+	}
+	return strings.NewReplacer("{item}", ItemName(p, e.Item), "{skill}", skill,
+		"{score}", strconv.Itoa(e.Score), "{damage}", strconv.Itoa(e.Damage)).Replace(Text(p, e.Text))
+}
+
+// SkillName names skill index n, as a string: weapon classes 0–3, then schools 0–3.
+func SkillName(n string) string {
+	i, err := strconv.Atoi(n)
+	if err != nil || i < 0 || i >= sim.Skills {
+		return n
+	}
+	if i < sim.SkillSchool {
+		return fmt.Sprintf("weapon class %d", i)
+	}
+	return []string{"Wizardry", "Sorcery", "Enchantment", "Healing"}[i-sim.SkillSchool]
 }
 
 // Hooks returns the procedures feature f's hooks run, in the order Cell lists them, skipping
@@ -291,7 +310,7 @@ func SlotName(i int) string {
 	case i >= sim.SlotPack:
 		return fmt.Sprintf("pack %d", i-sim.SlotPack)
 	}
-	return [...]string{"head", "arms", "left hand", "right hand", "feet", "quiver", "body", "neck"}[i-sim.Shelves]
+	return [...]string{"head", "arms", "right hand", "left hand", "feet", "quiver", "body", "neck"}[i-sim.Shelves]
 }
 
 // Player describes the player: where it stands, its points, and what it holds and carries.
@@ -308,6 +327,20 @@ func Player(p *content.Pack, pl *sim.Player) []string {
 			a[sim.AttrStrength], a[sim.AttrAgility], agility, a[sim.AttrEndurance], a[sim.AttrAccuracy], a[sim.AttrTalent], a[sim.AttrPower]))
 	}
 	lines = append(lines, fmt.Sprintf("  carrying %d, interval %+d ticks from the base", pl.Carried(p), pl.IntervalTicks(p)))
+	lines = append(lines, fmt.Sprintf("  level %d, experience %d/%d, armor %d%s%s", pl.Level, pl.Experience, pl.NextLevel,
+		pl.ArmorClass, onOff(pl.Poisoned, ", poisoned", ""), onOff(pl.Dead, ", DEAD", "")))
+	var skills []string
+	for i, s := range pl.Skills {
+		if s.Level > 0 || s.Practice > 0 {
+			skills = append(skills, fmt.Sprintf("%s %d (%d/%d)", SkillName(strconv.Itoa(i)), s.Level, s.Practice, s.Threshold))
+		}
+	}
+	if len(skills) > 0 {
+		lines = append(lines, "  skills: "+strings.Join(skills, ", "))
+	}
+	if pl.Delays != [2]int{} {
+		lines = append(lines, fmt.Sprintf("  hands wait %d and %d", pl.Delays[0], pl.Delays[1]))
+	}
 	hand := "nothing"
 	if pl.Hand != nil {
 		hand = object(p, pl.Hand)

@@ -211,8 +211,11 @@ func hall(p *content.Pack) {
 	p.Levels[l.ID] = l
 }
 
+// BruteStart is where the cellar's brute waits.
+var BruteStart = content.Cell{2, 2}
+
 // cellar is the level below the hall, where its pit, trapdoor and exits lead, with an exit back
-// up.
+// up: a hostile brute waits there, and boots of speed and a mail shirt lie by the west exit.
 func cellar(p *content.Pack) {
 	l := &content.Level{ID: Cellar, Floors: floorSet, Walls: wallSet, FloorTypes: floorTypes()}
 	grid(l, []string{
@@ -231,6 +234,13 @@ func cellar(p *content.Pack) {
 		{ID: "exit.up", Kind: content.FeatureExit, Cell: content.Cell{7, 7}, Look: lookExitFloor, To: &content.Destination{Level: Hall, Cell: HallStart}},
 		{ID: "exit.west", Kind: content.FeatureExit, Cell: content.Cell{4, 0}, Look: lookExitRight, To: &content.Destination{Level: Hall, Cell: content.Cell{9, 1}}},
 	}
-	l.Objects = []*content.FloorObject{{Cell: content.Cell{5, 5}, Object: content.Object{Item: ItemPotion}}}
+	l.Objects = []*content.FloorObject{
+		{Cell: content.Cell{5, 5}, Object: content.Object{Item: ItemPotion}},
+		{Cell: content.Cell{6, 2}, Object: content.Object{Item: ItemBoots}},
+		{Cell: content.Cell{6, 3}, Object: content.Object{Item: ItemMail}},
+	}
+	l.Things = []*content.PlacedThing{
+		{ID: "brute", Thing: ThingBrute, Cell: BruteStart, Items: []content.Object{{Item: ItemKey}}},
+	}
 	p.Levels[l.ID] = l
 }

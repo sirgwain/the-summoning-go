@@ -54,7 +54,12 @@ type Manifest struct {
 	Start   Start  `json:"start"`
 	// Player is the thing template of kind ThingPlayer the player is made from; empty for none.
 	Player string `json:"player,omitempty"`
+	// Rules names the combat rule set; empty means RulesSummoning.
+	Rules string `json:"rules,omitempty"`
 }
+
+// RulesSummoning is the Summoning's combat rule set, the only one.
+const RulesSummoning = "summoning"
 
 // Start is where a new game begins.
 type Start struct {

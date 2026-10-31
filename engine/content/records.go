@@ -15,6 +15,58 @@ type Item struct {
 	// Icon is the inventory image; Floor the image drawn on the floor.
 	Icon  Image `json:"icon"`
 	Floor Image `json:"floor"`
+	// Armor is what the item adds worn. Durability is a weapon's or armor's starting value;
+	// Charges anything else's.
+	Armor      int `json:"armor,omitempty"`
+	Durability int `json:"durability,omitempty"`
+	Charges    int `json:"charges,omitempty"`
+	// Wear is the worn slot the item goes in, one of the Wear constants.
+	Wear string `json:"wear,omitempty"`
+	// WeaponClass is a weapon's class, nil for anything else.
+	WeaponClass *int `json:"weapon_class,omitempty"`
+	// Actions are what the item does in hand.
+	Actions []ItemAction `json:"actions,omitempty"`
+	// Power is the power the item starts when worn or used, 0 for none.
+	Power int `json:"power,omitempty"`
+}
+
+// Worn slots an item can go in.
+const (
+	WearHead   = "head"
+	WearBody   = "body"
+	WearFeet   = "feet"
+	WearArms   = "arms"
+	WearQuiver = "quiver"
+	WearNeck   = "neck"
+	WearHand   = "hand"
+)
+
+var wears = map[string]bool{WearHead: true, WearBody: true, WearFeet: true, WearArms: true, WearQuiver: true, WearNeck: true, WearHand: true}
+
+// Item action kinds.
+const (
+	ActionAttack     = "attack"
+	ActionAttackBoth = "attack_both"
+	ActionFire       = "fire"
+	ActionUseUp      = "use_up"
+	ActionUse        = "use"
+)
+
+var actionKinds = map[string]bool{ActionAttack: true, ActionAttackBoth: true, ActionFire: true, ActionUseUp: true, ActionUse: true}
+
+// ItemAction is something an item does in hand.
+type ItemAction struct {
+	Kind   string `json:"kind"`
+	Damage Dice   `json:"damage,omitzero"`
+	// Delay is the player updates the hand waits afterwards.
+	Delay int `json:"delay"`
+	// Skill is the weapon class skill level an attack needs.
+	Skill int `json:"skill,omitempty"`
+}
+
+// Attack reports whether the action strikes.
+func (a ItemAction) Attack() bool {
+	return a.Kind == ActionAttack || a.Kind == ActionAttackBoth || a.Kind == ActionFire
 }
 
 // Container says what a container item holds.
@@ -49,12 +101,28 @@ const (
 	BehaviorLeavesCorpse    = "leaves_corpse"
 	BehaviorResistsTeleport = "resists_teleport"
 	BehaviorInvulnerable    = "invulnerable"
+	BehaviorPoisonous       = "poisonous"
+	BehaviorHurtsOnContact  = "hurts_on_contact"
+	BehaviorDeathBlow       = "death_blow"
+	BehaviorPhysicalOnly    = "physical_only"
+	BehaviorResistsFire     = "resists_fire"
+	BehaviorResistsLight    = "resists_lightning"
+	BehaviorResistsPoison   = "resists_poison"
+	// BehaviorAnimated creatures only animate in place and cannot be struck; BehaviorStationary
+	// ones stand still and cast.
+	BehaviorAnimated   = "animated"
+	BehaviorStationary = "stationary"
 )
 
 var behaviors = map[string]bool{
 	BehaviorHostile: true, BehaviorNeverHostile: true, BehaviorLeavesCorpse: true,
-	BehaviorResistsTeleport: true, BehaviorInvulnerable: true,
+	BehaviorResistsTeleport: true, BehaviorInvulnerable: true, BehaviorPoisonous: true,
+	BehaviorHurtsOnContact: true, BehaviorDeathBlow: true, BehaviorPhysicalOnly: true,
+	BehaviorResistsFire: true, BehaviorResistsLight: true, BehaviorResistsPoison: true, BehaviorAnimated: true, BehaviorStationary: true,
 }
+
+// ArrowClass is the weapon class of bows; arrows hurt creatures vulnerable to it more.
+const ArrowClass = 3
 
 // Thing is a template for things that stand in a level.
 type Thing struct {
@@ -74,6 +142,13 @@ type Thing struct {
 	MagicPoints Dice           `json:"magic_points,omitzero"`
 	Behaviors   []string       `json:"behaviors,omitempty"`
 	Stats       map[string]int `json:"stats,omitempty"`
+	// Attack is a creature's blow; Experience what killing it is worth.
+	Attack     Dice `json:"attack,omitzero"`
+	Experience Dice `json:"experience,omitzero"`
+	// Vulnerability is the weapon class that hurts it more, nil for none.
+	Vulnerability *int `json:"vulnerability,omitempty"`
+	// Spell is a creature's magic attack, 0 for none.
+	Spell int `json:"spell,omitempty"`
 	// Animations are the thing's own; a name it does not have comes from its sprite.
 	Animations map[string]Animation `json:"animations,omitempty"`
 }
@@ -154,8 +229,19 @@ const (
 	MsgSlotStuck     = "slot_stuck"
 	MsgNoDropHere    = "no_drop_here"
 	MsgNoRoom        = "no_room"
+	MsgNotACreature  = "not_a_creature"
+	MsgCannotHurt    = "cannot_hurt"
+	MsgMiss          = "miss"
+	MsgHit           = "hit"
+	MsgCreatureHits  = "creature_hits"
+	MsgCreatureMiss  = "creature_misses"
+	MsgWeaponBreaks  = "weapon_breaks"
+	MsgSkillUp       = "skill_up"
+	MsgLevelUp       = "level_up"
 )
 
 var messageKeys = map[string]bool{
 	MsgLeverStuck: true, MsgSlotWrongItem: true, MsgSlotStuck: true, MsgNoDropHere: true, MsgNoRoom: true,
+	MsgNotACreature: true, MsgCannotHurt: true, MsgMiss: true, MsgHit: true, MsgCreatureHits: true,
+	MsgCreatureMiss: true, MsgWeaponBreaks: true, MsgSkillUp: true, MsgLevelUp: true,
 }

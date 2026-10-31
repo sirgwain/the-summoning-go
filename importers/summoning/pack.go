@@ -158,6 +158,7 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 			Depends: []string{},
 			Palette: paletteID(0),
 			Start:   content.Start{Level: levelID(int(in.StartLevel)), Cell: content.Cell{int(in.StartX), int(in.StartY)}},
+			Rules:   content.RulesSummoning,
 		}),
 		init:      in,
 		resources: resources,

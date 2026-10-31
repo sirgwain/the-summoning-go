@@ -2,10 +2,37 @@
   "id": "sprite.ghost",
   "frame_size": [24, 40],
   "columns": 8,
-  "frames": 24,
+  "frames": 25,
   "transparent": 255,
   "anchor": [12, 36],
   "animations": {
+    "attack.0": {
+      "frames": [8]
+    },
+    "attack.1": {
+      "frames": [9]
+    },
+    "attack.2": {
+      "frames": [10]
+    },
+    "attack.3": {
+      "frames": [11]
+    },
+    "attack.4": {
+      "frames": [12]
+    },
+    "attack.5": {
+      "frames": [13]
+    },
+    "attack.6": {
+      "frames": [14]
+    },
+    "attack.7": {
+      "frames": [15]
+    },
+    "dead": {
+      "frames": [24]
+    },
     "idle": {
       "frames": [2]
     },

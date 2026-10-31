@@ -1,6 +1,7 @@
 # Content pack format
 
-Status: v1, 2026-10-31. Covers what Milestones 1 (Viewer), 2 (World) and 4 (Walk) need: the manifest,
+Status: v1, 2026-10-31. Covers what Milestones 1 (Viewer), 2 (World), 4 (Walk) and 5 (Fight)
+need: the manifest,
 palettes, sprites, floor and wall sets, text, engine messages, item and thing templates, looks, and
 levels with their floor types, features, procedures, things and objects. Later milestones extend it.
 The Go types are in `engine/content`.
@@ -58,12 +59,14 @@ A record's file is named after its id without the kind prefix (`item.dagger` is
   "depends": [],
   "palette": "palette.0",
   "start": { "level": "level.00", "cell": [16, 15] },
-  "player": "thing.player"
+  "player": "thing.player",
+  "rules": "summoning"
 }
 ```
 
 `format` is this document's version; the loader rejects a format it does not know. `palette` is the
-palette gameplay draws with. `player` is the thing template of kind `player` the player is made
+palette gameplay draws with. `rules` names the combat rule set (`docs/design.md`, Characters, stats
+and combat); `summoning` is the only one, and the default. `player` is the thing template of kind `player` the player is made
 from; a pack without one runs its levels with no player.
 
 ## Palettes
@@ -212,13 +215,17 @@ text to UTF-8.
     "slot_wrong_item": "msg.143",
     "slot_stuck": "msg.135",
     "no_drop_here": "msg.114",
-    "no_room": "msg.127"
+    "no_room": "msg.127",
+    "miss": "msg.91"
   }
 }
 ```
 
-The engine defines the keys; the pack gives the text. In `slot_wrong_item` and `slot_stuck`,
-`{item}` stands for the item's name. A key the pack leaves out shows nothing. Later milestones add
+The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slot_stuck` and
+`weapon_breaks`, `{item}` stands for the item's name; in `miss`, `hit`, `creature_hits` and
+`creature_misses`, `{score}` and `{damage}` stand for the numbers. The keys: `lever_stuck`,
+`slot_wrong_item`, `slot_stuck`, `no_drop_here`, `no_room`, `not_a_creature`, `cannot_hurt`,
+`miss`, `hit`, `creature_hits`, `creature_misses`, `weapon_breaks`, `skill_up`, `level_up`. A key the pack leaves out shows nothing. Later milestones add
 keys.
 
 ## Items
@@ -242,6 +249,15 @@ keys.
 - `weight` and `size` are the item's own, without contents.
 - `container` is present only for containers: it takes up to `capacity` objects of size at most
   `largest`. With `weightless`, its contents add no weight.
+- `armor` is the armor it adds worn. `durability` is a weapon's or armor's starting value, which
+  wear takes down; `charges` the starting value of anything else.
+- `wear` is the worn slot it goes in: `head`, `body`, `feet`, `arms`, `quiver`, `neck`, or `hand`.
+  `weapon_class` (0–3) is a weapon's class, whose skill it practices.
+- `actions` are up to two things the item does in hand: `{ "kind", "damage", "delay", "skill" }`.
+  `kind` is `attack`, `attack_both`, `fire`, `use_up` or `use`; `damage` dice; `delay` the player
+  updates the hand then waits; `skill` the class skill an attack needs (`docs/spec/items.md`).
+- `power` is the number of the power the item starts when worn or used (`docs/spec/items.md`,
+  Powers); powers become named records with Magic.
 - `tags` are words that rules and other records test (`body_armor`, `quiver`, `arrows`, `bottle`,
   `weapon`, `two_handed`). The engine attaches no meaning to a tag by itself.
 - `random` items can be picked for a random object.
@@ -284,10 +300,16 @@ keys.
   corners against the terrain. 0 means 16.
 - `weight` is what the thing adds to a plate it stands on; 0 presses nothing.
 - `hit_points` are rolled when the thing is placed. A creature with none is placed as a corpse.
-  `magic_points` (players) are rolled the same way.
+  `magic_points` (players) are rolled the same way. A player's `stats` may also give its starting
+  skills, `weapon.0`–`weapon.3` and `school.0`–`school.3`.
 - `behaviors` (creatures): `hostile` from the start, `never_hostile`, `leaves_corpse` when it dies,
-  `resists_teleport` (teleporters, pits and plates leave it alone), `invulnerable`. Combat behaviors
-  and resistances are added with Fight. What the game sets in play (talked to, dead) is world state.
+  `resists_teleport` (teleporters, pits and plates leave it alone), `invulnerable`, `poisonous`,
+  `hurts_on_contact`, `death_blow`, `physical_only`, `resists_fire`, `resists_lightning`,
+  `resists_poison`, `animated` (only animates in place, and cannot be struck), `stationary` (stands
+  and casts). Other creatures walk.
+- `attack` (creatures) is the damage dice of its blow, `experience` the dice of what killing it is
+  worth, `vulnerability` the weapon class that does it extra damage (arrows too, for class 3), `spell` its magic
+  attack. What the game sets in play (talked to, dead) is world state.
 - `stats` are named numbers the pack's rule set reads; the engine does not interpret them, except a
   `player`'s attributes `strength`, `agility`, `endurance`, `accuracy`, `talent` and `power`,
   from which its speed is worked out (`docs/spec/player.md`, Speed), and its starting

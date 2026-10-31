@@ -426,8 +426,9 @@ func (v *Viewer) keys(in Input) []input.Command {
 const packKeys = 8
 
 // playKeys turns the keys into the player's commands: arrows or WASD walk, two together along a
-// diagonal; G picks up, F puts down, E uses; digits swap the hand with shelves 0–9 (with Shift,
-// 10–19), R and L with the right and left hands, F1–F8 with the pack.
+// diagonal; G picks up, F puts down, E uses, Q puts on; J and K act with the right and left hands
+// (with Shift, their second action); digits swap the hand with shelves 0–9 (with Shift, 10–19),
+// R and L with the right and left hands, F1–F8 with the pack.
 func (v *Viewer) playKeys(in Input) []input.Command {
 	var cmds []input.Command
 	var x, y int
@@ -457,6 +458,18 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 		cmds = append(cmds, input.Swap{Slot: sim.SlotRightHand})
 	case in.pressed("L"):
 		cmds = append(cmds, input.Swap{Slot: sim.SlotLeftHand})
+	case in.pressed("Q"):
+		cmds = append(cmds, input.PutOn{})
+	}
+	action := 0
+	if in.held(KeyShift) {
+		action = 1
+	}
+	if in.pressed("J") {
+		cmds = append(cmds, input.Strike{Hand: 0, Action: action})
+	}
+	if in.pressed("K") {
+		cmds = append(cmds, input.Strike{Hand: 1, Action: action})
 	}
 	for d := range 10 {
 		if in.pressed(Key(fmt.Sprintf("Digit%d", (d+1)%10))) {
@@ -547,8 +560,10 @@ func (v *Viewer) PanelLines() []string {
 	if p := v.World.Player(); v.Play && p != nil {
 		lines = append(lines, inspect.Player(v.Pack, p)...)
 		lines = append(lines, "", "Arrows/WASD walk (two keys: diagonal)",
-			"G pick up  F put down  E use  1-0 shelf (Shift 10-19)",
-			"R right hand  L left hand  F1-F8 pack  V see all",
+			"G pick up  F put down  E use  Q put on",
+			"J K strike right, left (Shift: 2nd action)",
+			"1-0 shelf (Shift 10-19)  R right hand  L left hand",
+			"F1-F8 pack  V see all",
 			"Tab tools  Space pause  N step  M magnify")
 		if v.Selected != nil {
 			lines = append(lines, "")
