@@ -37,6 +37,9 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 	}
 	for _, t := range l.Things {
 		th := Thing{ID: t.ID, Template: t.Template.ID, U: t.U, V: t.V, Facing: t.Facing}
+		if w.Step() < t.ShownUntil {
+			th.Shown = t.Shown
+		}
 		switch {
 		case t.Rolling != nil:
 			th.Anim, th.Phase = fmt.Sprintf("roll.%d", t.Rolling.Direction), t.Phase
@@ -54,6 +57,14 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 	}
 	if p := w.Player(); p != nil && w.Current() == l {
 		th := Thing{ID: sim.PlayerID, Template: p.Template.ID, U: p.U, V: p.V, Facing: p.Facing}
+		if w.Step() < p.ShownUntil {
+			th.Shown = p.Shown
+		}
+		for hand := range 2 {
+			if o := p.Slots[sim.SlotRightHand+hand]; o != nil && !p.Dead {
+				th.Held[hand] = o.Item
+			}
+		}
 		switch {
 		case p.Pose != "":
 			th.Anim = fmt.Sprintf("%s.%d", p.Pose, p.Facing)

@@ -27,6 +27,7 @@ func Build() *content.Pack {
 	records(p)
 	hall(p)
 	cellar(p)
+	arena(p)
 	return p
 }
 
@@ -40,6 +41,9 @@ const (
 	spriteFloor    = "sprite.items.floor"
 	spriteBoulder  = "sprite.boulder"
 	spriteCrate    = "sprite.crate"
+
+	spriteSwordBehind = "sprite.sword.held.behind"
+	spriteSwordFront  = "sprite.sword.held.front"
 
 	floorSet = "floors.dev"
 	wallSet  = "walls.dev"
@@ -68,6 +72,7 @@ var figures = []struct {
 	{"ghost", purple + 3, gray + 13},
 	{"player", green + 1, tan + 5},
 	{"brute", red + 1, tan + 3},
+	{"goblin", green + 4, green + 6},
 }
 
 func art(p *content.Pack) {
@@ -106,6 +111,8 @@ func art(p *content.Pack) {
 			b.Animations[fmt.Sprintf("attack.both.%d", d)] = content.Animation{Frames: []int{8 + d}}
 		}
 	}
+	bank(p, spriteSwordBehind, heldSword(false), &figureAnchor)
+	bank(p, spriteSwordFront, heldSword(true), &figureAnchor)
 	b := bank(p, spriteBoulder, boulders(), &content.Offset{16, 29})
 	b.Animations = map[string]content.Animation{}
 	for d := 0; d < 8; d += 2 {
@@ -212,6 +219,7 @@ const (
 	ThingBoulder = "thing.boulder"
 	ThingCrate   = "thing.crate"
 	ThingBrute   = "thing.brute"
+	ThingGoblin  = "thing.goblin"
 	ThingPlayer  = "thing.player"
 )
 
@@ -245,6 +253,7 @@ func records(p *content.Pack) {
 	}
 	sword := 0
 	p.Items[ItemSword].WeaponClass, p.Items[ItemSword].Wear, p.Items[ItemSword].Durability = &sword, content.WearHand, 2500
+	p.Items[ItemSword].Held = &content.Held{Right: &content.HeldLayers{Behind: spriteSwordBehind, Front: spriteSwordFront}}
 	p.Items[ItemSword].Actions = []content.ItemAction{
 		{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 6}, Delay: 4, Skill: 1},
 		{Kind: content.ActionAttack, Damage: content.Dice{Count: 1, Sides: 10}, Delay: 3, Skill: 2},
@@ -263,6 +272,11 @@ func records(p *content.Pack) {
 	p.Things[ThingGhost] = &content.Thing{ID: ThingGhost, Kind: content.ThingCreature, Sprite: "sprite.ghost",
 		Facing: 3, Speed: 8, IntervalMS: 330, Weight: 100, HitPoints: content.Dice{Bonus: 12},
 		Behaviors: []string{content.BehaviorNeverHostile, content.BehaviorResistsTeleport, content.BehaviorStationary}}
+	p.Things[ThingGoblin] = &content.Thing{ID: ThingGoblin, Kind: content.ThingCreature, Sprite: "sprite.goblin",
+		Facing: 6, Speed: 8, IntervalMS: 275, Weight: 100, HitPoints: content.Dice{Count: 2, Sides: 8, Bonus: 2},
+		Behaviors: []string{content.BehaviorHostile, content.BehaviorLeavesCorpse},
+		Attack:    content.Dice{Count: 1, Sides: 6}, Experience: content.Dice{Count: 2, Sides: 10, Bonus: 40},
+		Stats: map[string]int{"accuracy": 8, "bonus": 1, "resistance": 0}}
 	p.Things[ThingBrute] = &content.Thing{ID: ThingBrute, Kind: content.ThingCreature, Sprite: "sprite.brute",
 		Facing: 3, Speed: 8, IntervalMS: 330, Weight: 100, HitPoints: content.Dice{Count: 2, Sides: 10, Bonus: 4},
 		Behaviors: []string{content.BehaviorHostile, content.BehaviorLeavesCorpse},

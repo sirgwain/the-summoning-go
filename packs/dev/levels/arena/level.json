@@ -1,0 +1,55 @@
+{
+  "id": "level.arena",
+  "name": "",
+  "size": [5, 10],
+  "floors": "floors.dev",
+  "walls": "walls.dev",
+  "floor_types": [
+    {
+      "variant": 0
+    },
+    {
+      "variant": 1
+    },
+    {
+      "variant": 2,
+      "depth": 4,
+      "sinks": true
+    },
+    {
+      "variant": 3,
+      "enter": {
+        "damage": "2d2",
+        "type": "fire"
+      },
+      "avoided": true
+    }
+  ],
+  "floor": [
+    "0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0",
+    "0 0 1 1 1 1 1 1 0 0",
+    "0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0"
+  ],
+  "wall": [
+    "0 0 0 0 0 0 0 0 0 0",
+    "0 . . . . . . . . 0",
+    "0 . . . . . . . . 0",
+    "0 . . . . . . . . 0",
+    "0 0 0 0 0 0 0 0 0 0"
+  ],
+  "things": [
+    {
+      "id": "goblin",
+      "thing": "thing.goblin",
+      "cell": [1, 7]
+    }
+  ],
+  "objects": [
+    {
+      "cell": [1, 1],
+      "item": "item.sword"
+    }
+  ]
+}

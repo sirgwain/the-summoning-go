@@ -121,8 +121,9 @@ func TestPauseAndStep(t *testing.T) {
 }
 
 func TestChangeLevel(t *testing.T) {
+	// Levels go in id order, wrapping: the hall is last, then the arena.
 	v := run(t, `[{"at": 0, "select": [7, 3], "keys": ["PageDown"]}]`)
-	if v.Shown != devpack.Cellar || v.Selected != nil {
+	if v.Shown != devpack.Arena || v.Selected != nil {
 		t.Errorf("shown %s, selected %v", v.Shown, v.Selected)
 	}
 	v = run(t, `[{"at": 0, "keys": ["BracketRight"]}, {"at": 1, "keys": ["BracketLeft"]}]`)

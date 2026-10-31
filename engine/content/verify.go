@@ -201,6 +201,15 @@ func (v *verifier) itemRecord(i *Item) {
 	if c := i.WeaponClass; c != nil && (*c < 0 || *c > 3) {
 		v.fail("%s: weapon class %d", owner, *c)
 	}
+	for hand := range 2 {
+		if l := i.Held.Hand(hand); l != nil {
+			for _, s := range []string{l.Behind, l.Front} {
+				if s != "" {
+					v.frames(owner+" held", s)
+				}
+			}
+		}
+	}
 	for _, ref := range []string{i.Spent, i.BreaksInto} {
 		if ref != "" {
 			v.item(owner, ref)

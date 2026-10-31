@@ -1,0 +1,8 @@
+{
+  "id": "sprite.sword.held.front",
+  "frame_size": [24, 40],
+  "columns": 8,
+  "frames": 25,
+  "transparent": 255,
+  "anchor": [12, 36]
+}

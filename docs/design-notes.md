@@ -41,6 +41,10 @@ teleporting to rune marks, smiting and freezing creatures); powers that start wo
 and the death-blow ward; exertion, fatigue and confusion. The starting inventory, whose boots now
 give the speed bonus. The dev pack's hall is solved by playing it, sphere throw included.
 
+**Done since.** Held objects drawn in the player's hands from the game's held-item table; the
+corpse frame as the bank's last; damage shown over the hurt; the dev pack's arena, an e2e test of
+a whole fight.
+
 **Left.**
 - Powers that cast spells, start conversations, show the map or choose the ending (they report
   "not yet"); transmuting and joining staff halves; charges absorbing damage.
@@ -51,8 +55,12 @@ give the speed bonus. The dev pack's hall is solved by playing it, sphere throw 
 - The flying looks of the seven thrown-look templates (the bank is unknown); flights draw the
   item's floor image.
 - Animated objects' patterns (drawn still), teleported creatures spinning.
-- Damage numbers over the hurt, and messages hidden by "quiet combat".
-- Play a fight on the imported game, and see the strike frames and flights on screen.
+- Messages hidden by "quiet combat"; held objects hidden in water 3 deep or more; worn looks
+  (head and body armor) and the player's colors.
+- Damage numbers are drawn with the debug font until the UI has its own (Remaster UI).
+- See a fight on the imported game on screen. The dev pack's arena fight runs through the viewer
+  in `TestArenaFight`; watch it with
+  `summoning view packs/dev --level level.arena --script devpack/scripts/arena.json --out /tmp/arena`.
 
 ## Left from Walk
 

@@ -203,7 +203,7 @@ Tables read in order:
 | 256 | Texture shades (panel stone texture; FFh ends the cycle) |
 | 256 | Base color map |
 | 96 | Figure frame shifts |
-| 1536 | Held-item frames |
+| 1536 | Held-item frames: four tables of 96 entries (player frames 0–95) of four bytes: layer (0 behind the figure, 1 in front), frame of the held-item bank, `i8` row offset, `i8` column offset (player.md, Held objects) |
 | 40 | Spell costs: four schools × ten spells |
 | 120 | Spell power: four schools × ten × `(dice, sides, bonus_sides)` |
 | 360 | Spell gestures: four schools × ten × nine bytes (letters A–L, NUL-padded) |
@@ -253,4 +253,4 @@ Resources the game uses by a fixed number rather than through a level header or 
 ## Unknowns
 
 - Header words 1Ch–3Fh, and the second byte of each decoration pair.
-- The meaning of the five INIT launch tables beyond the ones named (figure frame shifts, held-item frames, base color map): their use belongs to character drawing and is specified with it.
+- The meaning of the INIT tables beyond the ones named (figure frame shifts, base color map): their use belongs to character drawing and is specified with it.

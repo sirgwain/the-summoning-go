@@ -55,6 +55,8 @@ type Viewer struct {
 	Cmds    []drawlist.Cmd
 	Bounds  image.Rectangle
 	Version int
+	// Labels are the damage shown over things, rebuilt with Cmds.
+	Labels []drawlist.Label
 
 	// Hover is the cell under the cursor. Selected is the cell selected and Thing the thing in
 	// it, if one was clicked.
@@ -116,6 +118,7 @@ func (v *Viewer) rebuild() {
 		scene.Visible = nil
 	}
 	v.Cmds = drawlist.Build(v.Pack, scene, drawlist.Options{Magnify: v.Magnify})
+	v.Labels = drawlist.Labels(v.Pack, scene)
 	v.Bounds = drawlist.Bounds(l.Def)
 	v.Version++
 	if v.Shown != l.ID {
@@ -259,7 +262,8 @@ func (v *Viewer) Update(in Input) {
 	}
 	events := v.World.Update(cmds)
 	v.log(events)
-	if len(events) > 0 {
+	// Shown damage runs out without an event, so a view showing some rebuilds each update.
+	if len(events) > 0 || len(v.Labels) > 0 {
 		v.rebuild()
 	}
 	if v.Play {
@@ -638,6 +642,7 @@ type Dump struct {
 	Scale    int                 `json:"scale"`
 	Origin   [2]int              `json:"origin"`
 	Events   []string            `json:"events,omitempty"`
+	Labels   []drawlist.Label    `json:"labels,omitempty"`
 	World    *inspect.WorldState `json:"world"`
 }
 
@@ -645,7 +650,7 @@ type Dump struct {
 func (v *Viewer) Dump() *Dump {
 	d := &Dump{
 		Tick: v.Ticks, Shown: v.Shown, Selected: v.Selected, Thing: v.Thing, Paused: v.Paused, Play: v.Play,
-		Scale: v.Scale, Origin: [2]int{v.Origin.X, v.Origin.Y}, Events: v.Events,
+		Scale: v.Scale, Origin: [2]int{v.Origin.X, v.Origin.Y}, Events: v.Events, Labels: v.Labels,
 		World: inspect.State(v.World),
 	}
 	if len(v.Items) > 0 {

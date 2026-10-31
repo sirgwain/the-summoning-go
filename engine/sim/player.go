@@ -85,6 +85,9 @@ type Player struct {
 	Boosts         [6]Boost
 	// Exertion, Fatigue and Confusion are counts (docs/spec/player.md).
 	Exertion, Fatigue, Confusion int
+	// Shown is the damage shown over the player, until the step ShownUntil.
+	Shown      int
+	ShownUntil int64
 	// Pose is an action's pose ("attack", "attack.left", "attack.both"), shown poseLeft updates.
 	Pose     string
 	poseLeft int
@@ -228,6 +231,7 @@ func (w *World) hurtPlayer(n int, k combat.Kind, by string) {
 		w.wornChanged()
 	}
 	p.HitPoints = max(0, p.HitPoints-d)
+	p.Shown, p.ShownUntil = min(d, maxShown), w.step+6*w.PlayerInterval()
 	w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "hurt by " + by, Damage: d})
 	if p.HitPoints == 0 && p.Status.DeathProtection {
 		p.Status.DeathProtection = false

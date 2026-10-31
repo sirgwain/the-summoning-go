@@ -418,6 +418,34 @@ func figure(body, skin byte) []*canvas {
 	return append(out, dead)
 }
 
+// heldSword draws the sword held in the right hand for each of the figure's frames: in front of
+// the figure when it faces the viewer, behind it otherwise (the other sheet's frame is empty).
+// Striking frames hold it forward.
+func heldSword(front bool) []*canvas {
+	out := make([]*canvas, 3*8+1)
+	for i := range out {
+		c := newCanvas(figureW, figureH, clear)
+		out[i] = c
+		if i == figureCorpse {
+			continue
+		}
+		d, pose := i%8, i/8
+		dir := directions[d]
+		if (dir[1] > 0) != front {
+			continue
+		}
+		hx, hy := 12+dir[1]*6+dir[0]*2, 25.0
+		reach := 9.0
+		if pose > 0 {
+			reach = 13
+		}
+		tx, ty := hx+dir[0]*reach, hy-6+dir[1]*reach/2
+		c.line(int(hx), int(hy), int(math.Round(tx)), int(math.Round(ty)), gray+13)
+		c.set(int(hx), int(hy), wood+1)
+	}
+	return out
+}
+
 // boulderFrames is how many frames a boulder's roll turns through.
 const boulderFrames = 4
 

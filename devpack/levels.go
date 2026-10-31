@@ -244,3 +244,27 @@ func cellar(p *content.Pack) {
 	}
 	p.Levels[l.ID] = l
 }
+
+// Arena is a level for fighting: the player arrives at ArenaStart, where a sword lies, and a
+// hostile goblin, about as strong as a first level's monsters, waits along the same row.
+const Arena = "level.arena"
+
+// ArenaStart and GoblinStart are where the arena's player and goblin start.
+var (
+	ArenaStart  = content.Cell{1, 1}
+	GoblinStart = content.Cell{1, 7}
+)
+
+func arena(p *content.Pack) {
+	l := &content.Level{ID: Arena, Floors: floorSet, Walls: wallSet, FloorTypes: floorTypes()}
+	grid(l, []string{
+		"##########",
+		"#........#",
+		"#.,,,,,,.#",
+		"#........#",
+		"##########",
+	})
+	l.Things = []*content.PlacedThing{{ID: "goblin", Thing: ThingGoblin, Cell: GoblinStart}}
+	l.Objects = []*content.FloorObject{{Cell: ArenaStart, Object: content.Object{Item: ItemSword}}}
+	p.Levels[l.ID] = l
+}

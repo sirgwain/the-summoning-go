@@ -28,5 +28,11 @@
       "delay": 3,
       "skill": 2
     }
-  ]
+  ],
+  "held": {
+    "right": {
+      "behind": "sprite.sword.held.behind",
+      "front": "sprite.sword.held.front"
+    }
+  }
 }

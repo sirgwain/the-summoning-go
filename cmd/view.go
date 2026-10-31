@@ -159,6 +159,7 @@ var (
 	selectionColor = color.RGBA{255, 220, 0, 255}
 	hoverColor     = color.RGBA{255, 255, 255, 160}
 	thingColor     = color.RGBA{0, 220, 255, 255}
+	damageColor    = color.RGBA{170, 20, 20, 230}
 )
 
 // shell runs a viewer in a window: it reads Ebitengine's input into snapshots, or takes them
@@ -272,6 +273,7 @@ func (s *shell) Draw(screen *ebiten.Image) {
 	s.view.Draw(s.buffer, v.Origin)
 	s.presenter.SetColors(s.palette.At(v.Ticks * 1000 / int64(ebiten.TPS())))
 	s.presenter.Present(screen, s.buffer, v.Scale)
+	s.drawLabels(screen)
 	s.drawTools(screen)
 	for _, path := range s.shots {
 		if err := saveScreenshot(screen, path); err != nil && s.err == nil {
@@ -311,6 +313,18 @@ func (s *shell) drawTools(screen *ebiten.Image) {
 	text(v.PanelRect(), v.PanelLines())
 	if r := v.LogRect(); !r.Empty() {
 		text(r, v.LogLines())
+	}
+}
+
+// drawLabels draws the damage shown over things: white numbers on red, centered over each
+// sprite's top. A stand-in for the game's own until the UI has its font.
+func (s *shell) drawLabels(screen *ebiten.Image) {
+	for _, l := range s.v.Labels {
+		at := s.v.ScreenPoint(l.At)
+		w := len(l.Text)*viewer.CharWidth + 4
+		x, y := at.X-w/2, at.Y-viewer.LineHeight
+		vector.FillRect(screen, float32(x), float32(y), float32(w), float32(viewer.LineHeight), damageColor, false)
+		ebitenutil.DebugPrintAt(screen, l.Text, x+2, y)
 	}
 }
 

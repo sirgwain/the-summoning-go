@@ -263,6 +263,10 @@ keys.
 - `power` is the number of the power the item starts when used (`docs/spec/items.md`, Powers), and
   with `power_worn` also when worn; powers become named records with Magic. `spent` is the item a
   used-up object becomes.
+- `held` is how the item looks in the player's hands:
+  `{ "right": { "behind": sprite, "front": sprite }, "left": { … } }`. Each sprite has a frame for
+  every frame of the player's sprite, drawn with it (an empty frame for none), and its own anchor
+  at the player's ground point.
 - `missile` is how the item hurts in flight: `{ "damage": dice, "fired_only": bool }`; without it a
   thrown object does `weight / 10 + 1`. `breaks_into` is the item a landing bottle becomes.
 - `tags` are words that rules and other records test (`body_armor`, `quiver`, `arrows`, `bottle`,

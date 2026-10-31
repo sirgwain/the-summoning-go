@@ -74,6 +74,17 @@ type Thing struct {
 	// standing still.
 	Anim  string
 	Phase int
+	// Held are the items in the player's hands, right then left, drawn with its frame.
+	Held [2]string
+	// Shown is damage shown over the thing, 0 for none.
+	Shown int
+}
+
+// Label is text drawn over the view: damage shown over a thing, at the view pixel At, the top
+// middle of the thing's sprite.
+type Label struct {
+	At   image.Point
+	Text string
 }
 
 // LevelScene returns level l as its definition places it.
@@ -241,7 +252,7 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 	}
 	for _, t := range s.Things {
 		if cmd, cell, ok := thingCmd(p, t); ok && s.shows(cell) {
-			items = append(items, standing{depth: cell[0] + cell[1], top: cmd.Y, cmds: []Cmd{cmd}})
+			items = append(items, standing{depth: cell[0] + cell[1], top: cmd.Y, cmds: heldCmds(p, t, cmd)})
 		}
 	}
 	for _, f := range s.Flights {
@@ -358,6 +369,52 @@ func thingCmd(p *content.Pack, t Thing) (Cmd, content.Cell, bool) {
 	at := RefPoint(t.U, t.V).Sub(image.Pt(anchor[0], anchor[1]))
 	cell := content.Cell{floorDiv(t.U, CellUnits), floorDiv(t.V, CellUnits)}
 	return Cmd{Sprite: tmpl.Sprite, Frame: frame, X: at.X, Y: at.Y, Thing: t.ID}, cell, true
+}
+
+// heldCmds draws thing t's frame cmd with the layers of the items in its hands: the layers behind
+// first, then the thing, then those in front.
+func heldCmds(p *content.Pack, t Thing, cmd Cmd) []Cmd {
+	var behind, front []Cmd
+	for hand, item := range t.Held {
+		it, ok := p.Items[item]
+		if !ok {
+			continue
+		}
+		l := it.Held.Hand(hand)
+		if l == nil {
+			continue
+		}
+		for _, layer := range []struct {
+			sprite string
+			into   *[]Cmd
+		}{{l.Behind, &behind}, {l.Front, &front}} {
+			sprite, ok := p.Sprites[layer.sprite]
+			if !ok || cmd.Frame >= sprite.Frames {
+				continue
+			}
+			anchor, _ := sprite.AnchorOf(cmd.Frame)
+			at := RefPoint(t.U, t.V).Sub(image.Pt(anchor[0], anchor[1]))
+			*layer.into = append(*layer.into, Cmd{Sprite: layer.sprite, Frame: cmd.Frame, X: at.X, Y: at.Y, Thing: t.ID})
+		}
+	}
+	return append(append(behind, cmd), front...)
+}
+
+// Labels returns the damage shown over scene s's things, where it shows.
+func Labels(p *content.Pack, s Scene) []Label {
+	var out []Label
+	for _, t := range s.Things {
+		if t.Shown <= 0 {
+			continue
+		}
+		cmd, cell, ok := thingCmd(p, t)
+		if !ok || !s.shows(cell) {
+			continue
+		}
+		w := p.Sprites[cmd.Sprite].FrameSize[0]
+		out = append(out, Label{At: image.Pt(cmd.X+w/2, cmd.Y), Text: fmt.Sprint(t.Shown)})
+	}
+	return out
 }
 
 func placed(pl content.Placed) Cmd {

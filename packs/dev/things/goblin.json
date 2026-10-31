@@ -1,0 +1,21 @@
+{
+  "id": "thing.goblin",
+  "kind": "creature",
+  "sprite": "sprite.goblin",
+  "facing": 6,
+  "speed": 8,
+  "interval_ms": 275,
+  "weight": 100,
+  "hit_points": "2d8+2",
+  "behaviors": [
+    "hostile",
+    "leaves_corpse"
+  ],
+  "stats": {
+    "accuracy": 8,
+    "bonus": 1,
+    "resistance": 0
+  },
+  "attack": "1d6",
+  "experience": "2d10+40"
+}

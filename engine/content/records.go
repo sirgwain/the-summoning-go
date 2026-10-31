@@ -31,9 +31,35 @@ type Item struct {
 	PowerWorn bool `json:"power_worn,omitempty"`
 	// Spent is the item a used-up object becomes.
 	Spent string `json:"spent,omitempty"`
+	// Held is how it looks in the player's hands.
+	Held *Held `json:"held,omitempty"`
 	// Missile is how it hurts in flight; BreaksInto what a landing bottle becomes.
 	Missile    *Missile `json:"missile,omitempty"`
 	BreaksInto string   `json:"breaks_into,omitempty"`
+}
+
+// Held is how an item looks in each of the player's hands.
+type Held struct {
+	Right *HeldLayers `json:"right,omitempty"`
+	Left  *HeldLayers `json:"left,omitempty"`
+}
+
+// HeldLayers are the sprites drawn behind and in front of the player for an item in one hand,
+// frame for frame with the player's sprite.
+type HeldLayers struct {
+	Behind string `json:"behind,omitempty"`
+	Front  string `json:"front,omitempty"`
+}
+
+// Hand returns the layers for hand 0 (right) or 1 (left), or nil.
+func (h *Held) Hand(i int) *HeldLayers {
+	if h == nil {
+		return nil
+	}
+	if i == 0 {
+		return h.Right
+	}
+	return h.Left
 }
 
 // Missile is how an item hurts in flight.

@@ -123,6 +123,7 @@ Combat is a module (`engine/combat`) the simulation calls with plain numbers; th
 - **Behind.** In engine directions: the striker's direction, rounded down to an even one, equals the target's facing.
 - **Dice.** An item action's damage and a creature's attack are dice in the pack. A damage code byte `c` imports as `((c >> 4) + 1)d((c & 0Fh) + 1)`, and 00h as no damage.
 - **Rolls.** "d20" is 1 + rand(20). Every message above is an engine message (pack.md): `miss` (5Bh, the score), `hit` (5Ch, the score and the damage), `not_a_creature` (5Ah), `cannot_hurt` (5Dh), `creature_hits` (7Dh), `creature_misses` (7Eh), `weapon_breaks` (8Ah, the item's name).
+- **Showing damage.** The amount a blow takes shows over the one it hurt: a creature for 3 of its updates, the player for 6 of its own, at most 99 shown. It is part of the game's picture, not of the debug overlay.
 - **What waits.** Battle rage, invisibility, blow protection, the death-blow ward, resist quarter and forty, shields and charges come with statuses; until then those terms are 0. Poisoning, armor wear and weapon wear apply now.
 
 ## Unknowns

@@ -120,7 +120,7 @@ Each NPC record `n` becomes a thing template `thing.npc.n` of kind creature:
 - **Behaviors**: `hostile` (0100h), `never_hostile` (0004h or 1000h), `leaves_corpse` (0010h), `resists_teleport` (0200h), `invulnerable` (1000h).
 - **Stats**: `resistance` (byte 4), `bonus` (byte 5), `accuracy` (byte 10).
 - **Animations**, the template's own (the sprite is shared by records that start on different frames), named by engine direction `e = 2d` for a creature direction `d`:
-  - walkers with `n` frames: `idle.e` frame `d`; `walk.e` frames `d, d + 4` (with more than 12 frames, `d, d + 4, d, d + 8`); `attack.e` frame `d + n − 4`, all modulo `n`; `dead` frame `n − 1`;
+  - walkers with `n` frames: `idle.e` frame `d`; `walk.e` frames `d, d + 4` (with more than 12 frames, `d, d + 4, d, d + 8`); `attack.e` frame `d + n − 4`, all modulo `n`; `dead` the bank's last frame (Death), whatever `n` is;
   - stationary casters: `idle.2` frame 0 and `idle.6` frame 1;
   - animated objects: `idle`, a still frame for now: byte 6 for pattern 100, 0 for the others.
 

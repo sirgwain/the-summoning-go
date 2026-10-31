@@ -3,6 +3,7 @@ package summoning
 import (
 	"bytes"
 	"fmt"
+	"image/color"
 	"reflect"
 	"sort"
 	"strings"
@@ -300,7 +301,7 @@ func TestImportCatalog(t *testing.T) {
 		"idle.2": {Frames: []int{1}}, "walk.2": {Frames: []int{1, 5}, MS: content.Fixed(330)}, "attack.2": {Frames: []int{5}},
 		"idle.4": {Frames: []int{2}}, "walk.4": {Frames: []int{2, 6}, MS: content.Fixed(330)}, "attack.4": {Frames: []int{6}},
 		"idle.6": {Frames: []int{3}}, "walk.6": {Frames: []int{3, 7}, MS: content.Fixed(330)}, "attack.6": {Frames: []int{7}},
-		"dead": {Frames: []int{7}},
+		"dead": {Frames: []int{9}}, // the bank's last frame,
 	}
 	if npc.Kind != content.ThingCreature || npc.Sprite != "sprite.res.26" || npc.Facing != 4 || npc.IntervalMS != 330 ||
 		npc.HitPoints != (content.Dice{Count: 2, Sides: 10, Bonus: 4}) ||
@@ -506,5 +507,47 @@ func TestImportFighting(t *testing.T) {
 	}
 	if !reflect.DeepEqual(it.Actions, want) {
 		t.Errorf("actions %+v, want %+v", it.Actions, want)
+	}
+}
+
+// TestHeldLayers composes a held look from a hand-made table: for hand 0 (table 1) the player's
+// frame 0 shows the bank's frame 1 behind the figure at (2, −3), frame 1 its frame 0 in front at
+// (−1, 4), and frame 2 nothing.
+func TestHeldLayers(t *testing.T) {
+	pal := &content.Palette{ID: "p", Colors: [256]color.RGBA{}}
+	im := &importer{pack: content.NewPack(content.Manifest{}), init: &Init{}, palette: pal, report: &Report{},
+		banks: map[int]*SpriteBank{0: {Width: 2, Height: 2, Transparent: 0,
+			Frames: [][]byte{{5, 5, 5, 5}, {6, 6, 6, 6}}}}}
+	im.init.Bases.HeldItemAnimation = 0
+	set := func(table, frame int, e [4]int8) {
+		at := (table*heldEntries + frame) * heldEntrySize
+		for i, b := range e {
+			im.init.HeldItemFrames[at+i] = uint8(b)
+		}
+	}
+	set(1, 0, [4]int8{0, 1, -3, 2})
+	set(1, 1, [4]int8{1, 0, 4, -1})
+	set(1, 2, [4]int8{0, 9, 0, 0}) // a frame the bank lacks
+	l := im.heldLayers(1, 0, 3)
+	if l == nil || l.Behind == "" || l.Front == "" {
+		t.Fatalf("layers %+v", l)
+	}
+	behind, front := im.pack.Sprites[l.Behind], im.pack.Sprites[l.Front]
+	// The box covers (−1, −3) to (4, 6): 5×9, and the anchor moves by its corner.
+	if behind.FrameSize != (content.Offset{5, 9}) || *behind.Anchor != (content.Offset{creatureAnchor[0] + 1, creatureAnchor[1] + 3}) {
+		t.Fatalf("behind sheet %v, anchor %v", behind.FrameSize, *behind.Anchor)
+	}
+	px := func(b *content.SpriteBank, f, x, y int) uint8 {
+		r := b.FrameRect(f)
+		return b.Sheet.ColorIndexAt(r.Min.X+x-(-1), r.Min.Y+y-(-3))
+	}
+	if px(behind, 0, 2, -3) != 6 || px(front, 0, 2, -3) != 0 {
+		t.Error("frame 0: the bank's frame 1 is not behind at (2, −3)")
+	}
+	if px(front, 1, -1, 4) != 5 || px(behind, 1, -1, 4) != 0 {
+		t.Error("frame 1: the bank's frame 0 is not in front at (−1, 4)")
+	}
+	if px(behind, 2, 0, 0) != 0 || px(front, 2, 0, 0) != 0 {
+		t.Error("frame 2 draws something")
 	}
 }

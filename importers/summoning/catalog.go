@@ -438,7 +438,7 @@ func (im *importer) creature(n int) (string, error) {
 			anims[fmt.Sprintf("walk.%d", e)] = content.Animation{Frames: walk, MS: every}
 			anims[fmt.Sprintf("attack.%d", e)] = still(wrap(d + frames - 4))
 		}
-		anims["dead"] = still(frames - 1)
+		anims["dead"] = still(len(b.Frames) - 1)
 	}
 	t.Animations = im.fitAnimations(fmt.Sprintf("NPC record %d", n), anims, len(b.Frames))
 	im.pack.Things[id] = t

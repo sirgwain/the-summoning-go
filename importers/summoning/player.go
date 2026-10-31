@@ -118,5 +118,103 @@ func (im *importer) player() error {
 		}
 	}
 	im.pack.Manifest.Player = playerID
+	im.heldLooks(n)
 	return nil
+}
+
+// Held-item table layout (formats.md, INIT; player.md, Held objects).
+const (
+	heldEntries    = 96
+	heldEntrySize  = 4
+	heldLargeLooks = 11
+	categoryWorn   = 3 // categories below this have worn looks, not held ones
+)
+
+// heldLooks gives every hand item with a held look its layers: for each hand, the frames of the
+// held-item bank the table places behind and in front of each of the player's n frames.
+func (im *importer) heldLooks(n int) {
+	sheets := map[[2]int]*content.HeldLayers{}
+	for i := range im.objects.Templates {
+		tm := &im.objects.Templates[i]
+		look := int(tm[11] & 0x7F)
+		if look == 0 || tm.Category() < categoryWorn {
+			continue
+		}
+		held := &content.Held{}
+		for hand := range 2 {
+			key := [2]int{look, hand}
+			l, ok := sheets[key]
+			if !ok {
+				l = im.heldLayers(look, hand, n)
+				sheets[key] = l
+			}
+			if hand == 0 {
+				held.Right = l
+			} else {
+				held.Left = l
+			}
+		}
+		if held.Right != nil || held.Left != nil {
+			im.pack.Items[im.itemIDs[i]].Held = held
+		}
+	}
+}
+
+// heldLayers composes the behind and front sheets of held look look in hand hand, or returns nil
+// when its bank is missing.
+func (im *importer) heldLayers(look, hand, n int) *content.HeldLayers {
+	res := int(im.init.Bases.HeldItemAnimation) + look - 1
+	b, err := im.bank(res)
+	if err != nil {
+		im.report.addf("held look %d: %v; not drawn", look, err)
+		return nil
+	}
+	t := hand
+	if look > heldLargeLooks {
+		t += 2
+	}
+	type place struct {
+		layer, frame int
+		at           content.Offset
+	}
+	places := make([]*place, n)
+	var box image.Rectangle
+	for f := range min(n, heldEntries) {
+		e := im.init.HeldItemFrames[((t^1)*heldEntries+f)*heldEntrySize:]
+		pl := &place{layer: int(e[0]), frame: int(e[1]), at: content.Offset{int(int8(e[3])), int(int8(e[2]))}}
+		if pl.frame >= len(b.Frames) {
+			continue
+		}
+		places[f] = pl
+		box = box.Union(image.Rect(pl.at[0], pl.at[1], pl.at[0]+b.Width, pl.at[1]+b.Height))
+	}
+	if box.Empty() {
+		return nil
+	}
+	layers := &content.HeldLayers{}
+	for layer, name := range []string{"behind", "front"} {
+		frames := make([][]byte, n)
+		used := false
+		for f := range n {
+			var parts []part
+			if pl := places[f]; pl != nil && pl.layer == layer {
+				parts = append(parts, part{b, pl.frame, pl.at})
+				used = true
+			}
+			frames[f] = compose(box, b.Transparent, parts)
+		}
+		if !used {
+			continue
+		}
+		sid := fmt.Sprintf("sprite.held.%d.%s.%s", look, []string{"right", "left"}[hand], name)
+		im.addSprite(sid, frames, box.Dx(), box.Dy(), b.Transparent)
+		anchor := content.Offset{creatureAnchor[0] - box.Min.X, creatureAnchor[1] - box.Min.Y}
+		im.pack.Sprites[sid].Anchor = &anchor
+		if layer == 0 {
+			layers.Behind = sid
+		} else {
+			layers.Front = sid
+		}
+	}
+	return layers
 }

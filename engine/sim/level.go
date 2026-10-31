@@ -78,6 +78,9 @@ type Thing struct {
 	// update ("attack").
 	Hostile, Poisoned, Moving bool
 	Pose                      string
+	// Shown is the damage shown over the thing, until the step ShownUntil.
+	Shown      int
+	ShownUntil int64
 	// walkDir (0..3, 4 resting) and walkCount are a walker's current walk.
 	walkDir, walkCount int
 	// next is the step of its next update.

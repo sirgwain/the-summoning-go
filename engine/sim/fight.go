@@ -13,6 +13,8 @@ const (
 	wakeDistance = 320
 	// restDir is the walk direction that rests.
 	restDir = 4
+	// maxShown is the most damage shown over the hurt.
+	maxShown = 99
 	// poseUpdates is how many updates a strike's pose shows.
 	poseUpdates = 2
 	// bareHandsDelay is an empty hand's delay.
@@ -74,6 +76,7 @@ func (w *World) hurtThing(l *Level, t *Thing, d int, k combat.Kind) int {
 		return 0
 	}
 	t.HitPoints = max(0, t.HitPoints-d)
+	t.Shown, t.ShownUntil = min(d, maxShown), w.step+3*stepsMS(t.Template.IntervalMS)
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "hurt", Damage: d})
 	if k == combat.Poison && !t.Template.Has(content.BehaviorResistsPoison) {
 		t.Poisoned = true
