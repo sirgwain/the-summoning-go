@@ -1,0 +1,15 @@
+{
+  "id": "item.sword",
+  "name": "item.sword.name",
+  "weight": 10,
+  "size": 3,
+  "random": true,
+  "icon": {
+    "sprite": "sprite.items.icons",
+    "frame": 5
+  },
+  "floor": {
+    "sprite": "sprite.items.floor",
+    "frame": 5
+  }
+}

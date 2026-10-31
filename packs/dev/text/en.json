@@ -1,0 +1,20 @@
+{
+  "id": "text.en",
+  "strings": {
+    "item.bag.name": "Bag of Lightness",
+    "item.blue_gem.name": "Blue Gem",
+    "item.key.name": "Key",
+    "item.potion.name": "Potion",
+    "item.red_gem.name": "Red Gem",
+    "item.rock.name": "Rock",
+    "item.sack.name": "Sack",
+    "item.sphere.name": "Sphere",
+    "item.sword.name": "Sword",
+    "msg.lever_stuck": "The lever won't budge.",
+    "msg.mouth": "Welcome to the hall of *mechanisms*.",
+    "msg.mouth.after": "The *socket* is complete.",
+    "msg.no_drop": "It sinks out of sight.",
+    "msg.slot_stuck": "Nothing more fits in the {item}'s place.",
+    "msg.wrong_item": "The {item} doesn't fit."
+  }
+}

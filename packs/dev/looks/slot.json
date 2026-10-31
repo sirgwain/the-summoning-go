@@ -1,0 +1,13 @@
+{
+  "id": "look.slot",
+  "layer": "floor",
+  "states": {
+    "slot": [
+      {
+        "sprite": "sprite.features",
+        "frame": 2,
+        "offset": [-16, -16]
+      }
+    ]
+  }
+}

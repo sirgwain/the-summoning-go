@@ -1,0 +1,19 @@
+{
+  "id": "item.bag",
+  "name": "item.bag.name",
+  "weight": 1,
+  "size": 2,
+  "container": {
+    "capacity": 4,
+    "largest": 2,
+    "weightless": true
+  },
+  "icon": {
+    "sprite": "sprite.items.icons",
+    "frame": 7
+  },
+  "floor": {
+    "sprite": "sprite.items.floor",
+    "frame": 7
+  }
+}

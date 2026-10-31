@@ -1,0 +1,22 @@
+{
+  "id": "walls.dev",
+  "sprite": "sprite.walls",
+  "offset": [-16, -24],
+  "shapes": [
+    {
+      "frame": 0
+    },
+    {
+      "frame": 1,
+      "face": true
+    },
+    {
+      "frame": 2,
+      "diagonal": true
+    },
+    {
+      "frame": 3,
+      "face": true
+    }
+  ]
+}

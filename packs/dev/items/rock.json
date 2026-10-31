@@ -1,0 +1,14 @@
+{
+  "id": "item.rock",
+  "name": "item.rock.name",
+  "weight": 60,
+  "size": 3,
+  "icon": {
+    "sprite": "sprite.items.icons",
+    "frame": 1
+  },
+  "floor": {
+    "sprite": "sprite.items.floor",
+    "frame": 1
+  }
+}

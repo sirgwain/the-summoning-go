@@ -1,0 +1,14 @@
+{
+  "id": "item.sphere",
+  "name": "item.sphere.name",
+  "weight": 6,
+  "size": 2,
+  "icon": {
+    "sprite": "sprite.items.icons",
+    "frame": 4
+  },
+  "floor": {
+    "sprite": "sprite.items.floor",
+    "frame": 4
+  }
+}

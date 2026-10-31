@@ -224,6 +224,8 @@ func TestVerify(t *testing.T) {
 		"start outside":   {func(p *Pack) { p.Manifest.Start.Cell = Cell{5, 5} }, "start cell"},
 		"missing sprite":  {func(p *Pack) { p.Floors["floors.a"].Sprite = "sprite.none" }, "not found"},
 		"too many floors": {func(p *Pack) { p.Floors["floors.a"].Variants = 4 }, "variants"},
+		"floor shape":     {func(p *Pack) { p.Floors["floors.a"].Shape = "hex" }, "unknown shape"},
+		"diamond frames":  {func(p *Pack) { p.Floors["floors.a"].Shape = FloorDiamond }, "diamond set wants"},
 		"bad floor value": {func(p *Pack) { p.Levels["level.00"].Floor[0][0] = 2 }, "out of range"},
 		"missing shape":   {func(p *Pack) { p.Levels["level.00"].Wall[0][0] = 1 }, "out of range"},
 		"short grid":      {func(p *Pack) { p.Levels["level.00"].Wall = p.Levels["level.00"].Wall[:1] }, "rows"},

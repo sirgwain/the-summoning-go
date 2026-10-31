@@ -1,0 +1,7 @@
+{
+  "id": "sprite.floors",
+  "frame_size": [64, 32],
+  "columns": 4,
+  "frames": 4,
+  "transparent": 255
+}

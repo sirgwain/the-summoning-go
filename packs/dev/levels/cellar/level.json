@@ -1,0 +1,80 @@
+{
+  "id": "level.cellar",
+  "name": "",
+  "size": [10, 10],
+  "floors": "floors.dev",
+  "walls": "walls.dev",
+  "floor_types": [
+    {
+      "variant": 0
+    },
+    {
+      "variant": 1
+    },
+    {
+      "variant": 2,
+      "depth": 4,
+      "sinks": true
+    },
+    {
+      "variant": 3,
+      "enter": {
+        "damage": "2d2",
+        "type": "fire"
+      },
+      "avoided": true
+    }
+  ],
+  "floor": [
+    "0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0",
+    "0 0 1 1 1 1 1 1 0 0",
+    "0 0 1 1 1 1 1 1 0 0",
+    "0 0 1 1 1 1 1 1 0 0",
+    "0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0"
+  ],
+  "wall": [
+    "0 0 0 0 0 0 0 0 0 0",
+    "0 . . . . . . . . 0",
+    "0 . . . . . . . . 0",
+    "0 . . . . . . . . 0",
+    "3 . . . . . . . . 0",
+    "0 . . . . . . . . 0",
+    "0 . . . . . . . . 0",
+    "0 . . . . . . . . 0",
+    "0 . . . . . . . . 0",
+    "0 0 0 0 0 0 0 0 0 0"
+  ],
+  "features": [
+    {
+      "id": "exit.up",
+      "kind": "exit",
+      "cell": [7, 7],
+      "look": "look.exit.floor",
+      "to": {
+        "level": "level.hall",
+        "cell": [10, 4]
+      }
+    },
+    {
+      "id": "exit.west",
+      "kind": "exit",
+      "cell": [4, 0],
+      "look": "look.exit.right",
+      "to": {
+        "level": "level.hall",
+        "cell": [9, 1]
+      }
+    }
+  ],
+  "objects": [
+    {
+      "cell": [5, 5],
+      "item": "item.potion"
+    }
+  ]
+}

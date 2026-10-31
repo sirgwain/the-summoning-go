@@ -1,0 +1,14 @@
+{
+  "id": "item.blue_gem",
+  "name": "item.blue_gem.name",
+  "weight": 1,
+  "size": 1,
+  "icon": {
+    "sprite": "sprite.items.icons",
+    "frame": 3
+  },
+  "floor": {
+    "sprite": "sprite.items.floor",
+    "frame": 3
+  }
+}

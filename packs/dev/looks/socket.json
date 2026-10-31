@@ -1,0 +1,62 @@
+{
+  "id": "look.socket",
+  "layer": "floor",
+  "states": {
+    "empty": [
+      {
+        "sprite": "sprite.features",
+        "frame": 8,
+        "offset": [-16, -16]
+      }
+    ],
+    "full": [
+      {
+        "sprite": "sprite.features",
+        "frame": 9,
+        "offset": [-16, -16]
+      }
+    ],
+    "set.0": [
+      {
+        "sprite": "sprite.features",
+        "frame": 10,
+        "offset": [-16, -16]
+      }
+    ],
+    "set.1": [
+      {
+        "sprite": "sprite.features",
+        "frame": 11,
+        "offset": [-16, -16]
+      }
+    ],
+    "set.2": [
+      {
+        "sprite": "sprite.features",
+        "frame": 12,
+        "offset": [-16, -16]
+      }
+    ],
+    "set.3": [
+      {
+        "sprite": "sprite.features",
+        "frame": 13,
+        "offset": [-16, -16]
+      }
+    ],
+    "set.4": [
+      {
+        "sprite": "sprite.features",
+        "frame": 14,
+        "offset": [-16, -16]
+      }
+    ],
+    "set.5": [
+      {
+        "sprite": "sprite.features",
+        "frame": 15,
+        "offset": [-16, -16]
+      }
+    ]
+  }
+}

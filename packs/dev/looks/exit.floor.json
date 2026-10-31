@@ -1,0 +1,13 @@
+{
+  "id": "look.exit.floor",
+  "layer": "floor",
+  "states": {
+    "exit": [
+      {
+        "sprite": "sprite.features",
+        "frame": 18,
+        "offset": [-16, -16]
+      }
+    ]
+  }
+}

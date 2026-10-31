@@ -1,0 +1,13 @@
+{
+  "id": "look.mouth",
+  "layer": "floor",
+  "states": {
+    "mouth": [
+      {
+        "sprite": "sprite.features",
+        "frame": 16,
+        "offset": [-16, -16]
+      }
+    ]
+  }
+}

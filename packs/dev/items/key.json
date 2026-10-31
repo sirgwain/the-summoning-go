@@ -1,0 +1,14 @@
+{
+  "id": "item.key",
+  "name": "item.key.name",
+  "weight": 1,
+  "size": 1,
+  "icon": {
+    "sprite": "sprite.items.icons",
+    "frame": 0
+  },
+  "floor": {
+    "sprite": "sprite.items.floor",
+    "frame": 0
+  }
+}

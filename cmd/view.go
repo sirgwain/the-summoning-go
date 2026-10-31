@@ -1,23 +1,27 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"image"
+	"image/color"
 	"image/png"
 	"os"
+	"path/filepath"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
-	"github.com/sirgwain/the-summoning-go/engine/input"
 	"github.com/sirgwain/the-summoning-go/engine/render"
 	"github.com/sirgwain/the-summoning-go/engine/render/drawlist"
-	"github.com/sirgwain/the-summoning-go/engine/sim"
+	"github.com/sirgwain/the-summoning-go/engine/viewer"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	var level, screenshot string
+	var level, screenshot, script, out string
 	var scale, shotTicks int
 	var magnify bool
 	var at, sel []int
@@ -35,7 +39,10 @@ level, Home recenters, M magnifies objects on the floor.
 Click a cell or a thing to inspect it. Then U uses it, T toggles its feature, 1–9 run its
 hooks' procedures, E follows its exit, O drops the chosen object on it and X takes its top
 object; I and Shift+I choose the object. P places the chosen thing, C and Shift+C choose it, and
-Shift+click moves the selected thing to the clicked cell. Space pauses, N steps while paused.`,
+Shift+click moves the selected thing to the clicked cell. Space pauses, N steps while paused.
+
+--script runs a script of input, screenshots and state dumps (docs/design.md, Testing) in place
+of live input, and exits when it ends. Its files are written under --out.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := "packs/summoning"
@@ -63,24 +70,42 @@ Shift+click moves the selected thing to the clicked cell. Space pauses, N steps 
 			if err != nil {
 				return err
 			}
-			v, err := newViewer(pack, seed, level, scale, magnify)
+			var steps viewer.Script
+			if script != "" {
+				if steps, err = viewer.LoadScript(script); err != nil {
+					return err
+				}
+			}
+			if screenshot != "" {
+				steps = append(steps, viewer.Step{At: int64(shotTicks), Shot: screenshot})
+			}
+			v, err := viewer.New(pack, seed, level, scale, magnify, image.Pt(windowWidth, windowHeight))
 			if err != nil {
 				return err
 			}
-			v.screenshot, v.shotTicks = screenshot, int64(shotTicks)
 			if center != nil {
-				v.centerOn(*center)
+				v.CenterOn(*center)
 			}
 			if selected != nil {
-				v.selected = selected
+				v.Select(*selected)
 				if center == nil {
-					v.centerOn(*selected)
+					v.CenterOn(*selected)
 				}
 			}
+			s, err := newShell(v)
+			if err != nil {
+				return err
+			}
+			if steps != nil {
+				s.script = viewer.NewRunner(steps, out)
+			}
 			ebiten.SetWindowTitle("The Summoning: " + pack.Manifest.Name)
-			ebiten.SetWindowSize(1280, 800)
+			ebiten.SetWindowSize(windowWidth, windowHeight)
 			ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-			return ebiten.RunGame(v)
+			if err := ebiten.RunGame(s); err != nil && !errors.Is(err, ebiten.Termination) {
+				return err
+			}
+			return nil
 		},
 	}
 	viewCmd.Flags().StringVar(&level, "level", "", "level id to open (default: the start level)")
@@ -89,316 +114,194 @@ Shift+click moves the selected thing to the clicked cell. Space pauses, N steps 
 	viewCmd.Flags().IntSliceVar(&sel, "select", nil, "select this cell, as x,y")
 	viewCmd.Flags().BoolVar(&magnify, "magnify", false, "start with objects on the floor magnified")
 	viewCmd.Flags().Uint64Var(&seed, "seed", 1, "seed for the simulation's random choices")
+	viewCmd.Flags().StringVar(&script, "script", "", "run this script instead of live input, then exit")
+	viewCmd.Flags().StringVar(&out, "out", ".", "directory for a script's screenshots and dumps")
 	viewCmd.Flags().StringVar(&screenshot, "screenshot", "", "save a frame to this PNG file and exit")
 	viewCmd.Flags().IntVar(&shotTicks, "screenshot-ticks", 0, "updates to run before the screenshot")
 	rootCmd.AddCommand(viewCmd)
 }
 
-const (
-	maxScale    = 6
-	panSpeed    = 6
-	panSpeedFat = 24
-	// clickSlop is how far, in screen pixels, the mouse may move between press and release and
-	// still click rather than drag.
-	clickSlop = 4
+const windowWidth, windowHeight = 1280, 800
+
+var (
+	panelColor     = color.RGBA{0, 0, 0, 200}
+	selectionColor = color.RGBA{255, 220, 0, 255}
+	hoverColor     = color.RGBA{255, 255, 255, 160}
+	thingColor     = color.RGBA{0, 220, 255, 255}
 )
 
-type viewer struct {
-	pack      *content.Pack
-	world     *sim.World
+// shell runs a viewer in a window: it reads Ebitengine's input into snapshots, or takes them
+// from a script, and draws the viewer's state.
+type shell struct {
+	v         *viewer.Viewer
 	sprites   *render.Sprites
+	view      *render.LevelView
 	presenter *render.Presenter
 	palette   *content.Palette
-	// ticks counts updates, the clock palette effects run on.
-	ticks  int64
-	levels []string
-	view   *render.LevelView
-	// shown is the level the view draws.
-	shown string
-	// magnify draws floor objects with their inventory image.
-	magnify bool
-	// origin is the view pixel at the buffer's top-left.
-	origin image.Point
-	scale  int
-	buffer *ebiten.Image
-	// screen is the size of the screen in pixels.
-	screen image.Point
-	// press is where the mouse button went down; drag where the view was last dragged from.
-	press, drag *image.Point
-	// wheel accumulates scrolling not yet turned into zoom steps.
-	wheel float64
-	tools
-	// screenshot, if set, is where to save the first frame before exiting.
-	screenshot string
-	shotTicks  int64
-	shotTaken  bool
-	err        error
+	// version is the viewer's draw commands the view holds.
+	version int
+	buffer  *ebiten.Image
+	keys    map[viewer.Key]ebiten.Key
+	// script, if set, gives the input; shots are screenshots due at the next draw.
+	script *viewer.Runner
+	shots  []string
+	err    error
 }
 
-func newViewer(p *content.Pack, seed uint64, level string, scale int, magnify bool) (*viewer, error) {
+func newShell(v *viewer.Viewer) (*shell, error) {
 	pr, err := render.NewPresenter()
 	if err != nil {
 		return nil, err
 	}
-	w, err := sim.New(p, seed)
-	if err != nil {
-		return nil, err
+	s := &shell{
+		v: v, sprites: render.NewSprites(v.Pack), presenter: pr,
+		palette: v.Pack.Palettes[v.Pack.Manifest.Palette], keys: map[viewer.Key]ebiten.Key{},
 	}
-	v := &viewer{
-		pack:      p,
-		world:     w,
-		sprites:   render.NewSprites(p),
-		presenter: pr,
-		palette:   p.Palettes[p.Manifest.Palette],
-		scale:     max(1, min(scale, maxScale)),
-		magnify:   magnify,
-		screen:    image.Pt(1280, 800),
-		levels:    sortedIDs(p.Levels),
-		tools:     newTools(p),
+	s.view = render.NewLevelView(s.sprites)
+	names := map[string]ebiten.Key{}
+	for k := ebiten.Key(0); k <= ebiten.KeyMax; k++ {
+		names[k.String()] = k
 	}
-	if level != "" && level != w.Current().ID {
-		v.world.Update([]input.Command{input.GoTo{Level: level}})
-		if w.Current().ID != level {
-			return nil, fmt.Errorf("no level %q", level)
+	for _, k := range viewer.Keys {
+		ek, ok := names[string(k)]
+		if !ok {
+			return nil, fmt.Errorf("no Ebitengine key %q", k)
 		}
+		s.keys[k] = ek
 	}
-	if err := v.rebuild(); err != nil {
-		return nil, err
-	}
-	return v, nil
+	return s, s.sync()
 }
 
-// rebuild redraws the current level as the world has it, recentering when the level changed.
-func (v *viewer) rebuild() error {
-	l := v.world.Current()
-	scene := drawlist.SimScene(l)
-	opts := drawlist.Options{Magnify: v.magnify}
-	if v.view == nil {
-		lv, err := render.NewLevelView(v.pack, v.sprites, scene, opts)
-		if err != nil {
-			return err
-		}
-		v.view = lv
-	} else if err := v.view.Set(v.pack, v.sprites, scene, opts); err != nil {
-		return err
+// sync reloads the view when the viewer has rebuilt its draw commands.
+func (s *shell) sync() error {
+	if s.version == s.v.Version {
+		return nil
 	}
-	if v.shown != l.ID {
-		v.shown = l.ID
-		v.selected, v.thing = nil, ""
-		v.recenter()
+	s.version = s.v.Version
+	if err := s.view.Set(s.v.Cmds, s.v.Bounds); err != nil {
+		return fmt.Errorf("level %s: %w", s.v.Shown, err)
 	}
 	return nil
 }
 
-// recenter centers the view on the start cell on the start level, else on the level.
-func (v *viewer) recenter() {
-	if s := v.pack.Manifest.Start; s.Level == v.shown {
-		v.centerOn(s.Cell)
-		return
+// input reads Ebitengine's input.
+func (s *shell) input() viewer.Input {
+	in := viewer.Input{Held: map[viewer.Key]bool{}, Pressed: map[viewer.Key]bool{}}
+	x, y := ebiten.CursorPosition()
+	in.Cursor = image.Pt(x, y)
+	for k, ek := range s.keys {
+		in.Held[k] = ebiten.IsKeyPressed(ek)
+		in.Pressed[k] = inpututil.IsKeyJustPressed(ek)
 	}
-	center := v.view.Bounds().Min.Add(v.view.Bounds().Max).Div(2)
-	v.origin = center.Sub(v.bufferSize().Div(2))
-}
-
-// centerOn centers the view on cell c.
-func (v *viewer) centerOn(c content.Cell) {
-	center := drawlist.TileBox(c).Add(image.Pt(drawlist.TileSize/2, drawlist.TileSize/2))
-	v.origin = center.Sub(v.bufferSize().Div(2))
-}
-
-func (v *viewer) bufferSize() image.Point {
-	return image.Pt((v.screen.X+v.scale-1)/v.scale, (v.screen.Y+v.scale-1)/v.scale)
-}
-
-// screenRect returns the screen's rectangle.
-func (v *viewer) screenRect() image.Rectangle { return image.Rectangle{Max: v.screen} }
-
-// viewPoint returns the view pixel under screen point pt.
-func (v *viewer) viewPoint(pt image.Point) image.Point { return v.origin.Add(pt.Div(v.scale)) }
-
-// screenPoint returns the screen point of view pixel pt.
-func (v *viewer) screenPoint(pt image.Point) image.Point { return pt.Sub(v.origin).Mul(v.scale) }
-
-func (v *viewer) Update() error {
-	if v.err != nil {
-		return v.err
+	button := func(b ebiten.MouseButton) viewer.Button {
+		return viewer.Button{Held: ebiten.IsMouseButtonPressed(b),
+			Pressed: inpututil.IsMouseButtonJustPressed(b), Released: inpututil.IsMouseButtonJustReleased(b)}
 	}
-	if v.shotTaken {
+	in.Left, in.Right = button(ebiten.MouseButtonLeft), button(ebiten.MouseButtonRight)
+	_, in.Wheel = ebiten.Wheel()
+	return in
+}
+
+func (s *shell) Update() error {
+	if s.err != nil {
+		return s.err
+	}
+	if len(s.shots) > 0 {
+		// Wait for the draw that takes them, so they show this update.
+		return nil
+	}
+	if s.script == nil {
+		s.v.Update(s.input())
+		return s.sync()
+	}
+	if s.script.Done() {
 		return ebiten.Termination
 	}
-	v.ticks++
-	v.pan()
-	x, y := ebiten.CursorPosition()
-	cursor := image.Pt(x, y)
-	v.scroll(cursor)
-	cmds := v.mouse(cursor)
-
-	switch {
-	case justPressed(ebiten.KeyPageDown, ebiten.KeyBracketRight):
-		cmds = append(cmds, input.GoTo{Level: v.levels[(v.levelIndex()+1)%len(v.levels)]})
-	case justPressed(ebiten.KeyPageUp, ebiten.KeyBracketLeft):
-		cmds = append(cmds, input.GoTo{Level: v.levels[(v.levelIndex()+len(v.levels)-1)%len(v.levels)]})
-	case justPressed(ebiten.KeyEqual, ebiten.KeyNumpadAdd):
-		v.zoom(1)
-	case justPressed(ebiten.KeyMinus, ebiten.KeyNumpadSubtract):
-		v.zoom(-1)
-	case justPressed(ebiten.KeyHome):
-		v.recenter()
-	case justPressed(ebiten.KeyM):
-		v.magnify = !v.magnify
-		v.err = v.rebuild()
+	in, err := s.script.Before(s.v)
+	if err != nil {
+		return err
 	}
-	cmds = append(cmds, v.keys()...)
-
-	if v.paused && len(cmds) == 0 && !justPressed(ebiten.KeyN) {
-		return v.err
+	s.v.Update(in)
+	if s.shots, err = s.script.After(s.v); err != nil {
+		return err
 	}
-	events := v.world.Update(cmds)
-	v.log(events)
-	if len(events) > 0 && v.err == nil {
-		v.err = v.rebuild()
-	}
-	return v.err
+	return s.sync()
 }
 
-func (v *viewer) levelIndex() int {
-	for i, id := range v.levels {
-		if id == v.shown {
-			return i
+func (s *shell) Draw(screen *ebiten.Image) {
+	v := s.v
+	size := v.BufferSize()
+	if s.buffer == nil || s.buffer.Bounds().Size() != size {
+		if s.buffer != nil {
+			s.buffer.Deallocate()
+		}
+		s.buffer = ebiten.NewImage(size.X, size.Y)
+	}
+	s.buffer.Clear()
+	s.view.Draw(s.buffer, v.Origin)
+	s.presenter.SetColors(s.palette.At(v.Ticks * 1000 / int64(ebiten.TPS())))
+	s.presenter.Present(screen, s.buffer, v.Scale)
+	s.drawTools(screen)
+	for _, path := range s.shots {
+		if err := saveScreenshot(screen, path); err != nil && s.err == nil {
+			s.err = err
 		}
 	}
-	return 0
+	s.shots = nil
 }
 
-// pan moves the view by the arrow and WASD keys.
-func (v *viewer) pan() {
-	speed := panSpeed
-	if ebiten.IsKeyPressed(ebiten.KeyShift) {
-		speed = panSpeedFat
+// drawTools draws the selection, the inspector panel and the event log over the view.
+func (s *shell) drawTools(screen *ebiten.Image) {
+	v := s.v
+	if v.Hover != nil && (v.Selected == nil || *v.Hover != *v.Selected) {
+		s.diamond(screen, *v.Hover, hoverColor)
 	}
-	for _, k := range []struct {
-		keys   []ebiten.Key
-		dx, dy int
-	}{
-		{[]ebiten.Key{ebiten.KeyArrowLeft, ebiten.KeyA}, -1, 0},
-		{[]ebiten.Key{ebiten.KeyArrowRight, ebiten.KeyD}, 1, 0},
-		{[]ebiten.Key{ebiten.KeyArrowUp, ebiten.KeyW}, 0, -1},
-		{[]ebiten.Key{ebiten.KeyArrowDown, ebiten.KeyS}, 0, 1},
-	} {
-		for _, key := range k.keys {
-			if ebiten.IsKeyPressed(key) {
-				v.origin = v.origin.Add(image.Pt(k.dx*speed, k.dy*speed))
-				break
+	if v.Selected != nil {
+		s.diamond(screen, *v.Selected, selectionColor)
+	}
+	if v.Thing != "" {
+		for _, c := range v.Cmds {
+			if c.Thing == v.Thing {
+				size := v.Pack.Sprites[c.Sprite].FrameSize
+				at := image.Pt(c.X, c.Y)
+				s.outline(screen, image.Rectangle{at, at.Add(image.Pt(size[0], size[1]))}, thingColor)
 			}
 		}
 	}
-}
-
-// mouse tracks the cell under the cursor, drags the view, and turns a left click into a
-// selection, or with Shift into moving the selected thing to the clicked cell. A click is a
-// release near its press; a press and release between two updates (a trackpad tap) counts too.
-func (v *viewer) mouse(cursor image.Point) []input.Command {
-	if cursor.In(v.screenRect()) && !cursor.In(v.panel) {
-		c := drawlist.CellAt(v.viewPoint(cursor))
-		v.hover = &c
-	} else {
-		v.hover = nil
-	}
-
-	left, right := ebiten.MouseButtonLeft, ebiten.MouseButtonRight
-	if inpututil.IsMouseButtonJustPressed(left) || inpututil.IsMouseButtonJustPressed(right) {
-		v.press, v.drag = &cursor, &cursor
-	}
-	if v.drag != nil && (ebiten.IsMouseButtonPressed(left) || ebiten.IsMouseButtonPressed(right)) {
-		v.origin = v.origin.Sub(cursor.Sub(*v.drag).Div(v.scale))
-		moved := cursor.Sub(*v.drag).Div(v.scale).Mul(v.scale)
-		next := v.drag.Add(moved)
-		v.drag = &next
-	}
-	if inpututil.IsMouseButtonJustReleased(right) {
-		v.press, v.drag = nil, nil
-	}
-	if !inpututil.IsMouseButtonJustReleased(left) {
-		return nil
-	}
-	press := cursor
-	if v.press != nil {
-		press = *v.press
-	}
-	v.press, v.drag = nil, nil
-	if d := cursor.Sub(press); d.X*d.X+d.Y*d.Y > clickSlop*clickSlop || cursor.In(v.panel) {
-		return nil
-	}
-	pt := v.viewPoint(cursor)
-	c := drawlist.CellAt(pt)
-	if ebiten.IsKeyPressed(ebiten.KeyShift) && v.thing != "" {
-		return []input.Command{input.Move{Thing: v.thing, Cell: c}}
-	}
-	v.selected, v.thing = &c, ""
-	if id, _, ok := drawlist.ThingAt(v.pack, v.view.Cmds(), pt); ok {
-		v.thing = id
-		tc := v.world.Current().Thing(id).Cell()
-		v.selected = &tc
-	}
-	return nil
-}
-
-// scroll zooms around the cursor by the scroll wheel, a step per whole wheel unit.
-func (v *viewer) scroll(cursor image.Point) {
-	_, dy := ebiten.Wheel()
-	v.wheel += dy
-	for ; v.wheel >= 1; v.wheel-- {
-		v.zoomAt(1, cursor)
-	}
-	for ; v.wheel <= -1; v.wheel++ {
-		v.zoomAt(-1, cursor)
-	}
-}
-
-// zoom changes the scale, keeping the view centered on the same point.
-func (v *viewer) zoom(d int) {
-	v.zoomAt(d, v.screen.Div(2))
-}
-
-// zoomAt changes the scale, keeping the art pixel under the screen point at fixed.
-func (v *viewer) zoomAt(d int, at image.Point) {
-	under := v.origin.Add(at.Div(v.scale))
-	v.scale = max(1, min(v.scale+d, maxScale))
-	v.origin = under.Sub(at.Div(v.scale))
-}
-
-func justPressed(keys ...ebiten.Key) bool {
-	for _, k := range keys {
-		if inpututil.IsKeyJustPressed(k) {
-			return true
+	text := func(r image.Rectangle, lines []string) {
+		vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), panelColor, false)
+		for i, line := range lines {
+			ebitenutil.DebugPrintAt(screen, line, r.Min.X+viewer.Margin/2, r.Min.Y+i*viewer.LineHeight)
 		}
 	}
-	return false
+	text(v.PanelRect(), v.PanelLines())
+	if r := v.LogRect(); !r.Empty() {
+		text(r, v.LogLines())
+	}
 }
 
-func (v *viewer) Draw(screen *ebiten.Image) {
-	size := v.bufferSize()
-	if v.buffer == nil || v.buffer.Bounds().Size() != size {
-		if v.buffer != nil {
-			v.buffer.Deallocate()
-		}
-		v.buffer = ebiten.NewImage(size.X, size.Y)
+// diamond strokes the outline of cell c's ground on the screen.
+func (s *shell) diamond(screen *ebiten.Image, c content.Cell, clr color.Color) {
+	d := drawlist.Diamond(c)
+	for i := range d {
+		a, b := s.v.ScreenPoint(d[i]), s.v.ScreenPoint(d[(i+1)%len(d)])
+		vector.StrokeLine(screen, float32(a.X), float32(a.Y), float32(b.X), float32(b.Y), 2, clr, true)
 	}
-	v.buffer.Clear()
-	v.view.Draw(v.buffer, v.origin)
-	v.presenter.SetColors(v.palette.At(v.ticks * 1000 / int64(ebiten.TPS())))
-	v.presenter.Present(screen, v.buffer, v.scale)
-	v.drawTools(screen)
-	if v.screenshot != "" && !v.shotTaken && v.ticks >= v.shotTicks {
-		v.shotTaken = true
-		v.err = saveScreenshot(screen, v.screenshot)
-	}
+}
+
+// outline strokes view rectangle r on the screen.
+func (s *shell) outline(screen *ebiten.Image, r image.Rectangle, c color.Color) {
+	lo, hi := s.v.ScreenPoint(r.Min), s.v.ScreenPoint(r.Max)
+	vector.StrokeRect(screen, float32(lo.X), float32(lo.Y), float32(hi.X-lo.X), float32(hi.Y-lo.Y), 2, c, false)
 }
 
 func saveScreenshot(screen *ebiten.Image, path string) error {
 	b := screen.Bounds()
 	img := image.NewRGBA(b)
 	screen.ReadPixels(img.Pix)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -410,7 +313,7 @@ func saveScreenshot(screen *ebiten.Image, path string) error {
 	return f.Close()
 }
 
-func (v *viewer) Layout(outsideWidth, outsideHeight int) (int, int) {
-	v.screen = image.Pt(outsideWidth, outsideHeight)
+func (s *shell) Layout(outsideWidth, outsideHeight int) (int, int) {
+	s.v.Screen = image.Pt(outsideWidth, outsideHeight)
 	return outsideWidth, outsideHeight
 }

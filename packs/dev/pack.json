@@ -1,0 +1,12 @@
+{
+  "id": "dev",
+  "name": "Dev pack",
+  "version": "0.1.0",
+  "format": 1,
+  "depends": [],
+  "palette": "palette.dev",
+  "start": {
+    "level": "level.hall",
+    "cell": [10, 4]
+  }
+}

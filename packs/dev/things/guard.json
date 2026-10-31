@@ -1,0 +1,14 @@
+{
+  "id": "thing.guard",
+  "kind": "creature",
+  "sprite": "sprite.guard",
+  "facing": 3,
+  "speed": 8,
+  "interval_ms": 330,
+  "weight": 100,
+  "hit_points": "3d6+4",
+  "behaviors": [
+    "hostile",
+    "leaves_corpse"
+  ]
+}

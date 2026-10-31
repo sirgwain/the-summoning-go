@@ -21,6 +21,15 @@ func (p *Pack) Verify() error {
 		if n := v.frames("floor set "+id, f.Sprite); n >= 0 && f.Variants > n {
 			v.fail("floor set %s: %d variants, sprite bank has %d frames", id, f.Variants, n)
 		}
+		switch f.Shape {
+		case "", FloorBox:
+		case FloorDiamond:
+			if b, ok := p.Sprites[f.Sprite]; ok && b.FrameSize != f.FrameSize() {
+				v.fail("floor set %s: %v frames, a diamond set wants %v", id, b.FrameSize, f.FrameSize())
+			}
+		default:
+			v.fail("floor set %s: unknown shape %q", id, f.Shape)
+		}
 	}
 	for _, id := range sortedKeys(p.Walls) {
 		w := p.Walls[id]

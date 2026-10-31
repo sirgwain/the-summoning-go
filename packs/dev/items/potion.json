@@ -1,0 +1,15 @@
+{
+  "id": "item.potion",
+  "name": "item.potion.name",
+  "weight": 2,
+  "size": 1,
+  "random": true,
+  "icon": {
+    "sprite": "sprite.items.icons",
+    "frame": 8
+  },
+  "floor": {
+    "sprite": "sprite.items.floor",
+    "frame": 8
+  }
+}

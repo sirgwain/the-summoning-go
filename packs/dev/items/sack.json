@@ -1,0 +1,18 @@
+{
+  "id": "item.sack",
+  "name": "item.sack.name",
+  "weight": 2,
+  "size": 3,
+  "container": {
+    "capacity": 4,
+    "largest": 2
+  },
+  "icon": {
+    "sprite": "sprite.items.icons",
+    "frame": 6
+  },
+  "floor": {
+    "sprite": "sprite.items.floor",
+    "frame": 6
+  }
+}

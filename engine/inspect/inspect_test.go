@@ -1,6 +1,8 @@
 package inspect
 
 import (
+	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -85,5 +87,45 @@ func TestMessage(t *testing.T) {
 	ev := w.Update([]input.Command{input.Use{Cell: content.Cell{1, 1}}})
 	if got := Message(w.Pack(), ev[0]); got != "Hello" {
 		t.Errorf("mouth: %q", got)
+	}
+}
+
+func TestState(t *testing.T) {
+	w := testWorld(t)
+	// Dropping the guard's weight on the plate opens the door.
+	w.Update([]input.Command{input.Move{Thing: "guard", Cell: content.Cell{0, 0}}})
+	s := State(w)
+	if s.Current != "level.00" || s.Step != 1 || len(s.Levels) != 1 {
+		t.Fatalf("state %+v", s)
+	}
+	l := s.Levels["level.00"]
+	byID := map[string]FeatureState{}
+	for _, f := range l.Features {
+		byID[f.ID] = f
+	}
+	if p := byID["plate"]; !p.Down || p.Counter != 103 || p.Shows != "down" {
+		t.Errorf("plate %+v", p)
+	}
+	if d := byID["door"]; d.State != content.DoorOpening {
+		t.Errorf("door %+v", d)
+	}
+	if len(l.Things) != 1 || l.Things[0].Cell != (content.Cell{0, 0}) || l.Things[0].Items[0].Item != "item.key" {
+		t.Errorf("things %+v", l.Things)
+	}
+	want := []CellObjects{
+		{Cell: content.Cell{0, 0}, Objects: []content.Object{{Item: "item.sack", Contents: []content.Object{{Item: "item.key"}}}}},
+		{Cell: content.Cell{1, 0}, Objects: []content.Object{{Item: "item.key"}}},
+	}
+	if !reflect.DeepEqual(l.Objects, want) {
+		t.Errorf("objects %+v", l.Objects)
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{`"id":"plate"`, `"shows":"down"`, `"counter":103`, `"hit_points":7`} {
+		if !strings.Contains(string(b), field) {
+			t.Errorf("no %s in %s", field, b)
+		}
 	}
 }

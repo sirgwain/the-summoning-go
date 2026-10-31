@@ -1,0 +1,20 @@
+{
+  "id": "look.plate",
+  "layer": "floor",
+  "states": {
+    "down": [
+      {
+        "sprite": "sprite.features",
+        "frame": 1,
+        "offset": [-16, -16]
+      }
+    ],
+    "up": [
+      {
+        "sprite": "sprite.features",
+        "frame": 0,
+        "offset": [-16, -16]
+      }
+    ]
+  }
+}

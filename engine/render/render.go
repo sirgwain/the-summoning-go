@@ -60,38 +60,36 @@ func (s *Sprites) Frame(sprite string, i int) (*ebiten.Image, error) {
 
 // LevelView draws one level.
 type LevelView struct {
-	cmds []drawlist.Cmd
+	sprites *Sprites
+	cmds    []drawlist.Cmd
 	// images holds each command's frame, or blank for a command that blanks a tile box.
 	images []*ebiten.Image
 	blank  *ebiten.Image
 	bounds image.Rectangle
 }
 
-// NewLevelView prepares a scene for drawing.
-func NewLevelView(p *content.Pack, s *Sprites, scene drawlist.Scene, opts drawlist.Options) (*LevelView, error) {
-	v := &LevelView{blank: ebiten.NewImage(drawlist.TileSize, drawlist.TileSize)}
+// NewLevelView returns a view that draws nothing until Set.
+func NewLevelView(s *Sprites) *LevelView {
+	v := &LevelView{sprites: s, blank: ebiten.NewImage(drawlist.TileSize, drawlist.TileSize)}
 	v.blank.Fill(color.White)
-	if err := v.Set(p, s, scene, opts); err != nil {
-		return nil, err
-	}
-	return v, nil
+	return v
 }
 
-// Set replaces what the view draws with scene.
-func (v *LevelView) Set(p *content.Pack, s *Sprites, scene drawlist.Scene, opts drawlist.Options) error {
-	cmds := drawlist.Build(p, scene, opts)
+// Set replaces what the view draws with cmds, built by drawlist.Build, for a level covering
+// bounds.
+func (v *LevelView) Set(cmds []drawlist.Cmd, bounds image.Rectangle) error {
 	images := make([]*ebiten.Image, len(cmds))
 	for i, c := range cmds {
 		img := v.blank
 		if c.Sprite != "" {
 			var err error
-			if img, err = s.Frame(c.Sprite, c.Frame); err != nil {
-				return fmt.Errorf("level %s: %w", scene.Level.ID, err)
+			if img, err = v.sprites.Frame(c.Sprite, c.Frame); err != nil {
+				return err
 			}
 		}
 		images[i] = part(img, c.Part)
 	}
-	v.cmds, v.images, v.bounds = cmds, images, drawlist.Bounds(scene.Level)
+	v.cmds, v.images, v.bounds = cmds, images, bounds
 	return nil
 }
 

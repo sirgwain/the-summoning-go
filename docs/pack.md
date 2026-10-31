@@ -125,14 +125,28 @@ animates without being redrawn. Fades, flashes and remaps are added with scenes.
 
 ## Floor sets
 
-`tiles/floors/<name>.json`: floor art, one image per variant covering a cell's tile box.
+`tiles/floors/<name>.json`: floor art, one image per variant.
 
 ```json
-{ "id": "floors.1036", "sprite": "sprite.floors.1036", "variants": 4 }
+{ "id": "floors.1036", "sprite": "sprite.floors.1036", "variants": 4, "shape": "box" }
 ```
 
 Variant `k` is frame `k` of the sprite. A floor set is only art; what a floor does is its level's
 floor type (below).
+
+`shape` says what each image covers:
+
+- `box` (the default): a 32×32 image filling the cell's tile box. The box holds the middle of the
+  cell's diamond and a corner of each of its four neighbors' (top left `(x, y − 1)`, top right
+  `(x − 1, y)`, bottom left `(x + 1, y)`, bottom right `(x, y + 1)`), and the boxes of all cells
+  tile the view like bricks. The art paints those corners without knowing the neighbors, so it
+  suits floors that look alike. A cell with no floor, and each cell just past the level's far
+  edges, blanks its box, so the corners of the floors behind it do not show.
+- `diamond`: a 64×32 image of the cell's diamond alone, its corners transparent, drawn at
+  `(−16, 0)` from the tile box. Diamonds tile without overlap, so a cell looks the same whatever
+  floor its neighbors have, and nothing is blanked.
+
+Halves (`floor_halves`, below) are the upper and lower 16 rows of either image.
 
 ## Wall sets
 
@@ -351,9 +365,9 @@ keys.
   with neither is outside the map. Both grids are one string per row of space-separated values, so
   a level diffs well.
 - `floor_halves` says which halves of each floor are drawn: 1 the upper, 2 the lower, 3 both, 0
-  neither. A half not drawn is blanked. Without it, every floor is drawn whole. For now the importer
-  computes it as if the whole level were visible (`docs/spec/world.md`, Floor halves); once
-  visibility exists (Milestone 3, Walk) the rule moves into content and the renderer applies it to
+  neither. A half not drawn is blanked in a box set and left out in a diamond set. Without it,
+  every floor is drawn whole. For now the importer computes it as if the whole level were visible (`docs/spec/world.md`, Floor halves); once
+  visibility exists (Milestone 4, Walk) the rule moves into content and the renderer applies it to
   what the player sees.
 - `overlays` are fixed floor art (hazard tiles), drawn after all floors and before anything
   standing. `decorations` are drawn on their cell's wall face right after it. `props` (not shown)

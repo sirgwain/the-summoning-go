@@ -1,0 +1,7 @@
+{
+  "id": "sprite.doors",
+  "frame_size": [64, 56],
+  "columns": 5,
+  "frames": 5,
+  "transparent": 255
+}

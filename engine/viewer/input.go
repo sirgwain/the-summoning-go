@@ -1,0 +1,95 @@
+// Package viewer is the level viewer's controls: a camera over a level, a selection, and tools
+// that send debug commands to the simulation. It reads its input as a snapshot per update and
+// does not import Ebitengine, so tests and scripts drive it as a person would (docs/design.md,
+// Testing). The window, drawing and reading the real keyboard are the command's.
+package viewer
+
+import (
+	"fmt"
+	"image"
+	"strings"
+)
+
+// Key names a key, as Ebitengine's key names do ("A", "ArrowLeft", "Digit1", "Shift").
+type Key string
+
+// The keys the viewer reads.
+const (
+	KeyArrowLeft      Key = "ArrowLeft"
+	KeyArrowRight     Key = "ArrowRight"
+	KeyArrowUp        Key = "ArrowUp"
+	KeyArrowDown      Key = "ArrowDown"
+	KeyShift          Key = "Shift"
+	KeyPageUp         Key = "PageUp"
+	KeyPageDown       Key = "PageDown"
+	KeyBracketLeft    Key = "BracketLeft"
+	KeyBracketRight   Key = "BracketRight"
+	KeyEqual          Key = "Equal"
+	KeyMinus          Key = "Minus"
+	KeyNumpadAdd      Key = "NumpadAdd"
+	KeyNumpadSubtract Key = "NumpadSubtract"
+	KeyHome           Key = "Home"
+	KeySpace          Key = "Space"
+)
+
+// Keys are every key the viewer reads; a shell need only report these.
+var Keys = func() []Key {
+	keys := []Key{
+		KeyArrowLeft, KeyArrowRight, KeyArrowUp, KeyArrowDown, KeyShift, KeyPageUp, KeyPageDown,
+		KeyBracketLeft, KeyBracketRight, KeyEqual, KeyMinus, KeyNumpadAdd, KeyNumpadSubtract,
+		KeyHome, KeySpace,
+	}
+	for _, c := range "ACDEIMNOPSTUWX" {
+		keys = append(keys, Key(c))
+	}
+	for d := '1'; d <= '9'; d++ {
+		keys = append(keys, Key("Digit"+string(d)))
+	}
+	return keys
+}()
+
+// ParseKey returns the viewer's key named s, ignoring case.
+func ParseKey(s string) (Key, error) {
+	for _, k := range Keys {
+		if strings.EqualFold(string(k), s) {
+			return k, nil
+		}
+	}
+	return "", fmt.Errorf("unknown key %q", s)
+}
+
+// Button is a mouse button's state in an update.
+type Button struct {
+	// Held is whether it is down; Pressed and Released whether it went down or up since the last
+	// update. A tap can press and release between two updates.
+	Held, Pressed, Released bool
+}
+
+// Input is what the person did since the last update.
+type Input struct {
+	// Cursor is the mouse's screen point.
+	Cursor image.Point
+	// Held are the keys down; Pressed those that went down since the last update.
+	Held, Pressed map[Key]bool
+	Left, Right   Button
+	// Wheel is the vertical scroll since the last update.
+	Wheel float64
+}
+
+func (in Input) held(keys ...Key) bool {
+	for _, k := range keys {
+		if in.Held[k] {
+			return true
+		}
+	}
+	return false
+}
+
+func (in Input) pressed(keys ...Key) bool {
+	for _, k := range keys {
+		if in.Pressed[k] {
+			return true
+		}
+	}
+	return false
+}

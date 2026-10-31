@@ -1,0 +1,189 @@
+package viewer
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"image"
+	"os"
+	"path/filepath"
+	"slices"
+
+	"github.com/sirgwain/the-summoning-go/engine/content"
+)
+
+// Step is what a script does at one update (docs/design.md, Testing). Every field is optional;
+// a step can do several things, in this order: center, select, then input, and after the update,
+// shoot and dump.
+type Step struct {
+	// At is the update the step runs in, counting from 0.
+	At int64 `json:"at"`
+	// Center centers the view on a cell.
+	Center *content.Cell `json:"center,omitempty"`
+	// Select selects a cell; SelectThing a thing of the shown level.
+	Select      *content.Cell `json:"select,omitempty"`
+	SelectThing string        `json:"select_thing,omitempty"`
+	// Keys are pressed in this update and held through it. Hold keys are held without being
+	// pressed, for Shift with a click or for panning.
+	Keys []string `json:"keys,omitempty"`
+	Hold []string `json:"hold,omitempty"`
+	// Click taps the left button on a cell, centering the view on it first if it is hidden.
+	Click *content.Cell `json:"click,omitempty"`
+	// Wheel scrolls, positive to zoom in.
+	Wheel float64 `json:"wheel,omitempty"`
+	// Shot saves the screen after the update, and Dump the viewer's state, to these files.
+	Shot string `json:"shot,omitempty"`
+	Dump string `json:"dump,omitempty"`
+}
+
+// Script is a list of steps, run in update order.
+type Script []Step
+
+// LoadScript reads a script from a JSON file.
+func LoadScript(path string) (Script, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	s, err := ParseScript(data)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return s, nil
+}
+
+// ParseScript reads a script, checking its keys and putting its steps in update order.
+func ParseScript(data []byte) (Script, error) {
+	var s Script
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&s); err != nil {
+		return nil, err
+	}
+	for i, st := range s {
+		if st.At < 0 {
+			return nil, fmt.Errorf("step %d: negative update %d", i, st.At)
+		}
+		for _, keys := range [][]string{st.Keys, st.Hold} {
+			for j, k := range keys {
+				key, err := ParseKey(k)
+				if err != nil {
+					return nil, fmt.Errorf("step %d: %w", i, err)
+				}
+				keys[j] = string(key)
+			}
+		}
+	}
+	slices.SortStableFunc(s, func(a, b Step) int { return int(a.At - b.At) })
+	return s, nil
+}
+
+// Runner runs a script on a viewer, one update at a time.
+type Runner struct {
+	script Script
+	// dir is where shot and dump paths are relative to.
+	dir string
+	// next is the first step not yet run; at the update being run.
+	next int
+	at   int64
+	// first and last are the steps of the update being run.
+	first, last int
+}
+
+// NewRunner returns a runner for script s that writes its files relative to dir.
+func NewRunner(s Script, dir string) *Runner { return &Runner{script: s, dir: dir} }
+
+// Done reports whether every step has run.
+func (r *Runner) Done() bool { return r.next >= len(r.script) }
+
+// Before runs the update's steps on v and returns its input. Call it before each update, and
+// After after it.
+func (r *Runner) Before(v *Viewer) (Input, error) {
+	r.at, r.first = v.Ticks, r.next
+	for r.next < len(r.script) && r.script[r.next].At <= r.at {
+		r.next++
+	}
+	r.last = r.next
+	in := Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: image.Pt(-1, -1)}
+	for _, st := range r.script[r.first:r.last] {
+		if st.Center != nil {
+			v.CenterOn(*st.Center)
+		}
+		if st.Select != nil {
+			v.Select(*st.Select)
+		}
+		if st.SelectThing != "" {
+			if err := v.SelectThing(st.SelectThing); err != nil {
+				return in, fmt.Errorf("update %d: %w", r.at, err)
+			}
+		}
+		for _, k := range st.Hold {
+			in.Held[Key(k)] = true
+		}
+		for _, k := range st.Keys {
+			in.Held[Key(k)], in.Pressed[Key(k)] = true, true
+		}
+		if st.Click != nil {
+			pt := v.CellPoint(*st.Click)
+			if !pt.In(image.Rectangle{Max: v.Screen}) || pt.In(v.PanelRect()) || pt.In(v.LogRect()) {
+				v.CenterOn(*st.Click)
+				pt = v.CellPoint(*st.Click)
+			}
+			in.Cursor = pt
+			in.Left = Button{Pressed: true, Released: true}
+		}
+		in.Wheel += st.Wheel
+	}
+	return in, nil
+}
+
+// After writes the update's dumps and returns the paths of the screenshots to take.
+func (r *Runner) After(v *Viewer) ([]string, error) {
+	var shots []string
+	for _, st := range r.script[r.first:r.last] {
+		if st.Dump != "" {
+			if err := WriteDump(v, r.path(st.Dump)); err != nil {
+				return nil, err
+			}
+		}
+		if st.Shot != "" {
+			shots = append(shots, r.path(st.Shot))
+		}
+	}
+	r.first = r.last
+	return shots, nil
+}
+
+func (r *Runner) path(p string) string {
+	if filepath.IsAbs(p) {
+		return p
+	}
+	return filepath.Join(r.dir, p)
+}
+
+// Run runs the whole script on v without a screen, skipping screenshots.
+func (r *Runner) Run(v *Viewer) error {
+	for !r.Done() {
+		in, err := r.Before(v)
+		if err != nil {
+			return err
+		}
+		v.Update(in)
+		if _, err := r.After(v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// WriteDump writes the viewer's state to a JSON file, making its directory.
+func WriteDump(v *Viewer, path string) error {
+	data, err := json.MarshalIndent(v.Dump(), "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(data, '\n'), 0o644)
+}

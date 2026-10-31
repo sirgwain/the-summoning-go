@@ -1,0 +1,9 @@
+{
+  "id": "thing.boulder",
+  "kind": "boulder",
+  "sprite": "sprite.boulder",
+  "facing": 0,
+  "speed": 8,
+  "interval_ms": 110,
+  "weight": 100
+}

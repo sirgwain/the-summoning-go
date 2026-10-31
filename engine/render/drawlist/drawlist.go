@@ -114,17 +114,26 @@ const maxFloorObjects = 8
 // floor-layer feature look and floor object, then walls (each followed by its decorations),
 // props, standing feature looks and things, ordered by screen row (a + b) and within a row by
 // their top edge. A wall-layer feature look is drawn in place of its cell's wall and decorations.
-// Floors are drawn by the halves the level says show, the other halves blanked; a cell with no
-// floor, and each cell just past the level's far edges, blanks its tile box.
+// Floors are drawn by the halves the level says show. In a box floor set the other halves are
+// blanked, and a cell with no floor, and each cell just past the level's far edges, blanks its
+// tile box; a diamond set draws each diamond at its offset and blanks nothing (docs/pack.md).
 func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 	var cmds []Cmd
 	l := s.Level
 
 	floors := p.Floors[l.Floors]
+	// A diamond set draws each cell's diamond alone, offset from its tile box, and blanks
+	// nothing: only box sets paint corners of their neighbors that need covering.
+	var off content.Offset
+	if floors.Diamond() {
+		off = content.DiamondOffset
+	}
 	for _, c := range cellsBackToFront(l.Size[0]+1, l.Size[1]+1) {
-		box := TileBox(c)
+		box := TileBox(c).Add(image.Pt(off[0], off[1]))
 		if !l.InBounds(c) || s.Floor[c[0]][c[1]] == content.NoFrame {
-			cmds = append(cmds, Cmd{X: box.X, Y: box.Y})
+			if !floors.Diamond() {
+				cmds = append(cmds, Cmd{X: box.X, Y: box.Y})
+			}
 			continue
 		}
 		v, halves := l.FloorTypes[s.Floor[c[0]][c[1]]].Variant, l.Halves(c)
@@ -140,6 +149,8 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 			cmd := Cmd{X: box.X, Y: box.Y + h.dy, Part: h.part}
 			if halves&h.bit != 0 {
 				cmd.Sprite, cmd.Frame = floors.Sprite, v
+			} else if floors.Diamond() {
+				continue
 			}
 			cmds = append(cmds, cmd)
 		}

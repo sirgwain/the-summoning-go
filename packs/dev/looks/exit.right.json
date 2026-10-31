@@ -1,0 +1,13 @@
+{
+  "id": "look.exit.right",
+  "layer": "wall",
+  "states": {
+    "exit": [
+      {
+        "sprite": "sprite.walls",
+        "frame": 5,
+        "offset": [-16, -24]
+      }
+    ]
+  }
+}

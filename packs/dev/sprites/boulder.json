@@ -1,0 +1,8 @@
+{
+  "id": "sprite.boulder",
+  "frame_size": [32, 32],
+  "columns": 1,
+  "frames": 1,
+  "transparent": 255,
+  "anchor": [16, 29]
+}

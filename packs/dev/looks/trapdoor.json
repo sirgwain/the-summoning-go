@@ -1,0 +1,20 @@
+{
+  "id": "look.trapdoor",
+  "layer": "floor",
+  "states": {
+    "closed": [
+      {
+        "sprite": "sprite.features",
+        "frame": 7,
+        "offset": [-16, -16]
+      }
+    ],
+    "open": [
+      {
+        "sprite": "sprite.features",
+        "frame": 6,
+        "offset": [-16, -16]
+      }
+    ]
+  }
+}

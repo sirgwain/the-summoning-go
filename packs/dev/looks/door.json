@@ -1,0 +1,42 @@
+{
+  "id": "look.door",
+  "layer": "stand",
+  "states": {
+    "1": [
+      {
+        "sprite": "sprite.doors",
+        "frame": 1,
+        "offset": [-16, -24]
+      }
+    ],
+    "2": [
+      {
+        "sprite": "sprite.doors",
+        "frame": 2,
+        "offset": [-16, -24]
+      }
+    ],
+    "3": [
+      {
+        "sprite": "sprite.doors",
+        "frame": 3,
+        "offset": [-16, -24]
+      }
+    ],
+    "closed": [
+      {
+        "sprite": "sprite.doors",
+        "frame": 0,
+        "offset": [-16, -24]
+      }
+    ],
+    "open": [],
+    "sealed": [
+      {
+        "sprite": "sprite.doors",
+        "frame": 4,
+        "offset": [-16, -24]
+      }
+    ]
+  }
+}

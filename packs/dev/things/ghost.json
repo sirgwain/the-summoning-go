@@ -1,0 +1,14 @@
+{
+  "id": "thing.ghost",
+  "kind": "creature",
+  "sprite": "sprite.ghost",
+  "facing": 3,
+  "speed": 8,
+  "interval_ms": 330,
+  "weight": 100,
+  "hit_points": "12",
+  "behaviors": [
+    "never_hostile",
+    "resists_teleport"
+  ]
+}

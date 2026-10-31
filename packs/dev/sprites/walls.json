@@ -1,0 +1,7 @@
+{
+  "id": "sprite.walls",
+  "frame_size": [64, 56],
+  "columns": 6,
+  "frames": 6,
+  "transparent": 255
+}

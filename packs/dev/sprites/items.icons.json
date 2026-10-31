@@ -1,0 +1,7 @@
+{
+  "id": "sprite.items.icons",
+  "frame_size": [16, 16],
+  "columns": 8,
+  "frames": 9,
+  "transparent": 255
+}

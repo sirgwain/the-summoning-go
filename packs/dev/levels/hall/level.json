@@ -1,0 +1,365 @@
+{
+  "id": "level.hall",
+  "name": "",
+  "size": [18, 28],
+  "floors": "floors.dev",
+  "walls": "walls.dev",
+  "floor_types": [
+    {
+      "variant": 0
+    },
+    {
+      "variant": 1
+    },
+    {
+      "variant": 2,
+      "depth": 4,
+      "sinks": true
+    },
+    {
+      "variant": 3,
+      "enter": {
+        "damage": "2d2",
+        "type": "fire"
+      },
+      "avoided": true
+    }
+  ],
+  "floor": [
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 1 1 1 1 1 0 1 1 1 1 1 0 1 1 1 1 1 0 1 1 1 1 1 1 1 1 0",
+    "0 1 1 1 1 1 0 1 1 1 1 1 0 1 1 1 1 1 0 1 1 1 1 1 1 1 1 0",
+    "0 1 1 1 1 1 0 1 1 1 1 1 0 1 1 1 1 1 0 1 1 1 1 1 1 1 1 0",
+    "0 1 1 1 1 1 0 1 1 1 1 1 0 1 1 1 1 1 0 1 1 1 1 1 1 1 1 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 2 2 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 2 2 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3 3 3 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    ". . . . . . . . . . . . . . . . . . . . 0 1 1 1 0 . . .",
+    ". . . . . . . . . . . . . . . . . . . . 0 1 1 1 0 . . .",
+    ". . . . . . . . . . . . . . . . . . . . 0 0 0 0 0 . . ."
+  ],
+  "wall": [
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 . . . . . 0 . . . . . 0 . . . . . 0 . . . . . . . . 0",
+    "0 . . . . . 0 . . . . . 0 . . . . . 0 . . . . . . . . 0",
+    "0 . . . . . 0 . . . . . 0 . . . . . 0 . . . . . . . . 0",
+    "0 . . . . . 0 . . . . . 0 . . . . . 0 . . . . . . . . 0",
+    "0 0 0 . 0 0 0 0 0 . 0 0 0 0 0 . 0 0 0 0 0 0 . 0 0 0 0 0",
+    "0 . . . . . . . . . . . . . . . . . . . . . . . . . . 0",
+    "0 . . . . . . . . . . . . . . . . . . . . . . . . . . 0",
+    "0 . . . . . . . . . . . . . . . . . . . . . . . . . . 0",
+    "3 . . . . . . . . . . . . . . . . . . . . . . . . . . 0",
+    "0 . . . . . . . . . . . . . . . . . . . . . . . . . . 0",
+    "0 . . . . . . . . . . . . . . . . . . . . . . . . . . 0",
+    "0 . . . . . . . . . . . . . . . . . . . . . . . . . . 0",
+    "0 . . . . . . . . . . . . . . . . . . . . . . . . . . 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
+    ". . . . . . . . . . . . . . . . . . . . 0 . . . 0 . . .",
+    ". . . . . . . . . . . . . . . . . . . . 0 . . . 0 . . .",
+    ". . . . . . . . . . . . . . . . . . . . 0 0 0 0 0 . . ."
+  ],
+  "features": [
+    {
+      "id": "lever.a",
+      "kind": "lever",
+      "cell": [7, 3],
+      "look": "look.lever",
+      "armed": true,
+      "on_turn_on": "open_a",
+      "on_turn_off": "close_a"
+    },
+    {
+      "id": "door.a",
+      "kind": "door",
+      "cell": [5, 3],
+      "look": "look.door",
+      "state": "closed"
+    },
+    {
+      "id": "plate.b",
+      "kind": "plate",
+      "cell": [7, 9],
+      "look": "look.plate",
+      "armed": true,
+      "threshold": 100,
+      "on_press": "open_b",
+      "on_release": "close_b"
+    },
+    {
+      "id": "door.b",
+      "kind": "door",
+      "cell": [5, 9],
+      "look": "look.door",
+      "state": "closed"
+    },
+    {
+      "id": "slot.c",
+      "kind": "slot",
+      "cell": [7, 15],
+      "look": "look.slot",
+      "armed": true,
+      "accepts": "item.key",
+      "on_insert": "open_c"
+    },
+    {
+      "id": "door.c",
+      "kind": "door",
+      "cell": [5, 15],
+      "look": "look.door",
+      "state": "closed"
+    },
+    {
+      "id": "door.d",
+      "kind": "door",
+      "cell": [5, 22],
+      "look": "look.door",
+      "state": "closed",
+      "sealed_by": "item.sphere"
+    },
+    {
+      "id": "exit.d",
+      "kind": "exit",
+      "cell": [2, 22],
+      "look": "look.exit.floor",
+      "to": {
+        "level": "level.cellar",
+        "cell": [6, 4]
+      }
+    },
+    {
+      "id": "teleporter",
+      "kind": "teleporter",
+      "cell": [12, 3],
+      "look": "look.teleporter",
+      "armed": true,
+      "destinations": [
+        [7, 24],
+        [12, 24]
+      ]
+    },
+    {
+      "id": "lever.teleporter",
+      "kind": "lever",
+      "cell": [13, 1],
+      "look": "look.lever",
+      "armed": true,
+      "on_turn_on": "toggle_teleporter",
+      "on_turn_off": "toggle_teleporter"
+    },
+    {
+      "id": "pit",
+      "kind": "pit",
+      "cell": [12, 7],
+      "look": "look.pit",
+      "to": {
+        "level": "level.cellar",
+        "cell": [3, 3]
+      }
+    },
+    {
+      "id": "trapdoor",
+      "kind": "trapdoor",
+      "cell": [12, 10],
+      "look": "look.trapdoor",
+      "to": {
+        "level": "level.cellar",
+        "cell": [3, 6]
+      }
+    },
+    {
+      "id": "lever.trapdoor",
+      "kind": "lever",
+      "cell": [10, 10],
+      "look": "look.lever",
+      "armed": true,
+      "on_turn_on": "open_trapdoor",
+      "on_turn_off": "close_trapdoor"
+    },
+    {
+      "id": "mouth",
+      "kind": "mouth",
+      "cell": [10, 13],
+      "look": "look.mouth",
+      "message": "msg.mouth"
+    },
+    {
+      "id": "mark",
+      "kind": "mark",
+      "cell": [12, 13],
+      "look": "look.mark",
+      "rune": "rune.dev"
+    },
+    {
+      "id": "socket",
+      "kind": "socket",
+      "cell": [13, 22],
+      "look": "look.socket",
+      "places": [
+        "item.red_gem",
+        "item.blue_gem"
+      ],
+      "on_complete": "reveal"
+    },
+    {
+      "id": "lever.boulder",
+      "kind": "lever",
+      "cell": [12, 26],
+      "look": "look.lever",
+      "armed": true,
+      "on_turn_on": "roll",
+      "on_turn_off": "stop"
+    },
+    {
+      "id": "exit.west",
+      "kind": "exit",
+      "cell": [9, 0],
+      "look": "look.exit.right",
+      "to": {
+        "level": "level.cellar",
+        "cell": [5, 2]
+      }
+    }
+  ],
+  "procedures": {
+    "close_a": [
+      {
+        "off": "door.a"
+      }
+    ],
+    "close_b": [
+      {
+        "off": "door.b"
+      }
+    ],
+    "close_trapdoor": [
+      {
+        "off": "trapdoor"
+      }
+    ],
+    "open_a": [
+      {
+        "on": "door.a"
+      }
+    ],
+    "open_b": [
+      {
+        "on": "door.b"
+      }
+    ],
+    "open_c": [
+      {
+        "on": "door.c"
+      }
+    ],
+    "open_trapdoor": [
+      {
+        "on": "trapdoor"
+      }
+    ],
+    "reveal": [
+      {
+        "set_floor": {
+          "cell": [14, 22],
+          "type": 0
+        }
+      },
+      {
+        "set_message": {
+          "feature": "mouth",
+          "message": "msg.mouth.after"
+        }
+      }
+    ],
+    "roll": [
+      {
+        "roll": {
+          "thing": "boulder",
+          "direction": 0
+        }
+      }
+    ],
+    "stop": [
+      {
+        "stop": "boulder"
+      }
+    ],
+    "toggle_teleporter": [
+      {
+        "toggle": "teleporter"
+      }
+    ]
+  },
+  "things": [
+    {
+      "id": "guard",
+      "thing": "thing.guard",
+      "cell": [9, 20],
+      "items": [
+        {
+          "item": "item.potion"
+        }
+      ]
+    },
+    {
+      "id": "ghost",
+      "thing": "thing.ghost",
+      "cell": [11, 21],
+      "facing": 1
+    },
+    {
+      "id": "boulder",
+      "thing": "thing.boulder",
+      "cell": [9, 24]
+    }
+  ],
+  "objects": [
+    {
+      "cell": [2, 3],
+      "item": "item.sword"
+    },
+    {
+      "cell": [2, 9],
+      "item": "item.red_gem"
+    },
+    {
+      "cell": [2, 15],
+      "item": "item.blue_gem"
+    },
+    {
+      "cell": [8, 8],
+      "item": "item.rock"
+    },
+    {
+      "cell": [8, 10],
+      "item": "item.rock"
+    },
+    {
+      "cell": [8, 17],
+      "item": "item.sack",
+      "contents": [
+        {
+          "item": "item.key"
+        }
+      ]
+    },
+    {
+      "cell": [9, 18],
+      "item": "item.bag"
+    },
+    {
+      "cell": [15, 22],
+      "item": "item.sphere"
+    },
+    {
+      "cell": [13, 8],
+      "item": "random"
+    }
+  ]
+}

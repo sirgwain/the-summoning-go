@@ -119,12 +119,36 @@ func (b *SpriteBank) FrameRect(i int) image.Rectangle {
 	return image.Rect(x, y, x+w, y+h)
 }
 
-// FloorSet is a level's floor variants: variant k is frame k of its sprite bank, covering the
-// cell's tile box.
+// FloorSet is a level's floor variants: variant k is frame k of its sprite bank.
 type FloorSet struct {
 	ID       string `json:"id"`
 	Sprite   string `json:"sprite"`
 	Variants int    `json:"variants"`
+	// Shape is what each image covers, FloorBox or FloorDiamond; empty means FloorBox.
+	Shape string `json:"shape,omitempty"`
+}
+
+// Floor set shapes (docs/pack.md, Floor sets).
+const (
+	// FloorBox images fill a cell's 32×32 tile box, with corners of its neighbors' diamonds.
+	FloorBox = "box"
+	// FloorDiamond images are the cell's 64×32 diamond alone, drawn at DiamondOffset from the
+	// tile box.
+	FloorDiamond = "diamond"
+)
+
+// DiamondOffset places a diamond floor image relative to its cell's tile box.
+var DiamondOffset = Offset{-16, 0}
+
+// Diamond reports whether the set's images are diamonds.
+func (f *FloorSet) Diamond() bool { return f.Shape == FloorDiamond }
+
+// FrameSize returns the size of the set's images.
+func (f *FloorSet) FrameSize() Offset {
+	if f.Diamond() {
+		return Offset{64, 32}
+	}
+	return Offset{32, 32}
 }
 
 // WallSet has one composed image per wall shape.

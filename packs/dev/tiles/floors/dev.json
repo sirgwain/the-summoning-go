@@ -1,0 +1,6 @@
+{
+  "id": "floors.dev",
+  "sprite": "sprite.floors",
+  "variants": 4,
+  "shape": "diamond"
+}

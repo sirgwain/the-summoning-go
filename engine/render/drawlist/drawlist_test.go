@@ -119,6 +119,27 @@ func TestBuildFloorHalves(t *testing.T) {
 	}
 }
 
+func TestBuildDiamondFloors(t *testing.T) {
+	p, l := testPack()
+	p.Floors["f"].Shape = content.FloorDiamond
+	l.FloorHalves = content.Grid{{content.HalvesBoth, content.HalfLower}, {0, content.HalvesBoth}}
+	var floors []Cmd
+	for _, c := range Build(p, LevelScene(p, l), Options{}) {
+		if c.Sprite == "floor" || c.Sprite == "" {
+			floors = append(floors, c)
+		}
+	}
+	want := []Cmd{
+		{"floor", 1, -16, 0, Whole, ""},
+		// (1, 0) draws nothing; (0, 1) only its lower half; nothing is blanked.
+		{"floor", 0, 16, 32, LowerHalf, ""},
+		{"floor", 0, -16, 32, Whole, ""},
+	}
+	if !reflect.DeepEqual(floors, want) {
+		t.Errorf("got\n%v\nwant\n%v", floors, want)
+	}
+}
+
 func TestBuildMagnified(t *testing.T) {
 	p, l := testPack()
 	for _, c := range Build(p, LevelScene(p, l), Options{Magnify: true}) {

@@ -1,0 +1,13 @@
+{
+  "id": "look.mark",
+  "layer": "floor",
+  "states": {
+    "mark": [
+      {
+        "sprite": "sprite.features",
+        "frame": 17,
+        "offset": [-16, -16]
+      }
+    ]
+  }
+}

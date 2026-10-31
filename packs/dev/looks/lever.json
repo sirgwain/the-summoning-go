@@ -1,0 +1,20 @@
+{
+  "id": "look.lever",
+  "layer": "stand",
+  "states": {
+    "off": [
+      {
+        "sprite": "sprite.features",
+        "frame": 19,
+        "offset": [-16, -16]
+      }
+    ],
+    "on": [
+      {
+        "sprite": "sprite.features",
+        "frame": 20,
+        "offset": [-16, -16]
+      }
+    ]
+  }
+}

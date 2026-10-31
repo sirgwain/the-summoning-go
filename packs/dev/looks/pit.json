@@ -1,0 +1,13 @@
+{
+  "id": "look.pit",
+  "layer": "floor",
+  "states": {
+    "pit": [
+      {
+        "sprite": "sprite.features",
+        "frame": 5,
+        "offset": [-16, -16]
+      }
+    ]
+  }
+}
