@@ -3,6 +3,7 @@
 package drawlist
 
 import (
+	"fmt"
 	"image"
 	"slices"
 	"sort"
@@ -42,14 +43,23 @@ func TileBox(c content.Cell) image.Point {
 	return image.Pt(32*(b-a), 16*(a+b))
 }
 
-// Build returns the commands that draw level l, back to front: every floor, then every overlay
-// and floor-layer feature look, then walls (each followed by its decorations), props and
-// standing feature looks, ordered by screen row (a + b) and within a row by their top edge. A
-// wall-layer feature look is drawn in place of its cell's wall and decorations. Features are drawn
-// in the states the level gives them. Floors are drawn by the halves the level says show, the other
+// Options change how a level is drawn.
+type Options struct {
+	// Magnify draws floor objects with their inventory image.
+	Magnify bool
+}
+
+// maxFloorObjects is how many objects a cell's floor shows (docs/spec/items.md, Floor).
+const maxFloorObjects = 8
+
+// Build returns the commands that draw level l, back to front: every floor, then every overlay,
+// floor-layer feature look and floor object, then walls (each followed by its decorations),
+// props, standing feature looks and things, ordered by screen row (a + b) and within a row by
+// their top edge. A wall-layer feature look is drawn in place of its cell's wall and decorations.
+// Features and things are drawn as the level places them. Floors are drawn by the halves the level says show, the other
 // halves blanked; a cell with no floor, and each cell just past the level's far edges, blanks
 // its tile box.
-func Build(p *content.Pack, l *content.Level) []Cmd {
+func Build(p *content.Pack, l *content.Level, opts Options) []Cmd {
 	var cmds []Cmd
 
 	floors := p.Floors[l.Floors]
@@ -94,6 +104,15 @@ func Build(p *content.Pack, l *content.Level) []Cmd {
 	for _, f := range looks[content.LayerFloor] {
 		cmds = append(cmds, featureCmds(p, f)...)
 	}
+	shown := map[content.Cell]int{}
+	for _, o := range l.Objects {
+		if shown[o.Cell]++; shown[o.Cell] > maxFloorObjects {
+			continue
+		}
+		if cmd, ok := objectCmd(p, o, opts); ok {
+			cmds = append(cmds, cmd)
+		}
+	}
 
 	type standing struct {
 		depth, top int
@@ -126,6 +145,11 @@ func Build(p *content.Pack, l *content.Level) []Cmd {
 	for _, f := range looks[content.LayerStand] {
 		items = append(items, standing{depth: f.Cell[0] + f.Cell[1], top: TileBox(f.Cell).Y + 1, cmds: featureCmds(p, f)})
 	}
+	for _, t := range l.Things {
+		if cmd, cell, ok := thingCmd(p, t); ok {
+			items = append(items, standing{depth: cell[0] + cell[1], top: cmd.Y, cmds: []Cmd{cmd}})
+		}
+	}
 	for _, pr := range l.Props {
 		cmd := placed(pr)
 		items = append(items, standing{depth: pr.Cell[0] + pr.Cell[1], top: TileBox(pr.Cell).Y + 1, cmds: []Cmd{cmd}})
@@ -157,6 +181,79 @@ func featureCmds(p *content.Pack, f *content.Feature) []Cmd {
 		cmds[i] = Cmd{Sprite: pt.Sprite, Frame: pt.Frame, X: box.X + pt.Offset[0], Y: box.Y + pt.Offset[1]}
 	}
 	return cmds
+}
+
+// objectCmd draws a floor object centered in its cell's tile box.
+func objectCmd(p *content.Pack, o *content.FloorObject, opts Options) (Cmd, bool) {
+	it, ok := p.Items[o.Item]
+	if !ok {
+		return Cmd{}, false // a random object is chosen when the level is first entered
+	}
+	img := it.Floor
+	if opts.Magnify {
+		img = it.Icon
+	}
+	sprite, ok := p.Sprites[img.Sprite]
+	if !ok {
+		return Cmd{}, false
+	}
+	box := TileBox(o.Cell)
+	w, h := sprite.FrameSize[0], sprite.FrameSize[1]
+	return Cmd{Sprite: img.Sprite, Frame: img.Frame, X: box.X + TileSize/2 - w/2, Y: box.Y + TileSize/2 - h/2}, true
+}
+
+// CellUnits is the size of a cell in world units.
+const CellUnits = 32
+
+// GroundPoint returns where a placed thing stands, in world units (docs/pack.md, Things).
+func GroundPoint(t *content.PlacedThing) (u, v int) {
+	u, v = CellUnits*t.Cell[0]+CellUnits/2, CellUnits*t.Cell[1]+CellUnits/2
+	if t.Offset != nil {
+		u, v = u+t.Offset[0], v+t.Offset[1]
+	}
+	return u, v
+}
+
+// RefPoint returns the view pixel of world point (u, v) (docs/spec/world.md, Projection).
+func RefPoint(u, v int) image.Point {
+	return image.Pt(16+v-u, floorDiv(u, 2)+floorDiv(v, 2))
+}
+
+func floorDiv(a, b int) int {
+	q := a / b
+	if (a%b != 0) && (a < 0) != (b < 0) {
+		q--
+	}
+	return q
+}
+
+// Facing returns the direction a placed thing faces.
+func Facing(p *content.Pack, t *content.PlacedThing) int {
+	if t.Facing != nil {
+		return *t.Facing
+	}
+	return p.Things[t.Thing].Facing
+}
+
+// thingCmd draws a placed thing standing still, with its sprite's anchor at its ground point, and
+// returns the cell it stands in.
+func thingCmd(p *content.Pack, t *content.PlacedThing) (Cmd, content.Cell, bool) {
+	tmpl, ok := p.Things[t.Thing]
+	if !ok {
+		return Cmd{}, content.Cell{}, false
+	}
+	sprite, ok := p.Sprites[tmpl.Sprite]
+	if !ok {
+		return Cmd{}, content.Cell{}, false
+	}
+	frame := 0
+	if a, ok := p.Animation(tmpl, fmt.Sprintf("idle.%d", Facing(p, t)), "idle"); ok {
+		frame = a.Frames[0]
+	}
+	anchor, _ := sprite.AnchorOf(frame)
+	u, v := GroundPoint(t)
+	at := RefPoint(u, v).Sub(image.Pt(anchor[0], anchor[1]))
+	return Cmd{Sprite: tmpl.Sprite, Frame: frame, X: at.X, Y: at.Y}, content.Cell{floorDiv(u, CellUnits), floorDiv(v, CellUnits)}, true
 }
 
 func placed(pl content.Placed) Cmd {

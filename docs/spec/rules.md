@@ -97,7 +97,7 @@ Procedure `n` is the n-th procedure in the level's script pool (formats.md). Its
 | 2 | x, y | Toggle any of the above |
 | 3 | x, y, which, p | Set the trigger's procedure a (`which` 0) or b (1) to `p` |
 | 4 | x, y, state | Set the state (its message) of the mouth at the cell |
-| 5 | x, y, dir | Start the boulder placed at the cell rolling along direction `dir` (entities.md); it stops when blocked |
+| 5 | x, y, dir | Start the boulder placed at the cell rolling along direction `dir`, an even direction table entry (0, 2, 4 or 6); it stops when blocked |
 | 6 | x, y, dir | As 5, but the boulder reverses when blocked and keeps rolling |
 | 7 | x, y | Stop the boulder placed at the cell |
 | 8 | x, y, template, dir | Shoot a new object of the template from the cell along `dir` (arrow traps) |
@@ -136,7 +136,44 @@ An object put down on a cell is handled in this order:
 
 The player changes level by an exit, a pit, a conversation or a spell. The current level keeps its state; the new one is loaded, or restored as it was left. The player arrives at the destination cell. The arrival has three styles: falling from above (pits), sliding down from above (fall-through), and scrolling (walls, conversations).
 
+## Import
+
+Each cell's feature is named `<kind>.<x>.<y>` and made from its terrain and placement:
+
+| Terrain | Placement | Feature | State and fields |
+| --- | --- | --- | --- |
+| 10h, 11h, 15h, 1Bh | door (4) | `door` | stage 0 `closed`, 4 `open`; 5–7 `closed`, sealed by the Rainbow, Energy or Shadow Sphere; bit 20h opened by a spell; look by bit 40h |
+| 17h, 18h | trigger (7) | `slot` | accepts the threshold's template; procedure a is `on_insert` |
+| 19h, 1Ah | trigger (7) | `lever` | on at 1Ah; procedure a is `on_turn_on`, b `on_turn_off` |
+| 1Fh, 20h | trigger (7) | `plate` | down at 20h; the threshold; a is `on_press`, b `on_release` |
+| 21h–23h | any | `mark` | rune `1`–`3` |
+| 24h | teleporter (3) | `teleporter` | destinations `(x + b1, y + b3)` and `(x + b2, y + b4)`; next 1 when bit 04h is set; turn, fly over and armed from the kind byte |
+| 25h | exit (8) | `pit` | the exit's destination |
+| 26h, 27h | exit (8) | `trapdoor` | open at 26h; the exit's destination |
+| 28h | any | `socket` | places for gems C0h–C5h; `on_complete` runs the opening below |
+| wall 1, 3 | exit (8) or teleporter (3) of kind FFh | `exit` | the destination; drawn from the exit-wall bank |
+| 1Bh | exit (8), marker 0 | `exit` | the destination; drawn with resource 99 |
+| 1Bh | mouth (11) | `mouth` | its message; drawn with resource 56 |
+
+Triggers are armed as their placement says, and teleporters by bit 80h. A trigger's procedures FFh are none. The slot special case on level 30 becomes the slot's procedure. The gem socket's opening becomes a procedure of `set_floor` (floor type 0) on `(x − 1, y)` and `(x − 1, y + 1)` and `set_wall` (shape 3) on `(x − 1, y − 1)` and `(x − 1, y + 2)`.
+
+Procedure `n` is named `p<n>`. Its ops become actions on the feature or thing at the cell they name:
+
+| Op | Action |
+| --- | --- |
+| 0, 1, 2 | `on`, `off`, `toggle` |
+| 3 | `set_hook`, procedure a or b as the hook of the feature's kind |
+| 4 | `set_message`, the level message `state` |
+| 5, 6, 7 | `roll` (6 shuttling) and `stop` of the boulder placed at the cell, in direction `dir` |
+| 8 | `shoot_item` |
+| 9 | `shoot_spell`, power 6d10 |
+| 10 | `set_threshold` on a plate, `set_accepts` (the template) on a slot |
+| 11 | `create` |
+
+An op naming a cell with nothing it can act on is dropped and reported.
+
 ## Unknowns
 
 - The exact way a teleported creature spins and how long the player's teleport effect lasts.
+- A slot's procedure b. Many slots set one, but the game is not known to run it; the importer leaves it out.
 - Whether the objects and creatures a level places on a plate count toward its counter when the level first loads. Until known, the engine adds their weight at load without running any procedure, so the plate starts in the state its terrain shows.

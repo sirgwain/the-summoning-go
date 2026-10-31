@@ -171,9 +171,9 @@ caps already in it.
 {
   "id": "text.en",
   "strings": {
-    "msg.134": "It will not budge.",
+    "msg.134": "The lever won't budge",
     "item.dagger.name": "Dagger",
-    "level.03.mouth.0": "…"
+    "msg.l03.2": "…"
   }
 }
 ```
@@ -198,8 +198,9 @@ text to UTF-8.
 }
 ```
 
-The engine defines the keys; the pack gives the text. `slot_wrong_item` takes the item's name. A key
-the pack leaves out shows nothing. Later milestones add keys.
+The engine defines the keys; the pack gives the text. In `slot_wrong_item` and `slot_stuck`,
+`{item}` stands for the item's name. A key the pack leaves out shows nothing. Later milestones add
+keys.
 
 ## Items
 
@@ -251,9 +252,10 @@ the pack leaves out shows nothing. Later milestones add keys.
 
 - `kind` is `creature`, `boulder` or `trap`. The kind decides what the engine does with the thing;
   later milestones add kinds (things in flight, conjured things).
-- `sprite` is drawn with its anchor at the thing's ground point. Animations come from the sprite by
-  name: `idle`, `walk.d` and `attack.d` for direction `d`, `roll.d`, `dead`. A missing animation
-  falls back to `idle`, then to frame 0.
+- `sprite` is drawn with its anchor at the thing's ground point. `animations`, as on a sprite, are
+  the thing's own; a name the thing does not have comes from its sprite. Animations are found by
+  name: `idle.d`, `walk.d`, `attack.d` and `roll.d` for direction `d`, and `idle` and `dead`. A
+  missing animation falls back to `idle.d`, then `idle`, then frame 0.
 - `facing` is the starting direction, `speed` the step in world units, `interval_ms` the time
   between updates.
 - `weight` is what the thing adds to a plate it stands on; 0 presses nothing.
@@ -395,8 +397,9 @@ runs nothing.
 
 - A door's look has the stages it moves through between `closed` and `open`, numbered from 1. A
   sealed door shows `sealed` and opens only to its `sealed_by` item landing on it.
-- An `exit` or `mouth` on a wall cell is on the wall's face and drawn with a `wall` layer look; an
-  `exit` on a floor cell is a marker, taken by walking onto it.
+- An `exit` on a wall cell is in the wall's face, drawn with a `wall` layer look and taken by
+  walking into the face. An `exit` on a floor cell is a marker, taken by walking onto it. A `mouth`
+  stands on a floor cell, drawn up against the wall behind it.
 - A socket draws `full` when every place is set; otherwise `empty` and `set.i` for each set place.
 - A plate's counter starts at the weight of what the level places on it.
 - How each kind behaves is in `docs/spec/rules.md`.

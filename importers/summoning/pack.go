@@ -10,7 +10,7 @@ import (
 
 // Source holds the data files the importer reads.
 type Source struct {
-	Colors, Init, Resource, Levels []byte
+	Colors, Init, Resource, Levels, Text, Objects, NPC []byte
 }
 
 // ReadSource reads the data files from dir.
@@ -19,7 +19,10 @@ func ReadSource(dir string) (*Source, error) {
 	for _, f := range []struct {
 		name string
 		dst  *[]byte
-	}{{FileColors, &s.Colors}, {FileInit, &s.Init}, {FileResource, &s.Resource}, {FileLevels, &s.Levels}} {
+	}{
+		{FileColors, &s.Colors}, {FileInit, &s.Init}, {FileResource, &s.Resource}, {FileLevels, &s.Levels},
+		{FileText, &s.Text}, {FileObjects, &s.Objects}, {FileNPC, &s.NPC},
+	} {
 		data, err := ReadDataFile(dir, f.name)
 		if err != nil {
 			return nil, err
@@ -100,6 +103,13 @@ type importer struct {
 	palette   *content.Palette
 	banks     map[int]*SpriteBank
 	report    *Report
+
+	objects *Objects
+	npcs    []NPCRecord
+	// strings are text.en's strings; itemIDs the item of each object template.
+	strings map[string]string
+	itemIDs []string
+	levels  int
 }
 
 // Import converts the data files into a content pack.
@@ -123,6 +133,18 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	text, err := ReadText(src.Text)
+	if err != nil {
+		return nil, nil, err
+	}
+	objects, err := ReadObjects(src.Objects)
+	if err != nil {
+		return nil, nil, err
+	}
+	npcs, err := ReadNPCs(src.NPC)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	im := &importer{
 		pack: content.NewPack(content.Manifest{
@@ -138,12 +160,19 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 		resources: resources,
 		banks:     map[int]*SpriteBank{},
 		report:    &Report{},
+		objects:   objects,
+		npcs:      npcs,
+		levels:    len(levels),
 	}
 	for i, p := range palettes {
 		pal := &content.Palette{ID: paletteID(i), Colors: p, Effects: paletteEffects()}
 		im.pack.Palettes[pal.ID] = pal
 	}
 	im.palette = im.pack.Palettes[paletteID(0)]
+	im.text(text)
+	if err := im.items(); err != nil {
+		return nil, nil, err
+	}
 
 	for i, l := range levels {
 		cl, err := im.level(i, l)
@@ -160,6 +189,16 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 
 func paletteID(i int) string { return fmt.Sprintf("palette.%d", i) }
 func levelID(i int) string   { return fmt.Sprintf("level.%02d", i) }
+
+// levelExists reports whether id is one of the levels being imported.
+func (im *importer) levelExists(id string) bool {
+	for i := range im.levels {
+		if levelID(i) == id {
+			return true
+		}
+	}
+	return false
+}
 
 // bank decodes resource id as a sprite bank, once.
 func (im *importer) bank(id int) (*SpriteBank, error) {
@@ -369,41 +408,31 @@ func (im *importer) place(list *[]content.Placed, cell content.Cell, id, frame i
 func (im *importer) level(index int, l *Level) (*content.Level, error) {
 	h := &l.Header
 	cl := &content.Level{
-		ID:    levelID(index),
-		Size:  [2]int{l.Rows, l.Columns},
-		Floor: content.NewGrid(l.Rows, l.Columns),
-		Wall:  content.NewGrid(l.Rows, l.Columns),
+		ID:         levelID(index),
+		Size:       [2]int{l.Rows, l.Columns},
+		Floor:      content.NewGrid(l.Rows, l.Columns),
+		Wall:       content.NewGrid(l.Rows, l.Columns),
+		Procedures: map[string][]content.Action{},
 	}
 	var err error
 	if cl.Floors, err = im.floorSet(im.terrain(int(h.FloorBank))); err != nil {
 		return nil, err
 	}
-	for k := range im.pack.Floors[cl.Floors].Variants {
-		cl.FloorTypes = append(cl.FloorTypes, content.FloorType{Variant: k})
-	}
 	if cl.Walls, err = im.wallSet(im.terrain(int(h.WallBank))); err != nil {
 		return nil, err
 	}
+	for i, m := range l.Messages {
+		im.strings[levelMsgID(index, i)] = decode437(m)
+	}
 
-	byCell := map[content.Cell]*Placement{}
-	for i := range l.Placements {
-		p := &l.Placements[i]
-		byCell[content.Cell{int(p.X), int(p.Y)}] = p
+	lb := &levelBuilder{
+		im: im, index: index, l: l, cl: cl,
+		features: map[content.Cell]*content.Feature{}, boulders: map[content.Cell]string{}, thingIDs: map[string]int{},
+		triggers: map[content.Cell]*Placement{}, teleporters: map[content.Cell]*Placement{},
+		exits: map[content.Cell]*Placement{}, doors: map[content.Cell]*Placement{}, mouths: map[content.Cell]*Placement{},
+		usedProcs: map[int]bool{},
 	}
-	armed := func(c content.Cell) bool {
-		p := byCell[c]
-		switch {
-		case p == nil:
-			return false
-		case p.Type == PlaceExit:
-			return true
-		case p.Type == PlaceTeleporter:
-			return p.Extra[0]&teleporterArmed != 0
-		case p.Type == PlaceTrigger:
-			return p.Extra[1] == 0
-		}
-		return false
-	}
+	lb.floorTypes(im.pack.Floors[cl.Floors].Variants)
 
 	for x := range l.Rows {
 		for y := range l.Columns {
@@ -414,7 +443,7 @@ func (im *importer) level(index int, l *Level) (*content.Level, error) {
 				continue
 			case t <= terrainLastWall:
 				cl.Wall[x][y] = t
-				cl.Floor[x][y] = 0
+				cl.Floor[x][y] = lb.plain
 				continue
 			case t > terrainLastHazard:
 				im.report.addf("terrain %02Xh: unknown; not drawn", t)
@@ -422,81 +451,29 @@ func (im *importer) level(index int, l *Level) (*content.Level, error) {
 			case t >= terrainFloor && t < terrainPlate:
 				cl.Floor[x][y] = t - terrainFloor
 			default:
-				cl.Floor[x][y] = 0
+				cl.Floor[x][y] = lb.plain
 			}
-
-			switch {
-			case t >= terrainFloorOverlay && t < terrainFloor:
-				err = im.place(&cl.Overlays, c, im.terrain(int(h.FloorOverlayBank)), t-terrainFloorOverlay, content.Offset{4, 11}, "floor overlay")
-			case t == terrainGemSocket:
-				err = im.gemSocket(cl, c, 0)
-			case t >= terrainPlate && t <= terrainGemSocket:
-				if (t == terrainTeleporter && !armed(c)) || t == terrainTrapdoorShut {
-					continue
+			if t >= terrainHazard {
+				if err := im.place(&cl.Overlays, c, hazardResource, t-terrainHazard, content.Offset{0, 0}, "hazard"); err != nil {
+					return nil, err
 				}
-				err = im.place(&cl.Overlays, c, im.terrain(int(h.PlateBank)), t-terrainPlate, content.Offset{-16, 8}, "plate")
-			case t >= terrainHazard:
-				err = im.place(&cl.Overlays, c, hazardResource, t-terrainHazard, content.Offset{0, 0}, "hazard")
-			}
-			if err != nil {
-				return nil, err
 			}
 		}
 	}
-
 	cl.FloorHalves = floorHalves(l, im.init.Directions)
 
-	for i := range l.Placements {
-		if err := im.feature(cl, l, &l.Placements[i]); err != nil {
-			return nil, err
-		}
+	if err := lb.placements(); err != nil {
+		return nil, err
 	}
+	if err := lb.terrainFeatures(); err != nil {
+		return nil, err
+	}
+	if err := lb.placedFeatures(); err != nil {
+		return nil, err
+	}
+	lb.procedures()
+	lb.finish()
 	return cl, nil
-}
-
-// feature adds what a placement draws: decorations, exits in walls and doors. Everything else
-// in the entity stream belongs to later milestones.
-func (im *importer) feature(cl *content.Level, l *Level, p *Placement) error {
-	h := &l.Header
-	c := content.Cell{int(p.X), int(p.Y)}
-	t := int(l.TerrainAt(c[0], c[1]))
-	wallExit := (p.Type == PlaceTeleporter || p.Type == PlaceExit) && t <= terrainLastWall
-
-	switch {
-	case wallExit:
-		if t != 1 && t != 3 {
-			im.report.addf("exit in a wall of shape %d; drawn as a wall", t)
-			return nil
-		}
-		to, ok := exitDestination(p)
-		if !ok {
-			im.report.addf("in-level teleporter in a wall; drawn as a wall")
-			return nil
-		}
-		look, err := im.exitLook(im.terrain(int(h.ExitWallBank)), t)
-		if err != nil {
-			return err
-		}
-		cl.Features = append(cl.Features, &content.Feature{
-			ID: fmt.Sprintf("exit.%d.%d", c[0], c[1]), Kind: content.FeatureExit, Cell: c, Look: look, To: to,
-		})
-
-	case p.Type == PlaceDecoration:
-		if t != 1 && t != 3 {
-			return nil
-		}
-		ornament, decoration := p.Decoration()
-		if decoration >= len(h.DecorationBanks) {
-			im.report.addf("decoration %d: no such decoration bank; not drawn", decoration)
-			return nil
-		}
-		id := int(im.init.Bases.WallDecoration) + int(h.DecorationBanks[decoration])
-		return im.place(&cl.Decorations, c, id, ornament, content.Offset{8, 8}, "decoration")
-
-	case p.Type == PlaceDoor:
-		return im.door(cl, h, c, p.Extra[0])
-	}
-	return nil
 }
 
 // exitDestination returns where an exit placement leads: a level exit, or a teleporter record of
@@ -512,48 +489,4 @@ func exitDestination(p *Placement) (*content.Destination, bool) {
 		return nil, false
 	}
 	return &content.Destination{Level: levelID(int(level)), Cell: content.Cell{int(x), int(y)}}, true
-}
-
-// door adds a door's two sprites at its initial stage. They are placed from the reference point
-// of the cell's corner, which is (16, 0) from the tile box. An open door is not drawn.
-func (im *importer) door(cl *content.Level, h *LevelHeader, c content.Cell, state byte) error {
-	stage := int(state & doorStageMask)
-	if stage == doorOpen {
-		return nil
-	}
-	id, first := im.terrain(int(h.DoorBank)), 2*stage
-	at := [2]content.Offset{{16 - 33, -3}, {16 - 1, -14}}
-	switch {
-	case stage >= doorFirstSealed:
-		id, first = im.terrain(sealedDoorBank), 4*(stage-doorFirstSealed)
-	case state&doorVertical != 0:
-		id++
-		at = [2]content.Offset{{16 - 30, -14}, {16 + 2, -3}}
-	}
-	for i := range 2 {
-		if err := im.place(&cl.Props, c, id, first+i, at[i], fmt.Sprintf("door stage %d", stage)); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// gemSocket adds a gem socket showing the gems set in mask.
-func (im *importer) gemSocket(cl *content.Level, c content.Cell, mask int) error {
-	at := content.Offset{-1, 16}
-	if mask == gemsAllSet {
-		return im.place(&cl.Overlays, c, im.terrain(gemSocketBank), 1, at, "gem socket")
-	}
-	if err := im.place(&cl.Overlays, c, im.terrain(gemSocketBank), 0, at, "gem socket"); err != nil {
-		return err
-	}
-	for g := range gemCount {
-		if mask&(1<<g) != 0 {
-			o := content.Offset{at[0] + gemOffsets[g][0], at[1] + gemOffsets[g][1]}
-			if err := im.place(&cl.Overlays, c, im.terrain(gemBank), g, o, "gem"); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }

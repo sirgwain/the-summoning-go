@@ -58,6 +58,7 @@ An indexed container of NUL-terminated strings. Every byte before the terminator
 
 - `*word*`-style asterisks mark a keyword (dialogue.md).
 - `@` is replaced by the player's name.
+- `%s` is replaced by a value the game supplies, such as an object's name (messages 87h and 8Fh).
 - The last record is `END` and is not shown.
 
 ## KEYWORDS
@@ -131,12 +132,14 @@ u8 extra[len(type)]
 | 3 | 5 | In-level teleporter record (rules.md) |
 | 4 | 1 | Door, with its initial state byte (rules.md) |
 | 5 | 0 | Unused |
-| 6 | 2 | Boulder: start state, direction |
+| 6 | 2 | Boulder: start state (0 resting, 1 rolling, 2 shuttling), boulder direction 0..3 (entities.md) |
 | 7 | 5 | Trigger: `unused, disarmed, threshold, procedure_a, procedure_b`; armed when `disarmed == 0` |
 | 8 | 4 | Level exit: `marker, level, x, y`; `marker == 0` also places a visible exit marker |
 | 9 | 1 | NPC record id |
 | 10 | 1 | Weight plate (byte unused) |
 | 11 | 1 | Mouth, with its message id in the level's text pool |
+
+The exit's `marker` byte follows what the cell is: 0 a visible exit marker on a floor cell, 1 a pit (25h), 2 a closed trapdoor (27h), 3 an open trapdoor (26h), 4 an exit in a wall. Type 10 occurs only on the gem socket's cell, and type 2 containers only on rune marks (21h–23h).
 
 Objects: each template id becomes an object. If the entry is an NPC, the objects go into its inventory. Otherwise, if the first object is a container, the rest go inside it (an object that does not fit is dropped); else they lie on the floor of the cell.
 
@@ -228,6 +231,24 @@ The copy-protection images: 1-bit PCX files (version 5, RLE). The engine does no
 ## JAZ and saves
 
 JAZ is the game's runtime cache of visited levels and holds no content. The importer ignores it and the game's save files.
+
+## Fixed resources
+
+Resources the game uses by a fixed number rather than through a level header or a record:
+
+| Resource | Use |
+| --- | --- |
+| 56 | Mouth (entities.md) |
+| 60 | Entities that cycle frames 0, 1, 2, 1 (entities.md) |
+| 67 | Floor hazard tiles (world.md) |
+| 99 | Exit marker (entities.md) |
+| terrain base + 37h | Gem socket (world.md) |
+| terrain base + 38h | Gems set in the socket (world.md) |
+| terrain base + 39h | Sealed doors (world.md) |
+| NPC base + 12h | The slow creature bank: speed 2 (creatures.md) |
+| NPC base + 4Dh | The look the player takes when transformed (spells.md) |
+| small-object base + image | An object's inventory image (items.md) |
+| tiny-object base + image | An object's floor image (items.md) |
 
 ## Unknowns
 

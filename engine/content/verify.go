@@ -122,23 +122,28 @@ func (v *verifier) sprite(b *SpriteBank) {
 	if b.Anchors != nil && len(b.Anchors) != b.Frames {
 		v.fail("sprite bank %s: %d anchors for %d frames", id, len(b.Anchors), b.Frames)
 	}
-	for _, name := range sortedKeys(b.Animations) {
-		a := b.Animations[name]
+	v.animations("sprite bank "+id, b.Animations, b.Frames)
+}
+
+// animations checks animations over a sprite of n frames.
+func (v *verifier) animations(owner string, anims map[string]Animation, n int) {
+	for _, name := range sortedKeys(anims) {
+		a := anims[name]
 		if len(a.Frames) == 0 {
-			v.fail("sprite bank %s: animation %s has no frames", id, name)
+			v.fail("%s: animation %s has no frames", owner, name)
 		}
 		for _, f := range a.Frames {
-			if f < 0 || f >= b.Frames {
-				v.fail("sprite bank %s: animation %s uses frame %d of %d", id, name, f, b.Frames)
+			if f < 0 || f >= n {
+				v.fail("%s: animation %s uses frame %d of %d", owner, name, f, n)
 			}
 		}
 		if a.MS.Min < 0 || a.MS.Max < a.MS.Min || (len(a.Frames) > 1 && a.MS.Max == 0) {
-			v.fail("sprite bank %s: animation %s: bad duration %v", id, name, a.MS)
+			v.fail("%s: animation %s: bad duration %v", owner, name, a.MS)
 		}
 		switch a.Mode {
 		case "", AnimLoop, AnimOnce, AnimRandom, AnimFlicker:
 		default:
-			v.fail("sprite bank %s: animation %s: unknown mode %q", id, name, a.Mode)
+			v.fail("%s: animation %s: unknown mode %q", owner, name, a.Mode)
 		}
 	}
 }
@@ -176,7 +181,9 @@ func (v *verifier) thing(t *Thing) {
 	default:
 		v.fail("%s: unknown kind %q", owner, t.Kind)
 	}
-	v.frames(owner, t.Sprite)
+	if n := v.frames(owner, t.Sprite); n >= 0 {
+		v.animations(owner, t.Animations, n)
+	}
 	if t.Facing < 0 || t.Facing > 7 {
 		v.fail("%s: facing %d", owner, t.Facing)
 	}

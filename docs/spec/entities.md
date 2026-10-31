@@ -50,7 +50,7 @@ Where each kind is placed in cell `(a, b)`:
 | Boulder, trap | (32a + 8, 32b − 16) |
 | Exit marker, mouth | (32a − 16, 32b − 24) |
 
-A trap is a kind-5 entity with the level's trap sprite bank, interval 128. A boulder has the level's boulder bank, speed 8, interval 4. An exit marker uses sprite bank 99, a mouth bank 56; both have interval 100.
+A trap is a kind-5 entity with the level's trap sprite bank, interval 128. A boulder has the level's boulder bank, speed 8, interval 4. An exit marker uses resource 99, a mouth resource 56; both have interval 100. Both stand on floor cells: a mouth is drawn up against the wall behind it.
 
 Placing an entity where something already stands crushes it: when the player is placed (teleporting, changing level), whatever stands on it is removed, creatures dropping what they carry; another entity placed on a blocked spot is removed itself.
 
@@ -96,9 +96,24 @@ They do nothing on their own, except:
 
 - A thing on a teleporter is moved by it.
 - Conjured things with a lifetime count it down each update and vanish at 0, leaving any weight plate.
-- Sprite bank 60 entities cycle frames 0, 1, 2, 1.
+- Entities using resource 60 cycle frames 0, 1, 2, 1.
 
 Using a mouth (kind 7) shows its level message (formats.md). Using a creature talks to it (dialogue.md).
+
+## Engine model
+
+The engine places a thing by its **ground point**, the point that decides its cell, and draws its sprite with an **anchor**, the pixel of the sprite drawn at the ground point.
+
+- A thing's ground point is its position plus its kind's standing offset (above).
+- Its sprite's anchor is where the ground point falls relative to the sprite's top-left. For a standing offset `(su, sv)` (both even) that is `(sv − su, su/2 + sv/2)` pixels.
+- A thing placed in a cell has its ground point at the cell's center, `(32a + 16, 32b + 16)`, moved by an offset where the placement above puts it elsewhere.
+
+| Kind | Anchor | Offset from the cell's center |
+| --- | --- | --- |
+| Creature | (18, 19) | (−6, 12) |
+| Boulder, trap | (24, 20) | none |
+
+Exit markers and mouths do not move; the engine models them as cell features drawn at `(8, −20)` from the cell's tile box (rules.md, Import).
 
 ## Unknowns
 

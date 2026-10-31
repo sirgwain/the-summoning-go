@@ -1,7 +1,10 @@
 package summoning
 
 import (
+	"bytes"
+	"fmt"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
@@ -18,10 +21,63 @@ func rawBank(frames, height, widthUnits int, transparent uint8, value func(i int
 	return spriteResource(uint16(frames), uint8(height), uint8(widthUnits), transparent, CompressionRaw, pixels)
 }
 
-// importFixture is a small game. INIT's terrain base is 18 and its wall-decoration base 20 (see
-// initFixture); the level's banks are offsets 0 (walls, 18, caps 19), 2 (floors, 20), 3 (plates,
-// 21), 4 (doors, 22 and 23), 6 (floor overlays, 24), 7 (exit walls, 25), and decoration bank 6
-// (26).
+// textRecord encodes s as a TEXT record.
+func textRecord(s string) []byte {
+	b := make([]byte, 0, len(s)+1)
+	for i := range len(s) {
+		b = append(b, s[i]^textKey)
+	}
+	return append(b, 0)
+}
+
+// Fixture item templates: names from TEXT record fixtureNameBase on.
+const fixtureNameBase = 3
+
+var fixtureItems = []struct {
+	name                                       string
+	size, weight, container, image, flags, cat byte
+}{
+	{"Random Object", 0, 2, 0, 0, 0, 6},
+	{"Dagger", 2, 1, 0, 1, 0, 0x40 | 9},
+	{"Sack", 15, 1, 0x51, 0, 0, 6},
+	{"Key", 1, 1, 0, 1, 0x80, 6},
+	{"Dagger", 2, 1, 0, 1, 0, 0x40 | 9},
+	{"Bag of Lightness", 15, 1, 0x93, 0, 0, 6},
+}
+
+// textFixture is TEXT with the fixture's item names and the engine's messages.
+func textFixture() []byte {
+	recs := make([][]byte, 0x90)
+	for i := range recs {
+		recs[i] = textRecord(fmt.Sprintf("text %d", i))
+	}
+	for i, it := range fixtureItems {
+		recs[fixtureNameBase+i] = textRecord(it.name)
+	}
+	recs[0x8F] = textRecord("The %s doesn't fit")
+	return container(append(recs, textRecord("END"))...)
+}
+
+func objectsFixture() []byte {
+	f := fixture{}.u16(uint16(len(fixtureItems)), fixtureNameBase)
+	for i, it := range fixtureItems {
+		f = f.u8(it.size, byte(i), it.weight, it.container, 0, 0, 0, 0, 0, 0, it.image, it.flags, 0, it.cat, 0)
+	}
+	return f
+}
+
+// npcFixture has record 0, a walker with eight frames in bank 7 (resource 26), and record 1, an
+// animated object.
+func npcFixture() []byte {
+	f := fixture{}.u16(2)
+	f = f.u8(0, 0, 1, 2, 3, 4, 2, 7, 8, 0, 9, 6, 0, 0).u16(behaviorHostile | behaviorCorpse)
+	return f.u8(0, 0, 0, 1, 0, 0, 3, 7, patternFixed, 0, 0, 10, 0, 0).u16(0)
+}
+
+// importFixture is a small game. INIT's terrain base is 18, its NPC base 19, its wall-decoration
+// base 20 and its small and tiny object bases 10 and 12 (see initFixture); the level's banks are
+// offsets 0 (walls, 18, caps 19; also traps and boulders), 2 (floors, 20), 3 (plates, 21), 4
+// (doors, 22 and 23), 6 (floor overlays, 24), 7 (exit walls, 25), and decoration bank 6 (26).
 func importFixture() *Source {
 	in := initFixture()
 	copy(in[len(in)-4:], []byte{0, 1, 1}) // start: level 0, cell (1, 1)
@@ -29,7 +85,10 @@ func importFixture() *Source {
 	colors := fixture{}.u8(16).zeros(256 * 3)
 
 	plus := func(n int) func(int) uint8 { return func(i int) uint8 { return uint8(n + i) } }
-	resources := make([][]byte, 27)
+	resources := make([][]byte, 100)
+	for _, r := range []int{10, 11, 12, 13, mouthResource, exitMarkerResource} {
+		resources[r] = rawBank(1, 2, 1, 0, plus(r))
+	}
 	resources[18] = rawBank(30, 2, 2, 0, plus(1))
 	resources[19] = rawBank(2, 1, 1, 0, plus(100))
 	resources[20] = rawBank(4, 2, 1, 0xFF, plus(50))
@@ -51,14 +110,31 @@ func importFixture() *Source {
 	)
 	level = level.
 		u8(0, 1, 0, 0, uint8(PlaceDecoration), 3).
-		u8(0, 2, 0, 0, uint8(PlaceExit), 0, 0, 2, 3).
+		u8(0, 2, 0, 0, uint8(PlaceExit), 4, 0, 2, 3).
 		u8(2, 1, 0, 0, uint8(PlaceDoor), doorVertical).
-		u8(2, 2, 0, 0, uint8(PlaceTeleporter), teleporterArmed, 0, 0, 0, 0).
+		u8(2, 2, 0, 0, uint8(PlaceTeleporter), teleporterArmed, 0, 0xFF, 0, 1).
 		u8(1, 3, 0, 0, uint8(PlaceTeleporter), 0, 0, 0, 0, 0).
-		u8(0xFF, 0xFF).
-		u16(0, 0)
+		// The slot takes the Key and runs procedure 0; the plate runs 1.
+		u8(2, 0, 0, 0, uint8(PlaceTrigger), 0, 0, 3, 0, noProcedure).
+		u8(1, 2, 0, 0, uint8(PlaceTrigger), 0, 0, 50, 1, noProcedure).
+		// A creature carrying a Dagger, with a trap; a shuttling boulder; a Sack holding the Key
+		// and a random object; a mouth.
+		u8(1, 1, 1, 1, 1, uint8(PlaceNPC), 0).
+		u8(1, 1, 0, 0, uint8(PlaceBoulder), boulderShuttling, 1).
+		u8(1, 2, 3, 2, 3, 0, 0, uint8(PlaceContainer), 0).
+		u8(1, 0, 0, 0, uint8(PlaceMouth), 0).
+		u8(0xFF, 0xFF)
+	level = level.u16(6).str("Hello\x00")
+	// Procedure 0 opens the door; procedure 1 makes a Dagger, sets the plate's threshold and rolls
+	// the boulder.
+	script := fixture{}.u8(1, 0, 2, 1, 0, 0).u8(3, 11, 1, 0, 1, 0, 10, 1, 2, 99, 0, 5, 1, 1, 4, 0)
+	level = level.u16(uint16(len(script)))
+	level = append(level, script...)
 
-	return &Source{Colors: colors, Init: in, Resource: container(resources...), Levels: container(level)}
+	return &Source{
+		Colors: colors, Init: in, Resource: container(resources...), Levels: container(level),
+		Text: textFixture(), Objects: objectsFixture(), NPC: npcFixture(),
+	}
 }
 
 func TestImport(t *testing.T) {
@@ -98,32 +174,154 @@ func TestImport(t *testing.T) {
 	if want := []content.FloorType{{Variant: 0}, {Variant: 1}}; !reflect.DeepEqual(l.FloorTypes, want) {
 		t.Errorf("floor types %+v", l.FloorTypes)
 	}
-	wantFeatures := []*content.Feature{{
-		ID: "exit.0.2", Kind: content.FeatureExit, Cell: content.Cell{0, 2}, Look: "look.exit.25.3",
-		To: &content.Destination{Level: "level.00", Cell: content.Cell{2, 3}},
-	}}
-	if !reflect.DeepEqual(l.Features, wantFeatures) {
-		t.Errorf("features %+v", l.Features)
-	}
-
-	wantOverlays := []content.Placed{
-		{Cell: content.Cell{1, 2}, Sprite: "sprite.res.21", Frame: 0, Offset: content.Offset{-16, 8}},
-		{Cell: content.Cell{2, 0}, Sprite: "sprite.res.24", Frame: 0, Offset: content.Offset{4, 11}},
-		{Cell: content.Cell{2, 2}, Sprite: "sprite.res.21", Frame: 5, Offset: content.Offset{-16, 8}},
-	}
-	if !reflect.DeepEqual(l.Overlays, wantOverlays) {
-		t.Errorf("overlays %+v\nwant %+v", l.Overlays, wantOverlays)
+	if len(l.Overlays) != 0 || len(l.Props) != 0 {
+		t.Errorf("fixed art %+v %+v", l.Overlays, l.Props)
 	}
 	wantDecorations := []content.Placed{{Cell: content.Cell{0, 1}, Sprite: "sprite.res.26", Frame: 3, Offset: content.Offset{8, 8}}}
 	if !reflect.DeepEqual(l.Decorations, wantDecorations) {
 		t.Errorf("decorations %+v", l.Decorations)
 	}
-	wantProps := []content.Placed{
-		{Cell: content.Cell{2, 1}, Sprite: "sprite.res.23", Frame: 0, Offset: content.Offset{-14, -14}},
-		{Cell: content.Cell{2, 1}, Sprite: "sprite.res.23", Frame: 1, Offset: content.Offset{18, -3}},
+}
+
+func TestImportFeatures(t *testing.T) {
+	p, _, err := Import(importFixture())
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(l.Props, wantProps) {
-		t.Errorf("props %+v", l.Props)
+	l := p.Levels["level.00"]
+	cell := func(x, y int) content.Cell { return content.Cell{x, y} }
+	want := []*content.Feature{
+		{ID: "exit.0.2", Kind: content.FeatureExit, Cell: cell(0, 2), Look: "look.exit.25.3",
+			To: &content.Destination{Level: "level.00", Cell: cell(2, 3)}},
+		{ID: "mouth.1.0", Kind: content.FeatureMouth, Cell: cell(1, 0), Look: "look.mouth", Message: "msg.l00.0"},
+		{ID: "plate.1.2", Kind: content.FeaturePlate, Cell: cell(1, 2), Look: "look.plate.21", Armed: true, Threshold: 50, OnPress: "p1"},
+		{ID: "teleporter.1.3", Kind: content.FeatureTeleporter, Cell: cell(1, 3), Look: "look.teleporter.21",
+			Destinations: []content.Cell{cell(1, 3), cell(1, 3)}},
+		{ID: "slot.2.0", Kind: content.FeatureSlot, Cell: cell(2, 0), Look: "look.slot.24.0", Accepts: "item.key", Armed: true, OnInsert: "p0"},
+		{ID: "door.2.1", Kind: content.FeatureDoor, Cell: cell(2, 1), Look: "look.door.23.v", State: content.DoorClosed},
+		// Jumps (0, 0) and (−1, +1).
+		{ID: "teleporter.2.2", Kind: content.FeatureTeleporter, Cell: cell(2, 2), Look: "look.teleporter.21", Armed: true,
+			Destinations: []content.Cell{cell(2, 2), cell(1, 3)}},
+	}
+	if len(l.Features) != len(want) {
+		t.Fatalf("%d features, want %d: %+v", len(l.Features), len(want), l.Features)
+	}
+	for i := range want {
+		if !reflect.DeepEqual(l.Features[i], want[i]) {
+			t.Errorf("feature %d\n%+v\nwant\n%+v", i, *l.Features[i], *want[i])
+		}
+	}
+
+	door := p.Looks["look.door.23.v"]
+	if door.Layer != content.LayerStand || len(door.States["open"]) != 0 || len(door.States["2"]) != 2 ||
+		door.States["2"][0] != (content.LookPart{Sprite: "sprite.res.23", Frame: 4, Offset: content.Offset{-14, -14}}) {
+		t.Errorf("door look %+v", door)
+	}
+	if m := p.Looks["look.mouth"].States["mouth"]; len(m) != 1 || m[0].Offset != (content.Offset{8, -20}) {
+		t.Errorf("mouth look %+v", m)
+	}
+
+	dagger, key, door2 := "item.dagger", "item.key", "door.2.1"
+	wantProcs := map[string][]content.Action{
+		"p0": {{On: &door2}},
+		"p1": {
+			{Create: &content.Create{Cell: cell(1, 0), Item: dagger}},
+			{SetThreshold: &content.SetThreshold{Feature: "plate.1.2", Value: 99}},
+			{Roll: &content.Roll{Thing: "boulder.1.1", Direction: 4}},
+		},
+	}
+	if !reflect.DeepEqual(l.Procedures, wantProcs) {
+		t.Errorf("procedures %+v", l.Procedures)
+	}
+
+	offset := content.Offset{-6, 12}
+	wantThings := []*content.PlacedThing{
+		{ID: "creature.1.1", Thing: "thing.npc.0", Cell: cell(1, 1), Offset: &offset, Items: []content.Object{{Item: dagger}}},
+		{ID: "trap.1.1", Thing: "thing.trap.18", Cell: cell(1, 1)},
+		{ID: "boulder.1.1", Thing: "thing.boulder.18", Cell: cell(1, 1), Rolling: &content.Rolling{Direction: 2, Shuttle: true}},
+	}
+	if !reflect.DeepEqual(l.Things, wantThings) {
+		t.Errorf("things %+v", l.Things)
+	}
+	wantObjects := []*content.FloorObject{
+		{Cell: cell(1, 2), Object: content.Object{Item: "item.sack", Contents: []content.Object{{Item: key}, {Item: content.RandomItem}}}},
+	}
+	if !reflect.DeepEqual(l.Objects, wantObjects) {
+		t.Errorf("objects %+v", l.Objects)
+	}
+	if p.Texts["text.en"].Strings["msg.l00.0"] != "Hello" {
+		t.Error("level message not in the text")
+	}
+}
+
+func TestImportCatalog(t *testing.T) {
+	p, _, err := Import(importFixture())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	for id := range p.Items {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	if want := []string{"item.bag_of_lightness", "item.dagger", "item.dagger.2", "item.key", "item.random_object", "item.sack"}; !reflect.DeepEqual(ids, want) {
+		t.Errorf("items %v", ids)
+	}
+	dagger := p.Items["item.dagger"]
+	if dagger.Name != "msg.4" || !reflect.DeepEqual(dagger.Tags, []string{"weapon"}) || !dagger.Random ||
+		dagger.Icon != (content.Image{Sprite: "sprite.res.11", Frame: 0}) || dagger.Floor != (content.Image{Sprite: "sprite.res.13", Frame: 0}) {
+		t.Errorf("dagger %+v", dagger)
+	}
+	if p.Items["item.key"].Random || p.Items["item.random_object"].Random != true {
+		t.Error("random items wrong")
+	}
+	if c := p.Items["item.bag_of_lightness"].Container; c == nil || c.Capacity != 4 || c.Largest != 9 || !c.Weightless {
+		t.Errorf("bag %+v", c)
+	}
+	if c := p.Items["item.sack"].Container; c == nil || c.Weightless {
+		t.Errorf("sack %+v", c)
+	}
+	if p.Messages.Messages[content.MsgSlotWrongItem] != "msg.143" || p.Texts["text.en"].Strings["msg.143"] != "The {item} doesn't fit" {
+		t.Errorf("messages %+v", p.Messages.Messages)
+	}
+
+	npc := p.Things["thing.npc.0"]
+	wantAnims := map[string]content.Animation{
+		"idle.0": {Frames: []int{0}}, "walk.0": {Frames: []int{0, 4}, MS: content.Fixed(330)}, "attack.0": {Frames: []int{4}},
+		"idle.2": {Frames: []int{1}}, "walk.2": {Frames: []int{1, 5}, MS: content.Fixed(330)}, "attack.2": {Frames: []int{5}},
+		"idle.4": {Frames: []int{2}}, "walk.4": {Frames: []int{2, 6}, MS: content.Fixed(330)}, "attack.4": {Frames: []int{6}},
+		"idle.6": {Frames: []int{3}}, "walk.6": {Frames: []int{3, 7}, MS: content.Fixed(330)}, "attack.6": {Frames: []int{7}},
+		"dead": {Frames: []int{7}},
+	}
+	if npc.Kind != content.ThingCreature || npc.Sprite != "sprite.res.26" || npc.Facing != 4 || npc.IntervalMS != 330 ||
+		npc.HitPoints != (content.Dice{Count: 2, Sides: 10, Bonus: 4}) ||
+		!reflect.DeepEqual(npc.Behaviors, []string{content.BehaviorHostile, content.BehaviorLeavesCorpse}) ||
+		!reflect.DeepEqual(npc.Animations, wantAnims) {
+		t.Errorf("creature %+v", npc)
+	}
+	if a := p.Sprites["sprite.res.26"].Anchor; a == nil || *a != (content.Offset{18, 19}) {
+		t.Errorf("creature anchor %v", a)
+	}
+	if b := p.Things["thing.boulder.18"]; b.Kind != content.ThingBoulder || !reflect.DeepEqual(b.Animations["roll.4"].Frames, []int{4, 3, 2, 1, 0}) {
+		t.Errorf("boulder %+v", b)
+	}
+}
+
+func TestImportStillObject(t *testing.T) {
+	src := importFixture()
+	levels, _ := ReadContainer(src.Levels)
+	level := append([]byte(nil), levels[0]...)
+	// Place record 1, an animated object showing frame 3, instead of record 0.
+	i := bytes.Index(level, []byte{1, 1, 1, 1, 1, uint8(PlaceNPC), 0})
+	level[i+6] = 1
+	src.Levels = container(level)
+	p, _, err := Import(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	obj := p.Things["thing.npc.1"]
+	if obj.Speed != 0 || obj.Facing != 0 || !reflect.DeepEqual(obj.Animations, map[string]content.Animation{"idle": {Frames: []int{3}}}) {
+		t.Errorf("animated object %+v", obj)
 	}
 }
 

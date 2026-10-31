@@ -61,7 +61,8 @@ func testPack() *Pack {
 		Icon: Image{"sprite.tiles", 2}, Floor: Image{"sprite.tiles", 2}}
 	p.Things["thing.guard"] = &Thing{ID: "thing.guard", Kind: ThingCreature, Sprite: "sprite.npc", Facing: 2,
 		Speed: 8, IntervalMS: 330, Weight: 100, HitPoints: Dice{3, 10, 8},
-		Behaviors: []string{BehaviorHostile}, Stats: map[string]int{"accuracy": 10}}
+		Behaviors: []string{BehaviorHostile}, Stats: map[string]int{"accuracy": 10},
+		Animations: map[string]Animation{"idle.4": {Frames: []int{2}}}}
 	p.Things["thing.boulder"] = &Thing{ID: "thing.boulder", Kind: ThingBoulder, Sprite: "sprite.npc", Speed: 8, IntervalMS: 220, Weight: 100}
 
 	l := &Level{ID: "level.00", Name: "", Size: [2]int{2, 3}, Floors: "floors.a", Walls: "walls.a"}
@@ -159,6 +160,26 @@ func TestWriteLoad(t *testing.T) {
 	}
 }
 
+func TestAnimation(t *testing.T) {
+	p := testPack()
+	guard := p.Things["thing.guard"]
+	for _, tc := range []struct {
+		names []string
+		frame int
+		ok    bool
+	}{
+		{[]string{"idle.4", "idle"}, 2, true}, // the thing's own
+		{[]string{"idle.0", "idle"}, 0, true}, // falls back to the sprite's idle
+		{[]string{"walk.2"}, 0, true},         // the sprite's
+		{[]string{"attack.2"}, 0, false},
+	} {
+		a, ok := p.Animation(guard, tc.names...)
+		if ok != tc.ok || (ok && a.Frames[0] != tc.frame) {
+			t.Errorf("%v: %+v %v", tc.names, a, ok)
+		}
+	}
+}
+
 func TestDice(t *testing.T) {
 	for s, want := range map[string]Dice{"3d10+8": {3, 10, 8}, "2d2": {2, 2, 0}, "5": {0, 0, 5}} {
 		d, err := ParseDice(s)
@@ -217,6 +238,7 @@ func TestVerify(t *testing.T) {
 			p.Sprites["sprite.npc"].Animations["idle"] = Animation{Frames: []int{0}, Mode: "bounce"}
 		}, "unknown mode"},
 		"anchors":         {func(p *Pack) { p.Sprites["sprite.npc"].Anchors = []Offset{{0, 0}} }, "anchors"},
+		"thing anim":      {func(p *Pack) { p.Things["thing.guard"].Animations = map[string]Animation{"idle": {Frames: []int{3}}} }, "frame 3 of 3"},
 		"look layer":      {func(p *Pack) { p.Looks["look.plate"].Layer = "sky" }, "unknown layer"},
 		"look frame":      {func(p *Pack) { p.Looks["look.plate"].States["up"][0].Frame = 9 }, "frame 9"},
 		"item text":       {func(p *Pack) { p.Items["item.key"].Name = "item.nope" }, "not in text.en"},

@@ -19,6 +19,8 @@ import (
 func init() {
 	var level, screenshot string
 	var scale, shotTicks int
+	var magnify bool
+	var at []int
 	viewCmd := &cobra.Command{
 		Use:   "view [pack-dir]",
 		Short: "Look around a content pack's levels",
@@ -26,7 +28,7 @@ func init() {
 
 Arrows or WASD (with Shift, faster) or dragging with the mouse move the view. Scrolling zooms
 around the cursor, as do + and - around the center. Page Up and Page Down (or [ and ]) change
-level, Home recenters.`,
+level, Home recenters, M magnifies objects on the floor.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := "packs/summoning"
@@ -37,11 +39,16 @@ level, Home recenters.`,
 			if err != nil {
 				return err
 			}
-			v, err := newViewer(pack, level, scale)
+			v, err := newViewer(pack, level, scale, magnify)
 			if err != nil {
 				return err
 			}
 			v.screenshot, v.shotTicks = screenshot, int64(shotTicks)
+			if len(at) == 2 {
+				v.centerOn(content.Cell{at[0], at[1]})
+			} else if len(at) != 0 {
+				return fmt.Errorf("--at wants a cell as x,y")
+			}
 			ebiten.SetWindowTitle("The Summoning: " + pack.Manifest.Name)
 			ebiten.SetWindowSize(1280, 800)
 			ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
@@ -50,6 +57,8 @@ level, Home recenters.`,
 	}
 	viewCmd.Flags().StringVar(&level, "level", "", "level id to open (default: the start level)")
 	viewCmd.Flags().IntVar(&scale, "scale", 2, "pixels per art pixel")
+	viewCmd.Flags().IntSliceVar(&at, "at", nil, "center the view on this cell, as x,y")
+	viewCmd.Flags().BoolVar(&magnify, "magnify", false, "start with objects on the floor magnified")
 	viewCmd.Flags().StringVar(&screenshot, "screenshot", "", "save a frame to this PNG file and exit")
 	viewCmd.Flags().IntVar(&shotTicks, "screenshot-ticks", 0, "updates to run before the screenshot")
 	rootCmd.AddCommand(viewCmd)
@@ -71,6 +80,8 @@ type viewer struct {
 	levels  []string
 	current int
 	view    *render.LevelView
+	// magnify draws floor objects with their inventory image.
+	magnify bool
 	// origin is the view pixel at the buffer's top-left.
 	origin image.Point
 	scale  int
@@ -87,7 +98,7 @@ type viewer struct {
 	err        error
 }
 
-func newViewer(p *content.Pack, level string, scale int) (*viewer, error) {
+func newViewer(p *content.Pack, level string, scale int, magnify bool) (*viewer, error) {
 	pr, err := render.NewPresenter()
 	if err != nil {
 		return nil, err
@@ -98,6 +109,7 @@ func newViewer(p *content.Pack, level string, scale int) (*viewer, error) {
 		presenter: pr,
 		palette:   p.Palettes[p.Manifest.Palette],
 		scale:     max(1, min(scale, maxScale)),
+		magnify:   magnify,
 		screen:    image.Pt(1280, 800),
 	}
 	for id := range p.Levels {
@@ -118,22 +130,37 @@ func newViewer(p *content.Pack, level string, scale int) (*viewer, error) {
 }
 
 func (v *viewer) open(i int) error {
+	if err := v.build(i); err != nil {
+		return err
+	}
+	v.recenter()
+	return nil
+}
+
+// build prepares level i for drawing, keeping the view where it is.
+func (v *viewer) build(i int) error {
 	l := v.pack.Levels[v.levels[i]]
-	lv, err := render.NewLevelView(v.pack, v.sprites, l)
+	lv, err := render.NewLevelView(v.pack, v.sprites, l, drawlist.Options{Magnify: v.magnify})
 	if err != nil {
 		return err
 	}
 	v.current, v.view = i, lv
-	v.recenter()
 	return nil
 }
 
 // recenter centers the view on the start cell on the start level, else on the level.
 func (v *viewer) recenter() {
-	center := v.view.Bounds().Min.Add(v.view.Bounds().Max).Div(2)
 	if s := v.pack.Manifest.Start; s.Level == v.levels[v.current] {
-		center = drawlist.TileBox(s.Cell).Add(image.Pt(16, 16))
+		v.centerOn(s.Cell)
+		return
 	}
+	center := v.view.Bounds().Min.Add(v.view.Bounds().Max).Div(2)
+	v.origin = center.Sub(v.bufferSize().Div(2))
+}
+
+// centerOn centers the view on cell c.
+func (v *viewer) centerOn(c content.Cell) {
+	center := drawlist.TileBox(c).Add(image.Pt(drawlist.TileSize/2, drawlist.TileSize/2))
 	v.origin = center.Sub(v.bufferSize().Div(2))
 }
 
@@ -197,6 +224,9 @@ func (v *viewer) Update() error {
 		v.zoom(-1)
 	case justPressed(ebiten.KeyHome):
 		v.recenter()
+	case justPressed(ebiten.KeyM):
+		v.magnify = !v.magnify
+		v.err = v.build(v.current)
 	}
 	return v.err
 }
@@ -250,7 +280,7 @@ func (v *viewer) Draw(screen *ebiten.Image) {
 		v.shotTaken = true
 		v.err = saveScreenshot(screen, v.screenshot)
 	}
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("%s (%d/%d)  scale %d  [ ] level  scroll or +/- zoom  Home recenter",
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("%s (%d/%d)  scale %d  [ ] level  scroll or +/- zoom  Home recenter  M magnify",
 		v.levels[v.current], v.current+1, len(v.levels), v.scale))
 }
 

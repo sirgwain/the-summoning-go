@@ -22,7 +22,9 @@ OBJECTS holds 254 templates of 15 bytes. An object is an instance of a template 
 
 **Categories.** 1 body armor ("shirts"), 4 quiver, 7 arrows, 8 bottles (break into Broken Glass, template 0Ch); categories 9..12 are weapon classes 0..3 (a weapon's class is its category − 9). Weapons have the 40h flag.
 
-**Template 0** in a level is a random object: any template that is not never-random and is a weapon or of category 6.
+**Template 0** ("Random Object") in a level is a random object: any template that is not never-random and is a weapon or of category 6.
+
+**The Bag of Lightness** is template 05h.
 
 ## Object values
 
@@ -182,6 +184,19 @@ Throwing is not possible in water of depth 3 or more.
 - **Transmuting** (spells.md) turns the held object into: Amethyst → Teiwaz, Emerald → Isa, Ruby → Algit, Diamond → Snake Oil, NightShade Leftovers → Isa, anything else → Jera.
 - **Mending** joins the two staff halves D8h and D9h held in the hands into DAh.
 - **Gems** C0h–C5h are gems 1–6 for the gem socket (rules.md).
+
+## Import
+
+Each template becomes an item:
+
+- **Id**: `item.` and its name in lowercase, with runs of other characters as `_` (`item.bag_of_lightness`). A name used by several templates numbers the later ones from 2 in template order (`item.rainbow_sphere.2`).
+- **Name**: the name's text. **Weight** and **size** as given.
+- **Container**: present when byte 3 is not 0, with its capacity and largest size; weightless for the Bag of Lightness.
+- **Tags** by category: 1 `body_armor`, 4 `quiver`, 7 `arrows`, 8 `bottle`; `weapon` with the 40h flag, `two_handed` with 80h.
+- **Random**: a template that may be picked for a random object (above).
+- **Icon** and **floor** images: frame 0 of the small and tiny images.
+
+Template 0 in a level becomes a random object rather than the item itself.
 
 ## Unknowns
 

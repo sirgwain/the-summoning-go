@@ -34,7 +34,7 @@ The view is drawn back to front: by increasing `a + b` (screen row), and within 
 | 10h | Closed door, horizontal | no |
 | 11h | Closed door, vertical | no |
 | 12h–14h | Unused (drawn black) | no |
-| 15h | Floor under a door in motion | no |
+| 15h | Floor under a door in motion; sealed doors stand on it | no |
 | 16h | Door opening | no |
 | 17h, 18h | Item slot (keyhole, object hole) | yes |
 | 19h, 1Ah | Lever, two positions | yes |
@@ -148,6 +148,21 @@ The header's liquid kind:
 - **2, fire.** Entering a cell of terrain 1Bh–1Eh hurts the player 2d2 fire damage. Every status tick (player.md) on the level hurts 2d2 fire damage wherever the player stands. Fire immunity and levitation prevent both.
 - **1, water-like.** Terrain 1Dh hurts the player 1 on entering, and creatures avoid it. Terrain 1Eh drains 1 magic point on entering.
 - **Deep water** (formats.md): terrain 1Bh, 1Ch, 1Dh, 1Eh are depths 1, 2, 3, 4. At depth 4, every move has a 1 in 4 chance of costing 1 hit point, and every status tick costs 1, unless the player levitates. At depth 3 or more the player cannot throw or use hand actions.
+
+## Import
+
+**Floor types.** Terrain 1Bh–1Eh becomes floor types 0–3, drawing floor variants 0–3. Every other cell with a floor (walls, doors, plates, levers, slots, marks, teleporters, pits, trapdoors, the socket, hazards) draws variant 0; on a level with liquid effects these get a plain type of their own, so the effects stay on 1Bh–1Eh:
+
+| Level | Types 0–3 (1Bh–1Eh) | Plain type |
+| --- | --- | --- |
+| No liquid | variants 0–3 | type 0 |
+| Water-like (1) | 1Dh enters for 1 damage and is avoided; 1Eh enters for 1 magic point | variant 0 |
+| Fire (2) | enters for 2d2 fire damage; every status tick 2d2 fire | variant 0, every status tick 2d2 fire |
+| Deep water | depths 1–4; objects sink | variant 0; objects sink |
+
+**Wall shapes.** Shapes 0, 2, 4 and 5 are diagonal; 1 and 3 are faces.
+
+**Features.** A cell's terrain and its placement (formats.md) make its feature (rules.md, Import). Hazard tiles (29h–35h) stay fixed art.
 
 ## Unknowns
 

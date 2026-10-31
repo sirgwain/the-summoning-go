@@ -68,9 +68,9 @@ type LevelView struct {
 }
 
 // NewLevelView prepares level l for drawing.
-func NewLevelView(p *content.Pack, s *Sprites, l *content.Level) (*LevelView, error) {
+func NewLevelView(p *content.Pack, s *Sprites, l *content.Level, opts drawlist.Options) (*LevelView, error) {
 	v := &LevelView{
-		cmds:   drawlist.Build(p, l),
+		cmds:   drawlist.Build(p, l, opts),
 		blank:  ebiten.NewImage(drawlist.TileSize, drawlist.TileSize),
 		bounds: drawlist.Bounds(l),
 	}

@@ -110,6 +110,22 @@ xp = (byte 3)d10 + 4 × byte 2 + 13 × byte 5 + byte 10 + byte 4
      + 123 if behavior & 0040h
 ```
 
+## Import
+
+Each NPC record `n` becomes a thing template `thing.npc.n` of kind creature:
+
+- **Sprite**: NPC base + byte 7, with the creature anchor (entities.md). **Speed** as under Spawning, 0 for animated objects. **Interval**: byte 11 in milliseconds (`ticks × 1000 / 18.2`, rounded). **Weight** 100.
+- **Hit points**: `(byte 3)d10 + 4 × byte 2`.
+- **Facing**: for walkers, direction table entry `2 × byte 6`; for stationary casters, 2.
+- **Behaviors**: `hostile` (0100h), `never_hostile` (0004h or 1000h), `leaves_corpse` (0010h), `resists_teleport` (0200h), `invulnerable` (1000h).
+- **Stats**: `resistance` (byte 4), `bonus` (byte 5), `accuracy` (byte 10).
+- **Animations**, the template's own (the sprite is shared by records that start on different frames), named by engine direction `e = 2d` for a creature direction `d`:
+  - walkers with `n` frames: `idle.e` frame `d`; `walk.e` frames `d, d + 4` (with more than 12 frames, `d, d + 4, d, d + 8`); `attack.e` frame `d + n − 4`, all modulo `n`; `dead` frame `n − 1`;
+  - stationary casters: `idle.2` frame 0 and `idle.6` frame 1;
+  - animated objects: `idle`, a still frame for now: byte 6 for pattern 100, 0 for the others.
+
+Each frame lasts the interval.
+
 ## Unknowns
 
 - Behavior bit 0008h.

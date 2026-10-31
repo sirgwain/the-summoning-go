@@ -66,6 +66,26 @@ type Thing struct {
 	HitPoints Dice           `json:"hit_points,omitzero"`
 	Behaviors []string       `json:"behaviors,omitempty"`
 	Stats     map[string]int `json:"stats,omitempty"`
+	// Animations are the thing's own; a name it does not have comes from its sprite.
+	Animations map[string]Animation `json:"animations,omitempty"`
+}
+
+// Animation returns the animation the thing shows under name, falling back as docs/pack.md
+// says: the thing's own, then its sprite's, for name, then for each fallback in turn. It
+// returns false when neither has any of them.
+func (p *Pack) Animation(t *Thing, names ...string) (Animation, bool) {
+	sprite := p.Sprites[t.Sprite]
+	for _, n := range names {
+		if a, ok := t.Animations[n]; ok {
+			return a, true
+		}
+		if sprite != nil {
+			if a, ok := sprite.Animations[n]; ok {
+				return a, true
+			}
+		}
+	}
+	return Animation{}, false
 }
 
 // Has reports whether the thing has behavior b.
