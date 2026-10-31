@@ -72,7 +72,7 @@ engine/content/        pack schema (Go structs), loader, validation, mod overlay
 engine/render/         palette shader, sprite atlases, world draw list, effects
 engine/ui/             panels, quickbar, windows, text, pointer, gestures
 engine/audio/          music and effects
-engine/input/          commands and bindings
+engine/input/          commands (plain data, no Ebitengine); bindings in a subpackage
 engine/save/           save format
 importers/summoning/   reads the original files, writes a content pack
 docs/
