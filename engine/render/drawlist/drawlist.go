@@ -14,12 +14,15 @@ import (
 // Cmd draws one sprite frame, or the part of it Part names, with its top-left corner at (X, Y),
 // in view pixels relative to the tile box of cell (0, 0). A Cmd with no Sprite blanks a tile box,
 // or the part of one, at (X, Y) instead. Thing names the thing a Cmd draws, if it draws one.
+// Fixed draws with the palette's own colors rather than its effects: the player's figure and
+// what it holds (docs/pack.md, Palettes).
 type Cmd struct {
 	Sprite string
 	Frame  int
 	X, Y   int
 	Part   Part
 	Thing  string
+	Fixed  bool
 }
 
 // Scene is a level as it is to be drawn: its definition's fixed art, and the grids, features,
@@ -403,7 +406,7 @@ func thingCmd(p *content.Pack, t Thing) (Cmd, content.Cell, bool) {
 	anchor, _ := sprite.AnchorOf(frame)
 	at := RefPoint(t.U, t.V).Sub(image.Pt(anchor[0], anchor[1]))
 	cell := content.Cell{floorDiv(t.U, CellUnits), floorDiv(t.V, CellUnits)}
-	return Cmd{Sprite: tmpl.Sprite, Frame: frame, X: at.X, Y: at.Y, Thing: t.ID}, cell, true
+	return Cmd{Sprite: tmpl.Sprite, Frame: frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: tmpl.Kind == content.ThingPlayer}, cell, true
 }
 
 // heldCmds draws thing t's frame cmd with the layers of the items in its hands: the layers behind
@@ -429,7 +432,7 @@ func heldCmds(p *content.Pack, t Thing, cmd Cmd) []Cmd {
 			}
 			anchor, _ := sprite.AnchorOf(cmd.Frame)
 			at := RefPoint(t.U, t.V).Sub(image.Pt(anchor[0], anchor[1]))
-			*layer.into = append(*layer.into, Cmd{Sprite: layer.sprite, Frame: cmd.Frame, X: at.X, Y: at.Y, Thing: t.ID})
+			*layer.into = append(*layer.into, Cmd{Sprite: layer.sprite, Frame: cmd.Frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: cmd.Fixed})
 		}
 	}
 	return append(append(behind, cmd), front...)

@@ -9,12 +9,15 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/colorm"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/render/drawlist"
 )
 
 // Index images hold a palette index in the red channel. Alpha is 0 where nothing is drawn and
-// 255 elsewhere, so drawing them with the default blend copies indexes exactly.
+// 255 elsewhere, so drawing them with the default blend copies indexes exactly. In the world
+// buffer, green is 255 where a fixed command drew (drawlist.Cmd.Fixed): those indexes are looked
+// up in the palette's own colors, not its animated ones.
 
 // Sprites holds the pack's sprite banks as index images, one per frame.
 type Sprites struct {
@@ -117,10 +120,19 @@ func (v *LevelView) Bounds() image.Rectangle { return v.bounds }
 func (v *LevelView) Draw(dst *ebiten.Image, origin image.Point) {
 	view := dst.Bounds().Add(origin)
 	var op ebiten.DrawImageOptions
+	var fixedOp colorm.DrawImageOptions
+	var fixed colorm.ColorM
+	fixed.Translate(0, 1, 0, 0)
 	for i, c := range v.cmds {
 		img := v.images[i]
 		r := img.Bounds().Sub(img.Bounds().Min).Add(image.Pt(c.X, c.Y))
 		if !r.Overlaps(view) {
+			continue
+		}
+		if c.Fixed && c.Sprite != "" {
+			fixedOp.GeoM.Reset()
+			fixedOp.GeoM.Translate(float64(c.X-origin.X), float64(c.Y-origin.Y))
+			colorm.DrawImage(dst, img, fixed, &fixedOp)
 			continue
 		}
 		op.GeoM.Reset()
@@ -137,11 +149,15 @@ const paletteShaderSrc = `//kage:unit pixels
 package main
 
 var Palette [256]vec4
+var Fixed [256]vec4
 
 func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 	c := imageSrc0At(srcPos)
 	if c.a == 0 {
 		return vec4(0, 0, 0, 1)
+	}
+	if c.g > 0.5 {
+		return Fixed[int(c.r*255+0.5)]
 	}
 	return Palette[int(c.r*255+0.5)]
 }
@@ -149,8 +165,8 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 
 // Presenter shows an index image on the screen through a palette.
 type Presenter struct {
-	shader  *ebiten.Shader
-	palette []float32
+	shader         *ebiten.Shader
+	palette, fixed []float32
 }
 
 // NewPresenter compiles the palette shader.
@@ -159,17 +175,23 @@ func NewPresenter() (*Presenter, error) {
 	if err != nil {
 		return nil, fmt.Errorf("palette shader: %w", err)
 	}
-	return &Presenter{shader: sh, palette: make([]float32, 256*4)}, nil
+	return &Presenter{shader: sh, palette: make([]float32, 256*4), fixed: make([]float32, 256*4)}, nil
 }
 
-// SetColors sets the colors indexes are looked up in, such as a palette's colors at a moment of
-// its effects (content.Palette.At).
-func (pr *Presenter) SetColors(colors [256]color.RGBA) {
+// SetColors sets the colors indexes are looked up in: colors, such as a palette's colors at a
+// moment of its effects (content.Palette.At), and fixed for what fixed commands drew, such as the
+// palette's own colors.
+func (pr *Presenter) SetColors(colors, fixed [256]color.RGBA) {
+	setUniform(pr.palette, colors)
+	setUniform(pr.fixed, fixed)
+}
+
+func setUniform(u []float32, colors [256]color.RGBA) {
 	for i, c := range colors {
-		pr.palette[4*i] = float32(c.R) / 255
-		pr.palette[4*i+1] = float32(c.G) / 255
-		pr.palette[4*i+2] = float32(c.B) / 255
-		pr.palette[4*i+3] = 1
+		u[4*i] = float32(c.R) / 255
+		u[4*i+1] = float32(c.G) / 255
+		u[4*i+2] = float32(c.B) / 255
+		u[4*i+3] = 1
 	}
 }
 
@@ -177,7 +199,7 @@ func (pr *Presenter) SetColors(colors [256]color.RGBA) {
 func (pr *Presenter) Present(dst, src *ebiten.Image, scale int) {
 	var op ebiten.DrawRectShaderOptions
 	op.Images[0] = src
-	op.Uniforms = map[string]any{"Palette": pr.palette}
+	op.Uniforms = map[string]any{"Palette": pr.palette, "Fixed": pr.fixed}
 	op.GeoM.Scale(float64(scale), float64(scale))
 	b := src.Bounds()
 	dst.DrawRectShader(b.Dx(), b.Dy(), pr.shader, &op)

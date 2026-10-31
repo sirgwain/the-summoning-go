@@ -72,29 +72,29 @@ func TestBuild(t *testing.T) {
 	want := []Cmd{
 		// Floors back to front, row by row and left to right, with the cells past the far edges
 		// blanked.
-		{"floor", 1, 0, 0, Whole, ""},
-		{"floor", 0, -32, 16, Whole, ""},
-		{"floor", 0, 32, 16, Whole, ""},
-		{"", 0, -64, 32, Whole, ""},
-		{"floor", 0, 0, 32, Whole, ""},
-		{"", 0, 64, 32, Whole, ""},
-		{"", 0, -32, 48, Whole, ""},
-		{"", 0, 32, 48, Whole, ""},
-		{"", 0, 0, 64, Whole, ""},
+		{"floor", 1, 0, 0, Whole, "", false},
+		{"floor", 0, -32, 16, Whole, "", false},
+		{"floor", 0, 32, 16, Whole, "", false},
+		{"", 0, -64, 32, Whole, "", false},
+		{"floor", 0, 0, 32, Whole, "", false},
+		{"", 0, 64, 32, Whole, "", false},
+		{"", 0, -32, 48, Whole, "", false},
+		{"", 0, 32, 48, Whole, "", false},
+		{"", 0, 0, 64, Whole, "", false},
 		// Overlays, then floor looks in their state.
-		{"hazard", 2, 0, 32, Whole, ""},
-		{"plate", 1, -16, 40, Whole, ""},
+		{"hazard", 2, 0, 32, Whole, "", false},
+		{"plate", 1, -16, 40, Whole, "", false},
 		// The key centered in (0, 0).
-		{"tiny", 0, 12, 13, Whole, ""},
+		{"tiny", 0, 12, 13, Whole, "", false},
 		// Row 0: the lever and the door; then row 1: the exit look in place of its wall and
 		// decoration, and the wall with its decoration.
-		{"lever", 1, 4, 2, Whole, ""},
-		{"door", 0, -17, -3, Whole, ""},
-		{"exit", 1, -32, 0, Whole, ""},
-		{"wall", 1, 32, 8, Whole, ""},
-		{"deco", 4, 40, 24, Whole, ""},
+		{"lever", 1, 4, 2, Whole, "", false},
+		{"door", 0, -17, -3, Whole, "", false},
+		{"exit", 1, -32, 0, Whole, "", false},
+		{"wall", 1, 32, 8, Whole, "", false},
+		{"deco", 4, 40, 24, Whole, "", false},
 		// Row 2: the guard, facing 4, its anchor at the reference point (34, 51).
-		{"npc", 2, 16, 32, Whole, "guard"},
+		{"npc", 2, 16, 32, Whole, "guard", false},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got\n%v\nwant\n%v", got, want)
@@ -106,13 +106,13 @@ func TestBuildFloorHalves(t *testing.T) {
 	l.FloorHalves = content.Grid{{content.HalvesBoth, content.HalfLower}, {0, content.HalvesBoth}}
 	got := Build(p, LevelScene(p, l), Options{})[:5]
 	want := []Cmd{
-		{"floor", 1, 0, 0, Whole, ""},
+		{"floor", 1, 0, 0, Whole, "", false},
 		// (1, 0): both halves blanked.
-		{"", 0, -32, 16, UpperHalf, ""},
-		{"", 0, -32, 32, LowerHalf, ""},
+		{"", 0, -32, 16, UpperHalf, "", false},
+		{"", 0, -32, 32, LowerHalf, "", false},
 		// (0, 1): only the lower half drawn.
-		{"", 0, 32, 16, UpperHalf, ""},
-		{"floor", 0, 32, 32, LowerHalf, ""},
+		{"", 0, 32, 16, UpperHalf, "", false},
+		{"floor", 0, 32, 32, LowerHalf, "", false},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got\n%v\nwant\n%v", got, want)
@@ -130,10 +130,10 @@ func TestBuildDiamondFloors(t *testing.T) {
 		}
 	}
 	want := []Cmd{
-		{"floor", 1, -16, 0, Whole, ""},
+		{"floor", 1, -16, 0, Whole, "", false},
 		// (1, 0) draws nothing; (0, 1) only its lower half; nothing is blanked.
-		{"floor", 0, 16, 32, LowerHalf, ""},
-		{"floor", 0, -16, 32, Whole, ""},
+		{"floor", 0, 16, 32, LowerHalf, "", false},
+		{"floor", 0, -16, 32, Whole, "", false},
 	}
 	if !reflect.DeepEqual(floors, want) {
 		t.Errorf("got\n%v\nwant\n%v", floors, want)
@@ -209,6 +209,29 @@ func TestThingSteppingAnimation(t *testing.T) {
 	}
 	if f := frame("roll.4", 3); f != 2 {
 		t.Errorf("a missing animation drew frame %d, want the idle frame 2", f)
+	}
+}
+
+// TestPlayerFixedColors draws the player's figure and what it holds with the palette's own
+// colors, and other things with its animated ones.
+func TestPlayerFixedColors(t *testing.T) {
+	p, l := testPack()
+	p.Things["hero"] = &content.Thing{ID: "hero", Kind: content.ThingPlayer, Sprite: "npc"}
+	p.Items["sword"] = &content.Item{ID: "sword", Held: &content.Held{Right: &content.HeldLayers{Behind: "npc", Front: "npc"}}}
+	s := LevelScene(p, l)
+	s.Things = append(s.Things, Thing{ID: "hero", Template: "hero", U: 32, V: 32, Held: [2]string{"sword"}})
+	drawn, fixed := map[string]int{}, map[string]int{}
+	for _, c := range Build(p, s, Options{}) {
+		drawn[c.Thing]++
+		if c.Fixed {
+			fixed[c.Thing]++
+		}
+	}
+	if drawn["hero"] != 3 || fixed["hero"] != 3 {
+		t.Errorf("%d of the player's %d commands are fixed, want its figure and both held layers", fixed["hero"], drawn["hero"])
+	}
+	if drawn["guard"] == 0 || fixed["guard"] != 0 {
+		t.Errorf("%d of the guard's %d commands are fixed, want none", fixed["guard"], drawn["guard"])
 	}
 }
 

@@ -13,6 +13,8 @@ Every 8 ticks, in the active palette:
 
 Anything drawn in E0h–FCh animates without being redrawn: fire, glows, water.
 
+The player's figure does not animate. Its colors E0h–E3h are the character's own (hair, skin), chosen with the portrait in character creation, and the figure and the objects drawn in its hands (player.md, Held objects) are drawn with them rather than with the animated palette. Until character creation they are the palette's own E0h–E3h, unrotated.
+
 ## View effects
 
 Short animations played in the view, numbered 0–15, from RESOURCE `view-effect base + …` (INIT). Each has a fixed area:

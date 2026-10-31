@@ -276,7 +276,7 @@ func (s *shell) Draw(screen *ebiten.Image) {
 	}
 	s.buffer.Clear()
 	s.view.Draw(s.buffer, v.Origin)
-	s.presenter.SetColors(s.palette.At(v.Ticks * 1000 / int64(ebiten.TPS())))
+	s.presenter.SetColors(s.palette.At(v.Ticks*1000/int64(ebiten.TPS())), s.palette.Colors)
 	s.presenter.Present(screen, s.buffer, v.Scale)
 	s.drawLabels(screen)
 	s.drawTools(screen)

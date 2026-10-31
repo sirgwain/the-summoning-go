@@ -91,7 +91,8 @@ Exactly 256 colors, plus optional `effects` that animate them:
 - `cycle`: every `period_ms`, color `index` becomes the next of `colors`, starting with the first.
 
 Effects run on presentation time from when the view starts, so anything drawn in those colors
-animates without being redrawn. Fades, flashes and remaps are added with scenes.
+animates without being redrawn. The player's figure, and the items drawn in its hands, are the exception: they
+are drawn with the palette's own colors, without its effects. Fades, flashes and remaps are added with scenes.
 
 ## Sprites
 

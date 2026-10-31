@@ -56,7 +56,8 @@ a whole fight.
   item's floor image.
 - Animated objects' patterns (drawn still), teleported creatures spinning.
 - Messages hidden by "quiet combat"; held objects hidden in water 3 deep or more; worn looks
-  (head and body armor) and the player's colors.
+  (head and body armor). The player's figure and held layers draw with the palette's own
+  colors, unanimated (`drawlist.Cmd.Fixed`); character creation sets them from the portrait.
 - Damage numbers are drawn with the debug font until the UI has its own (Remaster UI).
 - See a fight on the imported game on screen. The dev pack's arena fight runs through the viewer
   in `TestArenaFight`; watch it with
@@ -84,7 +85,8 @@ a whole fight.
 ### 7. Game
 
 - Scenes: the intro, character creation (which replaces the starting attributes and bonus the
-  importer writes), story screens, endings, and the three arrival styles when changing level.
+  importer writes, and sets the figure's colors E0h–E3h from the portrait: the presenter's fixed
+  table), story screens, endings, and the three arrival styles when changing level.
 - Saves, audio (music and effects as Ogg with loop points), the level map and its refusals.
 - Level names, which the import leaves empty.
 
