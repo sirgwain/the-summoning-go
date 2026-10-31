@@ -16,7 +16,7 @@ OBJECTS holds 254 templates of 15 bytes. An object is an instance of a template 
 | 9 | Charges (the starting value of objects that have one) |
 | 10 | Image `i`: the small image is resource small-object base + `i`, the tiny image resource tiny-object base + `i` (INIT) |
 | 11 | Flags: 80h never chosen as a random object; other bits select the worn look |
-| 12 | Use handler: 80h set means it has a power, the low bits the power number |
+| 12 | Use handler: the low bits are the power number; 80h set means the power also starts when the object is worn |
 | 13 | Category: bits 0–5 the category; 40h a weapon; 80h two-handed |
 | 14 | Scroll: the spell a scroll teaches |
 
@@ -62,7 +62,7 @@ The player has slots:
 | 27 | Neck |
 | 28+ | Pack: the contents of the bag held in the left hand, one slot per capacity |
 
-Pack slots exist only up to the right-hand bag's capacity and take what fits in it. Putting an object in a worn slot (20–27) starts its power and adds its armor; taking it off ends both, so the speed powers (09h–0Bh) speed the player only while worn. The Leather Boots (24h) every character starts in have power 0Ah: interval −2 while worn. Picking an object up puts it in the first empty shelf; with none, message 7Fh. An arrow picked up goes into the quiver when it fits.
+Pack slots exist only up to the right-hand bag's capacity and take what fits in it. Putting an object in a worn slot (20–27, the hands included) adds its armor and, when its use handler has 80h, starts its power; taking it off ends both. Ending undoes the powers marked "lasts while worn" and the speed powers (09h–0Bh), so a worn object's speed counts only while worn. The Leather Boots (24h) every character starts in have power 0Ah with 80h: interval −2 while worn. Picking an object up puts it in the first empty shelf; with none, message 7Fh. An arrow picked up goes into the quiver when it fits.
 
 Objects given by the game (conversations, powers) go into the first empty shelf, or are dropped at the player's feet.
 
@@ -184,6 +184,12 @@ Taking off a lasting object undoes its effect (interval, status, attribute).
 
 Timed objects in worn slots count down their value each status tick and end when it runs out.
 
+## Using objects
+
+An action of kind use up (icons 9, 10) or use (11–20) starts the object's power, whatever 80h says. A power that refuses (below) leaves the object as it was. Use up then replaces the object with its spent object; use takes one charge from its value, and at 0 it becomes its spent object the same way. Neither strikes, except icon 11h, which also strikes with the object.
+
+**Engine model.** An item's `power` is its number and `power_worn` the 80h flag; `spent` is the item it becomes. The engine runs the powers in the table that need only the player: hit and magic points, cures, skills and attributes, statuses and timed effects, speed, and teleporting to a rune mark (a `mark` feature whose rune is `1`, `2` or `3` for 21h, 22h, 23h). Powers that cast spells, start conversations, change the ending or show the map wait for those milestones and report so. Each refusal is an engine message: `full_health` (3Eh), `full_magic` (42h), `not_poisoned` (40h), `not_poisoned_or_confused` (41h), `not_fatigued` (3Fh), `no_destination` (43h), `no_creatures` (88h), `already_have` (21h); others shown: `healed` (4Ah, `{damage}` the amount), `protected` (3Ch), `boost_extended` (33h), `poisoned` (59h), `slowed` (60h), `lost_weapon_skills` (64h), `lost_magic_skills` (67h).
+
 ## Throwing
 
 The player throws the object in hand, or fires an arrow from a bow. A thrown object flies `(100 − weight) / 5 + 5` steps (weight above 100 counts as 100); an arrow `5 × STR` steps, at most 127; 8 units a step. It flies as an entity of kind 3 (entities.md).
@@ -202,6 +208,10 @@ They roll their action-1 damage, or 1 when a flagged one is thrown rather than f
 **Landing.** On a door it may open it (rules.md). An arrow breaks 1 time in 25. A bottle breaks into Broken Glass. If the **Decanter (90h)** breaks, every creature of record 2Eh is removed, conversation 2Eh starts, and the player gains 72903 experience.
 
 Throwing is not possible in water of depth 3 or more.
+
+**Engine model.** The player throws the object in a hand (that hand then waits 5 updates) or, with a `fire` action, the first arrow of the quiver worn in slot 25 (message 48h `no_quiver` without one, 49h `no_arrows` when it is empty; 96h `no_room_to_shoot` when something stands a step ahead). Throwing practices weapon class 3 by 1; firing does too, and shows the both-hands strike pose. In deep water of depth 3 or more throwing gives 70h (`cannot_throw`) and other actions 73h (`cannot_act`). A thing in flight (entities.md) carries the object; how far it flies and its damage are as above, the damage from the item's `missile` (its dice, and whether only firing rolls them). A landing bottle becomes the item's `breaks_into`.
+
+Arrows taken up go into a worn quiver when it has room; putting arrows on (in slot 25) with a quiver worn adds them to it.
 
 ## Special objects
 

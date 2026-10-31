@@ -471,6 +471,9 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 	if in.pressed("K") {
 		cmds = append(cmds, input.Strike{Hand: 1, Action: action})
 	}
+	if in.pressed("T") {
+		cmds = append(cmds, input.Throw{Hand: action})
+	}
 	for d := range 10 {
 		if in.pressed(Key(fmt.Sprintf("Digit%d", (d+1)%10))) {
 			slot := d
@@ -561,7 +564,8 @@ func (v *Viewer) PanelLines() []string {
 		lines = append(lines, inspect.Player(v.Pack, p)...)
 		lines = append(lines, "", "Arrows/WASD walk (two keys: diagonal)",
 			"G pick up  F put down  E use  Q put on",
-			"J K strike right, left (Shift: 2nd action)",
+			"J K act right, left (Shift: 2nd action)",
+			"T throw from the right hand (Shift: left)",
 			"1-0 shelf (Shift 10-19)  R right hand  L left hand",
 			"F1-F8 pack  V see all",
 			"Tab tools  Space pause  N step  M magnify")

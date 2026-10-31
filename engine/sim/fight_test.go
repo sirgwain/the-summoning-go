@@ -28,7 +28,7 @@ func fightPack(rows ...string) *content.Pack {
 	sword := 0
 	p.Items["item.sword"] = &content.Item{ID: "item.sword", Weight: 10, Size: 3, Durability: 6000, Wear: content.WearHand,
 		WeaponClass: &sword, Actions: []content.ItemAction{{Kind: content.ActionAttack, Damage: content.Dice{Bonus: 4}, Delay: 5}}}
-	p.Items["item.boots"] = &content.Item{ID: "item.boots", Weight: 1, Size: 2, Wear: content.WearFeet, Armor: 1, Power: 0x0A}
+	p.Items["item.boots"] = &content.Item{ID: "item.boots", Weight: 1, Size: 2, Wear: content.WearFeet, Armor: 1, Power: 0x0A, PowerWorn: true}
 	p.Items["item.mail"] = &content.Item{ID: "item.mail", Weight: 20, Size: 3, Wear: content.WearBody, Armor: 4, Durability: 7500}
 	p.Things["thing.wolf"] = &content.Thing{ID: "thing.wolf", Kind: content.ThingCreature, Speed: 8, Weight: 100,
 		HitPoints: content.Dice{Bonus: 50}, Attack: content.Dice{Bonus: 3}, Stats: map[string]int{"accuracy": 100},
@@ -218,5 +218,165 @@ func TestWanderingCreatureStaysOnFloor(t *testing.T) {
 	}
 	if w.Player().HitPoints != 30 {
 		t.Error("a wolf that is not hostile hurt the player")
+	}
+}
+
+func TestThrowHitsAndLands(t *testing.T) {
+	w := fightWorld(t, nil,
+		"#########",
+		"#@..G...#",
+		"#########")
+	p, l := w.Player(), w.Current()
+	g := l.Thing("guard")
+	p.Facing = 2
+	p.Slots[SlotRightHand] = w.newObject("item.rock")
+	w.Update([]input.Command{input.Throw{Hand: 0}})
+	if p.Slots[SlotRightHand] != nil || len(l.Flights) != 1 {
+		t.Fatalf("the rock did not fly: hand %v, %d flights", p.Slots[SlotRightHand], len(l.Flights))
+	}
+	for range 200 {
+		w.Update(nil)
+	}
+	if len(l.Flights) != 0 || g.HitPoints != 20-(60/10+1) || !g.Hostile {
+		t.Errorf("the rock: %d flights, guard at %d hit points, hostile %v", len(l.Flights), g.HitPoints, g.Hostile)
+	}
+	landed := 0
+	for _, objs := range l.Objects {
+		landed += len(objs)
+	}
+	if landed != 1 {
+		t.Errorf("%d objects landed", landed)
+	}
+}
+
+func TestArrowTrapAndBow(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Items["item.arrow"] = &content.Item{ID: "item.arrow", Weight: 1, Size: 1, Tags: []string{"arrows"},
+			Missile: &content.Missile{Damage: content.Dice{Bonus: 5}}}
+		p.Items["item.quiver"] = &content.Item{ID: "item.quiver", Weight: 1, Size: 2, Wear: content.WearQuiver,
+			Container: &content.Container{Capacity: 4, Largest: 1}}
+		bow := 3
+		p.Items["item.bow"] = &content.Item{ID: "item.bow", Weight: 3, Size: 3, Wear: content.WearHand, WeaponClass: &bow,
+			Actions: []content.ItemAction{{Kind: content.ActionFire, Delay: 3}}}
+		p.Levels["level.walk"].Procedures["trap"] = []content.Action{{ShootItem: &content.ShootItem{Cell: cell{1, 6}, Item: "item.arrow", Direction: 6}}}
+	},
+		"########",
+		"#@.....#",
+		"########")
+	p, l := w.Player(), w.Current()
+	w.Update([]input.Command{input.Run{Procedure: "trap"}})
+	for range 200 {
+		w.Update(nil)
+	}
+	if p.HitPoints != 30-5 || len(l.Objects) != 0 {
+		t.Fatalf("the trap's arrow: %d hit points, %d cells with objects (a trap's arrow vanishes)", p.HitPoints, len(l.Objects))
+	}
+	p.Facing = 2
+	p.Slots[SlotRightHand] = w.newObject("item.bow")
+	p.Hand = w.newObject("item.quiver")
+	w.Update([]input.Command{input.PutOn{}})
+	if ev := strike(w, 0, 0); !has(ev, EventMessage, content.MsgNoArrows) {
+		t.Errorf("firing from an empty quiver: %v", ev)
+	}
+	l.Objects[p.Cell()] = []*Object{w.newObject("item.arrow")}
+	w.Update([]input.Command{input.PickUp{}})
+	if q := p.Slots[SlotQuiver]; len(q.Contents) != 1 || p.Hand != nil {
+		t.Fatal("the arrow picked up did not go into the quiver")
+	}
+	strike(w, 0, 0)
+	if len(p.Slots[SlotQuiver].Contents) != 0 || p.Skills[SkillWeapon+3].Practice != 1 {
+		t.Errorf("firing: quiver %v, bow practice %d", p.Slots[SlotQuiver].Contents, p.Skills[SkillWeapon+3].Practice)
+	}
+}
+
+func TestThrownSphereUnsealsDoor(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) {
+		for _, f := range p.Levels["level.walk"].Features {
+			if f.ID == "door" {
+				f.SealedBy = "item.key"
+			}
+		}
+	},
+		"#######",
+		"#@...D#",
+		"#######")
+	p, l := w.Player(), w.Current()
+	p.Facing = 2
+	p.Slots[SlotLeftHand] = w.newObject("item.key")
+	w.Update([]input.Command{input.Throw{Hand: 1}})
+	for range 200 {
+		w.Update(nil)
+	}
+	if f := l.Feature("door"); f.SealedBy != "" || f.State != content.DoorOpen || len(l.Objects) != 0 {
+		t.Errorf("door %+v, objects %v", f.State, l.Objects)
+	}
+}
+
+func TestUsingObjects(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Items["item.bottle"] = &content.Item{ID: "item.bottle", Weight: 1, Size: 1}
+		p.Items["item.potion"] = &content.Item{ID: "item.potion", Weight: 2, Size: 1, Power: 0x28, Spent: "item.bottle",
+			Actions: []content.ItemAction{{Kind: content.ActionUseUp, Delay: 3}}}
+		p.Items["item.wand"] = &content.Item{ID: "item.wand", Weight: 1, Size: 1, Power: 0x0F, Charges: 2, Spent: "item.bottle",
+			Actions: []content.ItemAction{{Kind: content.ActionUse, Delay: 3}}}
+	},
+		"####",
+		"#@.#",
+		"####")
+	p := w.Player()
+	p.Slots[SlotRightHand] = w.newObject("item.potion")
+	if ev := strike(w, 0, 0); !has(ev, EventMessage, content.MsgFullHealth) || p.Slots[SlotRightHand].Item != "item.potion" {
+		t.Fatalf("a healing potion at full health: %v", ev)
+	}
+	p.HitPoints = 5
+	strike(w, 0, 0)
+	if p.HitPoints <= 5 || p.Slots[SlotRightHand].Item != "item.bottle" {
+		t.Errorf("drinking: %d hit points, hand %v", p.HitPoints, p.Slots[SlotRightHand])
+	}
+	p.Slots[SlotLeftHand] = w.newObject("item.wand")
+	strike(w, 1, 0)
+	if !p.Status.Levitating || p.Slots[SlotLeftHand].Value != 1 {
+		t.Errorf("the wand: levitating %v, charges %d", p.Status.Levitating, p.Slots[SlotLeftHand].Value)
+	}
+	strike(w, 1, 0)
+	if p.Slots[SlotLeftHand].Item != "item.bottle" {
+		t.Errorf("the wand out of charges is %v", p.Slots[SlotLeftHand].Item)
+	}
+}
+
+func TestStatusesAndStartingInventory(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Things["thing.player"].Inventory = []content.InventoryObject{
+			{Slot: SlotFeet, Object: content.Object{Item: "item.boots"}}, {Slot: 0, Object: content.Object{Item: "item.key"}},
+		}
+	},
+		"#####",
+		"#@O.#",
+		"#####")
+	p := w.Player()
+	if p.Slots[SlotFeet] == nil || p.IntervalBonus != -2 || p.ArmorClass != 1 || p.Slots[0] == nil {
+		t.Fatalf("starting inventory: feet %v, bonus %d, armor %d", p.Slots[SlotFeet], p.IntervalBonus, p.ArmorClass)
+	}
+	// Levitating, the player walks over the pit.
+	p.Status.Levitating = true
+	walk(w, 2, 6)
+	if w.Current().ID != "level.walk" || p.Cell() != (cell{1, 3}) {
+		t.Errorf("levitating over the pit: %s %v", w.Current().ID, p.Cell())
+	}
+	p.addTimed(TimedHaste, 1)
+	if got := p.IntervalTicks(w.Pack()); got != -2-1-1 {
+		t.Errorf("hasted interval: %+d ticks", got)
+	}
+	for range Steps(statusTicks) + 2 {
+		w.Update(nil)
+	}
+	if p.Timed[TimedHaste] != 0 {
+		t.Error("haste did not run out")
+	}
+	// Exertion past END + 3 costs a point of endurance.
+	end := p.Attributes[AttrEndurance]
+	w.exert(end + 4)
+	if p.Attributes[AttrEndurance] != end-1 || p.Fatigue != 1 {
+		t.Errorf("exertion: endurance %d, fatigue %d", p.Attributes[AttrEndurance], p.Fatigue)
 	}
 }

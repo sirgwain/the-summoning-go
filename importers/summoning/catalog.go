@@ -141,6 +141,7 @@ func (im *importer) items() error {
 		im.fighting(i, tm, it)
 		im.pack.Items[id] = it
 	}
+	im.spentAndBroken()
 	return nil
 }
 
@@ -219,8 +220,45 @@ func (im *importer) fighting(i int, tm *ObjectTemplate, it *content.Item) {
 		}
 		it.Actions = append(it.Actions, act)
 	}
-	if p, ok := tm.Power(); ok {
-		it.Power = p
+	if p, worn := tm.Power(); p != 0 {
+		it.Power, it.PowerWorn = p, worn
+	}
+	if look, ok := thrownLooks[i]; ok {
+		it.Missile = &content.Missile{Damage: dice(tm.DamageCode(1)), FiredOnly: look}
+	}
+}
+
+// thrownLooks are the templates with a look of their own in flight, which roll their second
+// action's damage there; true for those that roll it only when fired (items.md, Throwing).
+var thrownLooks = map[int]bool{0x67: false, 0x68: false, 0x75: false, 0x6D: false, 0x97: true, 0x98: true, 0x99: true}
+
+// Templates objects become (items.md, Using up; Throwing).
+const (
+	templateEmptyBottle = 0x07
+	templateBrokenGlass = 0x0C
+	categoryBottle      = 8
+)
+
+// spentAndBroken sets what each item becomes used up, and what bottles break into, once every
+// item has its id.
+func (im *importer) spentAndBroken() {
+	for i := range im.objects.Templates {
+		tm := &im.objects.Templates[i]
+		it := im.pack.Items[im.itemIDs[i]]
+		if tm.Category() == categoryBottle {
+			it.BreaksInto = im.itemIDs[templateBrokenGlass]
+		}
+		used := false
+		for _, a := range it.Actions {
+			used = used || a.Kind == content.ActionUse || a.Kind == content.ActionUseUp
+		}
+		switch {
+		case !used:
+		case tm.Category() == categoryBottle:
+			it.Spent = im.itemIDs[templateEmptyBottle]
+		case i+1 < len(im.itemIDs):
+			it.Spent = im.itemIDs[i+1]
+		}
 	}
 }
 

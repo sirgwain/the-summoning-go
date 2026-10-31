@@ -30,6 +30,8 @@ type PlayerState struct {
 	ArmorClass  int          `json:"armor_class,omitempty"`
 	Skills      []sim.Skill  `json:"skills"`
 	Poisoned    bool         `json:"poisoned,omitempty"`
+	Status      sim.Status   `json:"status"`
+	Timed       []int        `json:"timed"`
 	Dead        bool         `json:"dead,omitempty"`
 	// Hand is the object held; Slots the inventory's filled slots by name.
 	Hand  *content.Object           `json:"hand,omitempty"`
@@ -90,7 +92,8 @@ func State(w *sim.World) *WorldState {
 	if pl := w.Player(); pl != nil {
 		ps := &PlayerState{Cell: pl.Cell(), At: [2]int{pl.U, pl.V}, Facing: pl.Facing,
 			HitPoints: pl.HitPoints, MagicPoints: pl.MagicPoints, Level: pl.Level, Experience: pl.Experience,
-			ArmorClass: pl.ArmorClass, Skills: pl.Skills[:], Poisoned: pl.Poisoned, Dead: pl.Dead}
+			ArmorClass: pl.ArmorClass, Skills: pl.Skills[:], Poisoned: pl.Poisoned, Dead: pl.Dead,
+			Status: pl.Status, Timed: pl.Timed[:]}
 		if pl.Hand != nil {
 			o := objects([]*sim.Object{pl.Hand})[0]
 			ps.Hand = &o

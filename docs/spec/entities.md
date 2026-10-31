@@ -156,6 +156,18 @@ A rolling boulder moves its `speed` along its direction each update (`interval_m
 
 Boulder animations are named `roll.d` for direction `d`. The importer makes `roll.0` and `roll.4` frames 0–4, `roll.2` and `roll.6` frames 5–9, forward for directions 0 and 2 and backward for 4 and 6, one frame per update.
 
+### Things in flight
+
+A thing in flight is an object thrown or fired, by the player, a creature or a cell (arrow traps). It starts at its thrower's ground point, moving along the thrower's facing, and updates every tick: the first update it waits; then it moves 8 units along its direction (half that along 1 and 5), its range falling by 1. Its footprint is 8.
+
+- **Its range runs out:** it lands where it is.
+- **Its ground point would enter a blocked cell:** if that is a sealed door its object opens, the object is used up; otherwise it lands where it is.
+- **It would overlap a thing** other than its thrower and corpses (the player, if a creature or a cell threw it): it hurts it (arrows as damage kind 3, everything else physical, through the target's defenses), the player's throw turns a creature hostile, and it lands.
+- **It enters an armed teleporter** that things in flight do not pass over: the teleporter moves it, and turns its direction by the teleporter's `turn` eighths.
+- **Landing:** only the player's throws land; a creature's or a cell's vanish. An arrow breaks 1 time in 25. A bottle becomes its broken item. The object is put down on its cell as rules.md, Dropping objects, says.
+
+A thrower already touching something when it throws (a thing within 4 units ahead of its footprint) hits it at once, and the object lands at its feet.
+
 ### The player's update
 
 The player's update comes every `interval_ms` of its template (player.md, Speed). In it, if a walk was asked for since the last update, the player turns to that direction and moves its template's `speed` along it, half that along directions 1 and 5 (screen left and right). A walk that moves shows the walk animation's next frame; after 8 updates without walking the player shows its idle frame. A blocked step that meets a creature touches it (combat, later).

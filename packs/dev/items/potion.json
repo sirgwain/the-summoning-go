@@ -11,5 +11,12 @@
   "floor": {
     "sprite": "sprite.items.floor",
     "frame": 10
-  }
+  },
+  "actions": [
+    {
+      "kind": "use_up",
+      "delay": 3
+    }
+  ],
+  "power": 40
 }

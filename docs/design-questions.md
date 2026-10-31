@@ -135,3 +135,11 @@ tests a step. With footprints of 16 that means walking right up to a creature.
 
 **Revisit if** fights feel cramped next to the game, where the rectangles in view pixels may reach
 a little differently along each axis.
+
+## Things in flight are not things
+
+**Choice.** An object in flight is a flight of its level, not a thing with a template: it has a
+footprint of 8, moves a step a tick, and draws the item's floor image above its ground point.
+
+**Why.** Flights live a few seconds and carry an object; giving them templates would add records
+nobody edits. Spells in flight will reuse them with Magic.

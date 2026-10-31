@@ -198,7 +198,7 @@ func (p player) to(cells ...content.Cell) {
 // TestHallPlays plays the hall from the start to the cellar with nothing but the player's
 // commands: the lever opens closet A, two rocks hold plate B down, the key from the sack opens
 // slot C, the gems from closets B and C fill the socket, lever D in the nook it opens opens door
-// D, and exit D leads to the cellar.
+// D, the sphere from the nook thrown at door E opens it, and exit D leads to the cellar.
 func TestHallPlays(t *testing.T) {
 	w, err := sim.New(Build(), 1)
 	if err != nil {
@@ -261,6 +261,17 @@ func TestHallPlays(t *testing.T) {
 	if l.Blocked(DoorD) {
 		t.Fatal("lever D did not open door D")
 	}
+	// The sphere thrown at door E unseals it.
+	p.to(Sphere)
+	p.do(input.PickUp{})
+	p.do(input.Swap{Slot: sim.SlotRightHand})
+	p.to(content.Cell{6, Sphere[1]}, content.Cell{6, SealedDoor[1]})
+	p.w.Player().Facing = 0
+	p.do(input.Throw{Hand: 0})
+	p.wait()
+	if l.Blocked(SealedDoor) {
+		t.Fatal("the thrown sphere did not open door E")
+	}
 	p.to(content.Cell{6, DoorD[1]}, DoorD, content.Cell{3, DoorD[1]})
 	for range 60 {
 		p.do(input.Walk{Direction: 0})
@@ -283,7 +294,7 @@ func TestCellarFight(t *testing.T) {
 	w.Update([]input.Command{input.PutOn{}})
 	p.Hand = &sim.Object{Item: ItemMail, Value: 7500}
 	w.Update([]input.Command{input.PutOn{}})
-	if p.Slots[sim.SlotRightHand] == nil || p.ArmorClass != 4 {
+	if p.Slots[sim.SlotRightHand] == nil || p.ArmorClass != 5 {
 		t.Fatalf("not armed: right hand %v, armor %d", p.Slots[sim.SlotRightHand], p.ArmorClass)
 	}
 	brute := l.Thing("brute")

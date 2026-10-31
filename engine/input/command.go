@@ -83,6 +83,11 @@ type PlacePlayer struct{ Cell content.Cell }
 // or with bare hands.
 type Strike struct{ Hand, Action int }
 
+// Throw throws the object in a hand (0 right, 1 left) along the player's facing.
+type Throw struct{ Hand int }
+
+func (Throw) command() {}
+
 // PutOn puts the hand's object on, in the worn slot or hand its item goes in.
 type PutOn struct{}
 

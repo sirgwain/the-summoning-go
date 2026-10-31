@@ -142,7 +142,7 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 		return
 	}
 	if t.walkCount--; t.walkCount <= 0 {
-		if t.Hostile && !p.Dead {
+		if t.Hostile && !p.Dead && !p.hidden() {
 			t.walkDir, t.walkCount = towards(t.U, t.V, p.U, p.V), 1
 		} else {
 			t.walkDir, t.walkCount = w.rng.IntN(5), 5+w.rng.IntN(5)
@@ -239,13 +239,13 @@ func (w *World) creatureStrikes(l *Level, t *Thing) {
 	p := w.player
 	t.Pose = PoseAttack
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "strikes"})
-	if t.Template.Has(content.BehaviorDeathBlow) {
+	if t.Template.Has(content.BehaviorDeathBlow) && !p.Status.DeathBlowWard {
 		w.killPlayer(t.ID)
 		return
 	}
 	r := w.rules.CreatureStrikes(w.rng, combat.CreatureStrike{
 		Accuracy: t.Template.Stats["accuracy"], Bonus: t.Template.Stats["bonus"], Damage: t.Template.Attack,
-		Behind: behind(t.Facing, p.Facing), PlayerAgility: p.Attributes[AttrAgility],
+		Behind: behind(t.Facing, p.Facing), PlayerAgility: p.Attributes[AttrAgility], Status: p.combatStatus(),
 	})
 	if !r.Hit {
 		w.messageNumbers(l, t.Cell(), content.MsgCreatureMiss, r.Score, 0)
@@ -294,6 +294,7 @@ func (w *World) strike(hand, action int) {
 			return
 		}
 		p.Delays[hand] = bareHandsDelay
+		w.exert(1)
 		w.swing(hand, nil, content.ItemAction{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 2}})
 		return
 	}
@@ -307,17 +308,32 @@ func (w *World) strike(hand, action int) {
 	if it.WeaponClass != nil {
 		class = *it.WeaponClass
 	}
+	if a.Kind != content.ActionFire && w.deepWater() {
+		w.message(l, p.Cell(), content.MsgCannotAct, "")
+		return
+	}
 	switch a.Kind {
 	case content.ActionAttack, content.ActionAttackBoth:
 		if class >= 0 && p.Skills[SkillWeapon+class].Level < a.Skill {
 			refuse("not skilled enough")
 			return
 		}
+	case content.ActionFire:
+		if w.deepWater() {
+			w.message(l, p.Cell(), content.MsgCannotAct, "")
+			return
+		}
+		p.Delays[hand] = a.Delay
+		w.exert(o.Weight(w.pack) / 8)
+		w.fire()
+		return
 	default:
-		w.emit(Event{Kind: EventNotYet, Level: l.ID, Cell: p.Cell(), Item: o.Item, Detail: "the " + a.Kind + " action"})
+		p.Delays[hand] = a.Delay
+		w.useObject(hand, o, a)
 		return
 	}
 	p.Delays[hand] = a.Delay
+	w.exert(o.Weight(w.pack) / 8)
 	if hasTag(it, "two_handed") {
 		p.Delays[1-hand] = max(p.Delays[1-hand], a.Delay)
 	}
@@ -367,7 +383,7 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 	s := combat.PlayerStrike{
 		Agility: p.Attributes[AttrAgility], Endurance: p.Attributes[AttrEndurance],
 		Accuracy: p.Attributes[AttrAccuracy], Strength: p.Attributes[AttrStrength],
-		Weapon: o != nil, Damage: a.Damage, Behind: behind(d, t.Facing),
+		Weapon: o != nil, Damage: a.Damage, Behind: behind(d, t.Facing), Status: p.combatStatus(),
 		CreatureAccuracy: t.Template.Stats["accuracy"], Resistance: t.Template.Stats["resistance"],
 		Vulnerable:   class >= 0 && t.Template.Vulnerability != nil && *t.Template.Vulnerability == class,
 		PhysicalOnly: t.Template.Has(content.BehaviorPhysicalOnly),
@@ -511,28 +527,17 @@ const (
 	powerSpeed2Lasting = 0x0B
 )
 
-// startPower starts the power of an object put on; endPower ends it when taken off. Only the
-// speed powers act yet; the others come with statuses and spells.
-func (w *World) startPower(power, sign int) {
-	p := w.player
-	switch power {
-	case powerSpeed1:
-		p.IntervalBonus -= sign
-	case powerSpeed2, powerSpeed2Lasting:
-		p.IntervalBonus -= 2 * sign
-	}
-}
-
-// putOn and takeOff start and end what object o does worn in slot i.
+// putOn and takeOff add and take away what worn object o does: its armor, and its power when
+// it starts worn (docs/spec/items.md, Inventory).
 func (w *World) putOn(o *Object) {
-	if it := w.pack.Items[o.Item]; it != nil {
+	if it := w.pack.Items[o.Item]; it != nil && it.PowerWorn && it.Power != 0 {
 		w.startPower(it.Power, 1)
 	}
 	w.wornChanged()
 }
 
 func (w *World) takeOff(o *Object) {
-	if it := w.pack.Items[o.Item]; it != nil {
+	if it := w.pack.Items[o.Item]; it != nil && it.PowerWorn && it.Power != 0 {
 		w.startPower(it.Power, -1)
 	}
 	w.wornChanged()

@@ -19,6 +19,8 @@ type Level struct {
 	Floor, Wall content.Grid
 	Features    []*Feature
 	Things      []*Thing
+	// Flights are the things in flight over the level.
+	Flights []*Flight
 	// Objects are the objects on each cell's floor, bottom first.
 	Objects map[content.Cell][]*Object
 

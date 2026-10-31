@@ -81,7 +81,7 @@ func (w *World) act(l *Level, a content.Action, depth int) {
 			t.Rolling = nil
 		}
 	case a.ShootItem != nil:
-		w.emit(Event{Kind: EventNotYet, Level: l.ID, Cell: a.ShootItem.Cell, Item: a.ShootItem.Item, Detail: "shooting objects"})
+		w.shootItem(l, a.ShootItem.Cell, a.ShootItem.Item, a.ShootItem.Direction)
 	case a.ShootSpell != nil:
 		w.emit(Event{Kind: EventNotYet, Level: l.ID, Cell: a.ShootSpell.Cell, Detail: "shooting spells"})
 	case a.Create != nil:
@@ -188,7 +188,7 @@ func (w *World) apply(cmd input.Command) {
 		if err := w.enter(c.Level); err != nil {
 			refuse(content.Cell{}, err.Error())
 		}
-	case input.Walk, input.PickUp, input.PutDown, input.Swap, input.Activate, input.PlacePlayer, input.Strike, input.PutOn:
+	case input.Walk, input.PickUp, input.PutDown, input.Swap, input.Activate, input.PlacePlayer, input.Strike, input.PutOn, input.Throw:
 		w.playerCommand(c)
 	}
 }
@@ -217,6 +217,8 @@ func (w *World) playerCommand(cmd input.Command) {
 		w.strike(c.Hand, c.Action)
 	case input.PutOn:
 		w.putOnHand()
+	case input.Throw:
+		w.throwFrom(c.Hand)
 	case input.PlacePlayer:
 		if !l.InBounds(c.Cell) || l.Blocked(c.Cell) {
 			w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: c.Cell, Detail: "the player cannot stand there"})

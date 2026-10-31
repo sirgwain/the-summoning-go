@@ -3,6 +3,7 @@
 package inspect
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strconv"
@@ -338,6 +339,9 @@ func Player(p *content.Pack, pl *sim.Player) []string {
 	if len(skills) > 0 {
 		lines = append(lines, "  skills: "+strings.Join(skills, ", "))
 	}
+	if st := statuses(pl); st != "" {
+		lines = append(lines, "  "+st)
+	}
 	if pl.Delays != [2]int{} {
 		lines = append(lines, fmt.Sprintf("  hands wait %d and %d", pl.Delays[0], pl.Delays[1]))
 	}
@@ -356,4 +360,28 @@ func Player(p *content.Pack, pl *sim.Player) []string {
 		}
 	}
 	return lines
+}
+
+// statuses describes the player's statuses, timed effects, exertion and confusion.
+func statuses(pl *sim.Player) string {
+	var out []string
+	data, _ := json.Marshal(pl.Status)
+	var flags map[string]bool
+	_ = json.Unmarshal(data, &flags)
+	for _, k := range sortedKeys(flags) {
+		out = append(out, k)
+	}
+	names := []string{"sight", "fire shield", "lightning shield", "battle rage", "haste", "invisibility", "weapon skills", "magic skills"}
+	for i, n := range pl.Timed {
+		if n > 0 {
+			out = append(out, fmt.Sprintf("%s %d", names[i], n))
+		}
+	}
+	if pl.Exertion > 0 || pl.Fatigue > 0 {
+		out = append(out, fmt.Sprintf("exertion %d, fatigue %d", pl.Exertion, pl.Fatigue))
+	}
+	if pl.Confusion > 0 {
+		out = append(out, fmt.Sprintf("confusion %d", pl.Confusion))
+	}
+	return strings.Join(out, ", ")
 }

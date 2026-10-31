@@ -13,5 +13,6 @@
   },
   "armor": 1,
   "wear": "feet",
-  "power": 10
+  "power": 10,
+  "power_worn": true
 }

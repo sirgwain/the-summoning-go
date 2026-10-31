@@ -51,6 +51,12 @@ A walk step moves the player's speed (8 units) in the facing, or half that when 
 
 **Skills and experience** are the player's state: four weapon classes and four schools, each with a level (starting 1 for the chosen class and school, else 0), practice points and a threshold (10); experience, the player's level, and the threshold for the next (500). Practice and levels work as above; the dice per level are the importer's rules for the Summoning, kept in the combat rule set. Until character creation the importer starts the player at weapon class 0 and school 0, level 1.
 
+**Statuses** are the player's state: the lasting conditions above as flags, the timed effects as counts of status ticks (at most 255), and each attribute's timed boost (its amount and its ticks). The combat rule set reads them. Levitating keeps the player off plates and floor effects and over pits and trapdoors, and stops it pushing corpses; fire-immune stops fire floors; invisible and transformed stop creatures chasing; haste and battle rage each take 1 from the interval. Regenerating and mana regenerating roll each player update. Sight and transforming wait for their spells.
+
+**Exertion and fatigue** are as above: each strike adds `weight / 8` (at least 1), each push 1 three times in eight.
+
+**Starting inventory.** The importer gives the player template its starting objects as the pack's `inventory`, slot by slot (pack.md): for weapon class 0 and school 0, the Apple of Vigor and the Palimpsest on shelves 0 and 1, Leather Trews (the first of templates 14–17) on the body, Leather Boots on the feet, the Falchion in the right hand and the school's scroll on shelf 2. Worn objects start as if put on, so the boots give the −2 bonus and the template needs no `interval_bonus`. Character creation will choose the class, school and body armor.
+
 **Dying.** At 0 hit points the player is dead: it no longer acts, and the world reports it; what follows comes with scenes.
 
 **View.** The view does not follow the player step by step. While the player stands within the middle of the view it stays put; a move that leaves the player outside it, horizontally or vertically, scrolls the view along that axis by as far as the player moved on screen. The engine takes the middle half of the view each way. A player outside the view altogether (arriving on a level, teleported) is centered.

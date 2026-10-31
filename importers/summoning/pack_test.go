@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
@@ -147,8 +148,11 @@ func TestImport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if lines := report.Lines(); len(lines) != 0 {
-		t.Errorf("report: %v", lines)
+	// The fixture has six item templates, none of the starting inventory's.
+	for _, line := range report.Lines() {
+		if !strings.HasPrefix(line, "starting inventory:") {
+			t.Errorf("report: %v", line)
+		}
 	}
 	if fx := p.Palettes["palette.0"].Effects; len(fx) != 3 || fx[0].First != 0xE0 || fx[1].Groups != 3 || fx[2].Index != 0xFC || fx[0].PeriodMS != 440 {
 		t.Errorf("palette effects %+v", fx)
@@ -435,6 +439,10 @@ func TestImportPlayer(t *testing.T) {
 	}
 	if got := tm.Animations["walk.0"].Frames; !reflect.DeepEqual(got, []int{9, 17, 25, 33, 41, 1}) {
 		t.Errorf("walk.0 frames %v", got)
+	}
+	// Of the starting inventory the fixture has only template 1, the Palimpsest's place on shelf 1.
+	if len(tm.Inventory) != 1 || tm.Inventory[0].Slot != 1 {
+		t.Errorf("inventory %v", tm.Inventory)
 	}
 	if got := tm.Animations["idle.7"].Frames; !reflect.DeepEqual(got, []int{8}) {
 		t.Errorf("idle.7 frames %v", got)

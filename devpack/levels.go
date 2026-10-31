@@ -104,14 +104,14 @@ var (
 //	The socket takes the two gems from closets B and C and opens the wall behind it into a nook,
 //	and changes what the mouth says. Lever D in the nook opens door D.
 //	Closet D: the exit down to the cellar.
-//	Closet E: a door sealed by the sphere, which lies in the nook; a potion inside. Opening it
-//	needs a throw.
+//	Closet E: a door sealed by the sphere, which lies in the nook; a potion inside. The sphere
+//	thrown at the door opens it.
 //	Elsewhere: a teleporter and the lever that arms it, a pit and a trapdoor down to the cellar
 //	(a lever opens the trapdoor), a mouth, a mark, deep water that swallows objects, lava, a
 //	guard, a ghost that teleporters leave alone, a crate to push, a boulder and a lever that
 //	rolls it, and an exit in the west wall.
 //
-// The player starts by closet A. Every closet but E opens by playing.
+// The player starts by closet A, wearing boots of speed. Every closet opens by playing.
 func hall(p *content.Pack) {
 	l := &content.Level{ID: Hall, Floors: floorSet, Walls: wallSet, FloorTypes: floorTypes()}
 	grid(l, []string{

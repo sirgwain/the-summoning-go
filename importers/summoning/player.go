@@ -23,11 +23,16 @@ const (
 )
 
 // starterAttributes are the player's attributes until character creation (player.md, Engine
-// model), with the interval bonus of the Leather Boots it starts wearing until worn slots exist,
-// and its hit and magic points: STR + END + 20 and TAL + POW + 20.
+// model) and starting skills, and its hit and magic points: STR + END + 20 and TAL + POW + 20.
 var starterAttributes = map[string]int{
 	"strength": 18, "agility": 20, "endurance": 18, "accuracy": 16, "talent": 16, "power": 16,
-	"interval_bonus": -2, "weapon.0": 1, "school.0": 1,
+	"weapon.0": 1, "school.0": 1,
+}
+
+// starterInventory are the objects the player starts with, by slot and template, for weapon class
+// 0 and school 0 (player.md, Starting inventory).
+var starterInventory = []struct{ slot, template int }{
+	{0, 0x7C}, {1, 0x01}, {2, 0xDF}, {26, 0x0E}, {24, 0x24}, {22, 0x61},
 }
 
 const (
@@ -105,6 +110,12 @@ func (im *importer) player() error {
 		IntervalMS: ms(playerInterval), Weight: creatureWeight, Footprint: content.DefaultFootprint,
 		HitPoints: content.Dice{Bonus: starterHitPoints}, MagicPoints: content.Dice{Bonus: starterMagicPoints},
 		Stats: starterAttributes, Animations: anims,
+	}
+	for _, s := range starterInventory {
+		if id, ok := im.item(s.template, "starting inventory"); ok {
+			im.pack.Things[playerID].Inventory = append(im.pack.Things[playerID].Inventory,
+				content.InventoryObject{Slot: s.slot, Object: content.Object{Item: id}})
+		}
 	}
 	im.pack.Manifest.Player = playerID
 	return nil

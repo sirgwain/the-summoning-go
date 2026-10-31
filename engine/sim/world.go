@@ -60,6 +60,7 @@ func New(p *content.Pack, seed uint64) (*World, error) {
 	}
 	if w.player = w.newPlayer(); w.player != nil {
 		w.place(p.Manifest.Start.Cell, true)
+		w.startInventory()
 	}
 	w.status = Steps(statusTicks)
 	w.events = nil
@@ -89,6 +90,7 @@ func (w *World) Update(cmds []input.Command) []Event {
 	}
 	w.rollBoulders(w.Current())
 	w.updateCreatures(w.Current())
+	w.updateFlights(w.Current())
 	for _, id := range sortedKeys(w.levels) {
 		w.advance(w.levels[id])
 	}

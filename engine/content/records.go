@@ -26,8 +26,27 @@ type Item struct {
 	WeaponClass *int `json:"weapon_class,omitempty"`
 	// Actions are what the item does in hand.
 	Actions []ItemAction `json:"actions,omitempty"`
-	// Power is the power the item starts when worn or used, 0 for none.
-	Power int `json:"power,omitempty"`
+	// Power is the power the item starts when used, 0 for none; PowerWorn starts it worn too.
+	Power     int  `json:"power,omitempty"`
+	PowerWorn bool `json:"power_worn,omitempty"`
+	// Spent is the item a used-up object becomes.
+	Spent string `json:"spent,omitempty"`
+	// Missile is how it hurts in flight; BreaksInto what a landing bottle becomes.
+	Missile    *Missile `json:"missile,omitempty"`
+	BreaksInto string   `json:"breaks_into,omitempty"`
+}
+
+// Missile is how an item hurts in flight.
+type Missile struct {
+	Damage Dice `json:"damage"`
+	// FiredOnly items do 1 when thrown rather than fired.
+	FiredOnly bool `json:"fired_only,omitempty"`
+}
+
+// InventoryObject is an object in an inventory slot.
+type InventoryObject struct {
+	Slot int `json:"slot"`
+	Object
 }
 
 // Worn slots an item can go in.
@@ -149,6 +168,8 @@ type Thing struct {
 	Vulnerability *int `json:"vulnerability,omitempty"`
 	// Spell is a creature's magic attack, 0 for none.
 	Spell int `json:"spell,omitempty"`
+	// Inventory is what a player starts with.
+	Inventory []InventoryObject `json:"inventory,omitempty"`
 	// Animations are the thing's own; a name it does not have comes from its sprite.
 	Animations map[string]Animation `json:"animations,omitempty"`
 }
@@ -224,24 +245,64 @@ type Messages struct {
 
 // Engine message keys.
 const (
-	MsgLeverStuck    = "lever_stuck"
-	MsgSlotWrongItem = "slot_wrong_item"
-	MsgSlotStuck     = "slot_stuck"
-	MsgNoDropHere    = "no_drop_here"
-	MsgNoRoom        = "no_room"
-	MsgNotACreature  = "not_a_creature"
-	MsgCannotHurt    = "cannot_hurt"
-	MsgMiss          = "miss"
-	MsgHit           = "hit"
-	MsgCreatureHits  = "creature_hits"
-	MsgCreatureMiss  = "creature_misses"
-	MsgWeaponBreaks  = "weapon_breaks"
-	MsgSkillUp       = "skill_up"
-	MsgLevelUp       = "level_up"
+	MsgLeverStuck            = "lever_stuck"
+	MsgSlotWrongItem         = "slot_wrong_item"
+	MsgSlotStuck             = "slot_stuck"
+	MsgNoDropHere            = "no_drop_here"
+	MsgNoRoom                = "no_room"
+	MsgNotACreature          = "not_a_creature"
+	MsgCannotHurt            = "cannot_hurt"
+	MsgMiss                  = "miss"
+	MsgHit                   = "hit"
+	MsgCreatureHits          = "creature_hits"
+	MsgCreatureMiss          = "creature_misses"
+	MsgWeaponBreaks          = "weapon_breaks"
+	MsgSkillUp               = "skill_up"
+	MsgLevelUp               = "level_up"
+	MsgFullHealth            = "full_health"
+	MsgFullMagic             = "full_magic"
+	MsgNotPoisoned           = "not_poisoned"
+	MsgNotPoisonedOrConfused = "not_poisoned_or_confused"
+	MsgNotFatigued           = "not_fatigued"
+	MsgNoDestination         = "no_destination"
+	MsgNoCreatures           = "no_creatures"
+	MsgAlreadyHave           = "already_have"
+	MsgHealed                = "healed"
+	MsgProtected             = "protected"
+	MsgBoostExtended         = "boost_extended"
+	MsgPoisoned              = "poisoned"
+	MsgSlowed                = "slowed"
+	MsgLostWeaponSkills      = "lost_weapon_skills"
+	MsgLostMagicSkills       = "lost_magic_skills"
+	MsgNoQuiver              = "no_quiver"
+	MsgNoArrows              = "no_arrows"
+	MsgNoRoomToShoot         = "no_room_to_shoot"
+	MsgCannotThrow           = "cannot_throw"
+	MsgCannotAct             = "cannot_act"
 )
 
 var messageKeys = map[string]bool{
 	MsgLeverStuck: true, MsgSlotWrongItem: true, MsgSlotStuck: true, MsgNoDropHere: true, MsgNoRoom: true,
 	MsgNotACreature: true, MsgCannotHurt: true, MsgMiss: true, MsgHit: true, MsgCreatureHits: true,
 	MsgCreatureMiss: true, MsgWeaponBreaks: true, MsgSkillUp: true, MsgLevelUp: true,
+	MsgFullHealth:            true,
+	MsgFullMagic:             true,
+	MsgNotPoisoned:           true,
+	MsgNotPoisonedOrConfused: true,
+	MsgNotFatigued:           true,
+	MsgNoDestination:         true,
+	MsgNoCreatures:           true,
+	MsgAlreadyHave:           true,
+	MsgHealed:                true,
+	MsgProtected:             true,
+	MsgBoostExtended:         true,
+	MsgPoisoned:              true,
+	MsgSlowed:                true,
+	MsgLostWeaponSkills:      true,
+	MsgLostMagicSkills:       true,
+	MsgNoQuiver:              true,
+	MsgNoArrows:              true,
+	MsgNoRoomToShoot:         true,
+	MsgCannotThrow:           true,
+	MsgCannotAct:             true,
 }

@@ -215,11 +215,11 @@ const (
 	ThingPlayer  = "thing.player"
 )
 
-// StarterAttributes are the player's attributes, an agile fighter, and its interval bonus,
-// standing in for the boots a new character wears: it walks a step every 2 ticks.
+// StarterAttributes are the player's attributes, an agile fighter, and its starting skills. It
+// starts wearing boots of speed, so it walks a step every 2 ticks.
 var StarterAttributes = map[string]int{
 	"strength": 18, "agility": 20, "endurance": 18, "accuracy": 16, "talent": 16, "power": 16,
-	"interval_bonus": -2, "weapon.0": 1, "school.0": 1,
+	"weapon.0": 1, "school.0": 1,
 }
 
 func records(p *content.Pack) {
@@ -250,6 +250,9 @@ func records(p *content.Pack) {
 		{Kind: content.ActionAttack, Damage: content.Dice{Count: 1, Sides: 10}, Delay: 3, Skill: 2},
 	}
 	p.Items[ItemBoots].Wear, p.Items[ItemBoots].Armor, p.Items[ItemBoots].Power = content.WearFeet, 1, 0x0A
+	p.Items[ItemBoots].PowerWorn = true
+	p.Items[ItemPotion].Power = 0x28
+	p.Items[ItemPotion].Actions = []content.ItemAction{{Kind: content.ActionUseUp, Delay: 3}}
 	p.Items[ItemMail].Wear, p.Items[ItemMail].Armor, p.Items[ItemMail].Durability = content.WearBody, 4, 7500
 	p.Items[ItemMail].Tags = []string{"body_armor"}
 	p.Things[ThingGuard] = &content.Thing{ID: ThingGuard, Kind: content.ThingCreature, Sprite: "sprite.guard",
@@ -271,5 +274,6 @@ func records(p *content.Pack) {
 		IntervalMS: 2200, Weight: 100, Footprint: 20}
 	p.Things[ThingPlayer] = &content.Thing{ID: ThingPlayer, Kind: content.ThingPlayer, Sprite: "sprite.player",
 		Facing: 3, Speed: 8, IntervalMS: 275, Weight: 100, Footprint: 16,
-		HitPoints: content.Dice{Bonus: 56}, MagicPoints: content.Dice{Bonus: 52}, Stats: StarterAttributes}
+		HitPoints: content.Dice{Bonus: 56}, MagicPoints: content.Dice{Bonus: 52}, Stats: StarterAttributes,
+		Inventory: []content.InventoryObject{{Slot: 24, Object: content.Object{Item: ItemBoots}}}}
 }

@@ -49,6 +49,9 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 		}
 		s.Things = append(s.Things, th)
 	}
+	for _, f := range l.Flights {
+		s.Flights = append(s.Flights, Flight{Item: f.Object.Item, U: f.U, V: f.V})
+	}
 	if p := w.Player(); p != nil && w.Current() == l {
 		th := Thing{ID: sim.PlayerID, Template: p.Template.ID, U: p.U, V: p.V, Facing: p.Facing}
 		switch {

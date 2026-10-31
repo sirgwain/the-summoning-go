@@ -61,7 +61,7 @@ A closed door's cell is terrain 10h (11h vertical) and blocks movement and sight
 
 **Closing on entities.** When a door closes on its cell, boulders, traps, conjured things and corpses there are removed. Anything else is pushed to the cell's edge, hurt 1 point with a 3 in 10 chance, and the door opens again.
 
-**Sealed doors** (stages 5–7) open only to a thrown sphere of the matching kind landing on them: the Rainbow Sphere (C9h) for stage 5, the Energy Sphere (CBh) for 6, the Shadow Sphere (CDh) for 7. The door opens at once (stage 4) with a sound and an effect.
+**Sealed doors** (stages 5–7) open only to a thrown sphere of the matching kind flying into them: the Rainbow Sphere (C9h) for stage 5, the Energy Sphere (CBh) for 6, the Shadow Sphere (CDh) for 7. The door opens at once (stage 4) with a sound and an effect, and the sphere is used up.
 
 **Kano** (spells.md) switches on a door with bit 20h; any other door gives message 34h.
 
@@ -189,6 +189,5 @@ An op naming a cell with nothing it can act on is dropped and reported.
 - The exact way a teleported creature spins and how long the player's teleport effect lasts.
 - How often a moving door steps. The engine steps it once per tick, so a door opens or closes in four ticks.
 - Where in its destination cell a teleported thing lands. The engine keeps its place within the cell.
-- Whether a sphere that opens a sealed door is used up. The engine leaves it lying on the door's cell.
 - A slot's procedure b. Many slots set one, but the game is not known to run it; the importer leaves it out.
 - Whether the objects and creatures a level places on a plate count toward its counter when the level first loads. Until known, the engine adds their weight at load without running any procedure, so the plate starts in the state its terrain shows.

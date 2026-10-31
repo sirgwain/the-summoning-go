@@ -77,8 +77,14 @@ type Player struct {
 	// ArmorClass is the armor the player wears; Delays each hand's updates until it acts again.
 	ArmorClass int
 	Delays     [2]int
-	// Poisoned and Dead are the player's conditions.
+	// Poisoned and Dead are the player's conditions; Status its lasting statuses, Timed its timed
+	// effects in status ticks, and Boosts each attribute's timed boost.
 	Poisoned, Dead bool
+	Status         Status
+	Timed          [TimedCount]int
+	Boosts         [6]Boost
+	// Exertion, Fatigue and Confusion are counts (docs/spec/player.md).
+	Exertion, Fatigue, Confusion int
 	// Pose is an action's pose ("attack", "attack.left", "attack.both"), shown poseLeft updates.
 	Pose     string
 	poseLeft int
@@ -98,8 +104,16 @@ func (p *Player) Cell() content.Cell { return cellOf(p.U, p.V) }
 // Walking reports whether the player shows its walk rather than its idle frame.
 func (p *Player) Walking() bool { return p.Moves > 0 && p.Idle < idleUpdates }
 
-// weight is what the player adds to a plate.
+// weight is what the player adds to a plate: nothing while levitating.
 func (p *Player) weight() int {
+	if p.Status.Levitating {
+		return 0
+	}
+	return p.baseWeight()
+}
+
+// baseWeight is the player's weight on its feet.
+func (p *Player) baseWeight() int {
 	if p.Template.Weight > 0 {
 		return p.Template.Weight
 	}
@@ -208,13 +222,18 @@ func (w *World) hurtPlayer(n int, k combat.Kind, by string) {
 		return
 	}
 	armor := p.Slots[SlotBody]
-	d, wear := w.rules.HurtPlayer(n, k, combat.PlayerDefense{ArmorClass: p.ArmorClass, BodyArmor: armor != nil})
+	d, wear := w.rules.HurtPlayer(n, k, combat.PlayerDefense{Status: p.combatStatus(), ArmorClass: p.ArmorClass, BodyArmor: armor != nil})
 	if wear > 0 && armor.Value < unwearing {
 		armor.Value = max(0, armor.Value-wear)
 		w.wornChanged()
 	}
 	p.HitPoints = max(0, p.HitPoints-d)
 	w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "hurt by " + by, Damage: d})
+	if p.HitPoints == 0 && p.Status.DeathProtection {
+		p.Status.DeathProtection = false
+		p.HitPoints, p.MagicPoints = p.MaxHitPoints, p.MaxMagicPoints
+		w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "revived"})
+	}
 	if p.HitPoints == 0 {
 		w.playerDies(by)
 	}
@@ -237,11 +256,15 @@ func (w *World) updatePlayer() {
 			w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "stands"})
 		}
 	}
-	if p.Poisoned && w.chance(1, poisonChance) {
-		w.hurtPlayer(1+w.rng.IntN(2), combat.Physical, "poison")
-	}
+	w.everyMove()
 	d := p.want
 	p.want = -1
+	if p.Confusion > 0 {
+		if d >= 0 && p.Confusion > confusedOver && w.rng.IntN(100) < p.Confusion {
+			d = (d + 7 + 2*w.rng.IntN(2)) % 8
+		}
+		p.Confusion--
+	}
 	if d < 0 || p.Dead {
 		if p.Idle < idleUpdates {
 			if p.Idle++; p.Idle == idleUpdates {
@@ -296,6 +319,12 @@ func (p *Player) IntervalTicks(pk *content.Pack) int {
 	}
 	agility, n := p.Agility(pk)
 	n += p.IntervalBonus
+	if p.Timed[TimedHaste] > 0 {
+		n--
+	}
+	if p.Timed[TimedBattleRage] > 0 {
+		n--
+	}
 	switch {
 	case agility >= 15:
 		n--
@@ -368,7 +397,7 @@ func (w *World) walk(d int) bool {
 	if su == 0 && sv == 0 && hit != nil && hit.thing != nil {
 		t := hit.thing
 		switch {
-		case pushable(t):
+		case pushable(t) && !(p.Status.Levitating && t.Template.Kind == content.ThingCreature):
 			from := [2]int{t.U, t.V}
 			if w.push(l, t, du, dv, 0) {
 				su, sv = t.U-from[0], t.V-from[1]
@@ -393,6 +422,9 @@ func (w *World) walk(d int) bool {
 		su, sv = w.slideOff(l, du, dv)
 	}
 	if su == 0 && sv == 0 {
+		if hit == nil {
+			p.Confusion += confusionBump
+		}
 		return false
 	}
 	w.movePlayerBy(l, su, sv)
@@ -451,7 +483,7 @@ func (w *World) probe(l *Level, u, v, d int) (bool, *Feature) {
 	if l.Blocked(c) {
 		return false, nil
 	}
-	if f != nil && d >= 0 && (f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor && f.Open) {
+	if f != nil && d >= 0 && !w.player.Status.Levitating && (f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor && f.Open) {
 		return false, f
 	}
 	return true, nil
@@ -488,7 +520,7 @@ func (w *World) movePlayerBy(l *Level, du, dv int) {
 	p.Idle = 0
 	to := p.Cell()
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: to, Thing: PlayerID, Detail: "moved"})
-	if ft := l.FloorType(to); ft != nil && ft.Depth == 4 && w.chance(1, 4) {
+	if ft := l.FloorType(to); ft != nil && ft.Depth == 4 && !p.Status.Levitating && w.chance(1, 4) {
 		w.hurtPlayer(1, combat.Physical, "deep water")
 	}
 	if from != to {
@@ -504,7 +536,7 @@ func (w *World) playerEntered(l *Level, c content.Cell, depth int) {
 	if depth >= maxDepth || w.current != l.ID {
 		return
 	}
-	if ft := l.FloorType(c); ft != nil && ft.Enter != nil {
+	if ft := l.FloorType(c); ft != nil && ft.Enter != nil && !w.player.Status.Levitating {
 		w.floorEffect(ft.Enter)
 	}
 	f := l.byCell[c]
@@ -514,7 +546,7 @@ func (w *World) playerEntered(l *Level, c content.Cell, depth int) {
 		w.travel(f.To)
 	case f.Kind == content.FeatureTeleporter && f.Armed:
 		w.teleportPlayer(l, f, depth)
-	case f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor && f.Open:
+	case (f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor && f.Open) && !w.player.Status.Levitating:
 		w.fallPlayer(f, -1)
 	}
 }
@@ -541,6 +573,9 @@ func (w *World) floorEffect(e *content.Effect) {
 			by = e.Type
 		}
 		if e.Type == "fire" {
+			if p.Status.FireImmune || p.Status.Levitating {
+				return
+			}
 			k = combat.Fire
 		}
 		w.hurtPlayer(w.roll(e.Damage), k, by)
@@ -559,13 +594,14 @@ func (w *World) statusTick() {
 		if ft.Tick != nil {
 			w.floorEffect(ft.Tick)
 		}
-		if ft.Depth == 4 {
+		if ft.Depth == 4 && !p.Status.Levitating {
 			w.hurtPlayer(1, combat.Physical, "deep water")
 		}
 	}
 	if p.statusTicks++; p.statusTicks%4 == 0 && p.MagicPoints < p.MaxMagicPoints {
 		p.MagicPoints++
 	}
+	w.statusTickPlayer()
 }
 
 // pickUp takes the top object of the player's cell into the hand, or the first empty shelf
@@ -579,6 +615,10 @@ func (w *World) pickUp() {
 		return
 	}
 	o := objs[len(objs)-1]
+	if w.intoQuiver(o) {
+		w.takeFloorObject(l, c)
+		return
+	}
 	slot := -1
 	if p.Hand != nil {
 		for i := range Shelves {
@@ -634,6 +674,8 @@ func (w *World) swap(i int) {
 	switch {
 	case i >= 0 && i < Shelves:
 		p.Hand, p.Slots[i] = p.Slots[i], p.Hand
+	case i == SlotQuiver && p.Hand != nil && w.intoQuiver(p.Hand):
+		p.Hand = nil
 	case i >= Shelves && i < SlotCount:
 		if wear := wearOf(i); wear != "" && p.Hand != nil {
 			if it := w.pack.Items[p.Hand.Item]; it == nil || it.Wear != wear {
@@ -707,4 +749,20 @@ func (w *World) activate() {
 		return
 	}
 	w.use(l, best.Cell)
+}
+
+// startInventory gives the player the objects its template starts with; worn ones start as if
+// put on (docs/spec/player.md, Starting inventory).
+func (w *World) startInventory() {
+	p := w.player
+	for _, io := range p.Template.Inventory {
+		o := w.object(io.Object)
+		if o == nil || io.Slot < 0 || io.Slot >= SlotCount {
+			continue
+		}
+		p.Slots[io.Slot] = o
+		if io.Slot >= Shelves {
+			w.putOn(o)
+		}
+	}
 }

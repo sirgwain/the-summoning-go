@@ -201,6 +201,11 @@ func (v *verifier) itemRecord(i *Item) {
 	if c := i.WeaponClass; c != nil && (*c < 0 || *c > 3) {
 		v.fail("%s: weapon class %d", owner, *c)
 	}
+	for _, ref := range []string{i.Spent, i.BreaksInto} {
+		if ref != "" {
+			v.item(owner, ref)
+		}
+	}
 	if len(i.Actions) > 2 {
 		v.fail("%s: %d actions, at most 2", owner, len(i.Actions))
 	}
@@ -228,6 +233,12 @@ func (v *verifier) thing(t *Thing) {
 	}
 	if t.Speed < 0 || t.IntervalMS < 0 || t.Weight < 0 || t.Footprint < 0 {
 		v.fail("%s: negative speed, interval, weight or footprint", owner)
+	}
+	for _, io := range t.Inventory {
+		if t.Kind != ThingPlayer || io.Slot < 0 || io.Slot >= 28 {
+			v.fail("%s: inventory slot %d", owner, io.Slot)
+		}
+		v.item(owner+" inventory", io.Item)
 	}
 	for _, b := range t.Behaviors {
 		if !behaviors[b] {

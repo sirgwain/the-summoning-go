@@ -225,7 +225,11 @@ The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slo
 `weapon_breaks`, `{item}` stands for the item's name; in `miss`, `hit`, `creature_hits` and
 `creature_misses`, `{score}` and `{damage}` stand for the numbers. The keys: `lever_stuck`,
 `slot_wrong_item`, `slot_stuck`, `no_drop_here`, `no_room`, `not_a_creature`, `cannot_hurt`,
-`miss`, `hit`, `creature_hits`, `creature_misses`, `weapon_breaks`, `skill_up`, `level_up`. A key the pack leaves out shows nothing. Later milestones add
+`miss`, `hit`, `creature_hits`, `creature_misses`, `weapon_breaks`, `skill_up`, `level_up`,
+`full_health`, `full_magic`, `not_poisoned`, `not_poisoned_or_confused`, `not_fatigued`,
+`no_destination`, `no_creatures`, `already_have`, `healed` (`{damage}` the amount), `protected`,
+`boost_extended`, `poisoned`, `slowed`, `lost_weapon_skills`, `lost_magic_skills`, `no_quiver`,
+`no_arrows`, `no_room_to_shoot`, `cannot_throw`, `cannot_act`. A key the pack leaves out shows nothing. Later milestones add
 keys.
 
 ## Items
@@ -256,8 +260,11 @@ keys.
 - `actions` are up to two things the item does in hand: `{ "kind", "damage", "delay", "skill" }`.
   `kind` is `attack`, `attack_both`, `fire`, `use_up` or `use`; `damage` dice; `delay` the player
   updates the hand then waits; `skill` the class skill an attack needs (`docs/spec/items.md`).
-- `power` is the number of the power the item starts when worn or used (`docs/spec/items.md`,
-  Powers); powers become named records with Magic.
+- `power` is the number of the power the item starts when used (`docs/spec/items.md`, Powers), and
+  with `power_worn` also when worn; powers become named records with Magic. `spent` is the item a
+  used-up object becomes.
+- `missile` is how the item hurts in flight: `{ "damage": dice, "fired_only": bool }`; without it a
+  thrown object does `weight / 10 + 1`. `breaks_into` is the item a landing bottle becomes.
 - `tags` are words that rules and other records test (`body_armor`, `quiver`, `arrows`, `bottle`,
   `weapon`, `two_handed`). The engine attaches no meaning to a tag by itself.
 - `random` items can be picked for a random object.
@@ -301,7 +308,9 @@ keys.
 - `weight` is what the thing adds to a plate it stands on; 0 presses nothing.
 - `hit_points` are rolled when the thing is placed. A creature with none is placed as a corpse.
   `magic_points` (players) are rolled the same way. A player's `stats` may also give its starting
-  skills, `weapon.0`–`weapon.3` and `school.0`–`school.3`.
+  skills, `weapon.0`–`weapon.3` and `school.0`–`school.3`, and its `inventory` the objects it starts
+  with: `[{ "slot": 26, "item": "item.leather_trews" }, …]`, an object with an inventory slot
+  number (`docs/spec/items.md`, Inventory). Worn ones start as if put on.
 - `behaviors` (creatures): `hostile` from the start, `never_hostile`, `leaves_corpse` when it dies,
   `resists_teleport` (teleporters, pits and plates leave it alone), `invulnerable`, `poisonous`,
   `hurts_on_contact`, `death_blow`, `physical_only`, `resists_fire`, `resists_lightning`,

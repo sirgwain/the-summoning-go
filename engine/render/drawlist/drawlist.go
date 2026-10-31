@@ -32,7 +32,18 @@ type Scene struct {
 	Things      []Thing
 	// Visible reports whether a cell is drawn; nil draws every cell.
 	Visible func(content.Cell) bool
+	// Flights are objects in flight.
+	Flights []Flight
 }
+
+// Flight is an object in flight over ground point (U, V).
+type Flight struct {
+	Item string
+	U, V int
+}
+
+// flightHeight is how high above its ground point an object in flight is drawn, in pixels.
+const flightHeight = 16
 
 // shows reports whether the scene draws cell c.
 func (s Scene) shows(c content.Cell) bool { return s.Visible == nil || s.Visible(c) }
@@ -232,6 +243,19 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 		if cmd, cell, ok := thingCmd(p, t); ok && s.shows(cell) {
 			items = append(items, standing{depth: cell[0] + cell[1], top: cmd.Y, cmds: []Cmd{cmd}})
 		}
+	}
+	for _, f := range s.Flights {
+		cell := content.Cell{floorDiv(f.U, CellUnits), floorDiv(f.V, CellUnits)}
+		it, ok := p.Items[f.Item]
+		if !ok || !s.shows(cell) {
+			continue
+		}
+		sprite, ok := p.Sprites[it.Floor.Sprite]
+		if !ok {
+			continue
+		}
+		at := RefPoint(f.U, f.V).Sub(image.Pt(sprite.FrameSize[0]/2, sprite.FrameSize[1]/2+flightHeight))
+		items = append(items, standing{depth: cell[0] + cell[1], top: at.Y, cmds: []Cmd{{Sprite: it.Floor.Sprite, Frame: it.Floor.Frame, X: at.X, Y: at.Y}}})
 	}
 	for _, pr := range l.Props {
 		if !s.shows(pr.Cell) {
