@@ -27,10 +27,12 @@ const (
 	detailLines = 5
 )
 
-// wornLeft and wornRight are the worn slots in the boxes left and right of the figure, top down.
+// wornLeft and wornRight are the worn slots in the boxes left and right of the figure, top down:
+// the armor on the left, and on the right the quiver, the amulet and the hands, in the hotbar's
+// order (right hand above left).
 var (
-	wornLeft  = []int{sim.SlotHead, sim.SlotNeck, sim.SlotArms, sim.SlotRightHand}
-	wornRight = []int{sim.SlotQuiver, sim.SlotBody, sim.SlotLeftHand, sim.SlotFeet}
+	wornLeft  = []int{sim.SlotHead, sim.SlotBody, sim.SlotArms, sim.SlotFeet}
+	wornRight = []int{sim.SlotQuiver, sim.SlotNeck, sim.SlotRightHand, sim.SlotLeftHand}
 )
 
 // DollPart is an image drawn on the figure, mirrored for the right hand.

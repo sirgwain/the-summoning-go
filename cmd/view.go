@@ -87,8 +87,8 @@ mouth (a skull), the pointer becomes a speech bubble: a click talks to the creat
 mouth's message beside it. Taking a scroll onto the pointer reads it.
 
 I or Tab, or clicking the portrait, opens the inventory panel (Escape closes it): the figure
-showing what it wears, with a box for each worn slot (head, neck, arms, right hand on the left;
-quiver, body, left hand, feet on the right), the pack of a bag held in the left hand, the details
+showing what it wears, with a box for each worn slot (head, body, arms, feet on the left;
+quiver, neck, right hand, left hand on the right), the pack of a bag held in the left hand, the details
 of the object under the pointer or on it, and the character's attributes, points, armor, level,
 experience and skills. Its boxes work as the hotbar's: a click swaps a box with the pointer.
 
