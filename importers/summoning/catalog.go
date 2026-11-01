@@ -11,9 +11,12 @@ import (
 // Templates the rules name (items.md, rules.md).
 const (
 	templateRandom         = 0x00
+	templateSack           = 0x04
 	templateBagOfLightness = 0x05
-	templateFirstGem       = 0xC0
-	categoryRandom         = 6
+	// sackFillPer is how many objects in the Sack make each step of its fill pictures.
+	sackFillPer      = 3
+	templateFirstGem = 0xC0
+	categoryRandom   = 6
 )
 
 // sealingSpheres are the templates that open sealed door stages 5, 6 and 7 (rules.md, Doors).
@@ -191,6 +194,16 @@ func (im *importer) items() error {
 		}
 		if tm.Container() {
 			it.Container = &content.Container{Capacity: tm.Capacity(), Largest: tm.Largest(), Weightless: i == templateBagOfLightness}
+		}
+		if i == templateSack && tm.Container() {
+			it.Fill = &content.Fill{Per: sackFillPer}
+			for k := 1; k <= (tm.Capacity()+sackFillPer-1)/sackFillPer; k++ {
+				fi, err := im.image(int(im.init.Bases.SmallObject) + tm.Image() + k)
+				if err != nil {
+					return fmt.Errorf("sack fill icon %d: %w", k, err)
+				}
+				it.Fill.Icons = append(it.Fill.Icons, fi)
+			}
 		}
 		if tag, ok := categoryTags[tm.Category()]; ok {
 			it.Tags = append(it.Tags, tag)

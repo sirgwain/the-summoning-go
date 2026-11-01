@@ -26,6 +26,8 @@ OBJECTS holds 254 templates of 15 bytes. An object is an instance of a template 
 
 **The Bag of Lightness** is template 05h.
 
+**The Sack** (template 04h) shows how full it is: with `n` objects inside, its small image and its worn image are image `i + (n + 2) / 3` (integer division; `i + 0` when empty) instead of `i`. Its nine places give four pictures.
+
 ## Object values
 
 A new object's value:
@@ -259,6 +261,7 @@ Each template becomes an item:
 - **Tags** by category: 1 `body_armor`, 4 `quiver`, 7 `arrows`, 8 `bottle`; `weapon` with the 40h flag, `two_handed` with 80h.
 - **Random**: a template that may be picked for a random object (above).
 - **Icon** and **floor** images: frame 0 of the small and tiny images.
+- **Fill**, for the Sack: `per` 3 and, for each step from 1 to `(capacity + 2) / 3`, the small image and the worn look of image `i + step`. An object of an item with a fill shows step `(n + per − 1) / per` (at most the last) of its `n` contents in its boxes and on the doll, and its own icon and worn look when empty.
 
 Template 0 in a level becomes a random object rather than the item itself.
 
@@ -266,5 +269,5 @@ Template 0 in a level becomes a random object rather than the item itself.
 
 - Whether the game also magnifies floor objects on its own, for example while the player has timed sight (player.md) or by interaction variable 98 (dialogue.md).
 - The worn-look flags in byte 11 and the image tables for the figure in the view; specified with character drawing.
-- Which hand objects count as armor drawn last on the doll; the engine draws those with an armor bonus last. The pictures of a bag in the left hand, which show how full it is (worn images 2Fh on by a third of its contents), are not imported.
+- Which hand objects count as armor drawn last on the doll; the engine draws those with an armor bonus last.
 - Category 6, and the hand delay formula beyond what is given.

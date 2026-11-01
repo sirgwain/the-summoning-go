@@ -311,3 +311,23 @@ func TestPaletteAt(t *testing.T) {
 		t.Error("cycle wrong")
 	}
 }
+
+// TestFill shows a container's own look empty and a step for each Per objects, up to the last.
+func TestFill(t *testing.T) {
+	it := &Item{
+		Icon: Image{Sprite: "s", Frame: 0}, Doll: &DollImage{Image: Image{Sprite: "d"}},
+		Fill: &Fill{Per: 3, Icons: []Image{{Sprite: "s", Frame: 1}, {Sprite: "s", Frame: 2}},
+			Dolls: []DollImage{{Image: Image{Sprite: "d1"}}}},
+	}
+	for n, want := range []int{0, 1, 1, 1, 2, 2, 2, 2, 2} {
+		if got := it.IconFor(n).Frame; got != want {
+			t.Errorf("%d objects: icon frame %d, want %d", n, got, want)
+		}
+	}
+	if it.DollFor(0).Image.Sprite != "d" || it.DollFor(5).Image.Sprite != "d1" {
+		t.Errorf("dolls %+v %+v", it.DollFor(0), it.DollFor(5))
+	}
+	if plain := (&Item{Icon: Image{Frame: 7}}); plain.IconFor(4).Frame != 7 || plain.DollFor(4) != nil {
+		t.Error("an item without a fill changed its look")
+	}
+}

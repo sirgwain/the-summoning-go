@@ -260,6 +260,17 @@ func (v *verifier) itemRecord(i *Item) {
 	if i.Doll != nil {
 		v.frame(owner+" doll", i.Doll.Image.Sprite, i.Doll.Image.Frame)
 	}
+	if f := i.Fill; f != nil {
+		if f.Per <= 0 || i.Container == nil {
+			v.fail("%s: fill needs a container and per above 0", owner)
+		}
+		for n, im := range f.Icons {
+			v.frame(owner+" fill icon "+itoa(n+1), im.Sprite, im.Frame)
+		}
+		for n, d := range f.Dolls {
+			v.frame(owner+" fill doll "+itoa(n+1), d.Image.Sprite, d.Image.Frame)
+		}
+	}
 	for n, a := range i.Actions {
 		if a.Icon != nil {
 			v.frame(owner+" action "+itoa(n)+" icon", a.Icon.Sprite, a.Icon.Frame)

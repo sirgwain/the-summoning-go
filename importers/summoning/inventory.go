@@ -88,6 +88,13 @@ func (im *importer) inventory() {
 			look = wornQuiver
 		}
 		it.Doll = im.wornLook(look)
+		if it.Fill != nil {
+			for k := range it.Fill.Icons {
+				if d := im.wornLook(look + k + 1); d != nil {
+					it.Fill.Dolls = append(it.Fill.Dolls, *d)
+				}
+			}
+		}
 		var icons []int
 		for a := range 2 {
 			switch icon := tm.ActionIcon(a); {

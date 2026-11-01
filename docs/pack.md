@@ -297,6 +297,8 @@ leaves out shows nothing. Later milestones add keys.
   `{ "right": { "behind": sprite, "front": sprite }, "left": { … } }`. Each sprite has a frame for
   every frame of the player's sprite, drawn with it (an empty frame for none), and its own anchor
   at the player's ground point.
+- `fill` gives a container a look for how full it is: `{ "per", "icons", "dolls" }`, step `k`
+  (from 1) shown while it holds more than `(k − 1) × per` objects, its own icon and doll empty.
 - `missile` is how the item hurts in flight: `{ "damage": dice, "fired_only": bool }`; without it a
   thrown object does `weight / 10 + 1`. `breaks_into` is the item a landing bottle becomes, and
   `on_break` actions run when it breaks (`set_counter`, `converse`, `remove_all`, `experience`).

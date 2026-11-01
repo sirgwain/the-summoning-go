@@ -46,6 +46,8 @@ type Item struct {
 	Picture *Image `json:"picture,omitempty"`
 	// Doll is how it shows on the inventory's figure when worn.
 	Doll *DollImage `json:"doll,omitempty"`
+	// Fill gives a container a look for how full it is.
+	Fill *Fill `json:"fill,omitempty"`
 	// Poisons makes its blows poison; Grows and Levels make it a counted weapon; OnBreak runs
 	// when it breaks; Flying is its look in flight.
 	Poisons bool     `json:"poisons,omitempty"`
@@ -53,6 +55,43 @@ type Item struct {
 	Levels  *Levels  `json:"levels,omitempty"`
 	OnBreak []Action `json:"on_break,omitempty"`
 	Flying  *Flying  `json:"flying,omitempty"`
+}
+
+// Fill is how a container looks as it fills: step k, for k from 1, is shown while it holds more
+// than (k−1)·Per objects; empty, it shows its own icon and worn look.
+type Fill struct {
+	Per int `json:"per"`
+	// Icons and Dolls are steps 1, 2, …'s icons and worn looks.
+	Icons []Image     `json:"icons"`
+	Dolls []DollImage `json:"dolls,omitempty"`
+}
+
+// step returns the fill step of n contents, 0 for none, at most last.
+func (f *Fill) step(n, last int) int {
+	if n <= 0 || f.Per <= 0 || last <= 0 {
+		return 0
+	}
+	return min((n+f.Per-1)/f.Per, last)
+}
+
+// IconFor returns the item's icon holding n objects (docs/spec/items.md, Templates).
+func (i *Item) IconFor(n int) Image {
+	if f := i.Fill; f != nil {
+		if k := f.step(n, len(f.Icons)); k > 0 {
+			return f.Icons[k-1]
+		}
+	}
+	return i.Icon
+}
+
+// DollFor returns the item's worn look holding n objects, nil for none.
+func (i *Item) DollFor(n int) *DollImage {
+	if i.Fill != nil {
+		if k := i.Fill.step(n, len(i.Fill.Dolls)); k > 0 {
+			return &i.Fill.Dolls[k-1]
+		}
+	}
+	return i.Doll
 }
 
 // Held is how an item looks in each of the player's hands.

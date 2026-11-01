@@ -95,7 +95,7 @@ func (v *Viewer) HandImage() (content.Image, bool) {
 	if it == nil {
 		return content.Image{}, false
 	}
-	return it.Icon, true
+	return it.IconFor(len(p.Hand.Contents)), true
 }
 
 // FixedColors returns the colors fixed draw commands (the player's figure and what it holds) are

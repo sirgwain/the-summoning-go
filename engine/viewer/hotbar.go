@@ -185,14 +185,15 @@ func (v *Viewer) actionButtons(p *sim.Player, hand int) []ActionButton {
 		return nil
 	}
 	var out []ActionButton
+	icon := it.IconFor(len(o.Contents))
 	for a, act := range it.Actions[:min(len(it.Actions), 2)] {
-		out = append(out, ActionButton{Hand: hand, Action: a, Ready: ready, Icon: act.Icon, Picture: &it.Icon,
+		out = append(out, ActionButton{Hand: hand, Action: a, Ready: ready, Icon: act.Icon, Picture: &icon,
 			Label: map[string]string{
 				content.ActionAttack: "strike", content.ActionAttackBoth: "swing", content.ActionFire: "fire",
 				content.ActionUseUp: "use", content.ActionUse: "use",
 			}[act.Kind]})
 	}
-	return append(out, ActionButton{Hand: hand, Action: ThrowAction, Label: "throw", Ready: ready, Icon: inv.ThrowIcon, Picture: &it.Icon})
+	return append(out, ActionButton{Hand: hand, Action: ThrowAction, Label: "throw", Ready: ready, Icon: inv.ThrowIcon, Picture: &icon})
 }
 
 // Screen returns the screen rectangle of hotbar rectangle r.
@@ -286,5 +287,5 @@ func (v *Viewer) SlotImage(slot int) (content.Image, bool) {
 	if o == nil || v.Pack.Items[o.Item] == nil {
 		return content.Image{}, false
 	}
-	return v.Pack.Items[o.Item].Icon, true
+	return v.Pack.Items[o.Item].IconFor(len(o.Contents)), true
 }

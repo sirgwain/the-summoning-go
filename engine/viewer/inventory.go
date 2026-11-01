@@ -171,7 +171,7 @@ func (v *Viewer) dollParts(p *sim.Player, inv *content.Inventory) []DollPart {
 		if it == nil || (slot == sim.SlotRightHand || slot == sim.SlotLeftHand) && (it.Armor > 0) != armor {
 			return
 		}
-		look := it.Doll
+		look := it.DollFor(len(o.Contents))
 		if slot == sim.SlotQuiver && inv.QuiverSlot != nil {
 			look = inv.QuiverSlot
 		}
