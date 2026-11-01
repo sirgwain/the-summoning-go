@@ -1,6 +1,6 @@
 # Audio plan
 
-Status: 2026-11-01. Phase 1 done. How music and sound effects get from the game's files to
+Status: 2026-11-01. Phases 1 and 2 done. How music and sound effects get from the game's files to
 the speakers, and the order to build it in. Update this file as work lands, and fold what's
 settled into [design.md](design.md#audio), [pack.md](pack.md) and the spec; delete it once audio
 is done.
@@ -52,31 +52,18 @@ starts a track; and a song that ends cuts its carriers rather than ringing on.
 
 ### 2. The chip: `internal/opl2`
 
-A port of opal cut down to the OPL2: one register array, nine two-operator channels, waveforms
-0–3, rhythm mode, mono output, no four-operator pairs, no timers.
+Done. A port of opal cut down to the OPL2: one register array, nine two-operator channels,
+waveforms 0–3, rhythm mode, mono output, no four-operator pairs, no timers. `New`, `Write`
+(queued, one write landing per sample, so a key-off then key-on restarts a note), `Sample` at
+`Rate`, `Silent` (every operator died away, nothing pending) and `Resampler`. With register 01h
+bit 5 clear, waveform writes are ignored, as on the OPL2; C0h bits 4–7 are ignored. opal's MIT
+notice is in `internal/opl2/LICENSE`.
 
-- [ ] API: `New()`, `Write(reg int, val byte)`, `Sample() int16` at `Rate` (49716 Hz),
-      `Silent(ch int) bool` (the carrier fully released, for finding a song's tail), and a
-      `Resampler` that produces samples at another rate.
-- [ ] Register 01h bit 5 must work as the OPL2's: with it clear, waveform registers act as 0.
-      opal ignores it, because the OPL3 does.
-- [ ] Writes are applied in order between samples. A key-off followed by a key-on in the same
-      tick must retrigger the note, so queue writes and apply them one per sample (as the bus
-      allows), or confirm that opal's write path already retriggers correctly.
-- [ ] C0h bits 4–7 are ignored, as on the OPL2 (opal's OPL3 uses bits 4–5 as speaker
-      enables; songs can set them through large feedback values).
-- [ ] `internal/opl2/LICENSE` with opal's MIT notice, and a package comment naming opal as the
-      source.
-
-Tests, all with hand-made register writes:
-
-- [ ] A sine operator at a known F-number and block crosses zero at the expected frequency.
-- [ ] Attack, decay and release take the times the rate tables give, within a sample or two.
-- [ ] Each waveform has its shape (half-sine, absolute sine, quarter pulses).
-- [ ] Rhythm mode: each drum bit produces sound only on its own operators; noise is
-      deterministic from reset.
-- [ ] A golden checksum of a few seconds of a fixed register script, so a later change to the
-      core shows up. Check it once against opal's own build before committing.
+Tests use hand-made register writes: frequency from F-number and block, instant attack and the
+sustain level, release rates doubling, retriggering, the four waveforms, waveform select, each
+drum bit, drums needing rhythm mode, the resampler, and a golden hash of a script with feedback,
+vibrato, tremolo, additive voices and drums. The hash matches opal's own build playing the same
+writes at the same samples.
 
 ### 3. The song player: `importers/summoning/music.go`
 
