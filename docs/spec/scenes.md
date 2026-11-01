@@ -74,13 +74,17 @@ When the player's hit points reach 0 at a status tick, or a death blow lands, pl
 
 ## Endings
 
-Power 5Eh (items.md) and the conversations choose an ending:
+Power 5Eh (items.md) chooses an ending by the first of these the player holds in either hand:
 
-- holding the Chesschantra Skull (F7h): ending F, with NPC record 4;
-- holding WarMonger (64h): ending G, with NPC record 5;
-- holding the Necklace of Runes (59h): ending E, with NPC record 3, after conversation 79h.
+- the Chesschantra Skull (F7h): ending F, NPC record 4;
+- WarMonger (64h): ending G, NPC record 5;
+- the Necklace of Runes (59h): ending E, NPC record 3.
 
-The choice is stored in interaction variable 32. The ending shows the closing picture spread in (the door closing: RESOURCE 54h's halves coming together over the view, then 3Eh), a fade to white, the final scene (RESOURCE 5Ah, then frames 0–4 of 5Bh), and the closing texts (TEXT records 157h–170h), each shown for 2Dh ticks on the banner RESOURCE 5Ch. Then the frontend plays the chosen end scene. End-scene art starts at RESOURCE `end-scene base` (INIT).
+The record's number is stored in interaction variable 32, conversation 79h runs, and when it ends play ends and the frontend plays the chosen ending's end scene. Ending G first takes the objects from both hands, runs level procedure 27h, drops the Shadow Weaver's Cloak, Mask and the Black Boots at (15h, 1Fh), awards 600000 experience and saves the game so it can go on after the ending.
+
+Conversation action 21h plays the closing, below, and then the game ends; nothing after it in the conversation runs. The closing shows the closing picture spread in (the door closing: RESOURCE 54h's halves coming together over the view, then 3Eh), a fade to white, the final scene (RESOURCE 5Ah, then frames 0–4 of 5Bh), and the closing texts (TEXT records 157h–170h), each shown for 2Dh ticks on the banner RESOURCE 5Ch. Then the frontend plays the chosen end scene. End-scene art starts at RESOURCE `end-scene base` (INIT).
+
+**Endings, engine model.** The creation record's `ending` gives the ending power's choices (the item held, the counter's value, a name and an optional scene), the counter, the conversation that runs before play ends, and the closing scene of the `ending` action. When play ends the simulation stops and reports the ending's name and scene; the presentation plays the scene and returns to the main menu. Ending G's changes to the world and its save are not done.
 
 **Scenes, engine model.** A scene is a record of steps the presentation plays in order: show a picture, part or close a picture's halves over a background in a number of steps, show a caption, fade to a color, wait. A key or a click skips to the end. The importer writes the new-game door and the ending as scenes; the end scenes and the intro, whose captions are in the game's program, are left out.
 

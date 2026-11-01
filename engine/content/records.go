@@ -377,6 +377,7 @@ const (
 	MsgCured                = "cured"
 	MsgKilled               = "killed"
 	MsgAbsorbed             = "absorbed"
+	MsgNoEnding             = "no_ending"
 )
 
 var messageKeys = map[string]bool{
@@ -391,6 +392,7 @@ var messageKeys = map[string]bool{
 	MsgNoDestination:         true,
 	MsgNoCreatures:           true,
 	MsgAlreadyHave:           true,
+	MsgNoEnding:              true,
 	MsgHealed:                true,
 	MsgProtected:             true,
 	MsgBoostExtended:         true,

@@ -222,6 +222,12 @@ func (w *World) usable(power int) bool {
 		// The map shows, and the object is never used up.
 		w.showMap()
 		return false
+	case powerEnding:
+		if w.endingChoice() == nil {
+			return no(content.MsgNoEnding)
+		}
+		w.chooseEnding()
+		return false
 	}
 	return true
 }

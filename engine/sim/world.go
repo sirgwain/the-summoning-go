@@ -50,6 +50,8 @@ type World struct {
 	counters map[string]int
 	// opening is the thing template whose conversation a new game starts on its first update.
 	opening *content.Thing
+	// ended is how play ended, nil while it goes on.
+	ended *Ended
 }
 
 var summoningRules combat.Rules = summoning.Rules{}
@@ -92,6 +94,9 @@ func (w *World) Level(id string) *Level { return w.levels[id] }
 // Update applies cmds, advances one step and returns what happened.
 func (w *World) Update(cmds []input.Command) []Event {
 	w.events = nil
+	if w.ended != nil {
+		return nil
+	}
 	if w.opening != nil && w.talk == nil {
 		t := w.opening
 		w.opening = nil

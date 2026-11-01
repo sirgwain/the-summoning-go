@@ -73,6 +73,7 @@ var engineMessages = map[string]struct {
 	content.MsgCured:                {0x7A, nil},
 	content.MsgKilled:               {0x8B, []string{"name"}},
 	content.MsgAbsorbed:             {0x3A, []string{"damage"}},
+	content.MsgNoEnding:             {0x8E, nil},
 }
 
 // placeholders replaces s's format codes, in order, with the named placeholders.

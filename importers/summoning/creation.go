@@ -19,6 +19,7 @@ const (
 	quiverArrows       = 4
 	npcOpening         = 0x7D
 	varNewGame         = 34
+	npcEnding          = 0x79
 	templateSkull      = 0xF7
 	templateNecklace   = 0x59
 )
@@ -124,7 +125,20 @@ func (im *importer) creation(rows int, premades []Premade) {
 	if s := im.doorScene(); s != nil {
 		c.Scene = s.ID
 	}
-	c.Ending = &content.Ending{Holding: items(templateSkull, templateWarMonger, templateNecklace)}
+	// The ending power's choices: the item held, the NPC record stored in the counter, and the
+	// ending's name. Their end scenes are the game's program's, so none is given.
+	c.Ending = &content.Ending{Counter: varID(varEnding)}
+	for _, ch := range []struct {
+		template, record int
+		name             string
+	}{{templateSkull, 4, "F"}, {templateWarMonger, 5, "G"}, {templateNecklace, 3, "E"}} {
+		if id := item(ch.template); id != "" {
+			c.Ending.Choices = append(c.Ending.Choices, content.EndingChoice{Name: ch.name, Holding: id, Value: ch.record})
+		}
+	}
+	if id, err := im.creature(npcEnding); err == nil && im.pack.Things[id].Conversation != "" {
+		c.Ending.Conversation = id
+	}
 	if s := im.endingScene(); s != nil {
 		c.Ending.Scene = s.ID
 	}

@@ -67,6 +67,8 @@ type Talk struct {
 	after *content.Destination
 	back  bool
 	use   func()
+	// ending is how play ends when the conversation does, for the ending power.
+	ending *Ended
 }
 
 // pass is a pass running: the keyword it asks ("" for the greeting), the clause whose actions
@@ -287,7 +289,8 @@ func (w *World) ask(word string) {
 // runTalk runs the conversation on until it waits for the player or ends.
 func (w *World) runTalk() {
 	t := w.talk
-	for t != nil && !t.done && t.Line == nil {
+	// The loop stops when the conversation is no longer the world's: play has ended.
+	for t != nil && w.talk == t && !t.done && t.Line == nil {
 		if t.pass == nil {
 			if t.queued == "" {
 				return
@@ -299,7 +302,7 @@ func (w *World) runTalk() {
 		}
 		w.stepPass()
 	}
-	if t != nil && t.done {
+	if t != nil && w.talk == t && t.done {
 		w.endTalk()
 	}
 }
@@ -498,7 +501,7 @@ func (w *World) talkAction(a content.Action) {
 	case a.Return:
 		t.back = true
 	case a.Ending:
-		w.emit(Event{Kind: EventNotYet, Level: l.ID, Detail: "the ending"})
+		w.closing()
 	case a.Menu != nil:
 		w.emit(Event{Kind: EventNotYet, Level: l.ID, Detail: "the " + *a.Menu + " menu"})
 	case a.Transcript != nil:
@@ -537,6 +540,10 @@ func (w *World) endTalk() {
 	w.emit(Event{Kind: EventTalk, Level: w.current, Thing: speakerID(t.Speaker), Item: t.Def.ID, Detail: "ended"})
 	if t.use != nil {
 		t.use()
+	}
+	if t.ending != nil {
+		w.end(*t.ending)
+		return
 	}
 	p := w.player
 	switch {

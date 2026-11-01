@@ -108,6 +108,11 @@ new game's counter, opening conversation and scene, and the ending. The importer
 ending as scenes (`scenes/`). `sim.NewGame` starts a world from a made character
 (`TestNewGame`); the player's name replaces @ in texts. The dev pack has a creation record.
 
+**Done (the ending, in the simulation).** Power 5Eh chooses an ending by the item held, sets
+variable 32 and runs conversation 79h; when it ends, play ends (`World.Ended`, `EventEnding`)
+with the ending's name. The conversations' `ending` action ends play with the closing scene
+(`TestEndingPower`, `TestEndingAction`). Not done: ending G's changes to the world and its save.
+
 ## Left from Walk
 
 - **Play a real level through.** Only a short walk on level 0 of the imported game has been tried.
@@ -120,7 +125,6 @@ ending as scenes (`scenes/`). `sim.NewGame` starts a world from a made character
 
 ### 5. Fight, left
 
-- Powers that show the map or choose the ending report "not yet" (Game).
 - Worn looks on the figure in the view (head and body armor), with character drawing; the
   player's figure and held layers draw with the palette's own colors, unanimated, and the
   portrait's figure colors.

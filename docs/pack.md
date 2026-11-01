@@ -505,7 +505,9 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
   "body_armor": ["item.leather_trews", "…"],
   "premade": [{ "name": "Kordan", "portrait": "portrait.3", "weapon_class": 0, "school": 1,
                 "attributes": { "strength": 18, "…": 0 } }],
-  "counter": "var.34", "opening": "thing.npc.125", "scene": "scene.door"
+  "counter": "var.34", "opening": "thing.npc.125", "scene": "scene.door",
+  "ending": { "scene": "scene.ending", "counter": "var.32", "conversation": "thing.npc.121",
+              "choices": [{ "name": "F", "holding": "item.chesschantra_skull", "value": 4 }] }
 }
 ```
 
@@ -516,6 +518,9 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
   icons a school starts knowing.
 - `inventory` is what every character starts with; one of `body_armor` goes on the body.
 - A new game sets `counter` to 1, plays `scene`, and starts `opening`'s conversation on arrival.
+- The ending power takes the first of `ending.choices` whose `holding` item is in a hand, sets
+  `ending.counter` to its `value`, runs `ending.conversation`'s conversation, and then ends play
+  with the choice's `scene`; the conversations' `ending` action ends play with `ending.scene`.
 
 ## Scenes
 

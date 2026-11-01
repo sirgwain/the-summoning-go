@@ -24,11 +24,23 @@ type Creation struct {
 	Ending *Ending `json:"ending,omitempty"`
 }
 
-// Ending is how the game ends: the scene it plays, and the items one of which the player must
-// hold in a hand for the ending power to work.
+// Ending is how the game ends (docs/pack.md, Creation). The ending power takes the first choice
+// whose item the player holds in a hand, sets Counter to its value and runs Conversation (a thing
+// template's); when that ends, play ends with the choice's scene. The conversations' `ending`
+// action ends play at once with Scene.
 type Ending struct {
-	Scene   string   `json:"scene,omitempty"`
-	Holding []string `json:"holding,omitempty"`
+	Scene        string         `json:"scene,omitempty"`
+	Counter      string         `json:"counter,omitempty"`
+	Conversation string         `json:"conversation,omitempty"`
+	Choices      []EndingChoice `json:"choices,omitempty"`
+}
+
+// EndingChoice is one of the endings the ending power chooses among.
+type EndingChoice struct {
+	Name    string `json:"name"`
+	Holding string `json:"holding"`
+	Value   int    `json:"value"`
+	Scene   string `json:"scene,omitempty"`
 }
 
 // AttributeMethod is a way of making the attributes: each the sum of Roll's dice, at most Max,
@@ -165,11 +177,20 @@ func (v *verifier) creation() {
 		v.fail("%s: scene %q not found", owner, c.Scene)
 	}
 	if e := c.Ending; e != nil {
-		if _, ok := v.p.Scenes[e.Scene]; e.Scene != "" && !ok {
-			v.fail("%s: ending scene %q not found", owner, e.Scene)
+		scene := func(id string) {
+			if _, ok := v.p.Scenes[id]; id != "" && !ok {
+				v.fail("%s: ending scene %q not found", owner, id)
+			}
 		}
-		for _, it := range e.Holding {
-			v.item(owner, it)
+		scene(e.Scene)
+		if e.Conversation != "" {
+			if t := v.thingRef(owner, e.Conversation); t != nil && t.Conversation == "" {
+				v.fail("%s: %s holds no conversation", owner, e.Conversation)
+			}
+		}
+		for _, ch := range e.Choices {
+			v.item(owner, ch.Holding)
+			scene(ch.Scene)
 		}
 	}
 }
