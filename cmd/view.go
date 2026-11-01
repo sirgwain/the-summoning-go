@@ -581,6 +581,11 @@ func (s *shell) drawInventory(screen *ebiten.Image) {
 		}
 		vector.StrokeRect(win, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx()-1), float32(r.Dy()-1), 1, edge, false)
 	}
+	for _, b := range ip.Preview {
+		r := b.Rect.Inset(1)
+		vector.FillRect(win, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), slotColor, false)
+		vector.StrokeRect(win, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx()-1), float32(r.Dy()-1), 1, slotEdgeColor, false)
+	}
 	art := s.artImage(size)
 	draw := func(img content.Image, at image.Point, mirrored bool) {
 		if err := s.sprites.DrawImage(art, img, at.X, at.Y, mirrored); err != nil && s.err == nil {
@@ -597,6 +602,12 @@ func (s *shell) drawInventory(screen *ebiten.Image) {
 		if img, ok := v.SlotImage(b.Slot); ok {
 			fs := v.Pack.Sprites[img.Sprite].FrameSize
 			draw(img, b.Rect.Min.Add(image.Pt((b.Rect.Dx()-fs[0])/2, (b.Rect.Dy()-fs[1])/2)), false)
+		}
+	}
+	for _, b := range ip.Preview {
+		if b.Has {
+			fs := v.Pack.Sprites[b.Icon.Sprite].FrameSize
+			draw(b.Icon, b.Rect.Min.Add(image.Pt((b.Rect.Dx()-fs[0])/2, (b.Rect.Dy()-fs[1])/2)), false)
 		}
 	}
 	textAt := map[int]int{}

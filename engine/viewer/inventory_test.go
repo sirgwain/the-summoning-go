@@ -161,37 +161,43 @@ func TestHoverContainer(t *testing.T) {
 	}
 }
 
-// TestInventoryContents opens the panel with a sack on a shelf: resting the pointer on it lists
-// what it holds in the panel's contents column, the hover text naming it alone; too many to fit
-// end with a count of the rest.
+// TestInventoryContents opens the panel with a sack on a shelf: resting the pointer on it shows
+// the sack as the pack would, a box for each of its places with the icons of what it holds, the
+// hover text naming it alone.
 func TestInventoryContents(t *testing.T) {
 	v := playIn(t, devpack.Study, devpack.StudyStart)
 	p := v.World.Player()
-	p.Slots[5] = &sim.Object{Item: devpack.ItemSack, Contents: []*sim.Object{{Item: devpack.ItemKey}, {Item: devpack.ItemKey}}}
+	p.Slots[5] = &sim.Object{Item: devpack.ItemSack, Contents: []*sim.Object{{Item: devpack.ItemKey}, {Item: devpack.ItemMail}}}
 	v.ToggleInventory()
+	if ip := v.Inventory(); len(ip.Preview) != 0 {
+		t.Fatalf("a preview with nothing described: %+v", ip.Preview)
+	}
 	r, ok := v.Hotbar().SlotRect(5)
 	if !ok {
 		t.Fatal("no shelf 5")
 	}
 	v.Cursor = r.Min.Add(r.Max).Div(2)
-	key := v.objectLines(&sim.Object{Item: devpack.ItemKey})[0]
-	if !hasLine(v.Inventory(), "Contents:") || !hasLine(v.Inventory(), key+" x2") {
-		t.Errorf("panel lines %+v", v.Inventory().Lines)
+	ip := v.Inventory()
+	if n := v.Pack.Items[devpack.ItemSack].Container.Capacity; len(ip.Preview) != n {
+		t.Fatalf("%d preview boxes, want the sack's %d places", len(ip.Preview), n)
 	}
-	three := &sim.Object{Item: devpack.ItemSack, Contents: []*sim.Object{{Item: devpack.ItemKey}, {Item: devpack.ItemMail}, {Item: devpack.ItemPotion}}}
-	if lines := v.contentsLines(three, 3); len(lines) != 3 || lines[2] != "  and 2 more" {
-		t.Errorf("clipped contents %q", lines)
+	key, mail := v.Pack.Items[devpack.ItemKey].Icon, v.Pack.Items[devpack.ItemMail].Icon
+	if b := ip.Preview; !b[0].Has || b[0].Icon != key || !b[1].Has || b[1].Icon != mail || b[2].Has {
+		t.Errorf("preview %+v", b[:3])
 	}
-	// On the panel's own box, the hover text is the name alone.
-	p.Slots[sim.SlotBody] = p.Slots[5]
-	p.Slots[5] = nil
+	sack := v.objectLines(p.Slots[5])[0]
+	if !hasLine(ip, sack) {
+		t.Errorf("the preview does not name the sack: %+v", ip.Lines)
+	}
+	// Moved into the panel's own box, the hover text names it alone and the preview stays.
+	p.Slots[sim.SlotBody], p.Slots[5] = p.Slots[5], nil
 	br, _ := v.Inventory().SlotRect(sim.SlotBody)
 	at := br.Min.Add(br.Max).Div(2)
 	v.Cursor = at
 	if got := v.HoverLines(at); len(got) != 1 {
 		t.Errorf("hover on the panel %q", got)
 	}
-	if !hasLine(v.Inventory(), "Contents:") {
-		t.Errorf("no contents for the panel's box: %+v", v.Inventory().Lines)
+	if len(v.Inventory().Preview) == 0 {
+		t.Error("no preview for the panel's box")
 	}
 }
