@@ -25,6 +25,34 @@ it once done.
    (`slots.go`); a key goes into a keyhole by mouse (`TestKeyIntoSlotWithMouse`). Portraits
    import from F and give the figure its colors E0h–E3h.
 
+5. **Fight.** `engine/combat` with the Summoning's rule set; attributes, skills,
+   practice, experience and levels; striking with either hand by an item's actions, with delays,
+   skill requirements and bare hands; creatures that wander, chase, strike, hurt on contact, poison,
+   die, drop what they carry and leave corpses; worn slots with armor class, body armor and weapon
+   wear, weapons breaking, and the speed powers while worn; the player dying; poses for striking,
+   walking and corpses. The importer writes item actions, armor, wear slots, values and powers,
+   creature attacks, experience, vulnerabilities and behaviors, and the player's strike frames. The
+   dev pack's cellar has a brute to fight (`TestCellarFight`), and boots and mail.
+   Things in flight: throwing from either hand, firing bows from a worn quiver,
+   arrow traps (`shoot_item`), hitting, landing, arrows breaking, bottles breaking, teleporters
+   turning them, and thrown spheres unsealing doors (the sphere is used up). Using objects by their
+   `use` and `use_up` actions, with charges and spent objects; the powers that need only the player
+   (healing, magic, cures, skills, attributes and their boosts, statuses, timed effects, speed,
+   teleporting to rune marks, smiting and freezing creatures); powers that start worn only with the
+   80h flag. Statuses and timed effects in combat, walking, plates, pits and floors; death protection
+   and the death-blow ward; exertion, fatigue and confusion. The starting inventory, whose boots now
+   give the speed bonus. The dev pack's hall is solved by playing it, sphere throw included.
+   Held objects drawn in the player's hands from the game's held-item table; the
+   corpse frame as the bank's last; damage shown over the hurt; the dev pack's arena, an e2e test of
+   a whole fight.
+   **Finished.** The counted weapons (the Rusted Blade growing into WarMonger, WarMonger's
+   levels), the Staff of the Serpent's poison, the mirroring creature (79h), charges absorbing
+   damage, the Decanter's breaking (`on_break`), the kill message with the creature's name and the
+   kill practice, the thrown looks of the seven templates, the animated patterns (driven by the
+   simulation: `animate`), teleported creatures spinning, quiet combat, held objects hidden in
+   deep water. Tested in `engine/sim/special_test.go`; a fight with the mercenaries of level 1
+   of the imported game seen on screen.
+
 6. **Inventory** (done before Fight's last items). The inventory panel (`engine/viewer/inventory.go`),
    opened with I, Tab or a click on the portrait: the game's paper doll with each worn object's
    worn look (mirrored in the right hand, the quiver slot's own look), a box for each worn slot,
@@ -58,49 +86,6 @@ it once done.
    `TestStudy` (`devpack/scripts/study.json`); the imported game's first conversation (Malachi,
    level 0) plays through.
 
-## In progress: 5. Fight
-
-**Done (stage 1, melee).** `engine/combat` with the Summoning's rule set; attributes, skills,
-practice, experience and levels; striking with either hand by an item's actions, with delays,
-skill requirements and bare hands; creatures that wander, chase, strike, hurt on contact, poison,
-die, drop what they carry and leave corpses; worn slots with armor class, body armor and weapon
-wear, weapons breaking, and the speed powers while worn; the player dying; poses for striking,
-walking and corpses. The importer writes item actions, armor, wear slots, values and powers,
-creature attacks, experience, vulnerabilities and behaviors, and the player's strike frames. The
-dev pack's cellar has a brute to fight (`TestCellarFight`), and boots and mail.
-
-**Done (stage 2).** Things in flight: throwing from either hand, firing bows from a worn quiver,
-arrow traps (`shoot_item`), hitting, landing, arrows breaking, bottles breaking, teleporters
-turning them, and thrown spheres unsealing doors (the sphere is used up). Using objects by their
-`use` and `use_up` actions, with charges and spent objects; the powers that need only the player
-(healing, magic, cures, skills, attributes and their boosts, statuses, timed effects, speed,
-teleporting to rune marks, smiting and freezing creatures); powers that start worn only with the
-80h flag. Statuses and timed effects in combat, walking, plates, pits and floors; death protection
-and the death-blow ward; exertion, fatigue and confusion. The starting inventory, whose boots now
-give the speed bonus. The dev pack's hall is solved by playing it, sphere throw included.
-
-**Done since.** Held objects drawn in the player's hands from the game's held-item table; the
-corpse frame as the bank's last; damage shown over the hurt; the dev pack's arena, an e2e test of
-a whole fight.
-
-**Left.**
-- Powers that show the map or choose the ending (they report "not yet"); charges absorbing
-  damage.
-- Special weapons: the Rusted Blade and WarMonger, the Staff of the Serpent's poison, creature 79h,
-  the Decanter's breaking.
-- Practice of 2 for killing a creature of record 50 or above without a conversation (the world's
-  records now keep talked and dead).
-- The flying looks of the seven thrown-look templates (the bank is unknown); flights draw the
-  item's floor image.
-- Animated objects' patterns (drawn still), teleported creatures spinning.
-- Messages hidden by "quiet combat"; held objects hidden in water 3 deep or more; worn looks
-  (head and body armor). The player's figure and held layers draw with the palette's own
-  colors, unanimated (`drawlist.Cmd.Fixed`), and the portrait's figure colors.
-- Damage numbers are drawn with the debug font until the UI has its own (Remaster UI).
-- See a fight on the imported game on screen. The dev pack's arena fight runs through the viewer
-  in `TestArenaFight`; watch it with
-  `summoning view packs/dev --level level.arena --script devpack/scripts/arena.json --out /tmp/arena`.
-
 ## Left from Walk
 
 - **Play a real level through.** Only a short walk on level 0 of the imported game has been tried.
@@ -111,9 +96,15 @@ a whole fight.
 
 ## Handed on
 
-### 5. Fight
+### 5. Fight, left
 
-- See above. Also confusion in walking, and haste and battle rage in the speed formula.
+- Powers that show the map or choose the ending report "not yet" (Game).
+- Worn looks on the figure in the view (head and body armor), with character drawing; the
+  player's figure and held layers draw with the palette's own colors, unanimated, and the
+  portrait's figure colors.
+- Damage numbers are drawn with the debug font until the UI has its own (Remaster UI).
+- Animations that run on time (a sprite's `ms`) are not played; things show their idle frame or
+  step by moves, and animated creatures by `animate`.
 
 ### 6. Inventory, left
 

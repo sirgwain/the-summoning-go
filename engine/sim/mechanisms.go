@@ -218,6 +218,9 @@ func (w *World) use(l *Level, c content.Cell) {
 
 // message shows the engine message key, naming item when it takes one.
 func (w *World) message(l *Level, c content.Cell, key, item string) {
+	if w.quiet(key) {
+		return
+	}
 	text := ""
 	if m := w.pack.Messages; m != nil {
 		text = m.Messages[key]
@@ -385,6 +388,9 @@ func (w *World) entered(l *Level, t *Thing, depth int) {
 		to := w.jump(l, f)
 		w.emit(Event{Kind: EventSound, Level: l.ID, Cell: f.Cell, Detail: soundTeleport})
 		w.moveThing(l, t, to, depth+1)
+		if alive(t) && t.spin == 0 && !t.Template.Has(content.BehaviorAnimated) {
+			t.spin, t.spinNext = spinTicks, w.step+Steps(1)
+		}
 	case (f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor && f.Open) && t.Template.Kind == content.ThingCreature:
 		w.removeThing(l, t, "fell")
 	}

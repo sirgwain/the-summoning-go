@@ -136,6 +136,10 @@ The **delay** of action 0 is `(byte 8 >> 4) + 3` player updates, of action 1 `(b
 
 **Value.** The importer writes the starting value rules above as the item's `durability` (weapons and body armor) or `charges`.
 
+**Breaking.** An item's `on_break` are actions run when it breaks on landing: the Decanter's sets interaction variable 18 to 1, starts conversation 2Eh, removes every creature of record 2Eh and gives 72903 experience. They are the registry's `set_counter`, `converse`, `remove_all` (the creatures of a thing template on the current level) and `experience`.
+
+**Flying looks.** An item's `flying` is its thrown look: a sprite with a frame for each direction, and with `fired_only` only when fired.
+
 **Using up.** When the last use of an object goes, it becomes a spent object: bottles (category 8) become an Empty Bottle (template 7); other objects become the next template.
 
 ## Powers
@@ -218,12 +222,14 @@ A scroll's `teaches` are the icons reading it teaches, and its `picture` the ima
 
 The player throws the object in hand, or fires an arrow from a bow. A thrown object flies `(100 − weight) / 5 + 5` steps (weight above 100 counts as 100); an arrow `5 × STR` steps, at most 127; 8 units a step. It flies as an entity of kind 3 (entities.md).
 
-**Damage.** Seven templates have a thrown look, their own flying frame:
+**Damage.** Seven templates have a thrown look of their own, RESOURCE `held-item base + offset` (INIT), with a frame for each way it flies: frame `(d + 1) mod 8` along table direction `d` (the player's facing that walks `d`). The others fly showing their tiny image.
 
 | Template | 67h | 68h | 75h | 6Dh | 97h | 98h | 99h |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Frame | 27h | 28h | 29h | 2Ah | 2Dh | 2Ch | 2Bh |
+| Offset | 27h | 28h | 29h | 2Ah | 2Dh | 2Ch | 2Bh |
 | Flagged | | | | | yes | yes | yes |
+
+A flagged template thrown rather than fired flies showing its tiny image instead.
 
 They roll their action-1 damage, or 1 when a flagged one is thrown rather than fired. Anything else does `weight / 10 + 1`. The player's arrows add `(ACC − 10) / 2`, at least 1 in all. A thrower touching its target hits at once.
 
@@ -259,7 +265,6 @@ Template 0 in a level becomes a random object rather than the item itself.
 ## Unknowns
 
 - Whether the game also magnifies floor objects on its own, for example while the player has timed sight (player.md) or by interaction variable 98 (dialogue.md).
-- Which bank the thrown-look frames index.
 - The worn-look flags in byte 11 and the image tables for the figure in the view; specified with character drawing.
 - Which hand objects count as armor drawn last on the doll; the engine draws those with an armor bonus last. The pictures of a bag in the left hand, which show how full it is (worn images 2Fh on by a third of its contents), are not imported.
 - Category 6, and the hand delay formula beyond what is given.

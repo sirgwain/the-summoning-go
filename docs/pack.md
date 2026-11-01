@@ -61,7 +61,8 @@ A record's file is named after its id without the kind prefix (`item.dagger` is
   "start": { "level": "level.00", "cell": [16, 15] },
   "player": "thing.player",
   "rules": "summoning",
-  "counters": { "after_conversation": "var.97", "use_result": "var.19", "transformed": "var.14" }
+  "counters": { "after_conversation": "var.97", "use_result": "var.19", "transformed": "var.14",
+                "quiet_combat": "var.96" }
 }
 ```
 
@@ -71,8 +72,8 @@ and combat); `summoning` is the only one, and the default. `player` is the thing
 from; a pack without one runs its levels with no player. `counters` names the counters the engine
 itself uses (`docs/spec/dialogue.md`, Engine model): `after_conversation` is cleared when every
 conversation ends, `use_result` decides whether an object whose conversation has `use_result` is
-used, and `transformed` is set to 1 by a Shape Change into the look named by `transformed_look`,
-and cleared when it ends.
+used, `transformed` is set to 1 by a Shape Change into the look named by `transformed_look`,
+and cleared when it ends, and while `quiet_combat` is not 0 the combat messages are not shown.
 
 ## Palettes
 
@@ -229,7 +230,8 @@ text to UTF-8.
 
 The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slot_stuck`,
 `weapon_breaks` and `filled`, `{item}` stands for the item's name; in `not_memorized` and
-`only_spell`, `{school}` for the school's name; in `miss`, `hit`, `creature_hits` and
+`only_spell`, `{school}` for the school's name; in `killed`, `{name}` for the creature's; in
+`absorbed`, `{damage}` for the damage absorbed; in `miss`, `hit`, `creature_hits` and
 `creature_misses`, `{score}` and `{damage}` stand for the numbers. The keys: `lever_stuck`,
 `slot_wrong_item`, `slot_stuck`, `no_drop_here`, `no_room`, `not_a_creature`, `cannot_hurt`,
 `miss`, `hit`, `creature_hits`, `creature_misses`, `weapon_breaks`, `skill_up`, `level_up`,
@@ -241,7 +243,8 @@ The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slo
 `no_room_for_portal`, `no_spell_near`, `nothing_to_mend`, `no_creature_near`, `no_bottle`,
 `filled`, `door_resists`, `missile_wall`, `battle_rage`, `battle_rage_extended`, `haste`,
 `fire_shield`, `lightning_shield`, `frozen`, `sight`, `weapon_skills_up`,
-`weapon_skills_extended`, `magic_skills_up`, `magic_skills_extended`, `cured`. A key the pack
+`weapon_skills_extended`, `magic_skills_up`, `magic_skills_extended`, `cured`; for fights `killed`
+and `absorbed`. A key the pack
 leaves out shows nothing. Later milestones add keys.
 
 ## Items
@@ -290,7 +293,13 @@ leaves out shows nothing. Later milestones add keys.
   every frame of the player's sprite, drawn with it (an empty frame for none), and its own anchor
   at the player's ground point.
 - `missile` is how the item hurts in flight: `{ "damage": dice, "fired_only": bool }`; without it a
-  thrown object does `weight / 10 + 1`. `breaks_into` is the item a landing bottle becomes.
+  thrown object does `weight / 10 + 1`. `breaks_into` is the item a landing bottle becomes, and
+  `on_break` actions run when it breaks (`set_counter`, `converse`, `remove_all`, `experience`).
+  `flying` is its look in flight, `{ "sprite", "fired_only" }`: a frame for each direction,
+  `(direction + 1) mod 8`, shown only when fired with `fired_only`; without it the floor image.
+- `poisons` makes its blows poison what they hit. `grows` makes it a counted weapon:
+  `{ "into", "at", "first", "grown", "counter" }`, and `levels` the grown one:
+  `{ "every", "max", "counter", "talk" }` (`docs/spec/combat.md`, Special weapons).
 - `tags` are words that rules and other records test (`body_armor`, `quiver`, `arrows`, `bottle`,
   `weapon`, `two_handed`). The engine attaches no meaning to a tag by itself.
 - `random` items can be picked for a random object.
@@ -355,6 +364,12 @@ leaves out shows nothing. Later milestones add keys.
   shown; the behavior `talks` lets the player talk to it, until it turns hostile. Powers and
   events start conversations with templates that no level places.
 - `spell` (creatures) is the spell it casts, and `spell_power` the dice of its power.
+- `name` (creatures) is a text key, shown when the player's blow kills it unless it has a
+  conversation; `kill_practice` is the practice that blow gives. The behavior `mirrors` passes
+  the damage it takes to the player.
+- `animate` changes an animated creature's frame on each of its updates:
+  `{ "kind": "flicker" | "toggle" | "random" | "cycle", "frames": [...], "random": bool }`
+  (`docs/spec/creatures.md`, Animated objects); for `flicker` the first frame is the rest frame.
 - Kinds `conjured` (a thing a spell puts up: it blocks, can be pushed, and lasts a number of its
   updates) and `portal` (walking into it takes the player where the spell that opened it says)
   are only made by spells.

@@ -88,8 +88,12 @@ type Thing struct {
 	Frame  *int
 	Portal *content.Destination
 	Mute   bool
-	// casting counts a stationary caster's updates to its next cast.
-	casting int
+	// casting counts a stationary caster's updates to its next cast; animCount and animStep an
+	// animated creature's frame changes; spin the ticks a teleported creature still spins.
+	casting             int
+	animCount, animStep int
+	spin                int
+	spinNext            int64
 	// walkDir (0..3, 4 resting) and walkCount are a walker's current walk.
 	walkDir, walkCount int
 	// next is the step of its next update.

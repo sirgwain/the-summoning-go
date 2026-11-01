@@ -241,6 +241,7 @@ func (v *verifier) itemRecord(i *Item) {
 	}
 	v.frame(owner+" icon", i.Icon.Sprite, i.Icon.Frame)
 	v.frame(owner+" floor", i.Floor.Sprite, i.Floor.Frame)
+	v.itemFight(owner, i)
 	if i.Doll != nil {
 		v.frame(owner+" doll", i.Doll.Image.Sprite, i.Doll.Image.Frame)
 	}
@@ -307,6 +308,7 @@ func (v *verifier) thing(t *Thing) {
 		v.conversationRef(owner, t.Conversation)
 	}
 	v.icons(owner, t.Icons)
+	v.thingFight(owner, t)
 }
 
 func (v *verifier) portrait(pt *Portrait) {

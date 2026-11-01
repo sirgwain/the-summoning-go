@@ -78,6 +78,9 @@ type PlayerDefense struct {
 	ArmorClass int
 	// BodyArmor is whether the player wears body armor, which the blow wears.
 	BodyArmor bool
+	// Absorb, when the player has the charges status, takes what charges absorb of damage d
+	// and returns the rest.
+	Absorb func(d int) int
 }
 
 // CreatureDefense is what a creature's template does to damage it takes.

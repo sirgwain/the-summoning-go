@@ -344,6 +344,10 @@ type Action struct {
 	Heal           *Dice         `json:"heal,omitempty"`
 	// Converse starts the conversation of a thing template once the spell is done.
 	Converse *string `json:"converse,omitempty"`
+	// RemoveAll removes the creatures of a thing template from the current level; Experience
+	// gives the player experience.
+	RemoveAll  *string `json:"remove_all,omitempty"`
+	Experience *int    `json:"experience,omitempty"`
 
 	// Conversation actions, run in a conversation.
 	Say           *string      `json:"say,omitempty"`

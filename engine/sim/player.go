@@ -101,6 +101,8 @@ type Player struct {
 	Look string
 	// Return is where a portal took the player from, for the way back.
 	Return *content.Destination
+	// WeaponCount is the damage counted weapons have dealt (combat.md, Special weapons).
+	WeaponCount int
 
 	// want is the direction a walk was asked for since the last update, or −1.
 	want int
@@ -242,13 +244,24 @@ func (w *World) hurtPlayer(n int, k combat.Kind, by string) {
 		return
 	}
 	armor := p.Slots[SlotBody]
-	d, wear := w.rules.HurtPlayer(n, k, combat.PlayerDefense{Status: p.combatStatus(), ArmorClass: p.ArmorClass, BodyArmor: armor != nil})
+	def := combat.PlayerDefense{Status: p.combatStatus(), ArmorClass: p.ArmorClass, BodyArmor: armor != nil}
+	absorbed := false
+	if p.Status.Charges {
+		def.Absorb = func(d int) int {
+			rest := w.absorb(d)
+			absorbed = rest < d
+			return rest
+		}
+	}
+	d, wear := w.rules.HurtPlayer(n, k, def)
 	if wear > 0 && armor.Value < unwearing {
 		armor.Value = max(0, armor.Value-wear)
 		w.wornChanged()
 	}
 	p.HitPoints = max(0, p.HitPoints-d)
-	p.Shown, p.ShownUntil = min(d, maxShown), w.step+6*w.PlayerInterval()
+	if !absorbed {
+		p.Shown, p.ShownUntil = min(d, maxShown), w.step+6*w.PlayerInterval()
+	}
 	w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "hurt by " + by, Damage: d})
 	if p.HitPoints == 0 && p.Status.DeathProtection {
 		p.Status.DeathProtection = false

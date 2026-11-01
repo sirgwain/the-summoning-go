@@ -419,7 +419,7 @@ func (w *World) spellEffect(l *Level, c caster, sp *content.Spell, e content.Act
 			return
 		}
 		o := w.newObject(*e.FireItem)
-		w.launch(l, o, c.u, c.v, c.dir, firedRange, w.missileDamage(o, true), c.player, c.thing)
+		w.launch(l, o, c.u, c.v, c.dir, firedRange, w.missileDamage(o, true), c.player, true, c.thing)
 		return
 	case !c.player || w.player == nil:
 		return

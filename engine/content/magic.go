@@ -148,6 +148,8 @@ type Counters struct {
 	// when the change ends.
 	Transformed     string `json:"transformed,omitempty"`
 	TransformedLook string `json:"transformed_look,omitempty"`
+	// QuietCombat hides the combat messages while it is not 0.
+	QuietCombat string `json:"quiet_combat,omitempty"`
 }
 
 // Cast is a spell an item casts when used.

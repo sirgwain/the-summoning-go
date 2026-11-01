@@ -116,6 +116,11 @@ func (Rules) HurtPlayer(d int, k combat.Kind, def combat.PlayerDefense) (int, in
 	if k == combat.Fire && st.FireShield || k == combat.Lightning && st.LightningShield {
 		d = 1
 	}
+	if k != combat.Physical && def.Absorb != nil {
+		if d = def.Absorb(d); d <= 0 {
+			return 0, 0
+		}
+	}
 	wear := 0
 	if def.BodyArmor && def.ArmorClass > 0 {
 		wear = min(d, def.ArmorClass)

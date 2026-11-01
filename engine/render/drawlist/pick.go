@@ -57,7 +57,11 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 			s.Flights = append(s.Flights, Flight{Sprite: f.Spell.Sprite, Frame: f.Spell.Frame, U: f.U, V: f.V})
 			continue
 		}
-		s.Flights = append(s.Flights, Flight{Item: f.Object.Item, U: f.U, V: f.V})
+		fl := Flight{Item: f.Object.Item, U: f.U, V: f.V}
+		if it := w.Pack().Items[f.Object.Item]; it != nil && it.Flying != nil && (f.Fired || !it.Flying.FiredOnly) {
+			fl.Sprite, fl.Frame = it.Flying.Sprite, (f.Direction+1)%8
+		}
+		s.Flights = append(s.Flights, fl)
 	}
 	if p := w.Player(); p != nil && w.Current() == l {
 		th := Thing{ID: sim.PlayerID, Template: p.Template.ID, U: p.U, V: p.V, Facing: p.Facing, Sprite: p.Look}
@@ -65,7 +69,7 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 			th.Shown = p.Shown
 		}
 		for hand := range 2 {
-			if o := p.Slots[sim.SlotRightHand+hand]; o != nil && !p.Dead && p.Look == "" {
+			if o := p.Slots[sim.SlotRightHand+hand]; o != nil && !p.Dead && p.Look == "" && !w.DeepWater() {
 				th.Held[hand] = o.Item
 			}
 		}

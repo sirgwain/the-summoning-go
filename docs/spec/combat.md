@@ -51,7 +51,7 @@ d = the Silver Sword's action-1 roll, or 0 for any other weapon
 d = max(0, d − creature resistance)
 ```
 
-A hit shows message 5Ch with the score and damage. A hit for 0 does nothing more. Otherwise the weapon wears by the damage (except the Rusted Blade and WarMonger), the creature is hurt (physical; the Staff of the Serpent's hits poison), and the weapon's skill gets practice: 1, or 2 when the blow kills a creature of record 50 or above that has no conversation (player.md).
+A hit shows message 5Ch with the score and damage. A hit for 0 does nothing more. Otherwise the weapon wears by the damage (except the Rusted Blade and WarMonger), the creature is hurt (physical; the Staff of the Serpent's (8Ah) hits poison it, unless it resists poison), and the weapon's skill gets practice: 1, or 2 when the blow kills a creature of record 50 or above that has no conversation (player.md). A blow that kills a creature whose record has no conversation shows message 8Bh with the creature's name, TEXT `AAh + record`.
 
 The creature turns hostile (creatures.md).
 
@@ -83,7 +83,7 @@ For damage `d` of kind `k`:
 2. Status "resist quarter": `d − d/4`. Status "resist forty": `d − 4d/10`.
 3. At least 1.
 4. Fire (1) under a fire shield, or lightning (2) under a lightning shield: 1.
-5. Non-physical damage while the player has the "charges" status is absorbed by charges in the hands' objects (items.md).
+5. Non-physical damage (any kind but 0, arrows included) while the player has the "charges" status is absorbed by the charges of the object in the right hand whose power is 23h, else the left hand's: each charge used absorbs 1, until the damage or the charges run out, and message 3Ah shows how many it absorbed. Hit points then drop without the damage shown.
 6. With body armor and armor class above 0: the armor wears by `min(d, AC)`, then `d − AC`, at least 1.
 7. Hit points drop by `d`. The amount shows over the player for 6 updates (at most 99).
 8. At 0 hit points or less with death protection: the protection is used up and hit points and magic points are restored to full.
@@ -93,6 +93,8 @@ At 0 hit points the player dies (scenes.md).
 ## Hurting a creature
 
 For damage `d` of kind `k`, with `poison` set by poisoning attacks:
+
+- Creature record 79h is not hurt: the player takes the damage instead, as if hurt by it. It only animates, but it can be struck.
 
 - Animated objects, corpses and kinds other than creatures are not hurt. A conjured thing loses 1 of its strength instead.
 - Behavior 1000h: immune. Record 31h: hurt only by exactly 3000.
@@ -112,8 +114,8 @@ An object's wear value starts at its template's durability (items.md). Wearing b
 
 ## Special weapons
 
-- **Rusted Blade (63h)** is charged by the damage it deals. The first hit starts conversation 45h. At 250 or more it becomes **WarMonger (64h)** in the same hand, and conversation 46h starts; WarMonger's level (interaction variable) starts at 1.
-- **WarMonger** counts the damage it deals. Each time the count passes 1000 its level rises (up to 9), the count resets, and conversation 46h starts.
+- **Rusted Blade (63h)** is charged by the damage it deals (after resistance, when above 0), one count the player keeps. A hit while the count is 0 starts conversation 45h; a hit with the count at 250 or more replaces the blade in its hand with a new **WarMonger (64h)**, starts conversation 46h and sets WarMonger's level, interaction variable 27, to 1. The damage is then added to the count.
+- **WarMonger** adds the damage it deals to the count. When the count passes 1000 while its level is below 9, the level rises by 1, the count resets to 0, and conversation 46h starts. The level changes nothing in combat: the conversations read it.
 
 ## Engine model
 
@@ -126,6 +128,14 @@ Combat is a module (`engine/combat`) the simulation calls with plain numbers; th
 - **Showing damage.** The amount a blow takes shows over the one it hurt: a creature for 3 of its updates, the player for 6 of its own, at most 99 shown. It is part of the game's picture, not of the debug overlay.
 - **What waits.** Battle rage, invisibility, blow protection, the death-blow ward, resist quarter and forty, shields and charges come with statuses; until then those terms are 0. Poisoning, armor wear and weapon wear apply now.
 
+## Engine model, special weapons and creatures
+
+- An item's `poisons` makes its blows poison the creature hit.
+- An item's `grows` is a counted weapon: the damage it deals goes into the player's weapon count; `first` names the thing template whose conversation the first hit starts, and at `at` the item is replaced by `into` with `grown` the conversation that follows and `counter` set to 1. An item's `levels` is the grown weapon: every `every` points while `counter` is below `max`, the counter rises, the count resets and `talk`'s conversation starts.
+- A creature template with `mirrors` passes the damage it takes to the player, and can be struck though it only animates.
+- A creature template's `name` is shown when the player's blow kills it, if it has no conversation; `kill_practice` is the practice that blow gives (2 for records 50 and above without a conversation).
+- The player's weapon count is the player's state.
+
 ## Unknowns
 
-- The size of WarMonger's per-level bonus, which lives in its conversations' variables and the hit code; specify with dialogue.
+- None besides those of the items and creatures.

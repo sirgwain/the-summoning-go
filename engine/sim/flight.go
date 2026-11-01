@@ -28,8 +28,9 @@ type Flight struct {
 	U, V, Direction, Range int
 	Damage                 int
 	// ByPlayer flights land and turn creatures hostile; others vanish. Thrower is the thing that
-	// threw it, if a creature did.
+	// threw it, if a creature did. Fired is an object shot rather than thrown.
 	ByPlayer bool
+	Fired    bool
 	Thrower  *Thing
 	waited   bool
 	next     int64
@@ -53,8 +54,8 @@ func (w *World) missileDamage(o *Object, fired bool) int {
 
 // launch sends object o flying from (u, v) along direction d with range and damage. A thrower
 // touching something already hits it at once, and the object lands at its feet.
-func (w *World) launch(l *Level, o *Object, u, v, d, rng, damage int, byPlayer bool, thrower *Thing) {
-	f := &Flight{Object: o, U: u, V: v, Direction: d, Range: rng, Damage: damage, ByPlayer: byPlayer, Thrower: thrower,
+func (w *World) launch(l *Level, o *Object, u, v, d, rng, damage int, byPlayer, fired bool, thrower *Thing) {
+	f := &Flight{Object: o, U: u, V: v, Direction: d, Range: rng, Damage: damage, ByPlayer: byPlayer, Fired: fired, Thrower: thrower,
 		next: w.step + Steps(flightTicks)}
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: f.Cell(), Item: o.Item, Detail: "thrown"})
 	if b := w.flightBlocker(l, f, u+Dirs[d][0]*touchReach, v+Dirs[d][1]*touchReach, flightFootprint+touchReach); b != nil {
@@ -183,6 +184,7 @@ func (w *World) land(l *Level, f *Flight) {
 	case it.BreaksInto != "":
 		w.emit(Event{Kind: EventObject, Level: l.ID, Cell: c, Item: o.Item, Detail: "broke"})
 		o = w.newObject(it.BreaksInto)
+		w.broke(l, it)
 	}
 	w.drop(l, c, o, byWorld, 0)
 }
@@ -210,7 +212,7 @@ func (w *World) throwFrom(hand int) {
 	w.takeOff(o)
 	p.Delays[hand] = throwDelay
 	rng := (100-min(o.Weight(w.pack), 100))/5 + 5
-	w.launch(l, o, p.U, p.V, p.Facing, rng, w.missileDamage(o, false), true, nil)
+	w.launch(l, o, p.U, p.V, p.Facing, rng, w.missileDamage(o, false), true, false, nil)
 	w.practice(SkillWeapon+bowClass, 1)
 }
 
@@ -233,7 +235,7 @@ func (w *World) fire() bool {
 	arrow := quiver.Contents[0]
 	quiver.Contents = quiver.Contents[1:]
 	damage := max(w.missileDamage(arrow, true)+(p.Attributes[AttrAccuracy]-10)/2, 1)
-	w.launch(l, arrow, p.U, p.V, p.Facing, min(5*p.Attributes[AttrStrength], firedRange), damage, true, nil)
+	w.launch(l, arrow, p.U, p.V, p.Facing, min(5*p.Attributes[AttrStrength], firedRange), damage, true, true, nil)
 	p.Pose, p.poseLeft = "attack.both", poseUpdates
 	w.practice(SkillWeapon+bowClass, 1)
 	return true
@@ -247,8 +249,12 @@ func (w *World) shootItem(l *Level, c content.Cell, item string, d int) {
 	}
 	o := w.newObject(item)
 	u, v := cellCenter(c)
-	w.launch(l, o, u, v, d, firedRange, w.missileDamage(o, true), false, nil)
+	w.launch(l, o, u, v, d, firedRange, w.missileDamage(o, true), false, true, nil)
 }
+
+// DeepWater reports whether the player stands in water too deep to act in, depth 3 or more,
+// unless levitating; held objects are not drawn there.
+func (w *World) DeepWater() bool { return w.player != nil && w.deepWater() }
 
 // deepWater reports whether the player stands in water too deep to act in, depth 3 or more,
 // unless levitating.

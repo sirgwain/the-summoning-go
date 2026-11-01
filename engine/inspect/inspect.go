@@ -41,7 +41,7 @@ func Message(p *content.Pack, e sim.Event) string {
 	if n, ok := strings.CutPrefix(e.Item, "skill."); ok {
 		skill = SkillName(n)
 	}
-	return strings.NewReplacer("{item}", ItemName(p, e.Item), "{skill}", skill, "{school}", Text(p, e.Item),
+	return strings.NewReplacer("{item}", ItemName(p, e.Item), "{skill}", skill, "{school}", Text(p, e.Item), "{name}", Text(p, e.Item),
 		"{score}", strconv.Itoa(e.Score), "{damage}", strconv.Itoa(e.Damage)).Replace(Text(p, e.Text))
 }
 

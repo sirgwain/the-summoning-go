@@ -172,7 +172,7 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 			Rules:   content.RulesSummoning,
 			Counters: &content.Counters{
 				AfterConversation: varID(varAfterConversation), UseResult: varID(varUseResult),
-				Transformed: varID(varTransformed),
+				Transformed: varID(varTransformed), QuietCombat: varID(varQuietCombat),
 			},
 		}),
 		init:      in,

@@ -71,6 +71,8 @@ var engineMessages = map[string]struct {
 	content.MsgMagicSkillsUp:        {0x65, nil},
 	content.MsgMagicSkillsExtended:  {0x66, nil},
 	content.MsgCured:                {0x7A, nil},
+	content.MsgKilled:               {0x8B, []string{"name"}},
+	content.MsgAbsorbed:             {0x3A, []string{"damage"}},
 }
 
 // placeholders replaces s's format codes, in order, with the named placeholders.
@@ -173,6 +175,9 @@ func (im *importer) items() error {
 		im.pack.Items[id] = it
 	}
 	im.spentAndBroken()
+	for i, id := range im.itemIDs {
+		im.specialItem(i, im.pack.Items[id])
+	}
 	return nil
 }
 
@@ -465,9 +470,6 @@ func (im *importer) creature(n int) (string, error) {
 			f = d0
 		}
 		anims["idle"] = still(f)
-		if frames != patternFixed {
-			im.report.addf("animated object pattern %d: drawn still", frames)
-		}
 	case frames == stationaryCaster:
 		t.Facing = 2
 		t.Behaviors = append(t.Behaviors, content.BehaviorStationary)
@@ -489,6 +491,7 @@ func (im *importer) creature(n int) (string, error) {
 		anims["dead"] = still(len(b.Frames) - 1)
 	}
 	t.Animations = im.fitAnimations(fmt.Sprintf("NPC record %d", n), anims, len(b.Frames))
+	im.specialCreature(n, rec, t)
 	im.pack.Things[id] = t
 	return id, nil
 }

@@ -68,6 +68,9 @@ func alive(t *Thing) bool { return t.Template.Kind == content.ThingCreature && t
 // defenses, and one at 0 dies (docs/spec/combat.md, Hurting a creature). It returns the hit
 // points taken.
 func (w *World) hurtThing(l *Level, t *Thing, d int, k combat.Kind) int {
+	if d > 0 && w.mirrored(t, d, k) {
+		return 0
+	}
 	if t.Template.Kind == content.ThingConjured && d > 0 {
 		w.wearConjured(l, t)
 		return 0
@@ -123,6 +126,9 @@ func (w *World) turnHostile(t *Thing) {
 // Walkers).
 func (w *World) updateCreatures(l *Level) {
 	for _, t := range append([]*Thing(nil), l.Things...) {
+		if w.spin(l, t) {
+			continue
+		}
 		if t.Template.Kind == content.ThingConjured && w.step >= t.next && l.Thing(t.ID) == t {
 			t.next = w.step + stepsMS(t.Template.IntervalMS)
 			w.wearConjured(l, t)
@@ -143,6 +149,8 @@ func (w *World) updateCreatures(l *Level) {
 			}
 		}
 		switch {
+		case t.Template.Animate != nil:
+			w.animate(l, t)
 		case t.Template.Has(content.BehaviorStationary):
 			w.stationaryCasts(l, t)
 		case !t.Template.Has(content.BehaviorAnimated):
@@ -279,6 +287,9 @@ func (w *World) creatureStrikes(l *Level, t *Thing) {
 
 // messageNumbers shows engine message key with a strike's numbers.
 func (w *World) messageNumbers(l *Level, c content.Cell, key string, score, damage int) {
+	if w.quiet(key) {
+		return
+	}
 	text := ""
 	if m := w.pack.Messages; m != nil {
 		text = m.Messages[key]
@@ -384,7 +395,7 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 	case b == nil || b.thing == nil || !alive(b.thing):
 		w.message(l, p.Cell(), content.MsgNotACreature, "")
 		return
-	case b.thing.Template.Has(content.BehaviorAnimated):
+	case b.thing.Template.Has(content.BehaviorAnimated) && !b.thing.Template.Has(content.BehaviorMirrors):
 		w.message(l, p.Cell(), content.MsgCannotHurt, "")
 		return
 	}
@@ -421,12 +432,22 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 	if r.Damage == 0 {
 		return
 	}
+	if it != nil {
+		w.countWeapon(o, it, r.Damage)
+	}
 	if o != nil {
 		w.wearWeapon(hand, o, r.Damage)
 	}
 	w.hurtThing(l, t, r.Damage, combat.Physical)
+	if it != nil && it.Poisons && alive(t) && !t.Template.Has(content.BehaviorResistsPoison) {
+		t.Poisoned = true
+	}
+	practice := 1
+	if t.Template.Kind == content.ThingCreature && t.HitPoints <= 0 {
+		practice = w.killedBy(l, t)
+	}
 	if class >= 0 {
-		w.practice(SkillWeapon+class, 1)
+		w.practice(SkillWeapon+class, practice)
 	}
 }
 

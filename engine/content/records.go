@@ -46,6 +46,13 @@ type Item struct {
 	Picture *Image `json:"picture,omitempty"`
 	// Doll is how it shows on the inventory's figure when worn.
 	Doll *DollImage `json:"doll,omitempty"`
+	// Poisons makes its blows poison; Grows and Levels make it a counted weapon; OnBreak runs
+	// when it breaks; Flying is its look in flight.
+	Poisons bool     `json:"poisons,omitempty"`
+	Grows   *Grows   `json:"grows,omitempty"`
+	Levels  *Levels  `json:"levels,omitempty"`
+	OnBreak []Action `json:"on_break,omitempty"`
+	Flying  *Flying  `json:"flying,omitempty"`
 }
 
 // Held is how an item looks in each of the player's hands.
@@ -175,6 +182,8 @@ const (
 	BehaviorStationary = "stationary"
 	// BehaviorTalks creatures can be talked to, until they turn hostile.
 	BehaviorTalks = "talks"
+	// BehaviorMirrors creatures pass the damage they take to the player.
+	BehaviorMirrors = "mirrors"
 )
 
 var behaviors = map[string]bool{
@@ -182,7 +191,7 @@ var behaviors = map[string]bool{
 	BehaviorResistsTeleport: true, BehaviorInvulnerable: true, BehaviorPoisonous: true,
 	BehaviorHurtsOnContact: true, BehaviorDeathBlow: true, BehaviorPhysicalOnly: true,
 	BehaviorResistsFire: true, BehaviorResistsLight: true, BehaviorResistsPoison: true, BehaviorAnimated: true, BehaviorStationary: true,
-	BehaviorTalks: true,
+	BehaviorTalks: true, BehaviorMirrors: true,
 }
 
 // ArrowClass is the weapon class of bows; arrows hurt creatures vulnerable to it more.
@@ -219,6 +228,11 @@ type Thing struct {
 	TalkPortrait string `json:"talk_portrait,omitempty"`
 	// Icons are the gesture icons a player starts knowing.
 	Icons string `json:"icons,omitempty"`
+	// Name is a creature's name, a text key; KillPractice the practice a player's blow that kills
+	// it gives; Animate how an animated creature's frame changes.
+	Name         string   `json:"name,omitempty"`
+	KillPractice int      `json:"kill_practice,omitempty"`
+	Animate      *Animate `json:"animate,omitempty"`
 	// Inventory is what a player starts with.
 	Inventory []InventoryObject `json:"inventory,omitempty"`
 	// Portrait is a player's portrait, which also gives its figure's colors.
@@ -361,6 +375,8 @@ const (
 	MsgMagicSkillsUp        = "magic_skills_up"
 	MsgMagicSkillsExtended  = "magic_skills_extended"
 	MsgCured                = "cured"
+	MsgKilled               = "killed"
+	MsgAbsorbed             = "absorbed"
 )
 
 var messageKeys = map[string]bool{
@@ -393,7 +409,7 @@ var messageKeys = map[string]bool{
 	MsgNoBottle: true, MsgFilled: true, MsgDoorResists: true, MsgMissileWall: true,
 	MsgBattleRage: true, MsgBattleRageExtended: true, MsgHaste: true, MsgFireShield: true,
 	MsgLightningShield: true, MsgFrozen: true, MsgSight: true, MsgWeaponSkillsUp: true,
-	MsgWeaponSkillsExtended: true, MsgMagicSkillsUp: true, MsgMagicSkillsExtended: true, MsgCured: true,
+	MsgWeaponSkillsExtended: true, MsgMagicSkillsUp: true, MsgMagicSkillsExtended: true, MsgCured: true, MsgKilled: true, MsgAbsorbed: true,
 }
 
 // FigureColor is the first of the colors a player's figure draws in its portrait's FigureColors.
