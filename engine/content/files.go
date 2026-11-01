@@ -139,6 +139,25 @@ func Load(fsys fs.FS) (*Pack, error) {
 	if err := loadRecords(fsys, levelsDir+"/*/"+levelFile, p.Levels, func(l *Level) string { return l.ID }); err != nil {
 		return nil, err
 	}
+	for _, dir := range []string{musicDir, sfxDir} {
+		if err := loadEach(fsys, dir+"/*.json", func(name string) error {
+			s := &Sound{}
+			if err := readJSON(fsys, name, s); err != nil {
+				return err
+			}
+			if !validSoundFile(s.File) {
+				return fmt.Errorf("%s: file %q is not a .wav or .ogg beside the record", name, s.File)
+			}
+			data, err := fs.ReadFile(fsys, path.Join(dir, s.File))
+			if err != nil {
+				return err
+			}
+			s.Data = data
+			return add(p.Sounds, s.ID, s, name)
+		}); err != nil {
+			return nil, err
+		}
+	}
 
 	if err := p.Verify(); err != nil {
 		return nil, err
@@ -286,6 +305,19 @@ func Write(p *Pack, dir string) error {
 	}
 	for _, id := range sortedKeys(p.Levels) {
 		if err := writeJSON(dir, path.Join(levelsDir, fileName(id, "level."), levelFile), p.Levels[id]); err != nil {
+			return err
+		}
+	}
+	for _, id := range sortedKeys(p.Sounds) {
+		s := p.Sounds[id]
+		sub, prefix := soundDir(id)
+		if sub == "" || !validSoundFile(s.File) {
+			return fmt.Errorf("sound %s: not a music or sfx id with a .wav or .ogg file", id)
+		}
+		if err := writeJSON(dir, path.Join(sub, fileName(id, prefix)+".json"), s); err != nil {
+			return err
+		}
+		if err := writeFile(dir, path.Join(sub, s.File), s.Data); err != nil {
 			return err
 		}
 	}

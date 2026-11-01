@@ -1,9 +1,9 @@
 # Content pack format
 
-Status: v1, 2026-10-31. Covers what Milestones 1 (Viewer), 2 (World), 4 (Walk), 5 (Fight) and 7
+Status: v1, 2026-11-01. Covers what Milestones 1 (Viewer), 2 (World), 4 (Walk), 5 (Fight) and 7
 (Magic and talk) need: the manifest, palettes, sprites, floor and wall sets, text, engine messages,
-item and thing templates, portraits, looks, spells, magic, keywords, conversations, and levels with
-their floor types, features, procedures, things and objects. Later milestones extend it.
+item and thing templates, portraits, looks, spells, magic, keywords, conversations, levels with
+their floor types, features, procedures, things and objects, and audio. Later milestones extend it.
 The Go types are in `engine/content`.
 
 The format is the engine's own. It describes a game in the engine's terms (ground points, named
@@ -796,6 +796,28 @@ Conversations use these:
   if it is a container. The item `random` is a random object, chosen when the level is first
   entered from the templates marked `random`.
 
+## Audio
+
+Music and sound effects are audio files, each with a record beside it that says how it loops.
+
+```
+audio/music/<name>.json   music.<name>
+audio/music/<name>.wav
+audio/sfx/<name>.json     sfx.<name>
+audio/sfx/<name>.wav
+```
+
+```json
+{ "id": "music.1", "file": "1.wav", "intro": 529200, "loop": 1058400 }
+```
+
+- `file` is the audio file, in the same directory: a 16-bit PCM WAV (mono or stereo, any rate) or
+  an Ogg Vorbis file.
+- `intro` and `loop` count samples (per channel). The sound plays its first `intro` samples, then
+  repeats the `loop` samples after them until it is stopped. With `loop` absent or 0 it plays the
+  whole file once. `intro + loop` must not run past the file.
+- Music ids start with `music.` and effect ids with `sfx.`; one music track plays at a time.
+
 ## The Summoning import
 
 The importer translates the original's encodings into the format above:
@@ -815,6 +837,11 @@ The importer translates the original's encodings into the format above:
 - Wall shapes get their properties from `docs/spec/world.md` (diagonal shapes 0, 2, 4, 5; faces 1
   and 3). Each level's floor types come from its floor variants and liquid kind.
 - Item categories become tags. The original's message numbers become `messages.json` entries.
+- Each song is rendered through an OPL2 emulator (`docs/spec/audio.md`) to a mono 16-bit WAV at
+  44100 Hz. Track `n` becomes `music.n` and sound effect `n` becomes `sfx.n`. A track the game
+  loops keeps two passes: the first is the intro and the second, which starts with the first's
+  notes still ringing, is the loop. A song that plays once keeps its release until it is silent.
+  `import --no-audio` skips rendering.
 
 ## Decisions
 

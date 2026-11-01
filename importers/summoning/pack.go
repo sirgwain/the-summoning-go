@@ -129,8 +129,14 @@ type importer struct {
 	portraitRows int
 }
 
+// Options choose what an import does.
+type Options struct {
+	// NoAudio skips rendering the music and sound effects, which takes most of an import's time.
+	NoAudio bool
+}
+
 // Import converts the data files into a content pack.
-func Import(src *Source) (*content.Pack, *Report, error) {
+func Import(src *Source, opt Options) (*content.Pack, *Report, error) {
 	in, err := ReadInit(src.Init)
 	if err != nil {
 		return nil, nil, err
@@ -254,6 +260,9 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 			return nil, nil, fmt.Errorf("level %d: %w", i, err)
 		}
 		im.pack.Levels[cl.ID] = cl
+	}
+	if !opt.NoAudio {
+		im.audio()
 	}
 	if err := im.pack.Verify(); err != nil {
 		return nil, nil, fmt.Errorf("imported pack: %w", err)

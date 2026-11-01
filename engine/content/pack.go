@@ -34,6 +34,8 @@ type Pack struct {
 	Creation      *Creation
 	Scenes        map[string]*Scene
 	Conversations map[string]*Conversation
+	// Sounds are the music tracks and sound effects.
+	Sounds map[string]*Sound
 }
 
 // NewPack returns an empty pack with the given manifest.
@@ -54,6 +56,7 @@ func NewPack(m Manifest) *Pack {
 		Scenes:    map[string]*Scene{},
 
 		Conversations: map[string]*Conversation{},
+		Sounds:        map[string]*Sound{},
 	}
 }
 

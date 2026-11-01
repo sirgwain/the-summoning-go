@@ -12,7 +12,7 @@ import (
 
 func init() {
 	var out string
-	var force bool
+	var force, noAudio bool
 	importCmd := &cobra.Command{
 		Use:   "import <data-dir>",
 		Short: "Convert The Summoning's data files into a content pack",
@@ -27,7 +27,7 @@ The pack holds the game's art and data: keep it local and do not distribute it.`
 			if err != nil {
 				return err
 			}
-			pack, report, err := summoning.Import(src)
+			pack, report, err := summoning.Import(src, summoning.Options{NoAudio: noAudio})
 			if err != nil {
 				return err
 			}
@@ -46,6 +46,7 @@ The pack holds the game's art and data: keep it local and do not distribute it.`
 	}
 	importCmd.Flags().StringVarP(&out, "out", "o", filepath.Join("packs", "summoning"), "directory to write the pack to")
 	importCmd.Flags().BoolVar(&force, "force", false, "replace an existing pack in the output directory")
+	importCmd.Flags().BoolVar(&noAudio, "no-audio", false, "skip rendering music and sound effects (faster)")
 	rootCmd.AddCommand(importCmd)
 }
 

@@ -1,6 +1,6 @@
 # Audio plan
 
-Status: 2026-11-01. Phases 1–3 done. How music and sound effects get from the game's files to
+Status: 2026-11-01. Phases 1–4 done. How music and sound effects get from the game's files to
 the speakers, and the order to build it in. Update this file as work lands, and fold what's
 settled into [design.md](design.md#audio), [pack.md](pack.md) and the spec; delete it once audio
 is done.
@@ -86,27 +86,17 @@ the timing corrected the spec: the timer's divisor comes from 1193180, but it co
 
 ### 4. Rendering and the pack
 
-- [ ] Render a song: run the song player and the chip together, one song tick of samples at a
-      time, then resample to 44100 Hz.
-- [ ] Songs that play once: render to FCh and the stop that follows, then keep going until
-      every voice is silent (with an upper limit): stopping attenuates the carriers, but an
-      additive voice's modulator rings on through its release.
-- [ ] Looping songs: render two passes and store both. The loop region is the second pass, because
-      it starts with the first pass's notes still ringing, so the loop is seamless. The intro is
-      the first pass. A pass ends at the restart: the loop point (from the track's bars) or FCh,
-      whichever comes first.
-- [ ] Write mono 16-bit WAV (a small writer in the importer, no dependency).
-- [ ] Write `audio/music/<id>.wav` or `audio/sfx/<id>.wav`, plus `<id>.json` with
-      `{ "rate": 44100, "intro": samples, "loop": samples }` (`loop` 0 for songs that play once).
-      Ids: `music.<n>` for track `n`, `sfx.<n>` for sound effect `n`.
-- [ ] Document the audio files and sidecar in [pack.md](pack.md), with the content structs and
-      validation in `engine/content`.
-- [ ] Update [design.md](design.md#audio): WAV or Ogg in packs; the chip in `internal/opl2`;
-      `internal/` in the repository layout.
-- [ ] `summoning import` renders audio by default; `--no-audio` skips it for quick imports during
-      development.
-- [ ] The dev pack gets one short generated tone with a loop, so the engine's tests have audio
-      without the game's files.
+- [x] Render a song: the song player's writes go to the chip at their times, each write taking
+      80 µs as the game's driver does (spec, Register writes), then the result is resampled to
+      44100 Hz (`importers/summoning/render.go`).
+- [x] Songs that play once keep their release until the chip is silent or nearly flat, up to
+      5 seconds.
+- [x] Looping songs keep two passes: the first is the intro, the second the loop, so the loop
+      starts with the first pass's notes still ringing.
+- [x] Mono 16-bit WAV in `audio/music` and `audio/sfx`, with a record of `file`, `intro` and
+      `loop` beside each ([pack.md](pack.md#audio); `engine/content/audio.go`).
+- [x] `import --no-audio` skips rendering.
+- [x] The dev pack has a generated tune with a loop and one effect.
 
 ### 5. The engine: `engine/audio`
 
@@ -130,8 +120,7 @@ Ebitengine is allowed here; `engine/sim` only emits events.
       **Unknowns**, with scenes). Fill [spec/audio.md](spec/audio.md) and
       [spec/scenes.md](spec/scenes.md), then the importer writes the assignments into the pack
       (level and scene fields).
-- [ ] Which tracks loop when started, and with how many bars; the importer needs this to render
-      loops, since songs don't carry it.
+- [x] Which tracks loop when started, and with how many bars (spec, Songs).
 
 ## Checking
 
@@ -142,7 +131,7 @@ Ebitengine is allowed here; `engine/sim` only emits events.
 
 ## Open questions
 
-- **Smaller packs.** If 65 MB matters: QOA (a simple lossy format, about 5:1; we would write the
+- **Smaller packs.** If 80 MB matters: QOA (a simple lossy format, about 5:1; we would write the
   encoder and decoder, a few hundred lines each), FLAC through a pure-Go library (about 2:1), or
   Ogg when `ffmpeg` is on the PATH.
 - **Rendering at the chip's rate.** The pack could keep 49716 Hz and let Ebitengine resample when

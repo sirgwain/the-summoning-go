@@ -1,9 +1,11 @@
 package opl2
 
 import (
+	"fmt"
 	"hash/fnv"
 	"math"
 	"testing"
+	"time"
 )
 
 func run(c *Chip, n int) []int16 {
@@ -388,5 +390,48 @@ func TestResampler(t *testing.T) {
 	want := 0x200 * 16.0 * Rate / (1 << 20)
 	if math.Abs(float64(crossings)-want) > 1.5 {
 		t.Fatalf("%d cycles a second at 44100, want %.1f", crossings, want)
+	}
+}
+
+func TestResampleSlice(t *testing.T) {
+	c := New()
+	sineVoice(c, 0, 15, 0, 0)
+	keyOn(c, 0, 0x200, 4)
+	direct := NewResampler(c, 44100)
+	want := make([]int16, 4410)
+	for i := range want {
+		want[i] = direct.Next()
+	}
+	c2 := New()
+	sineVoice(c2, 0, 15, 0, 0)
+	keyOn(c2, 0, 0x200, 4)
+	got := Resample(run(c2, Rate/10+2), 44100)
+	if len(got) < len(want) {
+		t.Fatalf("%d samples, want at least %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("sample %d: %d, want %d", i, got[i], want[i])
+		}
+	}
+}
+
+func TestWriteTime(t *testing.T) {
+	c := New()
+	c.SetWriteTime(80 * time.Microsecond) // 3.98 samples
+	for i := 0; i < 4; i++ {
+		c.Write(0xA0+i, 1)
+	}
+	var landed []uint64
+	for c.Pending() > 0 {
+		n := c.Pending()
+		c.Sample()
+		if c.Pending() < n {
+			landed = append(landed, c.chipSamples-1)
+		}
+	}
+	// Due at 0, 3.98, 7.96 and 11.93 samples, rounded up.
+	if fmt.Sprint(landed) != "[0 4 8 12]" {
+		t.Fatalf("writes landed at samples %v, want [0 4 8 12]", landed)
 	}
 }

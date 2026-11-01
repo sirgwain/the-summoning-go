@@ -11,6 +11,17 @@ Track `n` is RESOURCE `music base + n` (formats.md, INIT). Sound effect `n` is t
 - One song plays at a time; starting a song stops the one playing (Stopping).
 - A song plays once unless the game starts it with a loop of `B` bars. Then its loop point is `B × beats per bar × ticks per beat − 1` song ticks, and it restarts from its start at the loop point or at its end, whichever comes first (Timing).
 
+The game starts these tracks with a loop; every other track plays once. The front end's music base is the same RESOURCE number as the game's.
+
+| Track | Bars |
+|---|---|
+| 1 | 48 |
+| 5 | 24 |
+| 6 | 16 |
+| 7 | 8 |
+| 8 | 12 |
+| 15 | 8 |
+
 ## Song descriptor (24 bytes)
 
 | Offset | Type | Meaning |
@@ -203,7 +214,8 @@ Both fades end by stopping the song, and leave the master volume as it was befor
 
 The song player's output, the thing to test, is the list of register writes in order, each with the song tick of the clock it happens on, and the clock rate whenever it changes. The chip's starting state is the one "When the game starts" leaves, followed by the song's start.
 
+**Write timing.** The driver waits after each write: after the register number for a short delay, and after the value for seven times as long. It sizes both by counting the passes of a loop over one period of the timer when the game starts, so they take about the same time on any machine: about 10 µs and 70 µs. Each write takes about 80 µs, so the chip hears the writes of a step spread out: a program change (16 writes) over about 1.3 ms, a song's start over about 12 ms.
+
 ## Unknowns
 
-- Which tracks loop when the game starts them, and with how many bars.
 - Which track plays where (levels, menus, endings); specified with scenes.

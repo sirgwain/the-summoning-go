@@ -11,6 +11,8 @@
 // sample at Rate; Resampler gives samples at another rate.
 package opl2
 
+import "time"
+
 // Rate is the chip's sample rate: its 3.579545 MHz clock divided by 72.
 const Rate = 49716
 
@@ -155,13 +157,15 @@ type Chip struct {
 	noise           uint32
 	chipSamples     uint64
 
-	queue   []write
-	nextDue uint64 // the first sample a new write may land on
+	queue []write
+	// next is the first sample a new write may land on, and gap the time between writes, both
+	// in samples << 16.
+	next, gap uint64
 }
 
 // New returns a chip in its power-on state: all operators silent, all registers 0.
 func New() *Chip {
-	c := &Chip{noise: 1}
+	c := &Chip{noise: 1, gap: 1 << 16}
 	for i := range c.op {
 		c.op[i].stage = stageRelease
 		c.op[i].envelope = envelopeSilent
@@ -170,14 +174,21 @@ func New() *Chip {
 	return c
 }
 
-// Write queues a write of val to register reg. Queued writes land one per sample, in order.
+// Write queues a write of val to register reg. Queued writes land in order, one per write
+// time (one sample unless SetWriteTime says otherwise).
 func (c *Chip) Write(reg int, val byte) {
-	due := c.nextDue
-	if due < c.chipSamples {
-		due = c.chipSamples
+	if now := c.chipSamples << 16; c.next < now {
+		c.next = now
 	}
+	due := (c.next + 0xFFFF) >> 16
 	c.queue = append(c.queue, write{due: due, reg: uint8(reg), val: val})
-	c.nextDue = due + 1
+	c.next += c.gap
+}
+
+// SetWriteTime sets how long each write takes to land after the one before it, at least one
+// sample: the time the program driving the chip spends on each write.
+func (c *Chip) SetWriteTime(d time.Duration) {
+	c.gap = max(uint64(d.Seconds()*Rate*(1<<16)+0.5), 1<<16)
 }
 
 // Pending is the number of queued writes not yet applied.
@@ -660,28 +671,58 @@ func (c *Chip) mix() int32 {
 	return sum
 }
 
-// Resampler turns a chip's output into samples at another rate, interpolating linearly
-// between the chip's samples.
+// Source gives samples at Rate. A Chip is one.
+type Source interface {
+	Sample() int16
+}
+
+// Resampler turns samples at Rate into samples at another rate, interpolating linearly
+// between them.
 type Resampler struct {
-	chip       *Chip
+	src        Source
 	rate       int32
 	accum      int32
 	last, curr int16
 }
 
-// NewResampler returns a resampler that takes samples from chip at the given rate.
-func NewResampler(chip *Chip, rate int) *Resampler {
+// NewResampler returns a resampler that takes samples from src and gives them at rate.
+func NewResampler(src Source, rate int) *Resampler {
 	if rate <= 0 {
 		rate = Rate
 	}
-	return &Resampler{chip: chip, rate: int32(rate)}
+	return &Resampler{src: src, rate: int32(rate)}
+}
+
+// Resample converts samples at Rate to rate.
+func Resample(samples []int16, rate int) []int16 {
+	src := &sliceSource{samples: samples}
+	r := NewResampler(src, rate)
+	out := make([]int16, int64(len(samples))*int64(r.rate)/Rate)
+	for i := range out {
+		out[i] = r.Next()
+	}
+	return out
+}
+
+type sliceSource struct {
+	samples []int16
+	pos     int
+}
+
+func (s *sliceSource) Sample() int16 {
+	if s.pos >= len(s.samples) {
+		return 0
+	}
+	v := s.samples[s.pos]
+	s.pos++
+	return v
 }
 
 // Next returns the next sample at the resampler's rate.
 func (r *Resampler) Next() int16 {
 	for r.accum >= r.rate {
 		r.last = r.curr
-		r.curr = r.chip.Sample()
+		r.curr = r.src.Sample()
 		r.accum -= r.rate
 	}
 	fract := (int64(r.accum)*65536 + int64(r.rate)/2) / int64(r.rate)

@@ -2,6 +2,7 @@ package summoning
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"image/color"
 	"reflect"
@@ -80,9 +81,32 @@ func npcFixture() []byte {
 // base 20 and its small and tiny object bases 10 and 12 (see initFixture); the level's banks are
 // offsets 0 (walls, 18, caps 19; also traps and boulders), 2 (floors, 20), 3 (plates, 21), 4
 // (doors, 22 and 23), 6 (floor overlays, 24), 7 (exit walls, 25), and decoration bank 6 (26).
+// songRecord encodes a RESOURCE music record: one instrument and the events.
+func songRecord(events ...byte) []byte {
+	desc := make([]byte, songDescriptorSize)
+	desc[0], desc[1], desc[15], desc[23] = 240, 4, 1, 1
+	binary.LittleEndian.PutUint32(desc[6:], uint32(len(events)))
+	binary.LittleEndian.PutUint16(desc[16:], 120)
+	inst := make([]byte, instrumentSize)
+	for k, v := range testInstrument.Modulator {
+		inst[2+2*k] = v
+	}
+	for k, v := range testInstrument.Carrier {
+		inst[28+2*k] = v
+	}
+	rec := []byte{'E', 'H', byte(ResourceMusic), songDescriptorSize, 0}
+	rec = append(rec, desc...)
+	rec = append(rec, inst...)
+	return append(rec, events...)
+}
+
+// fixtureMusic is where the import fixture's songs start: tracks 0-16 and one sound effect.
+const fixtureMusic = 60
+
 func importFixture() *Source {
 	in := initFixture()
-	copy(in[len(in)-4:], []byte{0, 1, 1}) // start: level 0, cell (1, 1)
+	copy(in[len(in)-4:], []byte{0, 1, 1})                   // start: level 0, cell (1, 1)
+	binary.LittleEndian.PutUint16(in[6+2*4:], fixtureMusic) // the music base
 
 	colors := fixture{}.u8(16).zeros(256 * 3)
 
@@ -107,6 +131,9 @@ func importFixture() *Source {
 	resources[16] = rawBank(48, 2, 1, 0, plus(130))
 	resources[17] = rawBank(48, 1, 1, 0, plus(180))
 	resources[16+bodyLook] = rawBank(56, 1, 1, 0, plus(150))
+	for n := range firstEffect + 1 {
+		resources[fixtureMusic+n] = songRecord(0x00, 0xC0, 0x00, 0x00, 0x90, byte(0x30+n), 0x60, 0x30, 0x80, 0x30, 0x00, 0x00, 0xFC)
+	}
 
 	level := fixture{}.u8(3, 4)
 	level = level.u16(0, 2, 3, 4, 6, 7)
@@ -158,7 +185,7 @@ func portraitsFixture() []byte {
 }
 
 func TestImport(t *testing.T) {
-	p, report, err := Import(importFixture())
+	p, report, err := Import(importFixture(), Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +249,7 @@ func TestImport(t *testing.T) {
 }
 
 func TestImportFeatures(t *testing.T) {
-	p, _, err := Import(importFixture())
+	p, _, err := Import(importFixture(), Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,7 +320,7 @@ func TestImportFeatures(t *testing.T) {
 }
 
 func TestImportCatalog(t *testing.T) {
-	p, _, err := Import(importFixture())
+	p, _, err := Import(importFixture(), Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -353,7 +380,7 @@ func TestImportStillObject(t *testing.T) {
 	i := bytes.Index(level, []byte{1, 1, 1, 1, 1, uint8(PlaceNPC), 0})
 	level[i+6] = 1
 	src.Levels = container(level)
-	p, _, err := Import(src)
+	p, _, err := Import(src, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -372,7 +399,7 @@ func pixel(t *testing.T, p *content.Pack, sprite string, frame, x, y int) uint8 
 }
 
 func TestImportComposesTiles(t *testing.T) {
-	p, _, err := Import(importFixture())
+	p, _, err := Import(importFixture(), Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -429,7 +456,7 @@ func TestImportReportsMissingFrames(t *testing.T) {
 	level[2+levelHeaderSize+5] = 0x25 // cell (1, 1)
 	src.Levels = container(level)
 
-	_, report, err := Import(src)
+	_, report, err := Import(src, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -455,7 +482,7 @@ func TestWallChecksAs(t *testing.T) {
 }
 
 func TestImportPlayer(t *testing.T) {
-	p, _, err := Import(importFixture())
+	p, _, err := Import(importFixture(), Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -517,7 +544,7 @@ func TestImportPlayer(t *testing.T) {
 }
 
 func TestImportFighting(t *testing.T) {
-	p, _, err := Import(importFixture())
+	p, _, err := Import(importFixture(), Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -595,7 +622,7 @@ func TestHeldLayers(t *testing.T) {
 }
 
 func TestImportCreation(t *testing.T) {
-	p, _, err := Import(importFixture())
+	p, _, err := Import(importFixture(), Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

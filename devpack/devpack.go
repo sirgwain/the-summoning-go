@@ -35,6 +35,7 @@ func Build() *content.Pack {
 	study(p)
 	creation(p)
 	menu(p)
+	sounds(p)
 	return p
 }
 
