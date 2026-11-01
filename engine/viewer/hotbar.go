@@ -1,6 +1,7 @@
 package viewer
 
 import (
+	"fmt"
 	"image"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
@@ -244,36 +245,52 @@ func (h *Hotbar) click(v *Viewer, pt image.Point, right bool) []input.Command {
 	return nil
 }
 
-// HoverText names what is under the cursor on the hotbar: an object in a slot.
-func (v *Viewer) HoverText(cursor image.Point) string {
-	if ip := v.Inventory(); ip != nil && cursor.In(ip.Rect) {
-		if b, ok := slotAt(ip.Slots, ip.at(cursor)); ok {
-			if o := v.World.Player().Slot(v.Pack, b.Slot); o != nil {
-				return inspect.ItemName(v.Pack, o.Item)
-			}
-		}
-		return ""
+// HoverLines describe what is under the cursor on the hotbar or the inventory panel: the name of
+// an object in a box, and for a container what it holds (docs/spec/items.md, The inventory panel).
+func (v *Viewer) HoverLines(cursor image.Point) []string {
+	if o := v.objectUnder(v.Inventory(), cursor); o != nil {
+		return v.objectLines(o)
 	}
 	h := v.Hotbar()
 	if h == nil || !cursor.In(h.Rect) {
-		return ""
+		return nil
 	}
 	for _, s := range h.Spells {
 		if h.at(cursor).In(s.Rect) {
 			if sp := v.Pack.Spells[v.World.Player().Magic.Selected[s.School]]; sp != nil {
-				return inspect.Text(v.Pack, sp.Name)
+				return []string{inspect.Text(v.Pack, sp.Name)}
 			}
-			return ""
 		}
 	}
-	b, ok := slotAt(h.Slots, h.at(cursor))
-	if !ok {
-		return ""
+	return nil
+}
+
+// objectLines are object o's name and, for a container, its contents by name, repeats counted,
+// or "Empty".
+func (v *Viewer) objectLines(o *sim.Object) []string {
+	lines := []string{inspect.ItemName(v.Pack, o.Item)}
+	if it := v.Pack.Items[o.Item]; it == nil || it.Container == nil {
+		return lines
 	}
-	if o := v.World.Player().Slot(v.Pack, b.Slot); o != nil {
-		return inspect.ItemName(v.Pack, o.Item)
+	if len(o.Contents) == 0 {
+		return append(lines, "  Empty")
 	}
-	return ""
+	var names []string
+	count := map[string]int{}
+	for _, c := range o.Contents {
+		n := inspect.ItemName(v.Pack, c.Item)
+		if count[n] == 0 {
+			names = append(names, n)
+		}
+		count[n]++
+	}
+	for _, n := range names {
+		if count[n] > 1 {
+			n = fmt.Sprintf("%s x%d", n, count[n])
+		}
+		lines = append(lines, "  "+n)
+	}
+	return lines
 }
 
 // SlotImage returns the icon of the object in slot, if any.

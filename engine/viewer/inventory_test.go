@@ -133,3 +133,30 @@ func TestClickNearPlayer(t *testing.T) {
 		t.Errorf("a click at %v, past the reach, counts as on the player", far)
 	}
 }
+
+// TestHoverContainer rests the pointer on a shelf holding a sack: the name, then what it holds,
+// repeats counted; an empty sack says so, and a plain object shows its name alone.
+func TestHoverContainer(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	p := v.World.Player()
+	p.Slots[5] = &sim.Object{Item: devpack.ItemSack, Contents: []*sim.Object{
+		{Item: devpack.ItemKey}, {Item: devpack.ItemMail}, {Item: devpack.ItemKey}}}
+	r, ok := v.Hotbar().SlotRect(5)
+	if !ok {
+		t.Fatal("no shelf 5")
+	}
+	at := r.Min.Add(r.Max).Div(2)
+	key, mail, sack := v.objectLines(&sim.Object{Item: devpack.ItemKey})[0], v.objectLines(&sim.Object{Item: devpack.ItemMail})[0],
+		v.objectLines(&sim.Object{Item: devpack.ItemSack})[0]
+	if got, want := v.HoverLines(at), []string{sack, "  " + key + " x2", "  " + mail}; !slices.Equal(got, want) {
+		t.Errorf("hover %q, want %q", got, want)
+	}
+	p.Slots[5].Contents = nil
+	if got := v.HoverLines(at); !slices.Equal(got, []string{sack, "  Empty"}) {
+		t.Errorf("empty sack hover %q", got)
+	}
+	p.Slots[5] = &sim.Object{Item: devpack.ItemKey}
+	if got := v.HoverLines(at); !slices.Equal(got, []string{key}) {
+		t.Errorf("key hover %q", got)
+	}
+}

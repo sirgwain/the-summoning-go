@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -941,11 +942,21 @@ func (s *shell) drawReading(screen *ebiten.Image) {
 func (s *shell) drawPointer(screen *ebiten.Image) {
 	v := s.v
 	cursor := v.Cursor
-	if text := v.HoverText(cursor); text != "" {
-		w := len(text)*viewer.CharWidth + 4
-		at := cursor.Add(image.Pt(12, -viewer.LineHeight-4))
-		vector.FillRect(screen, float32(at.X), float32(at.Y), float32(w), float32(viewer.LineHeight), panelColor, false)
-		ebitenutil.DebugPrintAt(screen, text, at.X+2, at.Y)
+	if lines := v.HoverLines(cursor); len(lines) > 0 {
+		w := 0
+		for _, l := range lines {
+			w = max(w, utf8.RuneCountInString(l))
+		}
+		w = w*viewer.CharWidth + 4
+		h := len(lines) * viewer.LineHeight
+		// Above the pointer, kept on the screen.
+		at := cursor.Add(image.Pt(12, -h-4))
+		at.X = min(at.X, v.Screen.X-w)
+		at.Y = max(at.Y, 0)
+		vector.FillRect(screen, float32(at.X), float32(at.Y), float32(w), float32(h), panelColor, false)
+		for i, l := range lines {
+			ebitenutil.DebugPrintAt(screen, l, at.X+2, at.Y+i*viewer.LineHeight)
+		}
 	}
 	img, centered, ok := v.Pointer()
 	ok = ok && cursor.In(image.Rectangle{Max: v.Screen})
