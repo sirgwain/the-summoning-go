@@ -87,6 +87,11 @@ type Viewer struct {
 	Said    *Said
 	Typed   string
 	Reading *content.Image
+	// Front is the frontend while it shows, taking the input; Quit is set when it asks to quit.
+	// Seed is the seed the world was made with, from which new games take theirs.
+	Front *Frontend
+	Quit  bool
+	Seed  uint64
 
 	// press is where the mouse button went down; drag where the view was last dragged from.
 	press, drag *image.Point
@@ -95,6 +100,8 @@ type Viewer struct {
 	// seen is where the view last saw the player, in view pixels, and on which level.
 	seen      image.Point
 	seenLevel string
+	// deadFor counts the updates the player has been dead while playing.
+	deadFor int
 }
 
 // New returns a viewer of pack p, running a world with seed, showing level (the start level if
@@ -107,7 +114,7 @@ func New(p *content.Pack, seed uint64, level string, scale int, magnify bool, sc
 	v := &Viewer{
 		Pack: p, World: w, Scale: max(1, min(scale, MaxScale)), Magnify: magnify, Screen: screen,
 		Levels: sortedIDs(p.Levels), Items: sortedIDs(p.Items), Things: sortedIDs(p.Things),
-		SeeAll: true,
+		SeeAll: true, Seed: seed,
 	}
 	if level != "" && level != w.Current().ID {
 		w.Update([]input.Command{input.GoTo{Level: level}})
@@ -244,6 +251,10 @@ func (v *Viewer) CellPoint(c content.Cell) image.Point {
 func (v *Viewer) Update(in Input) {
 	v.Ticks++
 	v.Cursor = in.Cursor
+	if v.Front != nil {
+		v.frontUpdate(in)
+		return
+	}
 	acted := in.anyPressed() || in.Left.Released || in.Right.Released
 	if v.Said != nil && (v.Ticks > v.Said.Until || acted) {
 		v.Said = nil
@@ -332,6 +343,7 @@ func (v *Viewer) updateWorld(cmds []input.Command) {
 	if v.Play {
 		v.follow()
 	}
+	v.afterPlay()
 	// The selection follows the selected thing, and drops it when it leaves the level.
 	if v.Thing != "" {
 		if t := v.World.Current().Thing(v.Thing); t != nil {

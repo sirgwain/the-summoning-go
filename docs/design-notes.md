@@ -113,6 +113,16 @@ variable 32 and runs conversation 79h; when it ends, play ends (`World.Ended`, `
 with the ending's name. The conversations' `ending` action ends play with the closing scene
 (`TestEndingPower`, `TestEndingAction`). Not done: ending G's changes to the world and its save.
 
+**Done (the frontend).** `summoning play` starts at the main menu when the pack has character
+creation (`engine/viewer/frontend.go`, drawn by `cmd/front.go`): create a character (the
+descendant, the name, the attributes by the pack's methods, rolled or spent within their limits,
+the weapon and the school), restore a save, or pick a premade character; then the new game's
+scene and play. A dead player shows for three seconds, then the menu; an ending plays its scene,
+then the menu. Scenes play pictures, parts, captions over banners and fades by the clock; a key
+or click skips. Tested by `TestCreateCharacter`, `TestPremadeAndBack`, `TestDeathAndEndingGoToMenu`
+and `TestSceneRun`. Not yet seen on screen (no display this session): the menus, and the
+imported door and ending scenes.
+
 ## Left from Walk
 
 - **Play a real level through.** Only a short walk on level 0 of the imported game has been tried.

@@ -50,10 +50,7 @@ func (v *Viewer) LoadGame(name string) {
 		v.notice("Not loaded: " + err.Error())
 		return
 	}
-	v.World = w
-	v.Shown, v.Said, v.Reading, v.Typed, v.SpellsOpen = "", nil, nil, "", false
-	v.rebuild()
-	v.Recenter()
+	v.setWorld(w)
 	if warning != "" {
 		v.notice("Loaded; " + warning)
 		return

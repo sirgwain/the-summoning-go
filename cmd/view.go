@@ -31,7 +31,7 @@ func init() {
 func newViewCmd(play bool) *cobra.Command {
 	var level, screenshot, script, out, saves string
 	var scale, shotTicks int
-	var magnify bool
+	var magnify, menu bool
 	var at, sel []int
 	var seed uint64
 	use, short, long := "view [pack-dir]", "Look around a content pack's levels and work their mechanisms",
@@ -42,6 +42,12 @@ F12 switches to playing (see summoning play --help).
 		use, short, long = "play [pack-dir]", "Play a content pack's levels",
 			`Opens a window playing a pack: the player starts where the pack says and the view follows it,
 showing what the player sees.
+
+A pack with character creation starts at the main menu (--menu=false skips it): create a
+character (the descendant, the name, the attributes rolled or spent, the weapon and the school),
+restore a saved game, or select a premade character. Arrows and Enter or the mouse choose;
+Escape goes back. A new game shows the pack's opening scene (a key or click skips it). When the
+player dies, or the game ends, play returns to the main menu.
 
 The keys are laid out as the game's. WASD or the arrows walk, two together along a diagonal;
 Home, PgUp, End and PgDn walk the diagonals. Space acts with the right hand and Shift+Space does
@@ -154,6 +160,9 @@ of live input, and exits when it ends. Its files are written under --out.`,
 					return fmt.Errorf("pack %s has no player", pack.Manifest.ID)
 				}
 				v.SetPlay(true)
+				if menu && script == "" && pack.Creation != nil {
+					v.OpenFrontend()
+				}
 			}
 			if center != nil {
 				v.CenterOn(*center)
@@ -189,6 +198,9 @@ of live input, and exits when it ends. Its files are written under --out.`,
 	viewCmd.Flags().StringVar(&script, "script", "", "run this script instead of live input, then exit")
 	viewCmd.Flags().StringVar(&out, "out", ".", "directory for a script's screenshots and dumps")
 	viewCmd.Flags().StringVar(&saves, "saves", "", "directory for saved games (default: the user's config directory; none while a script runs)")
+	if play {
+		viewCmd.Flags().BoolVar(&menu, "menu", true, "start at the main menu when the pack has character creation (not while a script runs)")
+	}
 	viewCmd.Flags().StringVar(&screenshot, "screenshot", "", "save a frame to this PNG file and exit")
 	viewCmd.Flags().IntVar(&shotTicks, "screenshot-ticks", 0, "updates to run before the screenshot")
 	return viewCmd
@@ -303,6 +315,9 @@ func (s *shell) Update() error {
 		// Wait for the draw that takes them, so they show this update.
 		return nil
 	}
+	if s.v.Quit {
+		return ebiten.Termination
+	}
 	if s.script == nil {
 		s.v.Update(s.input())
 		return s.sync()
@@ -323,6 +338,11 @@ func (s *shell) Update() error {
 
 func (s *shell) Draw(screen *ebiten.Image) {
 	v := s.v
+	if v.Front != nil {
+		s.drawFront(screen)
+		s.takeShots(screen)
+		return
+	}
 	size := v.BufferSize()
 	if s.buffer == nil || s.buffer.Bounds().Size() != size {
 		if s.buffer != nil {
@@ -346,6 +366,11 @@ func (s *shell) Draw(screen *ebiten.Image) {
 	s.drawNotice(screen)
 	s.drawFullMap(screen)
 	s.drawPointer(screen)
+	s.takeShots(screen)
+}
+
+// takeShots saves the screenshots due.
+func (s *shell) takeShots(screen *ebiten.Image) {
 	for _, path := range s.shots {
 		if err := saveScreenshot(screen, path); err != nil && s.err == nil {
 			s.err = err
