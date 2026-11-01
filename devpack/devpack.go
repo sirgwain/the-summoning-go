@@ -277,13 +277,13 @@ func records(p *content.Pack) {
 	p.Items[ItemSword].WeaponClass, p.Items[ItemSword].Wear, p.Items[ItemSword].Durability = &sword, content.WearHand, 2500
 	p.Items[ItemSword].Held = &content.Held{Right: &content.HeldLayers{Behind: spriteSwordBehind, Front: spriteSwordFront}}
 	p.Items[ItemSword].Actions = []content.ItemAction{
-		{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 6}, Delay: 4, Skill: 1},
-		{Kind: content.ActionAttack, Damage: content.Dice{Count: 1, Sides: 10}, Delay: 3, Skill: 2},
+		{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 6}, Delay: 12, Skill: 1},
+		{Kind: content.ActionAttack, Damage: content.Dice{Count: 1, Sides: 10}, Delay: 9, Skill: 2},
 	}
 	p.Items[ItemBoots].Wear, p.Items[ItemBoots].Armor, p.Items[ItemBoots].Power = content.WearFeet, 1, 0x0A
 	p.Items[ItemBoots].PowerWorn = true
 	p.Items[ItemPotion].Power = 0x28
-	p.Items[ItemPotion].Actions = []content.ItemAction{{Kind: content.ActionUseUp, Delay: 3}}
+	p.Items[ItemPotion].Actions = []content.ItemAction{{Kind: content.ActionUseUp, Delay: 9}}
 	p.Items[ItemMail].Wear, p.Items[ItemMail].Armor, p.Items[ItemMail].Durability = content.WearBody, 4, 7500
 	p.Items[ItemMail].Tags = []string{"body_armor"}
 	p.Things[ThingGuard] = &content.Thing{ID: ThingGuard, Kind: content.ThingCreature, Sprite: "sprite.guard",

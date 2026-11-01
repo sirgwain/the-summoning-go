@@ -12,7 +12,7 @@ const (
 	flightTicks     = 1
 	firedRange      = 127
 	arrowBreaks     = 25
-	throwDelay      = 5
+	throwDelay      = 15
 	// touchReach is how far ahead of its footprint a thrower touches what it hits at once.
 	touchReach = 4
 	// bowClass is the weapon class throwing and firing practice.

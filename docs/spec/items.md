@@ -132,7 +132,7 @@ Using an action makes the hand wait its delay before the next action; each playe
 | `use_up` | 9, 10 | Uses the object up for its power |
 | `use` | 11–20 | Uses a charge for its power |
 
-The **delay** of action 0 is `(byte 8 >> 4) + 3` player updates, of action 1 `(byte 8 & 0Fh) + 3`; an item flagged two-handed (category 80h) delays both hands. A hand waits its delay before acting again, counted down on each of the player's updates. An attack adds `weight / 8` exertion (player.md). An empty hand strikes with bare hands, 2d2 damage and a delay of 2. Icon FFh is no action.
+The **delay** of action 0 is `(byte 8 >> 4) + 3` points, of action 1 `(byte 8 & 0Fh) + 3`; an item flagged two-handed (category 80h) delays both hands. Each point is three player updates: a hand waits `3 × delay` of the player's updates before acting again, counted down by one on each. An attack adds `weight / 8` exertion (player.md). An empty hand strikes with bare hands, 2d2 damage and a delay of 2 points (6 updates). A pack's action delays are in player updates, so the importer gives `3 × ((byte 8 >> 4) + 3)` and `3 × ((byte 8 & 0Fh) + 3)`. Icon FFh is no action.
 
 **Wearing.** An item's category gives the worn slot it goes in: 0 head, 1 body, 2 feet, 3 arms, 4 quiver, 5 neck; categories 6–12 go in a hand. The engine model calls this its `wear` slot. Weapons (40h) have a weapon class, `category − 9` for categories 9–12. Putting an item on, by swapping it into its own worn slot, adds its armor and starts its power; a worn slot refuses anything whose `wear` is not that slot. The quiver slot also takes arrows into a worn quiver.
 
@@ -241,7 +241,7 @@ They roll their action-1 damage, or 1 when a flagged one is thrown rather than f
 
 Throwing is not possible in water of depth 3 or more.
 
-**Engine model.** The player throws the object in a hand (that hand then waits 5 updates) or, with a `fire` action, the first arrow of the quiver worn in slot 25 (message 48h `no_quiver` without one, 49h `no_arrows` when it is empty; 96h `no_room_to_shoot` when something stands a step ahead). Throwing practices weapon class 3 by 1; firing does too, and shows the both-hands strike pose. In deep water of depth 3 or more throwing gives 70h (`cannot_throw`) and other actions 73h (`cannot_act`). A thing in flight (entities.md) carries the object; how far it flies and its damage are as above, the damage from the item's `missile` (its dice, and whether only firing rolls them). A landing bottle becomes the item's `breaks_into`.
+**Engine model.** The player throws the object in a hand (that hand then waits a delay of 5 points, 15 updates) or, with a `fire` action, the first arrow of the quiver worn in slot 25 (message 48h `no_quiver` without one, 49h `no_arrows` when it is empty; 96h `no_room_to_shoot` when something stands a step ahead). Throwing practices weapon class 3 by 1; firing does too, and shows the both-hands strike pose. In deep water of depth 3 or more throwing gives 70h (`cannot_throw`) and other actions 73h (`cannot_act`). A thing in flight (entities.md) carries the object; how far it flies and its damage are as above, the damage from the item's `missile` (its dice, and whether only firing rolls them). A landing bottle becomes the item's `breaks_into`.
 
 Arrows taken up go into a worn quiver when it has room; putting arrows on (in slot 25) with a quiver worn adds them to it.
 

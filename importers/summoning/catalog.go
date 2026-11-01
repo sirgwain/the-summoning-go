@@ -238,7 +238,9 @@ const (
 	categoryFirstWeapon = 9
 	categoryLastWeapon  = 12
 	unwearingValue      = 30000
-	bodyArmorValue      = 7500
+	// delayUpdates is the player updates in each point of a hand's delay.
+	delayUpdates   = 3
+	bodyArmorValue = 7500
 )
 
 // wearByCategory are the worn slots of categories 0–5; the rest go in a hand (items.md,
@@ -282,9 +284,10 @@ func (im *importer) fighting(i int, tm *ObjectTemplate, it *content.Item) {
 	}
 	for a := range 2 {
 		icon := tm.ActionIcon(a)
-		act := content.ItemAction{Damage: dice(tm.DamageCode(a)), Delay: (tm.DelayCode()>>4)&0x0F + 3}
+		// A delay's points are three player updates each (items.md, Hands and actions).
+		act := content.ItemAction{Damage: dice(tm.DamageCode(a)), Delay: delayUpdates * ((tm.DelayCode()>>4)&0x0F + 3)}
 		if a == 1 {
-			act.Delay = tm.DelayCode()&0x0F + 3
+			act.Delay = delayUpdates * (tm.DelayCode()&0x0F + 3)
 		}
 		switch {
 		case icon >= 100 && icon < 255:

@@ -571,8 +571,8 @@ func TestImportFighting(t *testing.T) {
 	it := &content.Item{}
 	(&importer{}).fighting(0, &tm, it)
 	want := []content.ItemAction{
-		{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 6}, Delay: 5, Skill: 2},
-		{Kind: content.ActionUseUp, Delay: 4},
+		{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 6}, Delay: 15, Skill: 2},
+		{Kind: content.ActionUseUp, Delay: 12},
 	}
 	if !reflect.DeepEqual(it.Actions, want) {
 		t.Errorf("actions %+v, want %+v", it.Actions, want)

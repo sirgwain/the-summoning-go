@@ -17,8 +17,8 @@ const (
 	maxShown = 99
 	// poseUpdates is how many updates a strike's pose shows.
 	poseUpdates = 2
-	// bareHandsDelay is an empty hand's delay.
-	bareHandsDelay = 2
+	// bareHandsDelay is an empty hand's delay, in player updates.
+	bareHandsDelay = 6
 	// poisonChance is the 1 in n chance each update that poison hurts.
 	poisonChance = 40
 	// unwearing is the durability that never wears.
