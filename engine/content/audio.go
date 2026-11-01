@@ -18,8 +18,6 @@ type Sound struct {
 	// once.
 	Intro int `json:"intro,omitempty"`
 	Loop  int `json:"loop,omitempty"`
-	// Priority ranks effects: an effect does not interrupt one of higher priority.
-	Priority int `json:"priority,omitempty"`
 	// Data is the audio file's contents.
 	Data []byte `json:"-"`
 }
@@ -144,9 +142,6 @@ func (v *verifier) sound(s *Sound) {
 	if !validSoundFile(s.File) {
 		v.fail("sound %s: file %q is not a .wav or .ogg beside the record", s.ID, s.File)
 		return
-	}
-	if s.Priority != 0 && !strings.HasPrefix(s.ID, SFXPrefix) {
-		v.fail("sound %s: only effects have a priority", s.ID)
 	}
 	if s.Intro < 0 || s.Loop < 0 {
 		v.fail("sound %s: negative intro or loop", s.ID)

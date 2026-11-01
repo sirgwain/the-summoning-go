@@ -100,8 +100,9 @@ the timing corrected the spec: the timer's divisor comes from 1193180, but it co
 
 ### 5. The engine: `engine/audio`
 
-- [x] The mixer (`engine/audio`): one sound at a time, the effect rule with priorities, the music
-      key's three settings, both fades, music and effect volumes. Tested with a fake backend.
+- [x] The mixer (`engine/audio`): a music channel with both fades, effects layered over it (not
+      the game's one sound at a time; [design.md](design.md#audio)), the music key's three
+      settings, music and effect volumes. Tested with a fake backend.
 - [x] The Ebitengine backend (`engine/audio/speaker`): decodes WAV and Ogg to the context's rate,
       loops with `NewInfiniteLoopWithIntro`.
 - [x] Cues: the simulation names its sounds (`lever`, `door`, `unseal`, `teleport`, `level_up`,
@@ -126,6 +127,7 @@ the timing corrected the spec: the timer's divisor comes from 1193180, but it co
 - Imported audio is checked by ear against the game running in DOSBox. Mismatches become spec
   corrections and new fixture tests.
 - No game audio, rendered or raw, goes into the repository or its tests.
+- 2026-11-01: the imported music and effects checked by ear, and they sound right.
 
 ## Open questions
 

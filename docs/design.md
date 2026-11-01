@@ -320,10 +320,14 @@ and the editor's play-test can use them later. A game build can leave them unbou
   with loop points. The sequence format and how it plays are in `docs/spec/audio.md`; the work is
   planned in [audio-plan.md](audio-plan.md).
 - `engine/audio` decides what plays and `engine/audio/speaker` plays it through Ebitengine, so the
-  rules test without a sound card. One sound plays at a time, by the game's rules: a music track
-  stops whatever plays; an effect waits for no track and no effect of higher priority. The
-  simulation names sounds by cue (`lever`, `door`, `level_up`, …) and the pack maps cues to sounds.
-- The fades lower a master volume, 0..127, by 3 a step, applied as up to 47.25 dB of attenuation
+  rules test without a sound card. The simulation names sounds by cue (`lever`, `door`,
+  `level_up`, …) and the pack maps cues to sounds.
+- **Sounds layer.** The game played one song at a time, so an effect waited for the music to end
+  and for any higher-numbered effect, and starting a sound cut off the one before. The engine
+  keeps no such limit: music has a channel of its own, one track at a time, and effects sound over
+  it and over each other. A cue always plays as an effect, so a fanfare sounds over the music
+  instead of stopping it; an effect started again while it sounds restarts rather than doubling.
+- The fades lower the music's master volume, 0..127, by 3 a step, applied as up to 47.25 dB of attenuation
   (a carrier at full output level). The quick fade steps every 1/18.2 s as the game does; the slow
   fade, which in the game steps with the song's events, steps every 125 ms, about the mean over the
   game's looping tracks.

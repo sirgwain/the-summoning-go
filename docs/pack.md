@@ -816,9 +816,8 @@ audio/sfx/<name>.wav
 - `intro` and `loop` count samples (per channel). The sound plays its first `intro` samples, then
   repeats the `loop` samples after them until it is stopped. With `loop` absent or 0 it plays the
   whole file once. `intro + loop` must not run past the file.
-- Music ids start with `music.` and effect ids with `sfx.`. One sound plays at a time: a music
-  track stops whatever is playing, and an effect plays only while no track is playing and no effect
-  of higher `priority` is sounding (an effect's `priority` defaults to 0).
+- Music ids start with `music.` and effect ids with `sfx.`. One music track plays at a time;
+  effects, and the sounds cues play, sound over it and over each other.
 
 `audio/cues.json` gives the sounds of the engine's cues, the sounds the simulation makes:
 
@@ -852,7 +851,7 @@ The importer translates the original's encodings into the format above:
   44100 Hz. Track `n` becomes `music.n` and sound effect `n` becomes `sfx.n`. A track the game
   loops keeps two passes: the first is the intro and the second, which starts with the first's
   notes still ringing, is the loop. A song that plays once keeps its release until it is silent.
-  An effect's priority is its number, and the cues name the tracks and effects the game plays.
+  The cues name the tracks and effects the game plays.
   `import --no-audio` skips rendering.
 
 ## Decisions

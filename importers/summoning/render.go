@@ -202,14 +202,10 @@ func (im *importer) audio() {
 			continue
 		}
 		_, name, _ := cutPrefix(id)
-		s := &content.Sound{
+		im.pack.Sounds[id] = &content.Sound{
 			ID: id, File: name + ".wav", Intro: j.out.Intro, Loop: j.out.Loop,
 			Data: content.EncodeWAV(j.out.Samples, SampleRate),
 		}
-		if j.track >= firstEffect {
-			s.Priority = j.track - firstEffect
-		}
-		im.pack.Sounds[id] = s
 	}
 	cues := map[string]string{}
 	for cue, track := range trackCues {

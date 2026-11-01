@@ -31,7 +31,7 @@ func TestWAV(t *testing.T) {
 func TestSoundWriteLoad(t *testing.T) {
 	p := testPack()
 	p.Sounds["music.3"] = &Sound{ID: "music.3", File: "3.wav", Intro: 2, Loop: 3, Data: EncodeWAV(make([]int16, 5), 44100)}
-	p.Sounds["sfx.0"] = &Sound{ID: "sfx.0", File: "0.wav", Priority: 4, Data: EncodeWAV([]int16{1, 2}, 44100)}
+	p.Sounds["sfx.0"] = &Sound{ID: "sfx.0", File: "0.wav", Data: EncodeWAV([]int16{1, 2}, 44100)}
 	p.Cues = &Cues{ID: "cues", Cues: map[string]string{CueLever: "sfx.0", CueLevelUp: "music.3"}}
 	if err := p.Verify(); err != nil {
 		t.Fatal(err)
@@ -69,7 +69,6 @@ func TestSoundVerify(t *testing.T) {
 		{Sound{ID: "music.1", File: "1.wav", Intro: 6, Loop: 5, Data: wav}, "run past"},
 		{Sound{ID: "music.1", File: "1.wav", Data: []byte("nope")}, "not a WAV"},
 		{Sound{ID: "music.1", File: "1.wav", Loop: -1, Data: wav}, "negative"},
-		{Sound{ID: "music.1", File: "1.wav", Priority: 1, Data: wav}, "only effects"},
 	} {
 		p := testPack()
 		s := tc.s
