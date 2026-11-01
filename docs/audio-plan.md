@@ -1,6 +1,6 @@
 # Audio plan
 
-Status: 2026-11-01. Phases 1 and 2 done. How music and sound effects get from the game's files to
+Status: 2026-11-01. Phases 1–3 done. How music and sound effects get from the game's files to
 the speakers, and the order to build it in. Update this file as work lands, and fold what's
 settled into [design.md](design.md#audio), [pack.md](pack.md) and the spec; delete it once audio
 is done.
@@ -67,26 +67,22 @@ writes at the same samples.
 
 ### 3. The song player: `importers/summoning/music.go`
 
-- [ ] Read the 24-byte song header, the 58-byte instruments and the event stream (RESOURCE type
-      3, [spec/formats.md](spec/formats.md#music-type-3)).
-- [ ] Play the events into timed register writes: delays and F8h extensions, running status,
-      note on/off with the velocity-as-volume rule, volume, program change (melodic and
-      percussion), pitch bend with the 25 frequency rows, the tempo command, FCh, the loop
-      length.
-- [ ] Report malformed songs (a stream running past its length, an instrument index past `P`) in
-      the import report instead of failing the import.
+Done. `DecodeSong` reads the descriptor, instruments and event stream. `songPlayer` starts from
+the driver's state at game start, starts a song (with an optional loop in bars) and plays it
+step by step into a timeline of register writes and clock-rate changes. A malformed stream
+(no FCh, a bad status byte) stops the song with an error for the import report.
 
-Fixture tests: songs of a few dozen bytes, built in the test, each checked against the register
-writes the spec gives.
+Fixture tests build songs of a few bytes and check the writes the spec gives: the frequency
+rows, the game-start and song-start writes, program changes on melodic and percussion
+channels, note on and off, a second note on without key-off, volume, pitch bend, rhythm mode,
+the tempo command and the slowest clock, delays with F8h, running status, ignored events,
+voiceless channels, missing instruments, bad streams, and loops restarting at the loop point
+and at FCh.
 
-- [ ] The frequency rows: row 0 is the spec's twelve values; rows 1–24 by the formula.
-- [ ] Note on and off, melodic and in rhythm mode (bass drum on voice 6, tom tuned by voice 8 with
-      voice 7 at note + 7).
-- [ ] Pitch bend: steps, the semitone and row split, retuning a sounding note, no bend on
-      percussion above voice 6.
-- [ ] The volume formula, on the carrier only, keeping the key scale level bits.
-- [ ] Timing: ticks per second from the tempo, the tempo command, a long delay with F8h.
-- [ ] Running status, and the ignored events (Bxh, Dxh, other F0h messages) consuming their bytes.
+Checked against the game: every register write of all 42 songs, in value and order, matches
+the game's driver, and every write during playback lands on the same microsecond. Checking
+the timing corrected the spec: the timer's divisor comes from 1193180, but it counts at
+1193182 Hz.
 
 ### 4. Rendering and the pack
 

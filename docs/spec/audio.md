@@ -101,7 +101,7 @@ Before a song's first program change on a voice, the voice has a default instrum
 
 **The Rhythm register (BDh)** is 20h when rhythm mode is on, OR the keys of the percussion instruments sounding. Deep tremolo and deep vibrato (bits 7, 6) stay off.
 
-**When the game starts** (once), the driver sets every operator's volume to 127 (Volume), turns rhythm mode off (no keys, reset the operators, write BDh), writes BDh again and 08h = 0, writes A0h and B0h of voices 0–8 as 0, sets the pitch bend range to 1 and every voice's bend to the center, then writes E0h = 0 for every slot and 01h = 20h (waveform selection on). The master volume is 127.
+**When the game starts** (once), the driver sets every operator's volume to 127 (Volume), turns rhythm mode off (no keys, reset the operators, write BDh), writes BDh again and 08h = 0, writes A0h and B0h of voices 0–8 as 0, sets the pitch bend range to 1 and every voice's bend to the center, then writes E0h = 0 for every slot and 01h = 20h (waveform selection on). Last, it applies the master volume 127 (Volume), with every channel's volume 0.
 
 **When a song starts**, after stopping any song playing:
 
@@ -115,16 +115,18 @@ A voice's bend is not reset when a song starts.
 
 ## Timing
 
-The song clock ticks at a rate set by a timer: with `r = ticks_per_beat × tempo / 60` (integer division, at least 19), the clock runs at `1193180 / floor(1193180 / r)` ticks per second. The tempo command (`F0 7F 00 i f F7`) sets the tempo to `T × i + (T × f) / 128` (16-bit, integer), with `T` the descriptor's tempo; it does not change `T`.
+The song clock is the PC's timer. With `r = ticks_per_beat × tempo / 60` (integer division, at least 19), the timer's divisor is `floor(1193180 / r)`; the timer counts at 1193182 Hz, so the clock runs at `1193182 / divisor` ticks per second. The tempo command (`F0 7F 00 i f F7`) sets the tempo to `T × i + (T × f) / 128` (16-bit, integer), with `T` the descriptor's tempo; it does not change `T`.
 
 The event stream is: a delay, then an event, repeated. A delay byte `d` waits `d` ticks; F8h waits 240 ticks plus the delay byte that follows, which can itself be F8h. Events at the same time have delays of 0 between them. FCh ends the song.
 
-The song's first delay is one byte, without F8h, and waits at least 1 tick. On each tick of the clock after that:
+The player waits a number of clock ticks, then takes a step. The song's first delay is one byte, without F8h, and its wait is at least 1 tick. Each step:
 
 1. A fading song takes its fade step (Fades).
 2. The position advances by the delay just waited.
 3. If the song has a loop point and the position has reached it, the song restarts.
-4. Events play until a nonzero delay, which is the wait to the next tick.
+4. Events play until a nonzero delay, which is the wait before the next step.
+
+A tempo change sets the clock rate for the ticks after the step.
 
 **Restarting** moves to the first event, with the position 0. It neither stops notes nor resets instruments, volumes or bends, so notes from the end of the song ring into its start. The first delay byte is skipped: the first events play in the tick of the restart. A restart at the loop point drops the events that were due at that tick. FCh restarts a song with a loop point, and stops one without (Stopping).
 
@@ -194,7 +196,7 @@ Notes released by the key-off are silenced by their carriers' attenuation; an ad
 
 Both fades end by stopping the song, and leave the master volume as it was before the fade for the next song.
 
-- **Slow fade** (stopping a track while play goes on): on each song tick, before the position advances, a master volume at 30 or below stops the song; otherwise it drops by 3 (at least 0).
+- **Slow fade** (stopping a track while play goes on): at each step, before the position advances, a master volume at 30 or below stops the song; otherwise it drops by 3 (at least 0). Steps come with the song's events, so the fade's speed follows them.
 - **Quick fade** (before a scene or a change of level): the master volume drops by 3 every 1/18.2 second, from its value down to 0 or the last step above it, while the song keeps playing; then the song stops.
 
 ## Register writes
