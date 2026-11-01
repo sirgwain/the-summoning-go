@@ -160,3 +160,38 @@ func TestHoverContainer(t *testing.T) {
 		t.Errorf("key hover %q", got)
 	}
 }
+
+// TestInventoryContents opens the panel with a sack on a shelf: resting the pointer on it lists
+// what it holds in the panel's contents column, the hover text naming it alone; too many to fit
+// end with a count of the rest.
+func TestInventoryContents(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	p := v.World.Player()
+	p.Slots[5] = &sim.Object{Item: devpack.ItemSack, Contents: []*sim.Object{{Item: devpack.ItemKey}, {Item: devpack.ItemKey}}}
+	v.ToggleInventory()
+	r, ok := v.Hotbar().SlotRect(5)
+	if !ok {
+		t.Fatal("no shelf 5")
+	}
+	v.Cursor = r.Min.Add(r.Max).Div(2)
+	key := v.objectLines(&sim.Object{Item: devpack.ItemKey})[0]
+	if !hasLine(v.Inventory(), "Contents:") || !hasLine(v.Inventory(), key+" x2") {
+		t.Errorf("panel lines %+v", v.Inventory().Lines)
+	}
+	three := &sim.Object{Item: devpack.ItemSack, Contents: []*sim.Object{{Item: devpack.ItemKey}, {Item: devpack.ItemMail}, {Item: devpack.ItemPotion}}}
+	if lines := v.contentsLines(three, 3); len(lines) != 3 || lines[2] != "  and 2 more" {
+		t.Errorf("clipped contents %q", lines)
+	}
+	// On the panel's own box, the hover text is the name alone.
+	p.Slots[sim.SlotBody] = p.Slots[5]
+	p.Slots[5] = nil
+	br, _ := v.Inventory().SlotRect(sim.SlotBody)
+	at := br.Min.Add(br.Max).Div(2)
+	v.Cursor = at
+	if got := v.HoverLines(at); len(got) != 1 {
+		t.Errorf("hover on the panel %q", got)
+	}
+	if !hasLine(v.Inventory(), "Contents:") {
+		t.Errorf("no contents for the panel's box: %+v", v.Inventory().Lines)
+	}
+}

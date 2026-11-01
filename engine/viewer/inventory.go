@@ -25,6 +25,8 @@ const (
 	// invTextW is the width of the details and stats columns; detailLines the details' lines.
 	invTextW    = 40 * CharWidth
 	detailLines = 5
+	// invContentsW is the width of the contents column.
+	invContentsW = 24 * CharWidth
 )
 
 // wornLeft and wornRight are the worn slots in the boxes left and right of the figure, top down:
@@ -114,8 +116,13 @@ func (v *Viewer) Inventory() *InventoryPanel {
 	detailsAt := image.Pt(x, y)
 	y += detailLines * LineHeight
 	right := max(x+invTextW, x+invColumn*SlotSize)
+	// The contents column at the right, from the top down to the stats.
+	contentsAt := image.Pt(right+2*invGap, invPad)
+	right = contentsAt.X + invContentsW
 	// The stats under the figure, across the panel.
-	y = max(y, invPad+dollH) + invGap
+	y = max(y, invPad+dollH)
+	contentsLines := (y - invPad) / LineHeight
+	y += invGap
 	stats := v.stats(p, inv)
 	for _, l := range stats {
 		l.At = l.At.Add(image.Pt(invPad, y))
@@ -134,10 +141,14 @@ func (v *Viewer) Inventory() *InventoryPanel {
 	corner := image.Pt((v.Screen.X-size.X*ip.Scale)/2, bottom-size.Y*ip.Scale)
 	ip.Rect = image.Rectangle{corner, corner.Add(size.Mul(ip.Scale))}
 	// The details last: they describe the box under the pointer, which needs the panel placed.
-	for i, s := range v.details(ip) {
+	o := v.described(ip)
+	for i, s := range v.details(o) {
 		if i < detailLines {
 			ip.Lines = append(ip.Lines, TextLine{At: detailsAt.Add(image.Pt(0, i*LineHeight)), Text: s})
 		}
+	}
+	for i, s := range v.contentsLines(o, contentsLines) {
+		ip.Lines = append(ip.Lines, TextLine{At: contentsAt.Add(image.Pt(0, i*LineHeight)), Text: s})
 	}
 	return ip
 }
@@ -217,14 +228,36 @@ func weight(halves int) string {
 	return fmt.Sprintf("%d.0 kg.", halves/2)
 }
 
-// details are the lines describing the object under the pointer on a panel, or else on the
-// pointer; with neither, the character: its name, title and load.
-func (v *Viewer) details(ip *InventoryPanel) []string {
-	p := v.World.Player()
-	o := v.objectUnder(ip, v.Cursor)
-	if o == nil {
-		o = p.Hand
+// described returns the object the panel describes: the one under the pointer on a panel, or
+// else the one on the pointer; nil for neither.
+func (v *Viewer) described(ip *InventoryPanel) *sim.Object {
+	if o := v.objectUnder(ip, v.Cursor); o != nil {
+		return o
 	}
+	return v.World.Player().Hand
+}
+
+// contentsLines are the contents column's lines for object o, at most n: "Contents:" and what a
+// container holds, as the hover text lists it, the last line counting any that do not fit.
+func (v *Viewer) contentsLines(o *sim.Object, n int) []string {
+	if o == nil {
+		return nil
+	}
+	if it := v.Pack.Items[o.Item]; it == nil || it.Container == nil {
+		return nil
+	}
+	lines := append([]string{"Contents:"}, v.objectLines(o)[1:]...)
+	if len(lines) > n && n > 0 {
+		more := len(lines) - n + 1
+		lines = append(lines[:n-1], fmt.Sprintf("  and %d more", more))
+	}
+	return lines
+}
+
+// details are the lines describing object o, the one the panel describes; with none, the
+// character: its name, title and load.
+func (v *Viewer) details(o *sim.Object) []string {
+	p := v.World.Player()
 	if o == nil {
 		return []string{v.playerName(), v.levelTitle(p.Level), v.label(content.LabelWeight, "Weight: ") + weight(p.Carried(v.Pack))}
 	}
