@@ -309,6 +309,8 @@ func (im *importer) fighting(i int, tm *ObjectTemplate, it *content.Item) {
 			im.useUpTracks[it.ID][len(it.Actions)] = useUpTrack[icon]
 		case icon >= 11 && icon <= 20:
 			act.Kind = content.ActionUse
+			// Icon 11h also swings the object, without a blow (items.md, Using objects).
+			act.Swings = icon == iconUseAndSwing
 		default:
 			continue
 		}
@@ -321,6 +323,9 @@ func (im *importer) fighting(i int, tm *ObjectTemplate, it *content.Item) {
 		it.Missile = &content.Missile{Damage: dice(tm.DamageCode(1)), FiredOnly: look}
 	}
 }
+
+// iconUseAndSwing is the use action that also shows the swing pose.
+const iconUseAndSwing = 0x11
 
 // thrownLooks are the templates with a look of their own in flight, which roll their second
 // action's damage there; true for those that roll it only when fired (items.md, Throwing).

@@ -97,7 +97,7 @@ type Player struct {
 	// Shown is the damage shown over the player, until the step ShownUntil.
 	Shown      int
 	ShownUntil int64
-	// Pose is an action's pose ("attack", "attack.left", "attack.both"), shown poseLeft updates.
+	// Pose is a swing pose ("attack", "attack.left", "attack.both"), held poseLeft more updates.
 	Pose     string
 	poseLeft int
 	// bowRelease is the step after a bow shot was fired, 0 for none: the bow sounds at the
@@ -116,7 +116,12 @@ type Player struct {
 
 	// want is the direction a walk was asked for since the last update, or −1.
 	want int
-	next int64
+	// last and next are the steps of the player's last update and its next.
+	last, next int64
+	// delays and gesture are the hands' delays and the gesture playing as they began, for
+	// HandWait and GestureWait.
+	delays  [2]wait
+	gesture wait
 	// vision is the cell visibility is computed from.
 	vision content.Cell
 	// statusTicks counts status ticks, for what comes every fourth one.
@@ -321,7 +326,7 @@ func (w *World) hurtPlayer(n int, k combat.Kind, by string) {
 // The player's update).
 func (w *World) updatePlayer() {
 	p := w.player
-	p.next = w.step + w.PlayerInterval()
+	p.last, p.next = w.step, w.step+w.PlayerInterval()
 	if p.Dead {
 		return
 	}
@@ -334,8 +339,12 @@ func (w *World) updatePlayer() {
 			w.cue(p.Cell(), content.CueBow)
 		}
 	}
-	if p.poseLeft > 0 {
-		if p.poseLeft--; p.poseLeft == 0 {
+	// A swing pose holds through poseUpdates updates, which do not walk; the next stands.
+	posing := p.Pose != ""
+	if posing {
+		if p.poseLeft > 0 {
+			p.poseLeft--
+		} else {
 			p.Pose, p.StepCount = "", 1
 			w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "stands"})
 		}
@@ -354,6 +363,9 @@ func (w *World) updatePlayer() {
 			d = (d + 7 + 2*w.rng.IntN(2)) % 8
 		}
 		p.Confusion--
+	}
+	if posing {
+		return
 	}
 	if d < 0 || p.Dead {
 		if p.Idle < idleUpdates {

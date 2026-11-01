@@ -578,6 +578,14 @@ func TestImportFighting(t *testing.T) {
 	if !reflect.DeepEqual(it.Actions, want) {
 		t.Errorf("actions %+v, want %+v", it.Actions, want)
 	}
+	// Icon 11h uses the object and swings it.
+	tm[5] = 0x11
+	it = &content.Item{}
+	(&importer{}).fighting(0, &tm, it)
+	want[1] = content.ItemAction{Kind: content.ActionUse, Delay: 12, Swings: true}
+	if !reflect.DeepEqual(it.Actions, want) {
+		t.Errorf("actions %+v, want %+v", it.Actions, want)
+	}
 }
 
 // TestHeldLayers composes a held look from a hand-made table: for hand 0 (table 1) the player's

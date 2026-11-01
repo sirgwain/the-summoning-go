@@ -169,6 +169,9 @@ type ItemAction struct {
 	Icon *Image `json:"icon,omitempty"`
 	// Sound is the sound a use-up action makes when it uses its object up.
 	Sound string `json:"sound,omitempty"`
+	// Swings makes a use or use-up action also show the swing pose, without a blow: of both
+	// hands for a weapon, else of its hand.
+	Swings bool `json:"swings,omitempty"`
 }
 
 // Attack reports whether the action strikes.

@@ -53,9 +53,11 @@ type Gauge struct {
 type ActionButton struct {
 	Rect         image.Rectangle
 	Hand, Action int
-	// Label names the action; Ready is false while the hand waits its delay.
+	// Label names the action; Ready is false while the hand waits its delay, and Wait is how
+	// much of the delay is still to run, from 1 just after acting to 0.
 	Label string
 	Ready bool
+	Wait  float64
 	// Icon is the action's icon, when the pack has one; the hand's box beside the actions shows
 	// the object.
 	Icon *content.Image
@@ -85,10 +87,12 @@ type Hotbar struct {
 type SpellBox struct {
 	Rect   image.Rectangle
 	School int
-	// Icon is the selected spell's icon, if Has; Count its memorizations.
+	// Icon is the selected spell's icon, if Has; Count its memorizations. Wait is how much of
+	// the gesture playing is still to run before another spell can be cast, 0 with none.
 	Icon  content.Image
 	Has   bool
 	Count int
+	Wait  float64
 }
 
 // GestureBox shows the icon of the gesture playing, or the empty panel.
@@ -146,7 +150,7 @@ func (v *Viewer) Hotbar() *Hotbar {
 	x += ShelfColumns*SlotSize + gap
 	for s := range content.Schools {
 		bx, by := x+(s/2)*SlotSize, (s%2)*SlotSize
-		b := SpellBox{Rect: image.Rect(bx, by, bx+SlotSize, by+SlotSize), School: s}
+		b := SpellBox{Rect: image.Rect(bx, by, bx+SlotSize, by+SlotSize), School: s, Wait: v.World.GestureWait()}
 		if sp := v.Pack.Spells[p.Magic.Selected[s]]; sp != nil && sp.Icon != nil {
 			b.Icon, b.Has, b.Count = *sp.Icon, true, p.Magic.Memorized[sp.ID]
 		}
@@ -172,10 +176,10 @@ func (v *Viewer) actionButtons(p *sim.Player, hand int) []ActionButton {
 	if inv == nil {
 		inv = &content.Inventory{}
 	}
-	ready := p.Delays[hand] == 0 && !p.Dead
+	ready, wait := p.Delays[hand] == 0 && !p.Dead, v.World.HandWait(hand)
 	o := p.Slots[sim.SlotRightHand+hand]
 	if o == nil {
-		return []ActionButton{{Hand: hand, Action: 0, Label: "strike", Ready: ready, Icon: inv.StrikeIcon}}
+		return []ActionButton{{Hand: hand, Action: 0, Label: "strike", Ready: ready, Wait: wait, Icon: inv.StrikeIcon}}
 	}
 	it := v.Pack.Items[o.Item]
 	if it == nil {
@@ -183,13 +187,13 @@ func (v *Viewer) actionButtons(p *sim.Player, hand int) []ActionButton {
 	}
 	var out []ActionButton
 	for a, act := range it.Actions[:min(len(it.Actions), 2)] {
-		out = append(out, ActionButton{Hand: hand, Action: a, Ready: ready, Icon: act.Icon,
+		out = append(out, ActionButton{Hand: hand, Action: a, Ready: ready, Wait: wait, Icon: act.Icon,
 			Label: map[string]string{
 				content.ActionAttack: "strike", content.ActionAttackBoth: "swing", content.ActionFire: "fire",
 				content.ActionUseUp: "use", content.ActionUse: "use",
 			}[act.Kind]})
 	}
-	return append(out, ActionButton{Hand: hand, Action: ThrowAction, Label: "throw", Ready: ready, Icon: inv.ThrowIcon})
+	return append(out, ActionButton{Hand: hand, Action: ThrowAction, Label: "throw", Ready: ready, Wait: wait, Icon: inv.ThrowIcon})
 }
 
 // Screen returns the screen rectangle of hotbar rectangle r.

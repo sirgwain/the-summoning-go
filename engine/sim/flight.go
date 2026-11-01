@@ -213,7 +213,7 @@ func (w *World) throwFrom(hand int) {
 	}
 	p.Slots[SlotRightHand+hand] = nil
 	w.takeOff(o)
-	p.Delays[hand] = throwDelay
+	w.setDelay(hand, throwDelay)
 	rng := (100-min(o.Weight(w.pack), 100))/5 + 5
 	w.launch(l, o, p.U, p.V, p.Facing, rng, w.missileDamage(o, false), true, false, nil)
 	w.practice(SkillWeapon+bowClass, 1)
@@ -239,7 +239,7 @@ func (w *World) fire() bool {
 	quiver.Contents = quiver.Contents[1:]
 	damage := max(w.missileDamage(arrow, true)+(p.Attributes[AttrAccuracy]-10)/2, 1)
 	w.launch(l, arrow, p.U, p.V, p.Facing, min(5*p.Attributes[AttrStrength], firedRange), damage, true, true, nil)
-	p.Pose, p.poseLeft = "attack.both", poseUpdates
+	w.pose(2)
 	p.bowRelease = w.step + 1
 	w.practice(SkillWeapon+bowClass, 1)
 	return true

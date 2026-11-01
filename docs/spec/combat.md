@@ -18,7 +18,7 @@ A damage code byte `c` means `(c >> 4) + 1` dice of `(c & 0Fh) + 1` sides. Code 
 
 ## The player attacks
 
-The player swings the object in a hand with one of its attack actions (items.md), striking whatever stands one step ahead. The player's swing pose shows frame `30h + 8 × swing + direction` for two updates. Only living creatures can be struck (message 5Ah otherwise); animated objects refuse with message 5Dh.
+The player swings the object in a hand with one of its attack actions (items.md), striking whatever stands one step ahead. The player's swing pose shows frame `30h + 8 × swing + direction`, where swing is 0 for the right hand, 1 for the left and 2 for both hands (an action that swings with both, and firing a bow). It holds through the player's next two updates, which do not walk, and the third turns the player back to standing. Only living creatures can be struck (message 5Ah otherwise); animated objects refuse with message 5Dh.
 
 **Behind.** The player strikes from behind when the creature's four-way direction equals the player's direction halved.
 

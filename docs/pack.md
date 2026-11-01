@@ -279,7 +279,8 @@ leaves out shows nothing. Later milestones add keys.
 - `actions` are up to two things the item does in hand: `{ "kind", "damage", "delay", "skill" }`.
   `kind` is `attack`, `attack_both`, `fire`, `use_up` or `use`; `damage` dice; `delay` the player
   updates the hand then waits; `skill` the class skill an attack needs (`docs/spec/items.md`);
-  `sound` the sound a `use_up` action makes when it uses its object up.
+  `sound` the sound a `use_up` action makes when it uses its object up; `swings` makes a `use` or
+  `use_up` action also show the swing pose, of both hands for a `weapon`, without a blow.
 - `power` is the number of the power the item starts when used (`docs/spec/items.md`, Powers), and
   with `power_worn` also when worn. `spent` is the item a used-up object becomes.
 - `casts` makes using the item cast a spell: `{ "spell": "spell.fireball", "power": "1d6" }`, the

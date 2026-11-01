@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -452,6 +453,37 @@ func (s *shell) artImage(size image.Point) *ebiten.Image {
 	return img
 }
 
+// actionWait is how much of an action box shows its wait: its hand's delay still to run, or all
+// of it when the box cannot act for another reason.
+func actionWait(a viewer.ActionButton) float64 {
+	if !a.Ready && a.Wait == 0 {
+		return 1
+	}
+	return a.Wait
+}
+
+// fillWait shades the part of box r a wait still has to run, left of it (0..1): a sector from
+// twelve o'clock round to where the wait has reached, so the box clears clockwise as it runs out.
+func fillWait(dst *ebiten.Image, r image.Rectangle, left float64, c color.Color) {
+	switch {
+	case left <= 0 || r.Empty():
+		return
+	case left >= 1:
+		vector.FillRect(dst, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), c, false)
+		return
+	}
+	cx, cy := float32(r.Min.X)+float32(r.Dx())/2, float32(r.Min.Y)+float32(r.Dy())/2
+	// The sector reaches past the corners; the box clips it.
+	radius := float32(math.Hypot(float64(r.Dx()), float64(r.Dy())))/2 + 1
+	var p vector.Path
+	p.MoveTo(cx, cy)
+	p.Arc(cx, cy, radius, float32(-math.Pi/2+2*math.Pi*(1-left)), float32(3*math.Pi/2), vector.Clockwise)
+	p.Close()
+	op := &vector.DrawPathOptions{AntiAlias: true}
+	op.ColorScale.ScaleWithColor(c)
+	vector.FillPath(dst.SubImage(r).(*ebiten.Image), &p, nil, op)
+}
+
 // drawHotbar draws the hotbar: boxes, gauges and action buttons at native resolution, then the
 // portrait and the objects' icons through the palette at the hotbar's scale.
 func (s *shell) drawHotbar(screen *ebiten.Image) {
@@ -496,17 +528,15 @@ func (s *shell) drawHotbar(screen *ebiten.Image) {
 	for _, b := range h.Spells {
 		r := h.Screen(b.Rect).Inset(1)
 		fill(r, slotColor)
+		fillWait(screen, r, b.Wait, waitColor)
 		stroke(r, spellEdgeColor)
 	}
 	fill(h.Screen(h.Gesture.Rect).Inset(1), slotColor)
 	stroke(h.Screen(h.Gesture.Rect).Inset(1), spellEdgeColor)
 	for _, a := range h.Actions {
 		r := h.Screen(a.Rect).Inset(1)
-		c := actionColor
-		if !a.Ready {
-			c = waitColor
-		}
-		fill(r, c)
+		fill(r, actionColor)
+		fillWait(screen, r, actionWait(a), waitColor)
 		stroke(r, slotEdgeColor)
 		if a.Icon == nil {
 			ebitenutil.DebugPrintAt(screen, a.Label, r.Min.X+(r.Dx()-len(a.Label)*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
@@ -550,11 +580,10 @@ func (s *shell) drawHotbar(screen *ebiten.Image) {
 	}
 	s.presenter.PresentAt(screen, art, h.Scale, h.Rect.Min)
 	for _, a := range h.Actions {
-		if !a.Ready {
-			fill(h.Screen(a.Rect).Inset(1), waitShade)
-		}
+		fillWait(screen, h.Screen(a.Rect).Inset(1), actionWait(a), waitShade)
 	}
 	for _, b := range h.Spells {
+		fillWait(screen, h.Screen(b.Rect).Inset(1), b.Wait, waitShade)
 		if b.Count > 1 {
 			r := h.Screen(b.Rect)
 			ebitenutil.DebugPrintAt(screen, fmt.Sprint(min(b.Count, 9)), r.Max.X-viewer.CharWidth-2, r.Max.Y-viewer.LineHeight)

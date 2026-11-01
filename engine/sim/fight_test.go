@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/sirgwain/the-summoning-go/devpack"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 )
@@ -404,5 +405,128 @@ func TestSkillRiseFanfares(t *testing.T) {
 	w.practice(SkillWeapon, p.Skills[SkillWeapon].Threshold)
 	if got := cues(); !slices.Equal(got, []string{content.CueWeaponSkillUp, content.CueLevelUp}) {
 		t.Errorf("a weapon skill rising to a level: %v", got)
+	}
+}
+
+// playerUpdate runs the world through the player's next update, asking for cmds first.
+func playerUpdate(w *World, cmds ...input.Command) {
+	p := w.Player()
+	next := p.next
+	w.Update(cmds)
+	for p.next == next {
+		w.Update(nil)
+	}
+}
+
+func TestSwingPoseHolds(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) { p.Things["thing.player"].IntervalMS = 275 },
+		"######",
+		"#@...#",
+		"######")
+	p := w.Player()
+	p.Facing = 2
+	playerUpdate(w)
+	w.Update([]input.Command{input.Strike{Hand: 1}})
+	if p.Pose != "attack.left" {
+		t.Fatalf("the left hand's swing shows pose %q", p.Pose)
+	}
+	u, v := p.U, p.V
+	for i := range poseUpdates {
+		playerUpdate(w, input.Walk{Direction: 2})
+		if p.Pose != "attack.left" || p.U != u || p.V != v {
+			t.Fatalf("update %d of the pose: pose %q, moved %d,%d", i+1, p.Pose, p.U-u, p.V-v)
+		}
+	}
+	playerUpdate(w)
+	if p.Pose != "" {
+		t.Errorf("the pose still shows after %d updates", poseUpdates+1)
+	}
+	playerUpdate(w, input.Walk{Direction: 2})
+	if p.U == u && p.V == v {
+		t.Error("the player does not walk after the pose")
+	}
+}
+
+func TestUseSwings(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) {
+		class := 0
+		p.Items["item.staff"] = &content.Item{ID: "item.staff", Weight: 8, Size: 3, Wear: content.WearHand, WeaponClass: &class,
+			Tags: []string{"weapon", "two_handed"}, Power: 0x28,
+			Actions: []content.ItemAction{{Kind: content.ActionUse, Delay: 9, Swings: true}}}
+	},
+		"#####",
+		"#@G.#",
+		"#####")
+	g := w.Current().Thing("guard")
+	p := w.Player()
+	p.Facing = 2
+	besideGuard(w)
+	p.Slots[SlotLeftHand] = w.newObject("item.staff")
+	hp := g.HitPoints
+	ev := w.Update([]input.Command{input.Strike{Hand: 1}})
+	if p.Pose != "attack.both" {
+		t.Errorf("using the staff shows pose %q", p.Pose)
+	}
+	if g.HitPoints != hp || has(ev, EventMessage, content.MsgHit) || has(ev, EventMessage, content.MsgMiss) {
+		t.Errorf("using the staff struck a blow: %v", ev)
+	}
+	if p.Delays[0] != p.Delays[1] || p.Delays[1] < 8 {
+		t.Errorf("a two-handed use delays the hands %v", p.Delays)
+	}
+}
+
+func TestHandWait(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) { p.Things["thing.player"].IntervalMS = 275 },
+		"#####",
+		"#@..#",
+		"#####")
+	p := w.Player()
+	playerUpdate(w)
+	w.Update(nil)
+	if got := w.HandWait(0); got != 0 {
+		t.Fatalf("a ready hand waits %v", got)
+	}
+	w.Update([]input.Command{input.Strike{}})
+	if got := w.HandWait(0); got < 0.9 {
+		t.Fatalf("just after striking the hand waits %v, want nearly 1", got)
+	}
+	if got := w.HandWait(1); got != 0 {
+		t.Errorf("the other hand waits %v", got)
+	}
+	last := 1.0
+	for p.Delays[0] > 0 {
+		w.Update(nil)
+		got := w.HandWait(0)
+		if got > last || got < 0 {
+			t.Fatalf("the wait went from %v to %v", last, got)
+		}
+		last = got
+	}
+	if last != 0 {
+		t.Errorf("a ready hand waits %v", last)
+	}
+}
+
+func TestGestureWait(t *testing.T) {
+	w := studyWorld(t, devpack.StudyStart, 2)
+	do(w, input.Learn{Gesture: "DJ"})
+	if got := w.GestureWait(); got != 0 {
+		t.Fatalf("with no gesture playing the wait is %v", got)
+	}
+	do(w, input.Cast{School: 0})
+	if got := w.GestureWait(); got < 0.9 {
+		t.Fatalf("as the gesture starts the wait is %v, want nearly 1", got)
+	}
+	last := 1.0
+	until(w, 2000, func() bool {
+		got := w.GestureWait()
+		if got > last {
+			t.Fatalf("the wait went from %v to %v", last, got)
+		}
+		last = got
+		return w.Player().Magic.Gesture == nil
+	})
+	if got := w.GestureWait(); got != 0 {
+		t.Errorf("after the cast the wait is %v", got)
 	}
 }
