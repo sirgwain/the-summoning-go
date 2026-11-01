@@ -97,8 +97,8 @@ of the object under the pointer or on it, and the character's attributes, points
 experience and skills. Its boxes work as the hotbar's: a click swaps a box with the pointer.
 
 V shows the whole level, F12 switches to the viewer's tools (see summoning view --help),
-clicking a cell inspects it, ~ hides or shows the debug overlay: the text, and the outlines of
-the selection and the cell under the mouse.
+clicking a cell inspects it, ~ shows or hides the debug overlay (hidden at first; --debug shows
+it): the text, and the outlines of the selection and the cell under the mouse.
 `
 	}
 	viewCmd := &cobra.Command{
@@ -159,6 +159,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 				return err
 			}
 			v.SaveDir = saves
+			v.HideDebug = play && !debugEnabled
 			if !mute && script == "" && screenshot == "" {
 				v.Audio = audio.New(speaker.New(), pack)
 			}
