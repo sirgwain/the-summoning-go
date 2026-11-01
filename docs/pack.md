@@ -560,6 +560,29 @@ A `picture` draws over what is there (`clear` first to start afresh); `part` dra
 and the two halves moved `8 × spread` pixels outward, spread going from `from` to `to`; `caption`
 shows a text at the bottom, over `banner` if given; `fade` fades to a color. `ms` holds the step.
 
+## Flipbooks
+
+`flipbooks/<name>.json`: an animation rendered ahead of time, played as a list of steps over
+whatever is behind it (`docs/spec/scenes.md`, View effects and Sparkles). The importer writes the
+view effects as `flipbook.effect.<n>` and the sparkles as `flipbook.sparkle.<kind>`.
+
+```json
+{ "id": "flipbook.effect.2", "sprite": "sprite.flipbook.effect.2", "framed": true, "steps": [
+  { "frame": 0, "ms": 275, "cancel": true, "sounds": ["sfx.21"] },
+  { "frame": 1, "ms": 275, "cancel": true },
+  { "frame": 0, "ms": 17, "music": "music.15" },
+  { "frame": 2, "ms": 989, "music_fade": true }
+] }
+```
+
+- `sprite` holds the frames, all of the flipbook's size. The size is the sprite's frame size.
+  Transparent pixels show what is behind: the view, for a view effect.
+- `framed` draws a border around the flipbook.
+- Each step shows `frame` for `ms`. With `cancel`, Esc or the right mouse button during the step
+  ends the flipbook at once.
+- As a step starts, `music_fade` fades out the music track playing, or `music_stop` stops it at once.
+  Then `music` starts a track and `sounds` start effects.
+
 ## Keywords
 
 `keywords.json`: the words the player can ask about in conversations.
@@ -798,7 +821,7 @@ Conversations use these:
 | `{ "run": procedure }` | Run a procedure of the current level |
 | `{ "teach": icons }` | Show gesture icons and teach them |
 | `{ "set_portrait": portrait }` | Change the conversation's portrait, and the template's |
-| `{ "effect": name }` | Play a view effect |
+| `{ "effect": flipbook }` | Play a view effect: a flipbook, in a framed box placed by the speaker |
 | `{ "travel": { "level", "cell" } }`, `{ "return": true }` | After the conversation, go to a level and cell, or back to where the player was when a portal took it |
 | `{ "jump": clause }` | Go on evaluating from a clause |
 | `{ "ending": true }`, `{ "menu": name }`, `{ "transcript": name }` | Play the ending; open the game's menu (`quit`, `save`, `restore`, `delete`, `rename`, `leave`); print the transcript (scenes and saves) |

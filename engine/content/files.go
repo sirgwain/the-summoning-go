@@ -137,6 +137,9 @@ func Load(fsys fs.FS) (*Pack, error) {
 	if err := loadRecords(fsys, scenesDir+"/*.json", p.Scenes, func(s *Scene) string { return s.ID }); err != nil {
 		return nil, err
 	}
+	if err := loadRecords(fsys, flipbooksDir+"/*.json", p.Flipbooks, func(f *Flipbook) string { return f.ID }); err != nil {
+		return nil, err
+	}
 	if err := loadRecords(fsys, levelsDir+"/*/"+levelFile, p.Levels, func(l *Level) string { return l.ID }); err != nil {
 		return nil, err
 	}
@@ -302,6 +305,9 @@ func Write(p *Pack, dir string) error {
 		return err
 	}
 	if err := writeRecords(dir, scenesDir, "scene.", p.Scenes); err != nil {
+		return err
+	}
+	if err := writeRecords(dir, flipbooksDir, FlipbookPrefix, p.Flipbooks); err != nil {
 		return err
 	}
 	for _, id := range sortedKeys(p.Levels) {

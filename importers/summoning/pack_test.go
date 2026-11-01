@@ -191,10 +191,11 @@ func TestImport(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The fixture has six item templates, none of the starting inventory's or creation's, no spell
-	// art and no door pictures, so its spells and scenes are left out.
+	// art, no door pictures and no view effect or sparkle art, so its spells, scenes and flipbooks
+	// are left out.
 	for _, line := range report.Lines() {
 		ok := false
-		for _, prefix := range []string{"starting inventory:", "spell ", "gesture icons:", "magic wall:", "gateway:", "portrait ", "pointers:", "inventory:", "worn image ", "character creation:", "door picture ", "the door scene:", "the ending scene:"} {
+		for _, prefix := range []string{"starting inventory:", "spell ", "gesture icons:", "magic wall:", "gateway:", "portrait ", "pointers:", "inventory:", "worn image ", "character creation:", "door picture ", "the door scene:", "the ending scene:", "view effect ", "sparkle "} {
 			ok = ok || strings.HasPrefix(line, prefix)
 		}
 		if !ok {

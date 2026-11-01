@@ -190,6 +190,9 @@ func (m *Mixer) haltEffects() {
 	}
 }
 
+// HaltMusic stops the music at once.
+func (m *Mixer) HaltMusic() { m.haltMusic() }
+
 // StopMusic fades the music out slowly: the game's way of stopping a track while play goes on.
 func (m *Mixer) StopMusic() { m.startFade(slowFade, slowStep) }
 

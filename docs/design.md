@@ -226,6 +226,7 @@ spells/<id>.json
 templates/<id>.json        puzzle-piece templates (plate, lever, teleporter…)
 levels/<id>/level.json     grid, placements, rules
 scenes/<id>.json
+flipbooks/<id>.json        animations rendered ahead: view effects, sparkles
 audio/music/<id>.wav       or .ogg, with loop points in a sidecar <id>.json
 audio/sfx/<id>.wav
 audio/cues.json            the sounds of the engine's cues

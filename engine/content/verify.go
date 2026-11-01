@@ -77,6 +77,9 @@ func (p *Pack) Verify() error {
 	for _, id := range sortedKeys(p.Scenes) {
 		v.scene(p.Scenes[id])
 	}
+	for _, id := range sortedKeys(p.Flipbooks) {
+		v.flipbook(p.Flipbooks[id])
+	}
 	for _, id := range sortedKeys(p.Sounds) {
 		v.sound(p.Sounds[id])
 	}
