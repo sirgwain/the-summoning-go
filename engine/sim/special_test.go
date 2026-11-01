@@ -115,7 +115,6 @@ func TestMirroringCreature(t *testing.T) {
 func TestChargesAbsorb(t *testing.T) {
 	w := studyWorld(t, devpack.StudyStart, 2, func(p *content.Pack) {
 		p.Items[devpack.ItemPotion].Power = powerCharges
-		p.Items[devpack.ItemPotion].Spent = devpack.ItemRock
 	})
 	p := w.Player()
 	p.Status.Charges = true
@@ -126,8 +125,9 @@ func TestChargesAbsorb(t *testing.T) {
 		t.Fatalf("2 fire: %d of %d hit points, %d charges", p.HitPoints, hp, p.Slots[SlotLeftHand].Value)
 	}
 	w.hurtPlayer(5, combat.Fire, "test")
-	if p.HitPoints != hp-4 || p.Slots[SlotLeftHand].Item != devpack.ItemRock {
-		t.Errorf("5 fire: %d of %d hit points, hand %+v", p.HitPoints, hp, p.Slots[SlotLeftHand])
+	// Out of charges, the object stays in the hand.
+	if o := p.Slots[SlotLeftHand]; p.HitPoints != hp-4 || o.Item != devpack.ItemPotion || o.Value != 0 {
+		t.Errorf("5 fire: %d of %d hit points, hand %+v", p.HitPoints, hp, o)
 	}
 	w.hurtPlayer(3, combat.Physical, "test")
 	// The player wears no body armor, so armor takes nothing off.

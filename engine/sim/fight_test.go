@@ -319,8 +319,10 @@ func TestUsingObjects(t *testing.T) {
 		p.Items["item.bottle"] = &content.Item{ID: "item.bottle", Weight: 1, Size: 1}
 		p.Items["item.potion"] = &content.Item{ID: "item.potion", Weight: 2, Size: 1, Power: 0x28, Spent: "item.bottle",
 			Actions: []content.ItemAction{{Kind: content.ActionUseUp, Delay: 3}}}
-		p.Items["item.wand"] = &content.Item{ID: "item.wand", Weight: 1, Size: 1, Power: 0x0F, Charges: 2, Spent: "item.bottle",
+		p.Items["item.wand"] = &content.Item{ID: "item.wand", Weight: 1, Size: 1, Power: 0x0F, Charges: 2,
 			Actions: []content.ItemAction{{Kind: content.ActionUse, Delay: 3}}}
+		p.Items["item.rune"] = &content.Item{ID: "item.rune", Weight: 1, Size: 1, Power: 0x28,
+			Actions: []content.ItemAction{{Kind: content.ActionUseUp, Delay: 3}}}
 	},
 		"####",
 		"#@.#",
@@ -341,8 +343,17 @@ func TestUsingObjects(t *testing.T) {
 		t.Errorf("the wand: levitating %v, charges %d", p.Status.Levitating, p.Slots[SlotLeftHand].Value)
 	}
 	strike(w, 1, 0)
-	if p.Slots[SlotLeftHand].Item != "item.bottle" {
-		t.Errorf("the wand out of charges is %v", p.Slots[SlotLeftHand].Item)
+	if o := p.Slots[SlotLeftHand]; o == nil || o.Item != "item.wand" || o.Value != 0 {
+		t.Fatalf("the wand out of charges: %+v", o)
+	}
+	if ev := strike(w, 1, 0); !has(ev, EventRefused, "") || p.Slots[SlotLeftHand].Value != 0 {
+		t.Errorf("a wand with no charges was used: %v", ev)
+	}
+	p.HitPoints = 5
+	p.Slots[SlotRightHand] = w.newObject("item.rune")
+	strike(w, 0, 0)
+	if p.HitPoints <= 5 || p.Slots[SlotRightHand] != nil {
+		t.Errorf("a used-up object with no spent object: %d hit points, hand %v", p.HitPoints, p.Slots[SlotRightHand])
 	}
 }
 
@@ -451,7 +462,7 @@ func TestUseSwings(t *testing.T) {
 	w := fightWorld(t, func(p *content.Pack) {
 		class := 0
 		p.Items["item.staff"] = &content.Item{ID: "item.staff", Weight: 8, Size: 3, Wear: content.WearHand, WeaponClass: &class,
-			Tags: []string{"weapon", "two_handed"}, Power: 0x28,
+			Tags: []string{"weapon", "two_handed"}, Power: 0x28, Charges: 5,
 			Actions: []content.ItemAction{{Kind: content.ActionUse, Delay: 9, Swings: true}}}
 	},
 		"#####",
@@ -528,5 +539,47 @@ func TestGestureWait(t *testing.T) {
 	})
 	if got := w.GestureWait(); got != 0 {
 		t.Errorf("after the cast the wait is %v", got)
+	}
+}
+
+// TestSharedCharges uses objects whose item shares one count of charges: using one drains the
+// other, making a new one refills it, the count is saved, and a weapon with no charges of its own
+// cannot be used.
+func TestSharedCharges(t *testing.T) {
+	class := 0
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Items["item.sword"] = &content.Item{ID: "item.sword", Weight: 4, Size: 1, Power: 0x0F, Durability: 1000,
+			Charges: 2, SharedCharges: true, WeaponClass: &class, Tags: []string{"weapon"},
+			Actions: []content.ItemAction{{Kind: content.ActionUse, Delay: 3}}}
+		p.Items["item.staff"] = &content.Item{ID: "item.staff", Weight: 4, Size: 1, Power: 0x0F, Durability: 1000,
+			WeaponClass: &class, Tags: []string{"weapon"}, Actions: []content.ItemAction{{Kind: content.ActionUse, Delay: 3}}}
+	},
+		"####",
+		"#@.#",
+		"####")
+	p := w.Player()
+	p.Slots[SlotRightHand], p.Slots[SlotLeftHand] = w.newObject("item.sword"), w.newObject("item.sword")
+	strike(w, 0, 0)
+	strike(w, 1, 0)
+	if w.Quantity(p.Slots[SlotRightHand]) != 0 || p.Slots[SlotRightHand].Value != 1000 {
+		t.Fatalf("two uses left %d charges, durability %d", w.Quantity(p.Slots[SlotRightHand]), p.Slots[SlotRightHand].Value)
+	}
+	if ev := strike(w, 0, 0); !has(ev, EventRefused, "") {
+		t.Errorf("a sword with no shared charges was used: %v", ev)
+	}
+	st, err := w.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.newObject("item.sword")
+	if w.Quantity(p.Slots[SlotLeftHand]) != 2 {
+		t.Errorf("a new sword did not refill the charges: %d", w.Quantity(p.Slots[SlotLeftHand]))
+	}
+	if st.Shared["item.sword"] != 0 {
+		t.Errorf("saved shared %v", st.Shared)
+	}
+	p.Slots[SlotRightHand] = w.newObject("item.staff")
+	if ev := strike(w, 0, 0); !has(ev, EventRefused, "") || w.Quantity(p.Slots[SlotRightHand]) != 0 {
+		t.Errorf("a weapon without charges was used: %v", ev)
 	}
 }

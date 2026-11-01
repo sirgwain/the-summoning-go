@@ -47,10 +47,12 @@ type World struct {
 	// rules is the combat rule set the pack names.
 	rules combat.Rules
 	// talk is the open conversation, nil when none is; records are what the world keeps about
-	// thing templates; counters the story's counters, by name (absent: 0).
+	// thing templates; counters the story's counters, by name (absent: 0); shared the shared
+	// charges of the items that have them, by item.
 	talk     *Talk
 	records  map[string]*Record
 	counters map[string]int
+	shared   map[string]int
 	// opening is the thing template whose conversation a new game starts on its first update.
 	opening *content.Thing
 	// ended is how play ended, nil while it goes on.
@@ -64,7 +66,7 @@ var summoningRules combat.Rules = summoning.Rules{}
 func New(p *content.Pack, seed uint64) (*World, error) {
 	src := rand.NewPCG(seed, seed^0x9E3779B97F4A7C15)
 	w := &World{pack: p, src: src, rng: rand.New(src), levels: map[string]*Level{}, rules: rulesFor(p),
-		records: map[string]*Record{}, counters: map[string]int{}}
+		records: map[string]*Record{}, counters: map[string]int{}, shared: map[string]int{}}
 	for _, id := range sortedKeys(p.Items) {
 		if p.Items[id].Random {
 			w.randomItems = append(w.randomItems, id)

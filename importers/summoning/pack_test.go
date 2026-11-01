@@ -654,3 +654,50 @@ func TestImportCreation(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+// TestSpentObjects checks what used-up objects leave (items.md, Using up): the next template for
+// an object with a quantity, an Empty Bottle for a bottle, and nothing for an object with no
+// quantity or one that uses charges.
+func TestSpentObjects(t *testing.T) {
+	im := &importer{objects: &Objects{Templates: make([]ObjectTemplate, 14)}, pack: &content.Pack{Items: map[string]*content.Item{}}}
+	for i := range im.objects.Templates {
+		id := fmt.Sprintf("item.%d", i)
+		im.itemIDs = append(im.itemIDs, id)
+		im.pack.Items[id] = &content.Item{ID: id}
+	}
+	useUp := []content.ItemAction{{Kind: content.ActionUseUp}}
+	set := func(i, charges int, actions []content.ItemAction) {
+		im.pack.Items[im.itemIDs[i]].Charges, im.pack.Items[im.itemIDs[i]].Actions = charges, actions
+	}
+	set(1, 1, useUp)                                           // an apple: leaves its core
+	set(2, 0, useUp)                                           // a rune: leaves nothing
+	set(3, 5, []content.ItemAction{{Kind: content.ActionUse}}) // a wand: never replaced
+	set(4, 1, useUp)                                           // a potion
+	im.objects.Templates[4][13] = categoryBottle
+	im.spentAndBroken()
+	for i, want := range map[int]string{1: "item.2", 2: "", 3: "", 4: "item.7", 5: ""} {
+		if got := im.pack.Items[im.itemIDs[i]].Spent; got != want {
+			t.Errorf("template %d spent %q, want %q", i, got, want)
+		}
+	}
+	if got := im.pack.Items["item.4"].BreaksInto; got != "item.12" {
+		t.Errorf("the potion breaks into %q", got)
+	}
+}
+
+// TestSharedChargesImport gives templates 72h–7Bh their charges as a shared count, weapons
+// keeping their durability, and other weapons no charges.
+func TestSharedChargesImport(t *testing.T) {
+	var tm ObjectTemplate
+	tm[2], tm[4], tm[5], tm[9], tm[13] = 10, 140, 0x11, 5, 0x40|9
+	it := &content.Item{}
+	(&importer{}).fighting(firstSharedTemplate+1, &tm, it)
+	if !it.SharedCharges || it.Charges != 5 || it.Durability != 6000 {
+		t.Errorf("a shared weapon: %+v", it)
+	}
+	it = &content.Item{}
+	(&importer{}).fighting(firstSharedTemplate-1, &tm, it)
+	if it.SharedCharges || it.Charges != 0 || it.Durability != 6000 {
+		t.Errorf("a weapon: %+v", it)
+	}
+}

@@ -141,7 +141,7 @@ func TestDeathAndEndingGoToMenu(t *testing.T) {
 	}
 	v.SetPlay(true)
 	pl := v.World.Player()
-	pl.Slots[sim.SlotRightHand] = &sim.Object{Item: devpack.ItemRock}
+	pl.Slots[sim.SlotRightHand] = &sim.Object{Item: devpack.ItemRock, Value: 1}
 	pl.Slots[sim.SlotLeftHand] = &sim.Object{Item: devpack.ItemSword}
 	pressKey(v, KeySpace)
 	if v.Front == nil || v.Front.Screen != ScreenScene || len(v.Front.Scene.Pictures) != 1 {

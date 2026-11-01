@@ -126,6 +126,7 @@ func (si *SaveImporter) Import(p *content.Pack, sf *SaveFile, seed uint64) (*sim
 	}
 	st.Current = levelID(sf.Current.Number)
 	im.counters(st)
+	im.shared(st)
 	im.records(st)
 	if err := im.player(st); err != nil {
 		return nil, nil, err
@@ -159,6 +160,19 @@ func (im *saveImport) levelState(st *sim.State, n int) *sim.LevelState {
 		}
 	}
 	return nil
+}
+
+// shared makes the shared counts of templates 72h–7Bh the world's shared charges of their items
+// (saves.md, Objects).
+func (im *saveImport) shared(st *sim.State) {
+	st.Shared = map[string]int{}
+	for i, v := range im.sf.Shared {
+		if t := firstSharedTemplate + i; t < len(im.si.itemIDs) {
+			if it := im.p.Items[im.si.itemIDs[t]]; it != nil && it.SharedCharges {
+				st.Shared[it.ID] = int(v)
+			}
+		}
+	}
 }
 
 // counters makes the interaction variables counters.
@@ -220,8 +234,6 @@ func (im *saveImport) object(n uint16, seen map[uint16]bool) *sim.Object {
 	switch {
 	case it.Container != nil:
 		o.Contents = im.list(so.Value, seen)
-	case int(so.Template) >= firstSharedTemplate && int(so.Template) < firstSharedTemplate+shareCount:
-		o.Value = int(im.sf.Shared[int(so.Template)-firstSharedTemplate])
 	default:
 		o.Value = int(so.Value)
 	}

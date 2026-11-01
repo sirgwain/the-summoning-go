@@ -37,7 +37,16 @@ A new object's value:
 - Body armor: 7500.
 - Anything else: the template's charges.
 
-Templates 72h–7Bh share one count per template across all their objects. Template 81h always has 1.
+Templates 72h–7Bh also have one **shared count** per template, held by the game rather than by any object: creating an object of one of these templates sets its count to the template's charges, so every object of the template draws on the same charges and a new one refills them. Most of them are weapons, which keep their durability as their value besides.
+
+An object's **quantity** is the first that applies:
+
+- Templates 72h–7Bh: the template's shared count.
+- Template 81h: always 1.
+- Containers, weapons and body armor: none.
+- Anything else: its value.
+
+**Engine model.** An item with `shared_charges` keeps its charges as one count for the whole item, which the world holds and saves; making an object of the item sets the count to the item's `charges`. The importer gives it to templates 72h–7Bh, with their charges, and their durability when they are weapons. A weapon or body armor otherwise has no `charges`, so its use actions are never available.
 
 ## Armor
 
@@ -126,7 +135,7 @@ Each hand shows the actions of the object it holds (bare hands can strike). An a
 | 9, 10 | Use the object up |
 | 11–20 | Use one charge |
 
-Using an action makes the hand wait its delay before the next action; each player update counts the delays down. A weapon swing is an attack (combat.md). An action that needs a quantity is unavailable when none is left.
+Using an action makes the hand wait its delay before the next action; each player update counts the delays down. A weapon swing is an attack (combat.md). An action of icon 11–99 needs a quantity (Object values) and is unavailable when the object has none.
 
 **Engine model.** An item has up to two **actions**, each a kind, damage dice and a delay:
 
@@ -148,7 +157,9 @@ The **delay** of action 0 is `(byte 8 >> 4) + 3` points, of action 1 `(byte 8 & 
 
 **Flying looks.** An item's `flying` is its thrown look: a sprite with a frame for each direction, and with `fired_only` only when fired.
 
-**Using up.** When the last use of an object goes, it becomes a spent object: bottles (category 8) become an Empty Bottle (template 7); other objects become the next template.
+**Using up.** An object used up (icons 9, 10) leaves a spent object in its hand when it has a quantity: bottles (category 8) leave an Empty Bottle (template 7), other objects the next template. An object with no quantity, such as a rune, leaves the hand empty. A charged object (icons 11–20) is never replaced: at no charges it stays where it is, its actions unavailable.
+
+**Engine model.** An item's `spent` is the item it leaves when used up. The importer gives it to items with a `use_up` action and nonzero `charges`; the others have none.
 
 ## Powers
 
@@ -216,13 +227,13 @@ An object's power starts when it is worn (if it lasts while worn) or used. Some 
 
 Taking off a lasting object undoes its effect (interval, status, attribute).
 
-Timed objects in worn slots count down their value each status tick and end when it runs out.
+Timed objects in worn slots count down their quantity each status tick and end when it runs out.
 
 ## Using objects
 
-An action of kind use up (icons 9, 10) or use (11–20) starts the object's power, whatever 80h says. A power that refuses (below) leaves the object as it was. Use up then replaces the object with its spent object; use takes one charge from its value, and at 0 it becomes its spent object the same way. Neither strikes. Icon 11h also swings the object, without a blow: the swing pose (combat.md, The player attacks) of both hands for a weapon (40h), else of its hand, whether or not the power starts.
+An action of kind use up (icons 9, 10) or use (11–20) starts the object's power, whatever 80h says. A power that refuses (below) leaves the object as it was. Use up then replaces the object with its spent object, if any (Using up); use takes one from its quantity, and the object stays in the hand at 0. An object with no quantity loses nothing. Neither strikes. Icon 11h also swings the object, without a blow: the swing pose (combat.md, The player attacks) of both hands for a weapon (40h), else of its hand, whether or not the power starts.
 
-**Engine model.** An item's `power` is its number and `power_worn` the 80h flag; `spent` is the item it becomes. The engine runs the powers in the table that need only the player: hit and magic points, cures, skills and attributes, statuses and timed effects, speed, and teleporting to a rune mark (a `mark` feature whose rune is `1`, `2` or `3` for 21h, 22h, 23h). A power that casts a spell is the item's `casts`: the spell and its power (none for the spell's own roll), with powers 19h and 5Ch taking the item's action-1 damage dice; using the object casts it at once, with no gesture, cost or memorization, and the cast practices the school as any cast by the player does. A power that starts a conversation is the item's `conversation`, a thing template whose conversation it holds; with `use_result` (power 51h) the object is used only when the conversation leaves the pack's result counter nonzero, and otherwise never. Power 22h shows the level map and is never used up; power 5Eh chooses the ending (scenes.md, Endings), refused with `no_ending` (8Eh).
+**Engine model.** An item's `power` is its number and `power_worn` the 80h flag; `spent` is the item it leaves when used up. The engine runs the powers in the table that need only the player: hit and magic points, cures, skills and attributes, statuses and timed effects, speed, and teleporting to a rune mark (a `mark` feature whose rune is `1`, `2` or `3` for 21h, 22h, 23h). A power that casts a spell is the item's `casts`: the spell and its power (none for the spell's own roll), with powers 19h and 5Ch taking the item's action-1 damage dice; using the object casts it at once, with no gesture, cost or memorization, and the cast practices the school as any cast by the player does. A power that starts a conversation is the item's `conversation`, a thing template whose conversation it holds; with `use_result` (power 51h) the object is used only when the conversation leaves the pack's result counter nonzero, and otherwise never. Power 22h shows the level map and is never used up; power 5Eh chooses the ending (scenes.md, Endings), refused with `no_ending` (8Eh).
 
 A scroll's `teaches` are the icons reading it teaches, and its `picture` the image shown when it is read. Each refusal is an engine message: `full_health` (3Eh), `full_magic` (42h), `not_poisoned` (40h), `not_poisoned_or_confused` (41h), `not_fatigued` (3Fh), `no_destination` (43h), `no_creatures` (88h), `already_have` (21h); others shown: `healed` (4Ah, `{damage}` the amount), `protected` (3Ch), `boost_extended` (33h), `poisoned` (59h), `slowed` (60h), `lost_weapon_skills` (64h), `lost_magic_skills` (67h).
 

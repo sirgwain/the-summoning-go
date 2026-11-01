@@ -319,3 +319,21 @@ func TestImportSave(t *testing.T) {
 		t.Errorf("seen %v, visible %v", ls.Seen, ls.Visible)
 	}
 }
+
+// TestImportSharedCounts makes the save's shared counts of templates 72h–7Bh the world's shared
+// charges of their items, and leaves out templates whose items have none.
+func TestImportSharedCounts(t *testing.T) {
+	ids := make([]string, firstSharedTemplate+2)
+	ids[firstSharedTemplate], ids[firstSharedTemplate+1] = "item.shield", "item.blade"
+	p := &content.Pack{Items: map[string]*content.Item{
+		"item.shield": {ID: "item.shield", Charges: 100, SharedCharges: true},
+		"item.blade":  {ID: "item.blade", Durability: 2500},
+	}}
+	im := &saveImport{si: &SaveImporter{itemIDs: ids}, p: p, sf: &SaveFile{}}
+	im.sf.Shared[0], im.sf.Shared[1], im.sf.Shared[5] = 40, 3, 9
+	st := &sim.State{}
+	im.shared(st)
+	if len(st.Shared) != 1 || st.Shared["item.shield"] != 40 {
+		t.Errorf("shared %v", st.Shared)
+	}
+}

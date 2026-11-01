@@ -187,7 +187,8 @@ func (v *Viewer) actionButtons(p *sim.Player, hand int) []ActionButton {
 	}
 	var out []ActionButton
 	for a, act := range it.Actions[:min(len(it.Actions), 2)] {
-		out = append(out, ActionButton{Hand: hand, Action: a, Ready: ready, Wait: wait, Icon: act.Icon,
+		// A use action with no charges left is unavailable (items.md, Using up).
+		out = append(out, ActionButton{Hand: hand, Action: a, Ready: ready && (act.Kind != content.ActionUse || v.World.Quantity(o) > 0), Wait: wait, Icon: act.Icon,
 			Label: map[string]string{
 				content.ActionAttack: "strike", content.ActionAttackBoth: "swing", content.ActionFire: "fire",
 				content.ActionUseUp: "use", content.ActionUse: "use",

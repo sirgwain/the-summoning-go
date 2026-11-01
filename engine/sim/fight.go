@@ -357,6 +357,10 @@ func (w *World) strike(hand, action int) {
 		w.fire()
 		return
 	default:
+		if a.Kind == content.ActionUse && w.Quantity(o) <= 0 {
+			refuse("the " + o.Item + " has no charges left")
+			return
+		}
 		w.delay(hand, it, a)
 		w.useObject(hand, o, a)
 		if a.Swings {

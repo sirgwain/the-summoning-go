@@ -154,7 +154,7 @@ By kind:
 
 The importer makes the engine state a save describes by starting from a new world on the pack, loading each level the save holds, and then laying the save over it. Anything the save keeps that the engine has no place for is left out and reported.
 
-**Objects.** An object number becomes an object of its template's item, with its value; templates 72h–7Bh take their shared count as their value. A container's list becomes its contents, oldest first. Objects of template FFh, or numbers past the pool, are reported and left out.
+**Objects.** An object number becomes an object of its template's item, with its value. The shared counts of templates 72h–7Bh become the world's shared counts of their items. A container's list becomes its contents, oldest first. Objects of template FFh, or numbers past the pool, are reported and left out.
 
 **The world.**
 

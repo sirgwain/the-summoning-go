@@ -16,10 +16,13 @@ type Item struct {
 	Icon  Image `json:"icon"`
 	Floor Image `json:"floor"`
 	// Armor is what the item adds worn. Durability is a weapon's or armor's starting value;
-	// Charges anything else's.
-	Armor      int `json:"armor,omitempty"`
-	Durability int `json:"durability,omitempty"`
-	Charges    int `json:"charges,omitempty"`
+	// Charges anything else's. SharedCharges makes the charges one count for the whole item,
+	// kept by the world and refilled whenever an object of the item is made; such an item may
+	// have durability besides.
+	Armor         int  `json:"armor,omitempty"`
+	Durability    int  `json:"durability,omitempty"`
+	Charges       int  `json:"charges,omitempty"`
+	SharedCharges bool `json:"shared_charges,omitempty"`
 	// Wear is the worn slot the item goes in, one of the Wear constants.
 	Wear string `json:"wear,omitempty"`
 	// WeaponClass is a weapon's class, nil for anything else.

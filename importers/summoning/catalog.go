@@ -282,6 +282,10 @@ func (im *importer) fighting(i int, tm *ObjectTemplate, it *content.Item) {
 	default:
 		it.Charges = tm.Charges()
 	}
+	// Templates 72h–7Bh keep their charges as one shared count (items.md, Object values).
+	if i >= firstSharedTemplate && i < firstSharedTemplate+shareCount {
+		it.Charges, it.SharedCharges = tm.Charges(), true
+	}
 	for a := range 2 {
 		icon := tm.ActionIcon(a)
 		// A delay's points are three player updates each (items.md, Hands and actions).
@@ -338,8 +342,9 @@ const (
 	categoryBottle      = 8
 )
 
-// spentAndBroken sets what each item becomes used up, and what bottles break into, once every
-// item has its id.
+// spentAndBroken sets what each item leaves when used up, and what bottles break into, once
+// every item has its id. Only an object used up with a quantity leaves anything (items.md, Using
+// up).
 func (im *importer) spentAndBroken() {
 	for i := range im.objects.Templates {
 		tm := &im.objects.Templates[i]
@@ -347,12 +352,12 @@ func (im *importer) spentAndBroken() {
 		if tm.Category() == categoryBottle {
 			it.BreaksInto = im.itemIDs[templateBrokenGlass]
 		}
-		used := false
+		usedUp := false
 		for _, a := range it.Actions {
-			used = used || a.Kind == content.ActionUse || a.Kind == content.ActionUseUp
+			usedUp = usedUp || a.Kind == content.ActionUseUp
 		}
 		switch {
-		case !used:
+		case !usedUp || it.Charges == 0:
 		case tm.Category() == categoryBottle:
 			it.Spent = im.itemIDs[templateEmptyBottle]
 		case i+1 < len(im.itemIDs):

@@ -25,7 +25,7 @@ func endingWorld(t *testing.T, closing bool) *World {
 		p.Things["thing.end"] = &end
 		p.Creation.Ending = &content.Ending{Scene: "", Counter: "var.ending", Conversation: "thing.end",
 			Choices: []content.EndingChoice{{Name: "S", Holding: devpack.ItemSword, Value: 7}}}
-		p.Items[devpack.ItemRock].Power = powerEnding
+		p.Items[devpack.ItemRock].Power, p.Items[devpack.ItemRock].Charges = powerEnding, 1
 		p.Items[devpack.ItemRock].Actions = []content.ItemAction{{Kind: content.ActionUse, Delay: 3}}
 	})
 }

@@ -79,17 +79,13 @@ func (w *World) absorb(d int) int {
 		if it == nil || it.Power != powerCharges {
 			continue
 		}
-		used := min(d, o.Value)
-		o.Value -= used
+		used := min(d, w.Quantity(o))
+		for range used {
+			w.useOne(o)
+		}
 		if used > 0 {
 			w.emit(Event{Kind: EventMessage, Level: w.current, Cell: p.Cell(), Text: w.messageText(content.MsgAbsorbed),
 				Detail: content.MsgAbsorbed, Damage: used})
-		}
-		if o.Value == 0 && it.Spent != "" {
-			w.takeOff(o)
-			spent := w.newObject(it.Spent)
-			p.Slots[slot] = spent
-			w.putOn(spent)
 		}
 		return d - used
 	}

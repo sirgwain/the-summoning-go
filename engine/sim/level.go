@@ -126,11 +126,40 @@ func (w *World) newObject(item string) *Object {
 	o := &Object{Item: item}
 	if it := w.pack.Items[item]; it != nil {
 		o.Value = it.Durability
-		if o.Value == 0 {
+		if o.Value == 0 && !it.SharedCharges {
 			o.Value = it.Charges
+		}
+		if it.SharedCharges {
+			w.shared[item] = it.Charges
 		}
 	}
 	return o
+}
+
+// Quantity returns what object o's use actions draw on: its item's shared charges, nothing for
+// an item with durability or a container, else its value (docs/spec/items.md, Object values).
+func (w *World) Quantity(o *Object) int {
+	it := w.pack.Items[o.Item]
+	switch {
+	case it == nil:
+		return 0
+	case it.SharedCharges:
+		return w.shared[o.Item]
+	case it.Durability > 0 || it.Container != nil:
+		return 0
+	}
+	return o.Value
+}
+
+// useOne takes one from object o's quantity, when it has any.
+func (w *World) useOne(o *Object) {
+	switch {
+	case w.Quantity(o) <= 0:
+	case w.pack.Items[o.Item].SharedCharges:
+		w.shared[o.Item]--
+	default:
+		o.Value--
+	}
 }
 
 // Weight returns the object's weight with what it holds (docs/spec/items.md, Weight and

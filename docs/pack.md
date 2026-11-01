@@ -273,7 +273,9 @@ leaves out shows nothing. Later milestones add keys.
 - `container` is present only for containers: it takes up to `capacity` objects of size at most
   `largest`. With `weightless`, its contents add no weight.
 - `armor` is the armor it adds worn. `durability` is a weapon's or armor's starting value, which
-  wear takes down; `charges` the starting value of anything else.
+  wear takes down; `charges` the starting value of anything else. With `shared_charges` the
+  charges are one count for the whole item, kept by the world, which every object of it draws on
+  and which making an object of it refills; such an item may have durability besides.
 - `wear` is the worn slot it goes in: `head`, `body`, `feet`, `arms`, `quiver`, `neck`, or `hand`.
   `weapon_class` (0–3) is a weapon's class, whose skill it practices.
 - `actions` are up to two things the item does in hand: `{ "kind", "damage", "delay", "skill" }`.
@@ -282,7 +284,8 @@ leaves out shows nothing. Later milestones add keys.
   `sound` the sound a `use_up` action makes when it uses its object up; `swings` makes a `use` or
   `use_up` action also show the swing pose, of both hands for a `weapon`, without a blow.
 - `power` is the number of the power the item starts when used (`docs/spec/items.md`, Powers), and
-  with `power_worn` also when worn. `spent` is the item a used-up object becomes.
+  with `power_worn` also when worn. `spent` is the item a used-up object leaves
+  in its hand; without one the hand is left empty. A charged object is never replaced.
 - `casts` makes using the item cast a spell: `{ "spell": "spell.fireball", "power": "1d6" }`, the
   power optional (the spell's own roll without it), with `message` an engine message shown as it
   casts. `conversation` makes using it start the
