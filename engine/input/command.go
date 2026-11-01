@@ -112,3 +112,48 @@ func (Switch) command()     {}
 func (Run) command()        {}
 func (FollowExit) command() {}
 func (GoTo) command()       {}
+
+// Magic and talk commands (docs/spec/spells.md, docs/spec/dialogue.md).
+
+// Learn enters a gesture, its icons as letters A–L: one that matches a spell puts the spell in
+// the spellbook and memorizes it.
+type Learn struct{ Gesture string }
+
+// Memorize memorizes a spell of the spellbook once more and selects it.
+type Memorize struct{ Spell string }
+
+// Cast casts a school's selected spell.
+type Cast struct{ School int }
+
+// NextSpell selects a school's next memorized spell.
+type NextSpell struct{ School int }
+
+// SlotHand names the hand on the pointer where a command takes a slot.
+const SlotHand = -1
+
+// Read looks at the details of the object in a slot (SlotHand for the hand): a scroll teaches its
+// icons.
+type Read struct{ Slot int }
+
+// Talk talks to a thing of the current level, or hears a mouth when Thing names one; with no
+// Thing it talks to the nearest that talks, or hears the nearest mouth.
+type Talk struct{ Thing string }
+
+// Continue goes on past the text a conversation shows; Ask, if set, asks that word next.
+type Continue struct{ Ask string }
+
+// Ask asks a word in a conversation.
+type Ask struct{ Word string }
+
+// Leave leaves a conversation.
+type Leave struct{}
+
+func (Learn) command()     {}
+func (Memorize) command()  {}
+func (Cast) command()      {}
+func (NextSpell) command() {}
+func (Read) command()      {}
+func (Talk) command()      {}
+func (Continue) command()  {}
+func (Ask) command()       {}
+func (Leave) command()     {}

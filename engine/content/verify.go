@@ -69,6 +69,15 @@ func (p *Pack) Verify() error {
 	for _, id := range sortedKeys(p.Levels) {
 		v.level(p.Levels[id])
 	}
+	v.magic()
+	v.keywords()
+	v.pointers()
+	for _, id := range sortedKeys(p.Spells) {
+		v.spell(p.Spells[id])
+	}
+	for _, id := range sortedKeys(p.Conversations) {
+		v.conversation(p.Conversations[id])
+	}
 	return errors.Join(v.errs...)
 }
 
@@ -93,6 +102,9 @@ func (v *verifier) manifest() {
 	}
 	if m.Rules != "" && m.Rules != RulesSummoning {
 		v.fail("pack.json: unknown rules %q", m.Rules)
+	}
+	if c := m.Counters; c != nil && c.TransformedLook != "" {
+		v.frames("pack.json transformed look", c.TransformedLook)
 	}
 	if m.Player != "" {
 		if t, ok := v.p.Things[m.Player]; !ok {
@@ -228,12 +240,29 @@ func (v *verifier) itemRecord(i *Item) {
 	}
 	v.frame(owner+" icon", i.Icon.Sprite, i.Icon.Frame)
 	v.frame(owner+" floor", i.Floor.Sprite, i.Floor.Frame)
+	if i.Casts != nil {
+		v.spellRef(owner, i.Casts.Spell)
+	}
+	if i.Conversation != "" {
+		if t, ok := v.p.Things[i.Conversation]; !ok {
+			v.fail("%s: conversation thing %q not found", owner, i.Conversation)
+		} else if t.Conversation == "" {
+			v.fail("%s: thing %s holds no conversation", owner, i.Conversation)
+		}
+	}
+	if i.Casts != nil && i.Conversation != "" {
+		v.fail("%s: both casts and starts a conversation", owner)
+	}
+	v.icons(owner, i.Teaches)
+	if i.Picture != nil {
+		v.frame(owner+" picture", i.Picture.Sprite, i.Picture.Frame)
+	}
 }
 
 func (v *verifier) thing(t *Thing) {
 	owner := "thing " + t.ID
 	switch t.Kind {
-	case ThingCreature, ThingBoulder, ThingTrap, ThingPlayer:
+	case ThingCreature, ThingBoulder, ThingTrap, ThingPlayer, ThingConjured, ThingPortal:
 	default:
 		v.fail("%s: unknown kind %q", owner, t.Kind)
 	}
@@ -257,11 +286,18 @@ func (v *verifier) thing(t *Thing) {
 			v.fail("%s: unknown behavior %q", owner, b)
 		}
 	}
-	if t.Portrait != "" {
-		if _, ok := v.p.Portraits[t.Portrait]; !ok {
-			v.fail("%s: portrait %q not found", owner, t.Portrait)
+	for _, pt := range []string{t.Portrait, t.TalkPortrait} {
+		if _, ok := v.p.Portraits[pt]; pt != "" && !ok {
+			v.fail("%s: portrait %q not found", owner, pt)
 		}
 	}
+	if t.Spell != "" {
+		v.spellRef(owner, t.Spell)
+	}
+	if t.Conversation != "" {
+		v.conversationRef(owner, t.Conversation)
+	}
+	v.icons(owner, t.Icons)
 }
 
 func (v *verifier) portrait(pt *Portrait) {
@@ -527,16 +563,7 @@ func (lv *levelVerifier) direction(what string, d int) {
 }
 
 func (lv *levelVerifier) action(what string, a Action) {
-	set := 0
-	for _, isSet := range []bool{a.On != nil, a.Off != nil, a.Toggle != nil, a.SetHook != nil,
-		a.SetThreshold != nil, a.SetAccepts != nil, a.SetMessage != nil, a.Roll != nil, a.Stop != nil,
-		a.ShootItem != nil, a.ShootSpell != nil, a.Create != nil, a.SetFloor != nil, a.SetWall != nil} {
-		if isSet {
-			set++
-		}
-	}
-	if set != 1 {
-		lv.fail("%s: %d operations, want 1", what, set)
+	if !lv.verifier.actionKind(lv.owner()+" "+what, a, levelOps) {
 		return
 	}
 	owner := lv.owner() + " " + what
@@ -574,6 +601,7 @@ func (lv *levelVerifier) action(what string, a Action) {
 	case a.ShootSpell != nil:
 		lv.cell(what, a.ShootSpell.Cell)
 		lv.direction(what, a.ShootSpell.Direction)
+		lv.spellRef(owner, a.ShootSpell.Spell)
 	case a.Create != nil:
 		lv.cell(what, a.Create.Cell)
 		lv.item(owner, a.Create.Item)

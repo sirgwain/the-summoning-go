@@ -31,6 +31,7 @@ func (o *ObjectTemplate) NeverRandom() bool  { return o[11]&0x80 != 0 }
 func (o *ObjectTemplate) Category() int      { return int(o[13] & 0x3F) }
 func (o *ObjectTemplate) Weapon() bool       { return o[13]&0x40 != 0 }
 func (o *ObjectTemplate) TwoHanded() bool    { return o[13]&0x80 != 0 }
+func (o *ObjectTemplate) Scroll() int        { return int(o[14]) }
 
 // Objects is OBJECTS: the item templates and the TEXT id of the first name.
 type Objects struct {
@@ -60,6 +61,7 @@ type NPCRecord [npcRecordSize]byte
 
 // Record fields (creatures.md, NPC record).
 func (n *NPCRecord) Conversation() int { return int(n[0]) }
+func (n *NPCRecord) Portrait() int     { return int(n[1]) }
 func (n *NPCRecord) HitBonus() int     { return int(n[2]) }
 func (n *NPCRecord) HitDice() int      { return int(n[3]) }
 func (n *NPCRecord) Resistance() int   { return int(n[4]) }

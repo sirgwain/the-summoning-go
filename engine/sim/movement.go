@@ -113,7 +113,7 @@ func (w *World) thingFits(l *Level, t *Thing, u, v int) bool {
 
 // pushable reports whether the player pushes t: a trap or a corpse.
 func pushable(t *Thing) bool {
-	return t.Template.Kind == content.ThingTrap || t.Template.Kind == content.ThingCreature && t.HitPoints <= 0
+	return t.Template.Kind == content.ThingTrap || t.Template.Kind == content.ThingConjured || t.Template.Kind == content.ThingCreature && t.HitPoints <= 0
 }
 
 // push moves thing t by (du, dv), first pushing the pushable things in its way, and reports

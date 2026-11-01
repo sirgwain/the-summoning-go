@@ -105,7 +105,8 @@ yet.
 ## Moving the player between levels from tools
 
 **Choice.** With a player, the viewer's level change and exit following move the player: to the
-exit's cell, or to the start cell on the start level and the first open cell elsewhere.
+exit's cell, or to the start cell on the start level and elsewhere the first open cell with nothing
+on it.
 
 **Why.** The current level is where the player is; a tool that changed level without it would leave
 the player standing at its old position on another map.
@@ -132,3 +133,27 @@ footprint of 8, moves a step a tick, and draws the item's floor image above its 
 
 **Why.** Flights live a few seconds and carry an object; giving them templates would add records
 nobody edits. Spells in flight will reuse them with Magic.
+
+## Conversations stop at each line
+
+**Choice.** A conversation's pass runs its actions until one says a line, and waits there for the
+player to go on (`continue`); the rest of the pass runs after. The world does not advance while a
+conversation is open.
+
+**Why.** The game shows each text and waits for a key before running the next action, and Escape
+there abandons the rest of the pass, so a gift after a text is not given when the player leaves
+early. Keeping the pass resumable keeps that, and lets tests step a conversation line by line.
+
+**Revisit if** a conversation action needs the world to run while it waits (a view effect that
+moves things, say).
+
+## Casting and talking powers as item fields
+
+**Choice.** An item whose power casts a spell or starts a conversation says so in fields of its
+own (`casts`, `conversation`, `use_result`); the other powers stay numbers the engine knows.
+
+**Why.** Those powers name records (a spell, a thing template) a pack can change; the rest are
+the game's own small rules (heal 2d6, cure poison), which a numbered table keeps short.
+
+**Revisit when** a game needs powers of its own: they would become records of effects, as spells
+are.

@@ -39,10 +39,13 @@ type Scene struct {
 	Flights []Flight
 }
 
-// Flight is an object in flight over ground point (U, V).
+// Flight is an object in flight over ground point (U, V), or with Sprite set a spell showing
+// that sprite's Frame.
 type Flight struct {
-	Item string
-	U, V int
+	Item   string
+	Sprite string
+	Frame  int
+	U, V   int
 }
 
 // flightHeight is how high above its ground point an object in flight is drawn, in pixels.
@@ -110,6 +113,10 @@ type Thing struct {
 	Held [2]string
 	// Shown is damage shown over the thing, 0 for none.
 	Shown int
+	// Frame, if set, is the frame drawn in place of any animation; Sprite, if set, the sprite
+	// drawn in place of the template's (a look the thing has taken).
+	Frame  *int
+	Sprite string
 }
 
 // Label is text drawn over the view: damage shown over a thing, at the view pixel At, the top
@@ -295,16 +302,20 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 	}
 	for _, f := range s.Flights {
 		cell := content.Cell{floorDiv(f.U, CellUnits), floorDiv(f.V, CellUnits)}
-		it, ok := p.Items[f.Item]
-		if !ok || !s.shows(cell) {
-			continue
+		img := content.Image{Sprite: f.Sprite, Frame: f.Frame}
+		if f.Sprite == "" {
+			it, ok := p.Items[f.Item]
+			if !ok {
+				continue
+			}
+			img = it.Floor
 		}
-		sprite, ok := p.Sprites[it.Floor.Sprite]
-		if !ok {
+		sprite, ok := p.Sprites[img.Sprite]
+		if !ok || !s.shows(cell) || img.Frame < 0 || img.Frame >= sprite.Frames {
 			continue
 		}
 		at := RefPoint(f.U, f.V).Sub(image.Pt(sprite.FrameSize[0]/2, sprite.FrameSize[1]/2+flightHeight))
-		items = append(items, standing{depth: cell[0] + cell[1], top: at.Y, cmds: []Cmd{{Sprite: it.Floor.Sprite, Frame: it.Floor.Frame, X: at.X, Y: at.Y}}})
+		items = append(items, standing{depth: cell[0] + cell[1], top: at.Y, cmds: []Cmd{{Sprite: img.Sprite, Frame: img.Frame, X: at.X, Y: at.Y}}})
 	}
 	for _, pr := range l.Props {
 		if !s.shows(pr.Cell) {
@@ -393,20 +404,33 @@ func thingCmd(p *content.Pack, t Thing) (Cmd, content.Cell, bool) {
 	if !ok {
 		return Cmd{}, content.Cell{}, false
 	}
-	sprite, ok := p.Sprites[tmpl.Sprite]
+	sid := tmpl.Sprite
+	if t.Sprite != "" {
+		sid = t.Sprite
+	}
+	sprite, ok := p.Sprites[sid]
 	if !ok {
 		return Cmd{}, content.Cell{}, false
 	}
 	frame := 0
-	if a, ok := p.Animation(tmpl, t.Anim); ok && t.Anim != "" && len(a.Frames) > 0 {
-		frame = a.Frames[t.Phase%len(a.Frames)]
-	} else if a, ok := p.Animation(tmpl, fmt.Sprintf("idle.%d", t.Facing), "idle"); ok && len(a.Frames) > 0 {
-		frame = a.Frames[0]
+	switch {
+	case t.Frame != nil:
+		if *t.Frame >= 0 && *t.Frame < sprite.Frames {
+			frame = *t.Frame
+		}
+	case t.Sprite != "":
+		// A look taken from another sprite shows its first frame.
+	default:
+		if a, ok := p.Animation(tmpl, t.Anim); ok && t.Anim != "" && len(a.Frames) > 0 {
+			frame = a.Frames[t.Phase%len(a.Frames)]
+		} else if a, ok := p.Animation(tmpl, fmt.Sprintf("idle.%d", t.Facing), "idle"); ok && len(a.Frames) > 0 {
+			frame = a.Frames[0]
+		}
 	}
 	anchor, _ := sprite.AnchorOf(frame)
 	at := RefPoint(t.U, t.V).Sub(image.Pt(anchor[0], anchor[1]))
 	cell := content.Cell{floorDiv(t.U, CellUnits), floorDiv(t.V, CellUnits)}
-	return Cmd{Sprite: tmpl.Sprite, Frame: frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: tmpl.Kind == content.ThingPlayer}, cell, true
+	return Cmd{Sprite: sid, Frame: frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: tmpl.Kind == content.ThingPlayer && t.Sprite == ""}, cell, true
 }
 
 // heldCmds draws thing t's frame cmd with the layers of the items in its hands: the layers behind

@@ -68,6 +68,10 @@ func alive(t *Thing) bool { return t.Template.Kind == content.ThingCreature && t
 // defenses, and one at 0 dies (docs/spec/combat.md, Hurting a creature). It returns the hit
 // points taken.
 func (w *World) hurtThing(l *Level, t *Thing, d int, k combat.Kind) int {
+	if t.Template.Kind == content.ThingConjured && d > 0 {
+		w.wearConjured(l, t)
+		return 0
+	}
 	if !alive(t) {
 		return 0
 	}
@@ -91,6 +95,7 @@ func (w *World) hurtThing(l *Level, t *Thing, d int, k combat.Kind) int {
 // corpse or removes it (docs/spec/creatures.md, Death).
 func (w *World) creatureDies(l *Level, t *Thing) {
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "died"})
+	w.record(t.Template.ID).Dead = true
 	t.Hostile, t.Poisoned, t.Pose = false, false, ""
 	if w.player != nil {
 		w.gainExperience(w.roll(t.Template.Experience))
@@ -118,6 +123,11 @@ func (w *World) turnHostile(t *Thing) {
 // Walkers).
 func (w *World) updateCreatures(l *Level) {
 	for _, t := range append([]*Thing(nil), l.Things...) {
+		if t.Template.Kind == content.ThingConjured && w.step >= t.next && l.Thing(t.ID) == t {
+			t.next = w.step + stepsMS(t.Template.IntervalMS)
+			w.wearConjured(l, t)
+			continue
+		}
 		if !alive(t) || w.step < t.next || l.Thing(t.ID) != t {
 			continue
 		}
@@ -132,7 +142,10 @@ func (w *World) updateCreatures(l *Level) {
 				continue
 			}
 		}
-		if !t.Template.Has(content.BehaviorAnimated) && !t.Template.Has(content.BehaviorStationary) {
+		switch {
+		case t.Template.Has(content.BehaviorStationary):
+			w.stationaryCasts(l, t)
+		case !t.Template.Has(content.BehaviorAnimated):
 			w.walkCreature(l, t)
 		}
 	}
@@ -180,6 +193,7 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 	if hit == nil && (du != 0 || dv != 0) {
 		w.moveThingBy(l, t, du, dv)
 		t.Moving = true
+		w.walkerCasts(l, t)
 		return
 	}
 	if hit == nil {

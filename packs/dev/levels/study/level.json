@@ -1,0 +1,74 @@
+{
+  "id": "level.study",
+  "name": "",
+  "size": [7, 12],
+  "floors": "floors.dev",
+  "walls": "walls.dev",
+  "floor_types": [
+    {
+      "variant": 0
+    },
+    {
+      "variant": 1
+    },
+    {
+      "variant": 2,
+      "depth": 4,
+      "sinks": true
+    },
+    {
+      "variant": 3,
+      "enter": {
+        "damage": "2d2",
+        "type": "fire"
+      },
+      "avoided": true
+    }
+  ],
+  "floor": [
+    "0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0"
+  ],
+  "wall": [
+    "0 0 0 0 0 0 0 0 0 0 0 0",
+    "0 . . . . . . . . . . 0",
+    "0 . . . . . . . . . . 0",
+    "0 . . . . . . . . . . 0",
+    "0 0 0 0 0 0 . 0 0 0 0 0",
+    "0 . . . . . . . . . . 0",
+    "0 0 0 0 0 0 0 0 0 0 0 0"
+  ],
+  "features": [
+    {
+      "id": "door.kano",
+      "kind": "door",
+      "cell": [4, 6],
+      "look": "look.door",
+      "state": "closed",
+      "opened_by_spell": true
+    }
+  ],
+  "things": [
+    {
+      "id": "sage",
+      "thing": "thing.sage",
+      "cell": [1, 1]
+    },
+    {
+      "id": "target",
+      "thing": "thing.target",
+      "cell": [2, 9]
+    }
+  ],
+  "objects": [
+    {
+      "cell": [3, 2],
+      "item": "item.scroll"
+    }
+  ]
+}

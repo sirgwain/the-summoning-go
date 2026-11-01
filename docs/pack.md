@@ -1,9 +1,9 @@
 # Content pack format
 
-Status: v1, 2026-10-31. Covers what Milestones 1 (Viewer), 2 (World), 4 (Walk) and 5 (Fight)
-need: the manifest,
-palettes, sprites, floor and wall sets, text, engine messages, item and thing templates, portraits,
-looks, and levels with their floor types, features, procedures, things and objects. Later milestones extend it.
+Status: v1, 2026-10-31. Covers what Milestones 1 (Viewer), 2 (World), 4 (Walk), 5 (Fight) and 7
+(Magic and talk) need: the manifest, palettes, sprites, floor and wall sets, text, engine messages,
+item and thing templates, portraits, looks, spells, magic, keywords, conversations, and levels with
+their floor types, features, procedures, things and objects. Later milestones extend it.
 The Go types are in `engine/content`.
 
 The format is the engine's own. It describes a game in the engine's terms (ground points, named
@@ -60,14 +60,19 @@ A record's file is named after its id without the kind prefix (`item.dagger` is
   "palette": "palette.0",
   "start": { "level": "level.00", "cell": [16, 15] },
   "player": "thing.player",
-  "rules": "summoning"
+  "rules": "summoning",
+  "counters": { "after_conversation": "var.97", "use_result": "var.19", "transformed": "var.14" }
 }
 ```
 
 `format` is this document's version; the loader rejects a format it does not know. `palette` is the
 palette gameplay draws with. `rules` names the combat rule set (`docs/design.md`, Characters, stats
 and combat); `summoning` is the only one, and the default. `player` is the thing template of kind `player` the player is made
-from; a pack without one runs its levels with no player.
+from; a pack without one runs its levels with no player. `counters` names the counters the engine
+itself uses (`docs/spec/dialogue.md`, Engine model): `after_conversation` is cleared when every
+conversation ends, `use_result` decides whether an object whose conversation has `use_result` is
+used, and `transformed` is set to 1 by a Shape Change into the look named by `transformed_look`,
+and cleared when it ends.
 
 ## Palettes
 
@@ -200,7 +205,7 @@ caps already in it.
 }
 ```
 
-Records refer to a string by its key. In a string, `*word*` marks a keyword
+Records refer to a string by its key. In a string, an asterisk before a word (`*word`) marks a keyword
 (`docs/spec/dialogue.md`) and `@` stands for the player's name. The importer converts the original's
 text to UTF-8.
 
@@ -222,16 +227,22 @@ text to UTF-8.
 }
 ```
 
-The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slot_stuck` and
-`weapon_breaks`, `{item}` stands for the item's name; in `miss`, `hit`, `creature_hits` and
+The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slot_stuck`,
+`weapon_breaks` and `filled`, `{item}` stands for the item's name; in `not_memorized` and
+`only_spell`, `{school}` for the school's name; in `miss`, `hit`, `creature_hits` and
 `creature_misses`, `{score}` and `{damage}` stand for the numbers. The keys: `lever_stuck`,
 `slot_wrong_item`, `slot_stuck`, `no_drop_here`, `no_room`, `not_a_creature`, `cannot_hurt`,
 `miss`, `hit`, `creature_hits`, `creature_misses`, `weapon_breaks`, `skill_up`, `level_up`,
 `full_health`, `full_magic`, `not_poisoned`, `not_poisoned_or_confused`, `not_fatigued`,
 `no_destination`, `no_creatures`, `already_have`, `healed` (`{damage}` the amount), `protected`,
 `boost_extended`, `poisoned`, `slowed`, `lost_weapon_skills`, `lost_magic_skills`, `no_quiver`,
-`no_arrows`, `no_room_to_shoot`, `cannot_throw`, `cannot_act`. A key the pack leaves out shows nothing. Later milestones add
-keys.
+`no_arrows`, `no_room_to_shoot`, `cannot_throw`, `cannot_act`; for magic `cannot_cast`,
+`not_memorized`, `only_spell`, `no_magic`, `forgot`, `forgot_more`, `no_room_for_wall`, `wall_failed`,
+`no_room_for_portal`, `no_spell_near`, `nothing_to_mend`, `no_creature_near`, `no_bottle`,
+`filled`, `door_resists`, `missile_wall`, `battle_rage`, `battle_rage_extended`, `haste`,
+`fire_shield`, `lightning_shield`, `frozen`, `sight`, `weapon_skills_up`,
+`weapon_skills_extended`, `magic_skills_up`, `magic_skills_extended`, `cured`. A key the pack
+leaves out shows nothing. Later milestones add keys.
 
 ## Items
 
@@ -262,8 +273,15 @@ keys.
   `kind` is `attack`, `attack_both`, `fire`, `use_up` or `use`; `damage` dice; `delay` the player
   updates the hand then waits; `skill` the class skill an attack needs (`docs/spec/items.md`).
 - `power` is the number of the power the item starts when used (`docs/spec/items.md`, Powers), and
-  with `power_worn` also when worn; powers become named records with Magic. `spent` is the item a
-  used-up object becomes.
+  with `power_worn` also when worn. `spent` is the item a used-up object becomes.
+- `casts` makes using the item cast a spell: `{ "spell": "spell.fireball", "power": "1d6" }`, the
+  power optional (the spell's own roll without it), with `message` an engine message shown as it
+  casts. `conversation` makes using it start the
+  conversation of a thing template; with `use_result` it is used only when that conversation
+  leaves the `use_result` counter nonzero, and otherwise it is never used up. Either replaces
+  `power`.
+- `teaches` are the gesture icons reading a scroll teaches (`"EIB"`), `picture` the image shown
+  when it is read.
 - `held` is how the item looks in the player's hands:
   `{ "right": { "behind": sprite, "front": sprite }, "left": { … } }`. Each sprite has a frame for
   every frame of the player's sprite, drawn with it (an empty frame for none), and its own anchor
@@ -328,8 +346,15 @@ keys.
   `player`'s attributes `strength`, `agility`, `endurance`, `accuracy`, `talent` and `power`,
   from which its speed is worked out (`docs/spec/player.md`, Speed), and its starting
   `interval_bonus` in ticks; a player without attributes walks at its base interval.
-- `portrait` (players) is the player's portrait, which also gives its figure's colors.
-- A conversation and loot are added with dialogue and combat.
+- `portrait` (players) is the player's portrait, which also gives its figure's colors. `icons`
+  (players) are the gesture icons it starts knowing.
+- `conversation` (creatures) is the conversation held with it, and `talk_portrait` the portrait
+  shown; the behavior `talks` lets the player talk to it, until it turns hostile. Powers and
+  events start conversations with templates that no level places.
+- `spell` (creatures) is the spell it casts, and `spell_power` the dice of its power.
+- Kinds `conjured` (a thing a spell puts up: it blocks, can be pushed, and lasts a number of its
+  updates) and `portal` (walking into it takes the player where the spell that opened it says)
+  are only made by spells.
 
 ## Portraits
 
@@ -353,6 +378,102 @@ keys.
 - `female` gives the sex; `other` is the portrait of the other sex, and `talk` the one a
   conversation shows for the player when the creature talked to has this portrait too. Both
   default to this portrait.
+
+## Spells
+
+`spells/<name>.json`: a spell (`docs/spec/spells.md`).
+
+```json
+{
+  "id": "spell.flame_arrow",
+  "name": "spell.flame_arrow.name",
+  "school": 0,
+  "cost": 5,
+  "power": "1d8",
+  "power_bonus": 4,
+  "gesture": "DJ",
+  "icon": { "sprite": "sprite.res.69", "frame": 0 },
+  "effects": [
+    { "missile": { "hurts": "fire", "sprite": "sprite.res.1009", "directional": true,
+                   "cloud": "sprite.res.57" } }
+  ]
+}
+```
+
+- `school` is 0–3. `power` is the dice of its power, `power_bonus` the sides of each extra die:
+  the caster gets `max(0, (power attribute − 10) / 2 + school skill)` of them.
+- `gesture` is its icons, letters `A`–`L` naming the magic record's icons; a spell without one
+  cannot be learned, only cast by creatures, objects and procedures.
+- `needs` is a condition checked before casting, one of `{ "floor_ahead": distance }`,
+  `{ "mark": rune }`, `{ "spell_near": distance }`, `{ "holding": [item, item] }`,
+  `{ "creature_near": distance }`, `{ "poisoned": true }`, `{ "fatigued": true }`,
+  `{ "hurt": true }`, with `"else"` an engine message shown in place of the condition's own when it
+  does not hold.
+- `practice` is how much more a cast practices its school than the 1 every cast does.
+- `effects` are actions (Procedures, below) run when the spell takes effect, with the cast's power.
+
+## Magic
+
+`magic.json`: what the spell UI draws, and the schools' names.
+
+```json
+{
+  "id": "magic",
+  "icons": [{ "sprite": "sprite.res.54", "frame": 1 }, "…twelve, for A–L…"],
+  "panel": { "sprite": "sprite.res.54", "frame": 0 },
+  "schools": ["msg.42", "msg.43", "msg.44", "msg.45"]
+}
+```
+
+`icons[i]` is the icon of letter `A + i`; `panel` the empty gesture panel; `schools` the text keys of
+the schools' names.
+
+## Pointers
+
+`pointers.json`: the pointer's images, each drawn with its top-left pixel at the mouse.
+
+```json
+{ "id": "pointers", "arrow": { "sprite": "sprite.res.2", "frame": 0 },
+  "talk": { "sprite": "sprite.res.2", "frame": 9 }, "wait": { "sprite": "sprite.res.2", "frame": 10 } }
+```
+
+`arrow` is the pointer over the view; `talk` over a creature that talks or a mouth, which a click
+talks to; `wait` while the game waits. Without the file the system's pointer is used.
+
+## Keywords
+
+`keywords.json`: the words the player can ask about in conversations.
+
+```json
+{ "id": "keywords",
+  "keywords": [ { "id": "keyword.wizard", "word": "keyword.wizard.word", "answer": "msg.1700" } ] }
+```
+
+`word` and `answer` are text keys: the word, and what asking it says (optional). A typed word
+matches the first keyword whose first four letters it shares, ignoring case.
+
+## Conversations
+
+`conversations/<name>.json`: a conversation, run as `docs/spec/dialogue.md` says.
+
+```json
+{
+  "id": "conversation.12",
+  "name": "Wizard",
+  "clauses": [
+    { "if": { "first_meeting": true },
+      "do": [{ "say": "msg.400" }, { "offer": "keyword.wizard" }] },
+    { "if": { "asked": ["keyword.wizard"] },
+      "do": [{ "say": "msg.401" }, { "set_counter": { "counter": "var.12", "value": 1 } }] },
+    { "if": { "counter": { "counter": "var.12", "equals": 1 } }, "do": [{ "jump": 0 }] }
+  ]
+}
+```
+
+A clause's `if` is one condition: `first_meeting`, `greeting`, `asked` (keywords), `never` (stops
+the pass), `carries` (items), `counter` (`above`, `equals` or `below` a value), `dead` (a thing
+template), `full_health`, `carries_count` (`{ "item", "count" }`), `slot_empty` (a slot),
+`slot_holds` (`{ "slot", "item" }`), `always`. Its `do` are actions (Procedures, below).
 
 ## Looks
 
@@ -519,8 +640,46 @@ runs nothing.
 | `{ "set_floor": { "cell", "type" } }` | Make a cell floor of a type, removing any wall |
 | `{ "set_wall": { "cell", "shape" } }` | Make a cell a wall of a shape |
 
-`roll`, `stop` and the shooting actions run in later milestones; until spells exist, `spell` is the
-spell's number.
+`shoot_spell` casts a spell from a cell along a direction, its power rolled from the dice.
+
+Spells' effects use these actions too, with the cast's power:
+
+| Action | Effect |
+| --- | --- |
+| `{ "missile": { "hurts", "opens", "scatters", "bane", "bane_damage", "sprite", "directional", "cloud", "bounces", "around" } }` | Fly a missile (`docs/spec/spells.md`, Missiles): `hurts` is `fire`, `lightning` or `poison`; `opens` opens doors and starts boulders; `scatters` moves what it hits to a random seen cell; `bane` is a thing template it hurts by `bane_damage`. `directional` draws the frame of the direction it flies; `cloud` is the sprite it ends as; `around` casts four, along the diagonals |
+| `{ "fire_item": item }` | Fire a new object of the item from the caster |
+| `{ "timed": effect }` | A timed effect for `power` status ticks |
+| `{ "conjure": { "thing", "distance", "look_per_skill" } }` | A new thing half a cell ahead, lasting `power` of its updates, showing frame school skill / `look_per_skill` |
+| `{ "portal": { "thing", "distance", "to" } }` | A new portal a distance ahead, replacing any other |
+| `{ "teleport_to_mark": rune }` | Ripple the player to a mark |
+| `{ "dispel": distance }` | End spells in flight near the player |
+| `{ "join": { "items", "into" } }` | Join the two items held in the hands into one |
+| `{ "freeze": ticks }` | Delay every other thing by `power × ticks` |
+| `{ "shape_change": distance }` | Take the look of the nearest creature |
+| `{ "transmute": { "holder", "table", "otherwise" } }` | Fill the `holder` item in a hand from the other hand's object: by `table`, using it up, or else `otherwise`, valued at the power |
+| `{ "cure_poison": true }`, `{ "restore": true }`, `{ "heal": dice }` | Cure poison; recover `power` fatigue; heal |
+| `{ "set_counter": { "counter", "value" } }`, `{ "converse": thing }` | Set a counter; start the conversation of a thing template |
+
+Conversations use these:
+
+| Action | Effect |
+| --- | --- |
+| `{ "say": text }` | Say a text, beside the conversation's portrait |
+| `{ "say_as": { "portrait", "text" } }` | Say a text beside another portrait (none: the player's) |
+| `{ "offer": keyword }` | Offer a keyword (at most six) |
+| `{ "forget_offers": true }` | Empty the offered keywords |
+| `{ "take": item }`, `{ "give": object }` | Take an object of an item; give a new object (with `contents`) |
+| `{ "set_counter": { "counter", "value" } }`, `{ "add_counter": counter }` | Set a counter; add 1 |
+| `{ "end": true }` | End the conversation |
+| `{ "remove_speaker": true }`, `{ "hostile": true }`, `{ "set_frame": n }` | Remove the creature spoken to; turn it and its kind hostile; show a frame of its sprite |
+| `{ "heal_fully": true }` | Cure poison and confusion and heal fully |
+| `{ "run": procedure }` | Run a procedure of the current level |
+| `{ "teach": icons }` | Show gesture icons and teach them |
+| `{ "set_portrait": portrait }` | Change the conversation's portrait, and the template's |
+| `{ "effect": name }` | Play a view effect |
+| `{ "travel": { "level", "cell" } }`, `{ "return": true }` | After the conversation, go to a level and cell, or back to where the player was when a portal took it |
+| `{ "jump": clause }` | Go on evaluating from a clause |
+| `{ "ending": true }`, `{ "menu": name }`, `{ "transcript": name }` | Play the ending; open the game's menu (`quit`, `save`, `restore`, `delete`, `rename`, `leave`); print the transcript (scenes and saves) |
 
 ### Things and objects
 

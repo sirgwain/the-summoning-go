@@ -109,7 +109,7 @@ func (im *importer) player() error {
 		ID: playerID, Kind: content.ThingPlayer, Sprite: sid, Facing: 3, Speed: creatureSpeed,
 		IntervalMS: ms(playerInterval), Weight: creatureWeight, Footprint: content.DefaultFootprint,
 		HitPoints: content.Dice{Bonus: starterHitPoints}, MagicPoints: content.Dice{Bonus: starterMagicPoints},
-		Stats: starterAttributes, Animations: anims,
+		Stats: starterAttributes, Animations: anims, Icons: icons(im.gesture(0)),
 	}
 	for _, s := range starterInventory {
 		if id, ok := im.item(s.template, "starting inventory"); ok {

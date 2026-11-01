@@ -25,6 +25,27 @@ it once done.
    (`slots.go`); a key goes into a keyhole by mouse (`TestKeyIntoSlotWithMouse`). Portraits
    import from F and give the figure its colors E0h–E3h.
 
+7. **Magic and talk** (done out of order, before Fight's last items and the Inventory panel).
+   Spells are records with effects from the action registry (missiles, timed effects, conjured
+   walls, portals, teleports, dispel, join, freeze, shape change, transmute, cures); the player
+   knows gesture icons, learns spells into a spellbook by entering gestures, memorizes within
+   the school's limit and casts with cost, conditions and the gesture playing one icon a player
+   update (`engine/sim/magic.go`, `missile.go`). Creatures cast (walkers 1 step in 10, stationary
+   casters on their cycle), procedures `shoot_spell`, and objects cast or start conversations.
+   Conversations are records of clauses run in resumable passes, stopping at each line
+   (`engine/sim/talk.go`); keywords match on four letters; counters, per-template records
+   (talked, dead, portrait) and the engine's counters named in `pack.json`. The importer reads
+   INIT's spells, KEYWORDS and INTERACT, scrolls and their pictures, the NPCs' talk portraits
+   (people banks past F's), and casting and talking powers. The hotbar has the schools' spell
+   boxes and the gesture panel; F10 opens the spell panel; the conversation window, drawn at
+   twice its size and centered in the view above the hotbar, shows lines with marked keywords,
+   offered keywords and a field. The pointer is the game's (resource 2, `pointers.json`): the
+   speech bubble over a creature that talks or a mouth, where a click talks to it; a mouth's
+   message shows beside it. An object coming onto the pointer is read, so selecting a scroll
+   teaches its icons and shows its picture above the hotbar. The dev pack's study is played by
+   `TestStudy` (`devpack/scripts/study.json`); the imported game's first conversation (Malachi,
+   level 0) plays through.
+
 ## In progress: 5. Fight
 
 **Done (stage 1, melee).** `engine/combat` with the Summoning's rule set; attributes, skills,
@@ -51,12 +72,12 @@ corpse frame as the bank's last; damage shown over the hurt; the dev pack's aren
 a whole fight.
 
 **Left.**
-- Powers that cast spells, start conversations, show the map or choose the ending (they report
-  "not yet"); transmuting and joining staff halves; charges absorbing damage.
+- Powers that show the map or choose the ending (they report "not yet"); charges absorbing
+  damage.
 - Special weapons: the Rusted Blade and WarMonger, the Staff of the Serpent's poison, creature 79h,
   the Decanter's breaking.
-- Practice of 2 for killing a creature of record 50 or above without a conversation, and the dead
-  bit on its record (both need records, with dialogue).
+- Practice of 2 for killing a creature of record 50 or above without a conversation (the world's
+  records now keep talked and dead).
 - The flying looks of the seven thrown-look templates (the bank is unknown); flights draw the
   item's floor image.
 - Animated objects' patterns (drawn still), teleported creatures spinning.
@@ -93,18 +114,31 @@ a whole fight.
 - The pointer's object drawn over the hotbar's cursor in scripts (scripts park the cursor off
   screen between clicks).
 
-### 7. Magic and talk
+### 7. Magic and talk, left
 
-- Spells on the hotbar: the memorized spells, cast by clicking.
-- Spells and gestures, `shoot_spell`, conjured things (pushable, timed), wall spells (Gateway).
-- Dialogue: talking to creatures, keywords, conversation actions and the procedures they run;
-  the creatures' conversation portraits (the people banks after the player's 42) and the
-  player's talk portrait.
+- Gesture timing: the game holds some icons over two updates by a table of which may follow
+  which (spells.md, Unknowns); the engine shows one an update.
+- Shape Change draws the creature's first frame, not its walk; the player's held objects hide.
+- Records 23h and 2Bh get speed 16 when a conversation turns them hostile (creatures.md,
+  Hostility); not done.
+- Interaction variables the game reads itself beyond 14, 19, 32 and 97: 96 (quiet combat), 98
+  (sight), 34 (the opening conversation on a new game) wait for their milestones.
+- Gateway's level 30 and the conversations that return from it are imported but not played
+  through on the imported game; nor is any quest that a conversation drives across levels.
+- Powers are still numbers the engine knows (items.md, Powers); casting and talking powers
+  became item fields (`casts`, `conversation`), the rest could become records too.
+- See a spell in flight and its burst on the imported game on screen: the dev pack's are drawn
+  (`TestStudy`), the imported ones only checked by rule.
 
 ### 8. Game
 
+- From Magic and talk: conversation actions that report "not yet" (the ending, the disk menu's
+  quit, save, restore, delete and rename, printing the transcript) and view effects (`effect.n`
+  events, and effect 6's level change, which does happen); the player's name in texts (the
+  viewer says "Stranger").
 - Scenes: the intro, character creation (which replaces the starting attributes and bonus the
-  importer writes, and chooses the portrait in place of portrait 0; F's premade characters),
+  importer writes, and chooses the portrait in place of portrait 0; F's premade characters,
+  and the school's first gesture icons, which the importer gives school 0's for now),
   changing sex (the other-sex portrait), story screens, endings, and the three arrival styles
   when changing level.
 - Saves, audio (music and effects as Ogg with loop points), the level map and its refusals.
@@ -114,7 +148,9 @@ a whole fight.
 
 - Play uses the game's key layout (Space and Q for the hands, X and Z to throw, F take, G put
   down, Enter lever, E talk, H recenter, P pause; 1–4 and R wait for spells).
-- Panels from the game's art (the hotbar and inventory panel draw plain boxes until then),
+- Panels from the game's art (the hotbar, the inventory and spell panels and the conversation
+  window draw plain boxes and the debug font until then; the game's spell panel art is resource
+  7, its icon strip resources 51 and 52),
   hotkeys for the hotbar's objects, magnified floor objects as a game setting, and the custom
   outline font (the hotbar's labels and tooltips use the debug font). Play mode's text panel is a
   stand-in.

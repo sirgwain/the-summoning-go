@@ -6,6 +6,7 @@ import (
 
 	"github.com/sirgwain/the-summoning-go/engine/combat"
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/input"
 )
 
 // PlayerID is the id events and draw lists give the player.
@@ -93,6 +94,12 @@ type Player struct {
 	// Pose is an action's pose ("attack", "attack.left", "attack.both"), shown poseLeft updates.
 	Pose     string
 	poseLeft int
+	// Magic is the player's spells (docs/spec/spells.md).
+	Magic Magic
+	// Look is the sprite a Shape Change gives the player, empty for its own.
+	Look string
+	// Return is where a portal took the player from, for the way back.
+	Return *content.Destination
 
 	// want is the direction a walk was asked for since the last update, or −1.
 	want int
@@ -157,6 +164,7 @@ func (w *World) newPlayer() *Player {
 		return nil
 	}
 	p := &Player{Template: tmpl, Portrait: tmpl.Portrait, Facing: tmpl.Facing, want: -1, Attributes: map[string]int{}}
+	p.Magic.teach(tmpl.Icons)
 	for i := range p.Skills {
 		p.Skills[i].Threshold = skillThreshold
 	}
@@ -263,6 +271,12 @@ func (w *World) updatePlayer() {
 		}
 	}
 	w.everyMove()
+	if p.Magic.Gesture != nil {
+		w.playGesture()
+		if p.Dead || w.talk != nil {
+			return
+		}
+	}
 	d := p.want
 	p.want = -1
 	if p.Confusion > 0 {
@@ -410,6 +424,9 @@ func (w *World) walk(d int) bool {
 				p.next += Steps(pushTicks)
 				w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "pushed"})
 			}
+		case t.Template.Kind == content.ThingPortal && t.Portal != nil:
+			w.enterPortal(l, t)
+			return true
 		case alive(t) && t.Template.Has(content.BehaviorHurtsOnContact):
 			w.hurtPlayer(1, combat.Physical, t.ID)
 			if t.Template.Has(content.BehaviorPoisonous) {
@@ -522,6 +539,7 @@ func (w *World) movePlayerBy(l *Level, du, dv int) {
 	p := w.player
 	from := p.Cell()
 	p.U, p.V = p.U+du, p.V+dv
+	w.endShapeChange()
 	p.Moves++
 	p.Idle = 0
 	to := p.Cell()
@@ -643,6 +661,7 @@ func (w *World) pickUp(toHand bool) {
 	w.takeFloorObject(l, c)
 	if slot < 0 {
 		p.Hand = o
+		w.read(input.SlotHand)
 	} else {
 		p.Slots[slot] = o
 	}
@@ -730,6 +749,9 @@ func (w *World) swap(i int) {
 		return
 	}
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "swapped"})
+	if p.Hand != nil {
+		w.read(input.SlotHand)
+	}
 }
 
 // activate uses the lever in the player's cell, or puts the key a keyhole there takes into it,

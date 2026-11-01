@@ -32,7 +32,8 @@ func slotAt(boxes []SlotBox, pt image.Point) (SlotBox, bool) {
 	return SlotBox{}, false
 }
 
-// clickSlot is a left click on a slot's box: the hand and the slot swap.
+// clickSlot is a left click on a slot's box: the hand and the slot swap, and an object coming onto
+// the pointer is read.
 func (v *Viewer) clickSlot(slot int) []input.Command { return []input.Command{input.Swap{Slot: slot}} }
 
 // clickPlayer is a left click on the player: with an empty hand it takes the top object

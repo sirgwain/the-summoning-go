@@ -83,7 +83,7 @@ func (w *World) act(l *Level, a content.Action, depth int) {
 	case a.ShootItem != nil:
 		w.shootItem(l, a.ShootItem.Cell, a.ShootItem.Item, a.ShootItem.Direction)
 	case a.ShootSpell != nil:
-		w.emit(Event{Kind: EventNotYet, Level: l.ID, Cell: a.ShootSpell.Cell, Detail: "shooting spells"})
+		w.shootSpell(l, a.ShootSpell.Cell, a.ShootSpell.Spell, a.ShootSpell.Direction, a.ShootSpell.Power)
 	case a.Create != nil:
 		w.drop(l, a.Create.Cell, w.newObject(a.Create.Item), byWorld, depth)
 	case a.SetFloor != nil:
@@ -188,7 +188,8 @@ func (w *World) apply(cmd input.Command) {
 		if err := w.enter(c.Level); err != nil {
 			refuse(content.Cell{}, err.Error())
 		}
-	case input.Walk, input.PickUp, input.PutDown, input.Swap, input.Activate, input.PlacePlayer, input.Strike, input.PutOn, input.Throw:
+	case input.Walk, input.PickUp, input.PutDown, input.Swap, input.Activate, input.PlacePlayer, input.Strike, input.PutOn, input.Throw,
+		input.Learn, input.Memorize, input.Cast, input.NextSpell, input.Read, input.Talk:
 		w.playerCommand(c)
 	}
 }
@@ -219,6 +220,18 @@ func (w *World) playerCommand(cmd input.Command) {
 		w.putOnHand()
 	case input.Throw:
 		w.throwFrom(c.Hand)
+	case input.Learn:
+		w.learn(c.Gesture)
+	case input.Memorize:
+		w.memorizeLearned(c.Spell)
+	case input.Cast:
+		w.cast(c.School)
+	case input.NextSpell:
+		w.nextSpell(c.School)
+	case input.Read:
+		w.read(c.Slot)
+	case input.Talk:
+		w.talkTo(c.Thing)
 	case input.PlacePlayer:
 		if !l.InBounds(c.Cell) || l.Blocked(c.Cell) {
 			w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: c.Cell, Detail: "the player cannot stand there"})
@@ -231,14 +244,14 @@ func (w *World) playerCommand(cmd input.Command) {
 }
 
 // arrival is where the player arrives on level l when no exit says: the pack's start cell on the
-// start level, otherwise the first open cell in row order.
+// start level, otherwise the first open cell in row order with no feature and nothing standing.
 func (w *World) arrival(l *Level) content.Cell {
 	if s := w.pack.Manifest.Start; s.Level == l.ID {
 		return s.Cell
 	}
 	for x := range l.Def.Size[0] {
 		for y := range l.Def.Size[1] {
-			if c := (content.Cell{x, y}); !l.Blocked(c) && l.byCell[c] == nil {
+			if c := (content.Cell{x, y}); !l.Blocked(c) && l.byCell[c] == nil && len(l.ThingsAt(c)) == 0 {
 				return c
 			}
 		}

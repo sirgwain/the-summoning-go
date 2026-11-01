@@ -8,6 +8,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -46,14 +47,30 @@ The keys are laid out as the game's. WASD or the arrows walk, two together along
 Home, PgUp, End and PgDn walk the diagonals. Space acts with the right hand and Shift+Space does
 its second action, X throws what it holds; Q, Shift+Q and Z do the same with the left hand. F
 takes the top object of the player's cell to the first empty shelf, G puts down what is in hand,
-Enter pulls the lever underfoot or puts the key a keyhole underfoot takes into it, E uses a mouth beside the player (and will talk), H recenters the view, P pauses.
+Enter pulls the lever underfoot or puts the key a keyhole underfoot takes into it, E or C talks to
+the nearest creature that talks (or hears the nearest mouth), H recenters the view, P pauses.
+
+F1-F4 (or 1-4) cast the selected spell of Wizardry, Sorcery, Enchantment and Healing; with Shift
+they select the school's next memorized spell. F10 opens the spell panel: type the letters A-L of
+a gesture (or click its icons), Backspace takes one off, Enter or Learn tries it; clicking a spell
+of the spellbook memorizes it once more; Escape closes it.
+
+In a conversation, a key or click goes on past each line, and clicking a marked word, or typing
+its first letter, asks it next. Then click an offered keyword, or type a word and press Enter;
+Escape, a right click or Bye leaves.
 
 The hotbar along the bottom shows the portrait, hit points, magic points and load, the hands
 with their actions, and the twenty shelves. Clicking the player takes the top object underfoot
 onto the pointer, or puts the pointer's object down (stand on a keyhole and click the player to
 put a key in); clicking a hand or shelf swaps it with the pointer; clicking an action acts with
 that hand. The right button puts the pointer's object on the first empty shelf, or takes the
-object underfoot straight there.
+object underfoot straight there. Shift and a click reads an object (a shelf, a hand, or the
+pointer's on the player): a scroll shows its picture and teaches its icons, as selecting it
+(taking it from a shelf onto the pointer) does. The four boxes after
+the shelves are the schools' selected spells: click to cast, right click for the next; the box at
+the end shows the gesture playing, and opens the spell panel. Over a creature that talks, or a
+mouth (a skull), the pointer becomes a speech bubble: a click talks to the creature, or shows the
+mouth's message beside it. Taking a scroll onto the pointer reads it.
 
 Until the inventory has its panel, Ctrl reaches the rest: Ctrl+1-9 and 0 swap the hand with shelves
 0-9 (with Shift, 10-19), Ctrl+R and Ctrl+L with the right and left hands, Ctrl+W puts what is in
@@ -181,6 +198,9 @@ var (
 	waitColor      = color.RGBA{40, 40, 40, 230}
 	gaugeColors    = [...]color.RGBA{{200, 30, 30, 255}, {40, 90, 220, 255}, {200, 160, 40, 255}}
 	overloadColor  = color.RGBA{255, 80, 0, 255}
+	spellEdgeColor = color.RGBA{120, 140, 220, 255}
+	talkColor      = color.RGBA{16, 12, 10, 235}
+	keywordColor   = color.RGBA{230, 200, 90, 255}
 )
 
 // shell runs a viewer in a window: it reads Ebitengine's input into snapshots, or takes them
@@ -201,6 +221,9 @@ type shell struct {
 	err    error
 	// art holds index images for the hotbar's and the pointer's art, by size.
 	art map[image.Point]*ebiten.Image
+	// talk and said are the conversation window and a mouth's message, drawn at their own pixels
+	// and scaled onto the screen.
+	talk, said *ebiten.Image
 }
 
 func newShell(v *viewer.Viewer) (*shell, error) {
@@ -255,6 +278,7 @@ func (s *shell) input() viewer.Input {
 	}
 	in.Left, in.Right = button(ebiten.MouseButtonLeft), button(ebiten.MouseButtonRight)
 	_, in.Wheel = ebiten.Wheel()
+	in.Chars = ebiten.AppendInputChars(nil)
 	return in
 }
 
@@ -299,6 +323,10 @@ func (s *shell) Draw(screen *ebiten.Image) {
 	s.presenter.Present(screen, s.buffer, v.Scale)
 	s.drawLabels(screen)
 	s.drawHotbar(screen)
+	s.drawSpellPanel(screen)
+	s.drawSaid(screen)
+	s.drawTalk(screen)
+	s.drawReading(screen)
 	s.drawTools(screen)
 	s.drawPointer(screen)
 	for _, path := range s.shots {
@@ -391,6 +419,13 @@ func (s *shell) drawHotbar(screen *ebiten.Image) {
 		}
 		stroke(r, edge)
 	}
+	for _, b := range h.Spells {
+		r := h.Screen(b.Rect).Inset(1)
+		fill(r, slotColor)
+		stroke(r, spellEdgeColor)
+	}
+	fill(h.Screen(h.Gesture.Rect).Inset(1), slotColor)
+	stroke(h.Screen(h.Gesture.Rect).Inset(1), spellEdgeColor)
 	for _, a := range h.Actions {
 		r := h.Screen(a.Rect).Inset(1)
 		c := actionColor
@@ -408,22 +443,243 @@ func (s *shell) drawHotbar(screen *ebiten.Image) {
 			s.err = err
 		}
 	}
-	for _, b := range h.Slots {
-		img, ok := v.SlotImage(b.Slot)
-		if !ok {
-			continue
+	centered := func(img content.Image, r image.Rectangle) {
+		b := v.Pack.Sprites[img.Sprite]
+		if b == nil {
+			return
 		}
-		size := v.Pack.Sprites[img.Sprite].FrameSize
-		at := b.Rect.Min.Add(image.Pt((b.Rect.Dx()-size[0])/2, (b.Rect.Dy()-size[1])/2))
+		at := r.Min.Add(image.Pt((r.Dx()-b.FrameSize[0])/2, (r.Dy()-b.FrameSize[1])/2))
 		if err := s.sprites.DrawImage(art, img, at.X, at.Y, false); err != nil && s.err == nil {
 			s.err = err
 		}
 	}
+	for _, b := range h.Slots {
+		if img, ok := v.SlotImage(b.Slot); ok {
+			centered(img, b.Rect)
+		}
+	}
+	for _, b := range h.Spells {
+		if b.Has && b.Count > 0 {
+			centered(b.Icon, b.Rect)
+		}
+	}
+	if h.Gesture.Has {
+		centered(h.Gesture.Icon, h.Gesture.Rect)
+	}
 	s.presenter.PresentAt(screen, art, h.Scale, h.Rect.Min)
+	for _, b := range h.Spells {
+		if b.Count > 1 {
+			r := h.Screen(b.Rect)
+			ebitenutil.DebugPrintAt(screen, fmt.Sprint(min(b.Count, 9)), r.Max.X-viewer.CharWidth-2, r.Max.Y-viewer.LineHeight)
+		}
+	}
 }
 
-// drawPointer draws the object in hand on the pointer, at the hotbar's scale, and names what the
-// cursor is over on the hotbar.
+// drawSpellPanel draws the spell panel: the icons known, the gesture entered, the buttons and the
+// spellbook.
+func (s *shell) drawSpellPanel(screen *ebiten.Image) {
+	v := s.v
+	sp := v.SpellPanel()
+	if sp == nil {
+		return
+	}
+	fill := func(r image.Rectangle, c color.Color) {
+		vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), c, false)
+	}
+	stroke := func(r image.Rectangle, c color.Color) {
+		vector.StrokeRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), 1, c, false)
+	}
+	fill(sp.Rect.Inset(-viewer.Margin/2), hotbarColor)
+	for _, b := range sp.Icons {
+		fill(sp.Screen(b.Rect), slotColor)
+		stroke(sp.Screen(b.Rect), slotEdgeColor)
+	}
+	for _, b := range sp.Buttons {
+		r := sp.Screen(b.Rect)
+		fill(r, actionColor)
+		stroke(r, slotEdgeColor)
+		ebitenutil.DebugPrintAt(screen, b.Label, r.Min.X+(r.Dx()-len(b.Label)*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+	}
+	for _, e := range sp.Book {
+		r := sp.Screen(e.Rect)
+		fill(r, slotColor)
+	}
+	art := s.artImage(sp.Rect.Size().Div(sp.Scale))
+	draw := func(img content.Image, r image.Rectangle) {
+		b := v.Pack.Sprites[img.Sprite]
+		if b == nil {
+			return
+		}
+		at := r.Min.Add(image.Pt((r.Dx()-b.FrameSize[0])/2, (r.Dy()-b.FrameSize[1])/2))
+		if err := s.sprites.DrawImage(art, img, at.X, at.Y, false); err != nil && s.err == nil {
+			s.err = err
+		}
+	}
+	for _, b := range append(sp.Icons, sp.Entered...) {
+		if b.Known {
+			draw(b.Icon, b.Rect)
+		}
+	}
+	for _, e := range sp.Book {
+		if e.Icon != nil {
+			draw(*e.Icon, image.Rect(e.Rect.Min.X, e.Rect.Min.Y, e.Rect.Min.X+e.Rect.Dy(), e.Rect.Max.Y))
+		}
+	}
+	s.presenter.PresentAt(screen, art, sp.Scale, sp.Rect.Min)
+	for _, e := range sp.Book {
+		r := sp.Screen(e.Rect)
+		x := r.Min.X + r.Dy() + 2
+		ebitenutil.DebugPrintAt(screen, viewer.Clip(e.Label, (r.Max.X-x)/viewer.CharWidth), x, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+	}
+}
+
+// drawTalk draws the open conversation: the line beside its portrait, its keywords underlined,
+// or the offered keywords and the field. It draws the window at its own pixels, then scales it
+// onto the screen.
+func (s *shell) drawTalk(screen *ebiten.Image) {
+	v := s.v
+	tv := v.Talk()
+	if tv == nil {
+		return
+	}
+	size := tv.Rect.Size().Div(tv.Scale)
+	if s.talk == nil || s.talk.Bounds().Size() != size {
+		if s.talk != nil {
+			s.talk.Deallocate()
+		}
+		s.talk = ebiten.NewImage(size.X, size.Y)
+	}
+	win := s.talk
+	win.Fill(talkColor)
+	vector.StrokeRect(win, 0.5, 0.5, float32(size.X-1), float32(size.Y-1), 1, slotEdgeColor, false)
+	fill := func(r image.Rectangle, c color.Color) {
+		vector.FillRect(win, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), c, false)
+	}
+	draw := func(img content.Image, at image.Point, scale int, mirrored bool) {
+		b := v.Pack.Sprites[img.Sprite]
+		if b == nil {
+			return
+		}
+		art := s.artImage(image.Pt(b.FrameSize[0], b.FrameSize[1]))
+		if err := s.sprites.DrawImage(art, img, 0, 0, mirrored); err != nil && s.err == nil {
+			s.err = err
+		}
+		s.presenter.PresentAt(win, art, scale, at)
+	}
+	if tv.HasPortrait {
+		draw(tv.Portrait, tv.PortraitAt, tv.PortraitScale, tv.Mirrored)
+	}
+	for i, img := range tv.Icons {
+		draw(img, tv.IconsAt[i], 2, false)
+	}
+	for _, w := range tv.Words {
+		ebitenutil.DebugPrintAt(win, w.Text, w.Rect.Min.X, w.Rect.Min.Y)
+		if w.Keyword {
+			vector.StrokeLine(win, float32(w.Rect.Min.X), float32(w.Rect.Max.Y)-0.5, float32(w.Rect.Max.X), float32(w.Rect.Max.Y)-0.5, 1, keywordColor, false)
+		}
+	}
+	for _, b := range tv.Buttons {
+		fill(b.Rect, actionColor)
+		vector.StrokeRect(win, float32(b.Rect.Min.X)+0.5, float32(b.Rect.Min.Y)+0.5, float32(b.Rect.Dx()-1), float32(b.Rect.Dy()-1), 1, slotEdgeColor, false)
+		ebitenutil.DebugPrintAt(win, b.Label, b.Rect.Min.X+(b.Rect.Dx()-len(b.Label)*viewer.CharWidth)/2, b.Rect.Min.Y+2)
+	}
+	if !tv.Waiting {
+		fill(tv.Field, slotColor)
+		cursor := ""
+		if v.Ticks/30%2 == 0 {
+			cursor = "_"
+		}
+		ebitenutil.DebugPrintAt(win, tv.Typed+cursor, tv.Field.Min.X+4, tv.Field.Min.Y+2)
+	}
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(float64(tv.Scale), float64(tv.Scale))
+	op.GeoM.Translate(float64(tv.Rect.Min.X), float64(tv.Rect.Min.Y))
+	screen.DrawImage(win, op)
+}
+
+// drawSaid draws a mouth's message beside the mouth: wrapped lines on a dark backing, hanging
+// above the mouth and kept on the screen, at twice the debug font's size.
+func (s *shell) drawSaid(screen *ebiten.Image) {
+	v := s.v
+	said := v.Said
+	if said == nil {
+		return
+	}
+	const scale, width = 2, 36
+	lines := wrap(said.Text, width)
+	size := image.Pt(width*viewer.CharWidth+8, len(lines)*viewer.LineHeight+8)
+	if s.said == nil || s.said.Bounds().Size() != size {
+		if s.said != nil {
+			s.said.Deallocate()
+		}
+		s.said = ebiten.NewImage(size.X, size.Y)
+	}
+	s.said.Fill(talkColor)
+	vector.StrokeRect(s.said, 0.5, 0.5, float32(size.X-1), float32(size.Y-1), 1, slotEdgeColor, false)
+	for i, l := range lines {
+		ebitenutil.DebugPrintAt(s.said, l, 4, 4+i*viewer.LineHeight)
+	}
+	at := v.ScreenPoint(said.At)
+	shown := size.Mul(scale)
+	x := min(max(at.X-shown.X/2, viewer.Margin), v.Screen.X-shown.X-viewer.Margin)
+	y := max(at.Y-shown.Y-viewer.Margin, viewer.Margin)
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(scale, scale)
+	op.GeoM.Translate(float64(x), float64(y))
+	screen.DrawImage(s.said, op)
+}
+
+// wrap breaks text into lines of at most n characters, at spaces.
+func wrap(text string, n int) []string {
+	var lines []string
+	line := ""
+	for _, word := range strings.Fields(text) {
+		switch {
+		case line == "":
+			line = word
+		case len([]rune(line))+1+len([]rune(word)) <= n:
+			line += " " + word
+		default:
+			lines = append(lines, line)
+			line = word
+		}
+	}
+	if line != "" {
+		lines = append(lines, line)
+	}
+	return lines
+}
+
+// drawReading draws the picture of a scroll being read in a small window centered above the
+// hotbar, at the hotbar's scale.
+func (s *shell) drawReading(screen *ebiten.Image) {
+	v := s.v
+	img := v.Reading
+	if img == nil {
+		return
+	}
+	b := v.Pack.Sprites[img.Sprite]
+	if b == nil {
+		return
+	}
+	scale, bottom := v.Scale, v.Screen.Y
+	if h := v.Hotbar(); h != nil {
+		scale, bottom = h.Scale, h.Rect.Min.Y-viewer.Margin
+	}
+	size := image.Pt(b.FrameSize[0], b.FrameSize[1])
+	at := image.Pt((v.Screen.X-size.X*scale)/2, bottom-size.Y*scale-viewer.Margin)
+	r := image.Rectangle{at, at.Add(size.Mul(scale))}.Inset(-viewer.Margin)
+	vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), hotbarColor, false)
+	art := s.artImage(size)
+	if err := s.sprites.DrawImage(art, *img, 0, 0, false); err != nil && s.err == nil {
+		s.err = err
+	}
+	s.presenter.PresentAt(screen, art, scale, at)
+}
+
+// drawPointer names what the cursor is over on the hotbar, and draws the pointer while playing:
+// the arrow, the speech bubble over something a click talks to, or the object in hand, at the
+// view's scale, in place of the system's pointer.
 func (s *shell) drawPointer(screen *ebiten.Image) {
 	v := s.v
 	cursor := v.Cursor
@@ -433,13 +689,19 @@ func (s *shell) drawPointer(screen *ebiten.Image) {
 		vector.FillRect(screen, float32(at.X), float32(at.Y), float32(w), float32(viewer.LineHeight), panelColor, false)
 		ebitenutil.DebugPrintAt(screen, text, at.X+2, at.Y)
 	}
-	img, ok := v.HandImage()
+	img, centered, ok := v.Pointer()
+	mode := ebiten.CursorModeVisible
+	if ok && !s.scripted() {
+		mode = ebiten.CursorModeHidden
+	}
+	if ebiten.CursorMode() != mode {
+		ebiten.SetCursorMode(mode)
+	}
 	if !ok {
 		return
 	}
-	h := v.Hotbar()
 	scale := v.Scale
-	if h != nil {
+	if h := v.Hotbar(); h != nil && centered {
 		scale = h.Scale
 	}
 	fs := v.Pack.Sprites[img.Sprite].FrameSize
@@ -448,8 +710,15 @@ func (s *shell) drawPointer(screen *ebiten.Image) {
 	if err := s.sprites.DrawImage(art, img, 0, 0, false); err != nil && s.err == nil {
 		s.err = err
 	}
-	s.presenter.PresentAt(screen, art, scale, cursor.Sub(size.Mul(scale).Div(2)))
+	at := cursor
+	if centered {
+		at = cursor.Sub(size.Mul(scale).Div(2))
+	}
+	s.presenter.PresentAt(screen, art, scale, at)
 }
+
+// scripted reports whether a script, not the mouse, moves the cursor.
+func (s *shell) scripted() bool { return s.script != nil }
 
 // drawLabels draws the damage shown over things: white numbers on red, centered over each
 // sprite's top. A stand-in for the game's own until the UI has its font.

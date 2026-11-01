@@ -1,0 +1,23 @@
+{
+  "id": "spell.flame_arrow",
+  "name": "spell.flame_arrow.name",
+  "school": 0,
+  "cost": 5,
+  "power": "1d8",
+  "power_bonus": 4,
+  "gesture": "DJ",
+  "icon": {
+    "sprite": "sprite.spell_icons",
+    "frame": 0
+  },
+  "effects": [
+    {
+      "missile": {
+        "hurts": "fire",
+        "sprite": "sprite.arrow_bolt",
+        "directional": true,
+        "cloud": "sprite.cloud"
+      }
+    }
+  ]
+}

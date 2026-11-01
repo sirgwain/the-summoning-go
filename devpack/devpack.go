@@ -23,11 +23,14 @@ func Build() *content.Pack {
 	})
 	p.Palettes[paletteID] = palette()
 	art(p)
+	magicArt(p)
 	text(p)
 	records(p)
+	magicRecords(p)
 	hall(p)
 	cellar(p)
 	arena(p)
+	study(p)
 	return p
 }
 
@@ -75,6 +78,7 @@ var figures = []struct {
 	{"player", green + 1, water + 2},
 	{"brute", red + 1, tan + 3},
 	{"goblin", green + 4, green + 6},
+	{"sage", purple + 1, tan + 5},
 }
 
 func art(p *content.Pack) {
@@ -179,8 +183,8 @@ func text(p *content.Pack) {
 		"msg.breaks":      "Your {item} breaks.",
 		"msg.skill_up":    "You are better at {skill}.",
 		"msg.level_up":    "You have gained a level.",
-		"msg.mouth":       "Welcome to the hall of *mechanisms*.",
-		"msg.mouth.after": "The *socket* is complete.",
+		"msg.mouth":       "Welcome to the hall of *mechanisms.",
+		"msg.mouth.after": "The *socket is complete.",
 	}
 	for _, it := range itemArt {
 		s["item."+it.name+".name"] = itemNames[it.name]
@@ -199,7 +203,7 @@ func text(p *content.Pack) {
 var itemNames = map[string]string{
 	"key": "Key", "rock": "Rock", "red_gem": "Red Gem", "blue_gem": "Blue Gem", "sphere": "Sphere",
 	"sword": "Sword", "sack": "Sack", "bag": "Bag of Lightness", "potion": "Potion",
-	"boots": "Boots of Speed", "mail": "Chain Mail",
+	"boots": "Boots of Speed", "mail": "Chain Mail", "scroll": "Scroll of Fireball",
 }
 
 // Item ids.
@@ -248,6 +252,7 @@ func records(p *content.Pack) {
 		"sack":   {2, 3, false, &content.Container{Capacity: 4, Largest: 2}},
 		"bag":    {1, 2, false, &content.Container{Capacity: 4, Largest: 2, Weightless: true}},
 		"potion": {2, 1, true, nil}, "boots": {1, 2, false, nil}, "mail": {20, 3, false, nil},
+		"scroll": {1, 1, false, nil},
 	}
 	for i, it := range itemArt {
 		st := stats[it.name]
@@ -295,7 +300,7 @@ func records(p *content.Pack) {
 		IntervalMS: 2200, Weight: 100, Footprint: 20}
 	p.Things[ThingPlayer] = &content.Thing{ID: ThingPlayer, Kind: content.ThingPlayer, Sprite: "sprite.player",
 		Facing: 3, Speed: 8, IntervalMS: 275, Weight: 100, Footprint: 16,
-		HitPoints: content.Dice{Bonus: 56}, MagicPoints: content.Dice{Bonus: 52}, Stats: StarterAttributes,
+		HitPoints: content.Dice{Bonus: 56}, MagicPoints: content.Dice{Bonus: 52}, Stats: StarterAttributes, Icons: "DJ",
 		Inventory: []content.InventoryObject{{Slot: 24, Object: content.Object{Item: ItemBoots}}},
 		Portrait:  PortraitPlayer}
 }

@@ -18,7 +18,7 @@ OBJECTS holds 254 templates of 15 bytes. An object is an instance of a template 
 | 11 | Flags: 80h never chosen as a random object; other bits select the worn look |
 | 12 | Use handler: the low bits are the power number; 80h set means the power also starts when the object is worn |
 | 13 | Category: bits 0–5 the category; 40h a weapon; 80h two-handed |
-| 14 | Scroll: the spell a scroll teaches |
+| 14 | Scroll number, 1..25 (spells.md, Scrolls); 0 if not a scroll |
 
 **Categories.** 1 body armor ("shirts"), 4 quiver, 7 arrows, 8 bottles (break into Broken Glass, template 0Ch); categories 9..12 are weapon classes 0..3 (a weapon's class is its category − 9). Weapons have the 40h flag.
 
@@ -196,7 +196,9 @@ Timed objects in worn slots count down their value each status tick and end when
 
 An action of kind use up (icons 9, 10) or use (11–20) starts the object's power, whatever 80h says. A power that refuses (below) leaves the object as it was. Use up then replaces the object with its spent object; use takes one charge from its value, and at 0 it becomes its spent object the same way. Neither strikes, except icon 11h, which also strikes with the object.
 
-**Engine model.** An item's `power` is its number and `power_worn` the 80h flag; `spent` is the item it becomes. The engine runs the powers in the table that need only the player: hit and magic points, cures, skills and attributes, statuses and timed effects, speed, and teleporting to a rune mark (a `mark` feature whose rune is `1`, `2` or `3` for 21h, 22h, 23h). Powers that cast spells, start conversations, change the ending or show the map wait for those milestones and report so. Each refusal is an engine message: `full_health` (3Eh), `full_magic` (42h), `not_poisoned` (40h), `not_poisoned_or_confused` (41h), `not_fatigued` (3Fh), `no_destination` (43h), `no_creatures` (88h), `already_have` (21h); others shown: `healed` (4Ah, `{damage}` the amount), `protected` (3Ch), `boost_extended` (33h), `poisoned` (59h), `slowed` (60h), `lost_weapon_skills` (64h), `lost_magic_skills` (67h).
+**Engine model.** An item's `power` is its number and `power_worn` the 80h flag; `spent` is the item it becomes. The engine runs the powers in the table that need only the player: hit and magic points, cures, skills and attributes, statuses and timed effects, speed, and teleporting to a rune mark (a `mark` feature whose rune is `1`, `2` or `3` for 21h, 22h, 23h). A power that casts a spell is the item's `casts`: the spell and its power (none for the spell's own roll), with powers 19h and 5Ch taking the item's action-1 damage dice; using the object casts it at once, with no gesture, cost or memorization, and the cast practices the school as any cast by the player does. A power that starts a conversation is the item's `conversation`, a thing template whose conversation it holds; with `use_result` (power 51h) the object is used only when the conversation leaves the pack's result counter nonzero, and otherwise never. Powers that change the ending or show the map wait for those milestones and report so.
+
+A scroll's `teaches` are the icons reading it teaches, and its `picture` the image shown when it is read. Each refusal is an engine message: `full_health` (3Eh), `full_magic` (42h), `not_poisoned` (40h), `not_poisoned_or_confused` (41h), `not_fatigued` (3Fh), `no_destination` (43h), `no_creatures` (88h), `already_have` (21h); others shown: `healed` (4Ah, `{damage}` the amount), `protected` (3Ch), `boost_extended` (33h), `poisoned` (59h), `slowed` (60h), `lost_weapon_skills` (64h), `lost_magic_skills` (67h).
 
 ## Throwing
 

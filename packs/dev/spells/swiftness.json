@@ -1,0 +1,18 @@
+{
+  "id": "spell.swiftness",
+  "name": "spell.swiftness.name",
+  "school": 1,
+  "cost": 20,
+  "power": "1d20",
+  "power_bonus": 4,
+  "gesture": "FACF",
+  "icon": {
+    "sprite": "sprite.spell_icons",
+    "frame": 3
+  },
+  "effects": [
+    {
+      "timed": "haste"
+    }
+  ]
+}

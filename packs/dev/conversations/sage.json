@@ -1,0 +1,150 @@
+{
+  "id": "conversation.sage",
+  "name": "Sage",
+  "clauses": [
+    {
+      "if": {
+        "first_meeting": true
+      },
+      "do": [
+        {
+          "say": "talk.sage.hello"
+        },
+        {
+          "offer": "keyword.name"
+        },
+        {
+          "offer": "keyword.magic"
+        }
+      ]
+    },
+    {
+      "if": {
+        "greeting": true
+      },
+      "do": [
+        {
+          "say": "talk.sage.again"
+        },
+        {
+          "offer": "keyword.magic"
+        },
+        {
+          "offer": "keyword.gift"
+        }
+      ]
+    },
+    {
+      "if": {
+        "asked": [
+          "keyword.name"
+        ]
+      },
+      "do": [
+        {
+          "say": "talk.sage.name"
+        },
+        {
+          "offer": "keyword.magic"
+        }
+      ]
+    },
+    {
+      "if": {
+        "asked": [
+          "keyword.magic"
+        ]
+      },
+      "do": [
+        {
+          "say": "talk.sage.magic"
+        },
+        {
+          "teach": "IBF"
+        },
+        {
+          "offer": "keyword.fireball"
+        }
+      ]
+    },
+    {
+      "if": {
+        "asked": [
+          "keyword.fireball"
+        ]
+      },
+      "do": [
+        {
+          "say": "talk.sage.fireball"
+        }
+      ]
+    },
+    {
+      "if": {
+        "asked": [
+          "keyword.sage"
+        ]
+      },
+      "do": [
+        {
+          "say": "talk.sage.sage"
+        },
+        {
+          "offer": "keyword.gift"
+        }
+      ]
+    },
+    {
+      "if": {
+        "asked": [
+          "keyword.gift"
+        ]
+      },
+      "do": [
+        {
+          "jump": 8
+        }
+      ]
+    },
+    {
+      "if": {
+        "never": true
+      },
+      "do": null
+    },
+    {
+      "if": {
+        "counter": {
+          "counter": "var.gift",
+          "equals": 0
+        }
+      },
+      "do": [
+        {
+          "say": "talk.sage.gift"
+        },
+        {
+          "give": {
+            "item": "item.potion"
+          }
+        },
+        {
+          "set_counter": {
+            "counter": "var.gift",
+            "value": 1
+          }
+        }
+      ]
+    },
+    {
+      "if": {
+        "always": true
+      },
+      "do": [
+        {
+          "say": "talk.sage.nomore"
+        }
+      ]
+    }
+  ]
+}

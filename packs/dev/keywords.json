@@ -1,0 +1,30 @@
+{
+  "id": "keywords",
+  "keywords": [
+    {
+      "id": "keyword.fireball",
+      "word": "keyword.fireball.word",
+      "answer": "keyword.fireball.answer"
+    },
+    {
+      "id": "keyword.gift",
+      "word": "keyword.gift.word",
+      "answer": "keyword.gift.answer"
+    },
+    {
+      "id": "keyword.magic",
+      "word": "keyword.magic.word",
+      "answer": "keyword.magic.answer"
+    },
+    {
+      "id": "keyword.name",
+      "word": "keyword.name.word",
+      "answer": "keyword.name.answer"
+    },
+    {
+      "id": "keyword.sage",
+      "word": "keyword.sage.word",
+      "answer": "keyword.sage.answer"
+    }
+  ]
+}

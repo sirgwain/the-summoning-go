@@ -41,7 +41,7 @@ func Message(p *content.Pack, e sim.Event) string {
 	if n, ok := strings.CutPrefix(e.Item, "skill."); ok {
 		skill = SkillName(n)
 	}
-	return strings.NewReplacer("{item}", ItemName(p, e.Item), "{skill}", skill,
+	return strings.NewReplacer("{item}", ItemName(p, e.Item), "{skill}", skill, "{school}", Text(p, e.Item),
 		"{score}", strconv.Itoa(e.Score), "{damage}", strconv.Itoa(e.Damage)).Replace(Text(p, e.Text))
 }
 
@@ -253,7 +253,7 @@ func Action(p *content.Pack, a content.Action) string {
 	case a.ShootItem != nil:
 		return fmt.Sprintf("shoot %s from %s in direction %d", ItemName(p, a.ShootItem.Item), cell(a.ShootItem.Cell), a.ShootItem.Direction)
 	case a.ShootSpell != nil:
-		return fmt.Sprintf("shoot spell %d from %s in direction %d, power %s", a.ShootSpell.Spell, cell(a.ShootSpell.Cell), a.ShootSpell.Direction, a.ShootSpell.Power)
+		return fmt.Sprintf("shoot spell %s from %s in direction %d, power %s", a.ShootSpell.Spell, cell(a.ShootSpell.Cell), a.ShootSpell.Direction, a.ShootSpell.Power)
 	case a.Create != nil:
 		return fmt.Sprintf("make %s at %s", ItemName(p, a.Create.Item), cell(a.Create.Cell))
 	case a.SetFloor != nil:

@@ -9,5 +9,8 @@
     "level": "level.hall",
     "cell": [10, 4]
   },
-  "player": "thing.player"
+  "player": "thing.player",
+  "counters": {
+    "after_conversation": "var.after"
+  }
 }

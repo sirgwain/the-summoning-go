@@ -14,6 +14,11 @@ type WorldState struct {
 	Current string `json:"current"`
 	// Player is the player, if the pack has one.
 	Player *PlayerState `json:"player,omitempty"`
+	// Talk is the open conversation, if one is; Counters the story's counters; Records what the
+	// world keeps about thing templates.
+	Talk     *TalkState             `json:"talk,omitempty"`
+	Counters map[string]int         `json:"counters,omitempty"`
+	Records  map[string]*sim.Record `json:"records,omitempty"`
 	// Levels are the levels entered so far, by id.
 	Levels map[string]*LevelState `json:"levels"`
 }
@@ -36,6 +41,19 @@ type PlayerState struct {
 	// Hand is the object held; Slots the inventory's filled slots by name.
 	Hand  *content.Object           `json:"hand,omitempty"`
 	Slots map[string]content.Object `json:"slots,omitempty"`
+	// Magic is the player's spells; Look a look taken by a Shape Change.
+	Magic sim.Magic `json:"magic"`
+	Look  string    `json:"look,omitempty"`
+}
+
+// TalkState is an open conversation.
+type TalkState struct {
+	Conversation string    `json:"conversation"`
+	Speaker      string    `json:"speaker,omitempty"`
+	Portrait     string    `json:"portrait,omitempty"`
+	Offered      []string  `json:"offered,omitempty"`
+	Line         *sim.Line `json:"line,omitempty"`
+	Transcript   []string  `json:"transcript,omitempty"`
 }
 
 // LevelState is a level's state.
@@ -93,7 +111,7 @@ func State(w *sim.World) *WorldState {
 		ps := &PlayerState{Cell: pl.Cell(), At: [2]int{pl.U, pl.V}, Facing: pl.Facing,
 			HitPoints: pl.HitPoints, MagicPoints: pl.MagicPoints, Level: pl.Level, Experience: pl.Experience,
 			ArmorClass: pl.ArmorClass, Skills: pl.Skills[:], Poisoned: pl.Poisoned, Dead: pl.Dead,
-			Status: pl.Status, Timed: pl.Timed[:]}
+			Status: pl.Status, Timed: pl.Timed[:], Magic: pl.Magic, Look: pl.Look}
 		if pl.Hand != nil {
 			o := objects([]*sim.Object{pl.Hand})[0]
 			ps.Hand = &o
@@ -111,6 +129,24 @@ func State(w *sim.World) *WorldState {
 			}
 		}
 		s.Player = ps
+	}
+	if t := w.Talk(); t != nil {
+		ts := &TalkState{Conversation: t.Def.ID, Portrait: t.Portrait, Line: t.Line, Transcript: t.Transcript}
+		if t.Speaker != nil {
+			ts.Speaker = t.Speaker.ID
+		}
+		for _, k := range t.Offered {
+			if k != "" {
+				ts.Offered = append(ts.Offered, k)
+			}
+		}
+		s.Talk = ts
+	}
+	if c := w.Counters(); len(c) > 0 {
+		s.Counters = c
+	}
+	if r := w.Records(); len(r) > 0 {
+		s.Records = r
 	}
 	for id := range w.Pack().Levels {
 		if l := w.Level(id); l != nil {

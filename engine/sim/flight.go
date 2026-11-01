@@ -19,9 +19,11 @@ const (
 	bowClass = 3
 )
 
-// Flight is a thing in flight: an object thrown or fired.
+// Flight is a thing in flight: an object thrown or fired, or a spell.
 type Flight struct {
+	// Object is the object in flight, nil for a spell; Spell the spell, nil for an object.
 	Object *Object
+	Spell  *SpellFlight
 	// U and V are its ground point; Direction its table direction; Range the steps it has left.
 	U, V, Direction, Range int
 	Damage                 int
@@ -103,6 +105,10 @@ func (w *World) updateFlights(l *Level) {
 			continue
 		}
 		f.next = w.step + Steps(flightTicks)
+		if f.Spell != nil {
+			w.updateSpell(l, f)
+			continue
+		}
 		if !f.waited {
 			f.waited = true
 			continue

@@ -1,0 +1,7 @@
+{
+  "id": "sprite.portrait.sage",
+  "frame_size": [48, 48],
+  "columns": 1,
+  "frames": 1,
+  "transparent": 255
+}

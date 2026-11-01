@@ -1,0 +1,7 @@
+{
+  "id": "sprite.scroll",
+  "frame_size": [112, 54],
+  "columns": 1,
+  "frames": 1,
+  "transparent": 255
+}

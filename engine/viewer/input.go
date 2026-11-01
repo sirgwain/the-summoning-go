@@ -35,7 +35,10 @@ const (
 	KeyEnd            Key = "End"
 	KeyEnter          Key = "Enter"
 	KeyControl        Key = "Control"
+	KeyF10            Key = "F10"
 	KeyF12            Key = "F12"
+	KeyEscape         Key = "Escape"
+	KeyBackspace      Key = "Backspace"
 )
 
 // Keys are every key the viewer reads; a shell need only report these.
@@ -43,9 +46,10 @@ var Keys = func() []Key {
 	keys := []Key{
 		KeyArrowLeft, KeyArrowRight, KeyArrowUp, KeyArrowDown, KeyShift, KeyPageUp, KeyPageDown,
 		KeyBracketLeft, KeyBracketRight, KeyEqual, KeyMinus, KeyNumpadAdd, KeyNumpadSubtract,
-		KeyHome, KeySpace, KeyTab, KeyBackquote, KeyEnd, KeyEnter, KeyControl, KeyF12,
+		KeyHome, KeySpace, KeyTab, KeyBackquote, KeyEnd, KeyEnter, KeyControl, KeyF10, KeyF12,
+		KeyEscape, KeyBackspace,
 	}
-	for _, c := range "ACDEFGHIJKLMNOPQRSTUVWXZ" {
+	for _, c := range "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
 		keys = append(keys, Key(c))
 	}
 	for d := '0'; d <= '9'; d++ {
@@ -83,11 +87,23 @@ type Input struct {
 	Left, Right   Button
 	// Wheel is the vertical scroll since the last update.
 	Wheel float64
+	// Chars are the characters typed since the last update.
+	Chars []rune
 }
 
 func (in Input) held(keys ...Key) bool {
 	for _, k := range keys {
 		if in.Held[k] {
+			return true
+		}
+	}
+	return false
+}
+
+// anyPressed reports whether any key went down, other than Shift and Control.
+func (in Input) anyPressed() bool {
+	for k, down := range in.Pressed {
+		if down && k != KeyShift && k != KeyControl {
 			return true
 		}
 	}

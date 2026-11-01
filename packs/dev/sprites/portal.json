@@ -1,0 +1,14 @@
+{
+  "id": "sprite.portal",
+  "frame_size": [32, 44],
+  "columns": 3,
+  "frames": 3,
+  "transparent": 255,
+  "anchor": [16, 40],
+  "animations": {
+    "idle": {
+      "frames": [0, 1, 2, 1],
+      "ms": 500
+    }
+  }
+}

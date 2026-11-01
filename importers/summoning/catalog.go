@@ -42,6 +42,35 @@ var engineMessages = map[string]struct {
 	content.MsgWeaponBreaks:  {0x8A, []string{"item"}},
 	content.MsgSkillUp:       {0x44, []string{"skill"}},
 	content.MsgLevelUp:       {0xA5, nil},
+
+	content.MsgCannotCast:           {0x71, nil},
+	content.MsgNotMemorized:         {0x46, []string{"school"}},
+	content.MsgOnlySpell:            {0x47, []string{"school"}},
+	content.MsgNoMagic:              {0x29, nil},
+	content.MsgForgot:               {0x68, nil},
+	content.MsgForgotMore:           {0x69, nil},
+	content.MsgNoRoomForWall:        {0x6A, nil},
+	content.MsgWallFailed:           {0x6B, nil},
+	content.MsgNoRoomForPortal:      {0x6F, nil},
+	content.MsgNoSpellNear:          {0x61, nil},
+	content.MsgNothingToMend:        {0x6D, nil},
+	content.MsgNoCreatureNear:       {0x89, nil},
+	content.MsgNoBottle:             {0x6C, nil},
+	content.MsgFilled:               {0x6E, []string{"item"}},
+	content.MsgDoorResists:          {0x34, nil},
+	content.MsgMissileWall:          {0x93, nil},
+	content.MsgBattleRage:           {0x5E, nil},
+	content.MsgBattleRageExtended:   {0x92, nil},
+	content.MsgHaste:                {0x5F, nil},
+	content.MsgFireShield:           {0x37, nil},
+	content.MsgLightningShield:      {0x38, nil},
+	content.MsgFrozen:               {0x39, nil},
+	content.MsgSight:                {0x3B, nil},
+	content.MsgWeaponSkillsUp:       {0x62, nil},
+	content.MsgWeaponSkillsExtended: {0x63, nil},
+	content.MsgMagicSkillsUp:        {0x65, nil},
+	content.MsgMagicSkillsExtended:  {0x66, nil},
+	content.MsgCured:                {0x7A, nil},
 }
 
 // placeholders replaces s's format codes, in order, with the named placeholders.
@@ -139,6 +168,8 @@ func (im *importer) items() error {
 			it.Tags = append(it.Tags, "silver")
 		}
 		im.fighting(i, tm, it)
+		im.scroll(i, tm, it)
+		im.casting(tm, it)
 		im.pack.Items[id] = it
 	}
 	im.spentAndBroken()
@@ -320,6 +351,7 @@ const (
 	creatureFootprint     = 16
 	trapFootprint         = 20
 	behaviorNeverHostile  = 0x0004
+	behaviorTalks         = 0x0008
 	behaviorCorpse        = 0x0010
 	behaviorHostile       = 0x0100
 	behaviorResists       = 0x0200
@@ -362,7 +394,7 @@ func (im *importer) creature(n int) (string, error) {
 		expBonus += 123
 	}
 	t := &content.Thing{
-		Attack: dice(rec.Attack()), Spell: rec.Spell(),
+		Attack:     dice(rec.Attack()),
 		Experience: content.Dice{Count: rec.HitDice(), Sides: 10, Bonus: expBonus},
 		ID:         id, Kind: content.ThingCreature, Sprite: sid, Speed: creatureSpeed,
 		IntervalMS: ms(rec.Interval()), Weight: creatureWeight, Footprint: creatureFootprint,
@@ -381,6 +413,22 @@ func (im *importer) creature(n int) (string, error) {
 	}
 	if rec.Bank() == slowBank {
 		t.Speed = slowSpeed
+	}
+	if sp, ok := spellID(rec.Spell()); ok && rec.Spell() != 0 {
+		t.Spell, t.SpellPower = sp, content.Dice{Count: 5, Sides: 5}
+		if rec.Frames() == stationaryCaster {
+			t.Spell, _ = spellID(1)
+			t.SpellPower = content.Dice{Count: 15, Sides: 10}
+		}
+	}
+	if rec.Behavior()&behaviorTalks != 0 {
+		t.Behaviors = append(t.Behaviors, content.BehaviorTalks)
+	}
+	if id := conversationID(rec.Conversation()); im.pack.Conversations[id] != nil {
+		t.Conversation = id
+	}
+	if p := im.npcPortrait(rec.Portrait()); p != "" {
+		t.TalkPortrait = p
 	}
 	beh := rec.Behavior()
 	for _, b := range []struct {

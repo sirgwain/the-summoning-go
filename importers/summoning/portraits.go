@@ -61,7 +61,7 @@ func (im *importer) portraits(rows []PortraitRow) {
 		return portraitID(i)
 	}
 	for i, row := range rows {
-		sid, err := im.portraitSprite(int(im.init.Bases.People) + i)
+		sid, err := im.stripSprite(int(im.init.Bases.People)+i, "sprite.portrait")
 		if err != nil {
 			im.report.addf("portrait %d: %v; left out", i, err)
 			continue
@@ -91,14 +91,17 @@ func (im *importer) portraits(rows []PortraitRow) {
 	}
 }
 
-// portraitSprite adds people bank id as one image: the bank's frames are its rows, frame 0 at the
-// top, each as high as a frame (formats.md, Strips).
-func (im *importer) portraitSprite(id int) (string, error) {
+// stripSprite adds bank id, a strip, as one image named prefix.id: the bank's frames are its
+// rows, frame 0 at the top, each as high as a frame (formats.md, Strips).
+func (im *importer) stripSprite(id int, prefix string) (string, error) {
+	sid := fmt.Sprintf("%s.%d", prefix, id)
+	if _, ok := im.pack.Sprites[sid]; ok {
+		return sid, nil
+	}
 	b, err := im.bank(id)
 	if err != nil {
 		return "", err
 	}
-	sid := fmt.Sprintf("sprite.portrait.%d", id)
 	var pix []byte
 	for _, f := range b.Frames {
 		pix = append(pix, f...)

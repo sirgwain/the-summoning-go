@@ -31,6 +31,11 @@ const (
 	messagesFile = "messages.json"
 	levelsDir    = "levels"
 	levelFile    = "level.json"
+	spellsDir    = "spells"
+	magicFile    = "magic.json"
+	keywordsFile = "keywords.json"
+	pointersFile = "pointers.json"
+	talkDir      = "conversations"
 )
 
 // Load reads the pack in fsys and verifies it.
@@ -100,12 +105,27 @@ func Load(fsys fs.FS) (*Pack, error) {
 	if err := loadRecords(fsys, textDir+"/*.json", p.Texts, func(t *Text) string { return t.ID }); err != nil {
 		return nil, err
 	}
-	if _, err := fs.Stat(fsys, messagesFile); err == nil {
-		p.Messages = &Messages{}
-		if err := readJSON(fsys, messagesFile, p.Messages); err != nil {
+	for _, f := range []struct {
+		name string
+		set  func() any
+	}{
+		{messagesFile, func() any { p.Messages = &Messages{}; return p.Messages }},
+		{magicFile, func() any { p.Magic = &Magic{}; return p.Magic }},
+		{keywordsFile, func() any { p.Keywords = &Keywords{}; return p.Keywords }},
+		{pointersFile, func() any { p.Pointers = &Pointers{}; return p.Pointers }},
+	} {
+		if _, err := fs.Stat(fsys, f.name); err == nil {
+			if err := readJSON(fsys, f.name, f.set()); err != nil {
+				return nil, err
+			}
+		} else if !errors.Is(err, fs.ErrNotExist) {
 			return nil, err
 		}
-	} else if !errors.Is(err, fs.ErrNotExist) {
+	}
+	if err := loadRecords(fsys, spellsDir+"/*.json", p.Spells, func(s *Spell) string { return s.ID }); err != nil {
+		return nil, err
+	}
+	if err := loadRecords(fsys, talkDir+"/*.json", p.Conversations, func(c *Conversation) string { return c.ID }); err != nil {
 		return nil, err
 	}
 	if err := loadRecords(fsys, levelsDir+"/*/"+levelFile, p.Levels, func(l *Level) string { return l.ID }); err != nil {
@@ -236,10 +256,22 @@ func Write(p *Pack, dir string) error {
 	if err := writeRecords(dir, textDir, "text.", p.Texts); err != nil {
 		return err
 	}
-	if p.Messages != nil {
-		if err := writeJSON(dir, messagesFile, p.Messages); err != nil {
-			return err
+	for _, f := range []struct {
+		name string
+		v    any
+		ok   bool
+	}{{messagesFile, p.Messages, p.Messages != nil}, {magicFile, p.Magic, p.Magic != nil}, {keywordsFile, p.Keywords, p.Keywords != nil}, {pointersFile, p.Pointers, p.Pointers != nil}} {
+		if f.ok {
+			if err := writeJSON(dir, f.name, f.v); err != nil {
+				return err
+			}
 		}
+	}
+	if err := writeRecords(dir, spellsDir, "spell.", p.Spells); err != nil {
+		return err
+	}
+	if err := writeRecords(dir, talkDir, "conversation.", p.Conversations); err != nil {
+		return err
 	}
 	for _, id := range sortedKeys(p.Levels) {
 		if err := writeJSON(dir, path.Join(levelsDir, fileName(id, "level."), levelFile), p.Levels[id]); err != nil {

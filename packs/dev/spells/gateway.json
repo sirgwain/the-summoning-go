@@ -1,0 +1,28 @@
+{
+  "id": "spell.gateway",
+  "name": "spell.gateway.name",
+  "school": 1,
+  "cost": 20,
+  "gesture": "ELADJKJC",
+  "icon": {
+    "sprite": "sprite.spell_icons",
+    "frame": 5
+  },
+  "needs": {
+    "floor_ahead": 32,
+    "else": "no_room_for_portal"
+  },
+  "practice": 5,
+  "effects": [
+    {
+      "portal": {
+        "thing": "thing.portal",
+        "distance": 32,
+        "to": {
+          "level": "level.hall",
+          "cell": [10, 4]
+        }
+      }
+    }
+  ]
+}

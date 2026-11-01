@@ -326,6 +326,49 @@ type Action struct {
 	Create       *Create       `json:"create,omitempty"`
 	SetFloor     *SetFloor     `json:"set_floor,omitempty"`
 	SetWall      *SetWall      `json:"set_wall,omitempty"`
+
+	// Spell effects, run with a cast's caster and power.
+	Missile        *MissileSpell `json:"missile,omitempty"`
+	FireItem       *string       `json:"fire_item,omitempty"`
+	Timed          *string       `json:"timed,omitempty"`
+	Conjure        *Conjure      `json:"conjure,omitempty"`
+	Portal         *Portal       `json:"portal,omitempty"`
+	TeleportToMark *string       `json:"teleport_to_mark,omitempty"`
+	Dispel         *int          `json:"dispel,omitempty"`
+	Join           *Join         `json:"join,omitempty"`
+	Freeze         *int          `json:"freeze,omitempty"`
+	ShapeChange    *int          `json:"shape_change,omitempty"`
+	Transmute      *Transmute    `json:"transmute,omitempty"`
+	CurePoison     bool          `json:"cure_poison,omitempty"`
+	Restore        bool          `json:"restore,omitempty"`
+	Heal           *Dice         `json:"heal,omitempty"`
+	// Converse starts the conversation of a thing template once the spell is done.
+	Converse *string `json:"converse,omitempty"`
+
+	// Conversation actions, run in a conversation.
+	Say           *string      `json:"say,omitempty"`
+	SayAs         *SayAs       `json:"say_as,omitempty"`
+	Offer         *string      `json:"offer,omitempty"`
+	ForgetOffers  bool         `json:"forget_offers,omitempty"`
+	Take          *string      `json:"take,omitempty"`
+	Give          *Object      `json:"give,omitempty"`
+	SetCounter    *SetCounter  `json:"set_counter,omitempty"`
+	AddCounter    *string      `json:"add_counter,omitempty"`
+	End           bool         `json:"end,omitempty"`
+	RemoveSpeaker bool         `json:"remove_speaker,omitempty"`
+	Hostile       bool         `json:"hostile,omitempty"`
+	SetFrame      *int         `json:"set_frame,omitempty"`
+	HealFully     bool         `json:"heal_fully,omitempty"`
+	Run           *string      `json:"run,omitempty"`
+	Teach         *string      `json:"teach,omitempty"`
+	SetPortrait   *string      `json:"set_portrait,omitempty"`
+	Effect        *string      `json:"effect,omitempty"`
+	Travel        *Destination `json:"travel,omitempty"`
+	Return        bool         `json:"return,omitempty"`
+	Jump          *int         `json:"jump,omitempty"`
+	Ending        bool         `json:"ending,omitempty"`
+	Menu          *string      `json:"menu,omitempty"`
+	Transcript    *string      `json:"transcript,omitempty"`
 }
 
 // SetHook points a feature's hook at a procedure, or at none.
@@ -367,12 +410,12 @@ type ShootItem struct {
 	Direction int    `json:"direction"`
 }
 
-// ShootSpell fires a spell from a cell. Spell is the spell's number until spells exist.
+// ShootSpell casts a spell from a cell along a direction, its power rolled from Power.
 type ShootSpell struct {
-	Cell      Cell `json:"cell"`
-	Spell     int  `json:"spell"`
-	Direction int  `json:"direction"`
-	Power     Dice `json:"power"`
+	Cell      Cell   `json:"cell"`
+	Spell     string `json:"spell"`
+	Direction int    `json:"direction"`
+	Power     Dice   `json:"power"`
 }
 
 // Create puts a new object on a cell's floor.

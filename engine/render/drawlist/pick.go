@@ -36,7 +36,7 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 		}
 	}
 	for _, t := range l.Things {
-		th := Thing{ID: t.ID, Template: t.Template.ID, U: t.U, V: t.V, Facing: t.Facing}
+		th := Thing{ID: t.ID, Template: t.Template.ID, U: t.U, V: t.V, Facing: t.Facing, Frame: t.Frame}
 		if w.Step() < t.ShownUntil {
 			th.Shown = t.Shown
 		}
@@ -53,15 +53,19 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 		s.Things = append(s.Things, th)
 	}
 	for _, f := range l.Flights {
+		if f.Spell != nil {
+			s.Flights = append(s.Flights, Flight{Sprite: f.Spell.Sprite, Frame: f.Spell.Frame, U: f.U, V: f.V})
+			continue
+		}
 		s.Flights = append(s.Flights, Flight{Item: f.Object.Item, U: f.U, V: f.V})
 	}
 	if p := w.Player(); p != nil && w.Current() == l {
-		th := Thing{ID: sim.PlayerID, Template: p.Template.ID, U: p.U, V: p.V, Facing: p.Facing}
+		th := Thing{ID: sim.PlayerID, Template: p.Template.ID, U: p.U, V: p.V, Facing: p.Facing, Sprite: p.Look}
 		if w.Step() < p.ShownUntil {
 			th.Shown = p.Shown
 		}
 		for hand := range 2 {
-			if o := p.Slots[sim.SlotRightHand+hand]; o != nil && !p.Dead {
+			if o := p.Slots[sim.SlotRightHand+hand]; o != nil && !p.Dead && p.Look == "" {
 				th.Held[hand] = o.Item
 			}
 		}

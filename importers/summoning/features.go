@@ -744,10 +744,11 @@ func (lb *levelBuilder) action(n int, in Instruction) (content.Action, bool) {
 		}
 		return content.Action{ShootItem: &content.ShootItem{Cell: c, Item: item, Direction: int(arg2)}}, true
 	case 9:
-		if arg2 > 7 {
-			return drop("direction %d", arg2)
+		spell, ok := spellID(int(arg))
+		if arg2 > 7 || !ok {
+			return drop("spell %d, direction %d", arg, arg2)
 		}
-		return content.Action{ShootSpell: &content.ShootSpell{Cell: c, Spell: int(arg), Direction: int(arg2),
+		return content.Action{ShootSpell: &content.ShootSpell{Cell: c, Spell: spell, Direction: int(arg2),
 			Power: content.Dice{Count: 6, Sides: 10}}}, true
 	case 10:
 		if id, ok := feature(content.FeaturePlate); ok {

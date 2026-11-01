@@ -1,0 +1,18 @@
+{
+  "id": "thing.target",
+  "kind": "creature",
+  "sprite": "sprite.brute",
+  "facing": 6,
+  "interval_ms": 330,
+  "weight": 100,
+  "hit_points": "6",
+  "behaviors": [
+    "stationary",
+    "leaves_corpse"
+  ],
+  "stats": {
+    "accuracy": 1,
+    "bonus": 0,
+    "resistance": 0
+  }
+}

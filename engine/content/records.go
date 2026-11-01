@@ -36,6 +36,14 @@ type Item struct {
 	// Missile is how it hurts in flight; BreaksInto what a landing bottle becomes.
 	Missile    *Missile `json:"missile,omitempty"`
 	BreaksInto string   `json:"breaks_into,omitempty"`
+	// Casts is a spell using it casts; Conversation a thing template whose conversation using it
+	// starts, used only when UseResult and the pack's use_result counter is then nonzero.
+	Casts        *Cast  `json:"casts,omitempty"`
+	Conversation string `json:"conversation,omitempty"`
+	UseResult    bool   `json:"use_result,omitempty"`
+	// Teaches are the gesture icons reading it teaches; Picture what reading it shows.
+	Teaches string `json:"teaches,omitempty"`
+	Picture *Image `json:"picture,omitempty"`
 }
 
 // Held is how an item looks in each of the player's hands.
@@ -134,6 +142,10 @@ const (
 	ThingBoulder  = "boulder"
 	ThingTrap     = "trap"
 	ThingPlayer   = "player"
+	// ThingConjured things are put up by spells: they block, can be pushed and last a while.
+	ThingConjured = "conjured"
+	// ThingPortal things take the player who walks into them where the spell said.
+	ThingPortal = "portal"
 )
 
 // DefaultFootprint is the footprint of a thing whose template gives none.
@@ -157,6 +169,8 @@ const (
 	// ones stand still and cast.
 	BehaviorAnimated   = "animated"
 	BehaviorStationary = "stationary"
+	// BehaviorTalks creatures can be talked to, until they turn hostile.
+	BehaviorTalks = "talks"
 )
 
 var behaviors = map[string]bool{
@@ -164,6 +178,7 @@ var behaviors = map[string]bool{
 	BehaviorResistsTeleport: true, BehaviorInvulnerable: true, BehaviorPoisonous: true,
 	BehaviorHurtsOnContact: true, BehaviorDeathBlow: true, BehaviorPhysicalOnly: true,
 	BehaviorResistsFire: true, BehaviorResistsLight: true, BehaviorResistsPoison: true, BehaviorAnimated: true, BehaviorStationary: true,
+	BehaviorTalks: true,
 }
 
 // ArrowClass is the weapon class of bows; arrows hurt creatures vulnerable to it more.
@@ -192,8 +207,14 @@ type Thing struct {
 	Experience Dice `json:"experience,omitzero"`
 	// Vulnerability is the weapon class that hurts it more, nil for none.
 	Vulnerability *int `json:"vulnerability,omitempty"`
-	// Spell is a creature's magic attack, 0 for none.
-	Spell int `json:"spell,omitempty"`
+	// Spell is the spell a creature casts, empty for none, at the power SpellPower rolls.
+	Spell      string `json:"spell,omitempty"`
+	SpellPower Dice   `json:"spell_power,omitzero"`
+	// Conversation is the conversation held with it; TalkPortrait the portrait it shows.
+	Conversation string `json:"conversation,omitempty"`
+	TalkPortrait string `json:"talk_portrait,omitempty"`
+	// Icons are the gesture icons a player starts knowing.
+	Icons string `json:"icons,omitempty"`
 	// Inventory is what a player starts with.
 	Inventory []InventoryObject `json:"inventory,omitempty"`
 	// Portrait is a player's portrait, which also gives its figure's colors.
@@ -307,6 +328,35 @@ const (
 	MsgNoRoomToShoot         = "no_room_to_shoot"
 	MsgCannotThrow           = "cannot_throw"
 	MsgCannotAct             = "cannot_act"
+
+	MsgCannotCast           = "cannot_cast"
+	MsgNotMemorized         = "not_memorized"
+	MsgOnlySpell            = "only_spell"
+	MsgNoMagic              = "no_magic"
+	MsgForgot               = "forgot"
+	MsgForgotMore           = "forgot_more"
+	MsgNoRoomForWall        = "no_room_for_wall"
+	MsgWallFailed           = "wall_failed"
+	MsgNoRoomForPortal      = "no_room_for_portal"
+	MsgNoSpellNear          = "no_spell_near"
+	MsgNothingToMend        = "nothing_to_mend"
+	MsgNoCreatureNear       = "no_creature_near"
+	MsgNoBottle             = "no_bottle"
+	MsgFilled               = "filled"
+	MsgDoorResists          = "door_resists"
+	MsgMissileWall          = "missile_wall"
+	MsgBattleRage           = "battle_rage"
+	MsgBattleRageExtended   = "battle_rage_extended"
+	MsgHaste                = "haste"
+	MsgFireShield           = "fire_shield"
+	MsgLightningShield      = "lightning_shield"
+	MsgFrozen               = "frozen"
+	MsgSight                = "sight"
+	MsgWeaponSkillsUp       = "weapon_skills_up"
+	MsgWeaponSkillsExtended = "weapon_skills_extended"
+	MsgMagicSkillsUp        = "magic_skills_up"
+	MsgMagicSkillsExtended  = "magic_skills_extended"
+	MsgCured                = "cured"
 )
 
 var messageKeys = map[string]bool{
@@ -333,6 +383,13 @@ var messageKeys = map[string]bool{
 	MsgNoRoomToShoot:         true,
 	MsgCannotThrow:           true,
 	MsgCannotAct:             true,
+	MsgCannotCast:            true, MsgNotMemorized: true, MsgOnlySpell: true, MsgNoMagic: true,
+	MsgForgot: true, MsgForgotMore: true, MsgNoRoomForWall: true, MsgWallFailed: true,
+	MsgNoRoomForPortal: true, MsgNoSpellNear: true, MsgNothingToMend: true, MsgNoCreatureNear: true,
+	MsgNoBottle: true, MsgFilled: true, MsgDoorResists: true, MsgMissileWall: true,
+	MsgBattleRage: true, MsgBattleRageExtended: true, MsgHaste: true, MsgFireShield: true,
+	MsgLightningShield: true, MsgFrozen: true, MsgSight: true, MsgWeaponSkillsUp: true,
+	MsgWeaponSkillsExtended: true, MsgMagicSkillsUp: true, MsgMagicSkillsExtended: true, MsgCured: true,
 }
 
 // FigureColor is the first of the colors a player's figure draws in its portrait's FigureColors.

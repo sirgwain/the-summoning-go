@@ -1,0 +1,7 @@
+{
+  "id": "sprite.gestures",
+  "frame_size": [32, 32],
+  "columns": 8,
+  "frames": 13,
+  "transparent": 255
+}

@@ -1,0 +1,63 @@
+{
+  "id": "magic",
+  "icons": [
+    {
+      "sprite": "sprite.gestures",
+      "frame": 1
+    },
+    {
+      "sprite": "sprite.gestures",
+      "frame": 2
+    },
+    {
+      "sprite": "sprite.gestures",
+      "frame": 3
+    },
+    {
+      "sprite": "sprite.gestures",
+      "frame": 4
+    },
+    {
+      "sprite": "sprite.gestures",
+      "frame": 5
+    },
+    {
+      "sprite": "sprite.gestures",
+      "frame": 6
+    },
+    {
+      "sprite": "sprite.gestures",
+      "frame": 7
+    },
+    {
+      "sprite": "sprite.gestures",
+      "frame": 8
+    },
+    {
+      "sprite": "sprite.gestures",
+      "frame": 9
+    },
+    {
+      "sprite": "sprite.gestures",
+      "frame": 10
+    },
+    {
+      "sprite": "sprite.gestures",
+      "frame": 11
+    },
+    {
+      "sprite": "sprite.gestures",
+      "frame": 12
+    }
+  ],
+  "panel": {
+    "sprite": "sprite.gestures",
+    "frame": 0
+  },
+  "schools": [
+    "school.0",
+    "school.1",
+    "school.2",
+    "school.3"
+  ]
+}

@@ -56,7 +56,7 @@ See audio.md for the descriptor, the patches and the event stream.
 
 An indexed container of NUL-terminated strings. Every byte before the terminator is XORed with DAh. Text is code page 437. Markup inside strings:
 
-- `*word*`-style asterisks mark a keyword (dialogue.md).
+- An asterisk before a word (`*friend`) marks it as a keyword (dialogue.md); punctuation after it is not part of the keyword.
 - `@` is replaced by the player's name.
 - `%s` is replaced by a value the game supplies, such as an object's name (messages 87h and 8Fh).
 - The last record is `END` and is not shown.
@@ -263,6 +263,7 @@ Resources the game uses by a fixed number rather than through a level header or 
 
 | Resource | Use |
 | --- | --- |
+| 2 | The pointer: frame 0 the arrow, 9 the speech bubble, 10 waiting (dialogue.md, The pointer) |
 | 56 | Mouth (entities.md) |
 | 60 | Entities that cycle frames 0, 1, 2, 1 (entities.md) |
 | 67 | Floor hazard tiles (world.md) |

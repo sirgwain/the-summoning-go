@@ -1,0 +1,21 @@
+{
+  "id": "spell.fireball",
+  "name": "spell.fireball.name",
+  "school": 0,
+  "cost": 15,
+  "power": "3d10",
+  "power_bonus": 6,
+  "gesture": "IBF",
+  "icon": {
+    "sprite": "sprite.spell_icons",
+    "frame": 1
+  },
+  "effects": [
+    {
+      "missile": {
+        "hurts": "fire",
+        "sprite": "sprite.bolt"
+      }
+    }
+  ]
+}

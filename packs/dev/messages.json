@@ -1,19 +1,33 @@
 {
   "id": "messages",
   "messages": {
+    "cannot_cast": "msg.cannot_cast",
     "cannot_hurt": "msg.not_hurt",
     "creature_hits": "msg.struck",
     "creature_misses": "msg.missed",
+    "door_resists": "msg.door_resists",
+    "forgot": "msg.forgot",
+    "forgot_more": "msg.forgot_more",
+    "full_health": "msg.full_health",
+    "haste": "msg.haste",
+    "healed": "msg.healed",
     "hit": "msg.hit",
     "level_up": "msg.level_up",
     "lever_stuck": "msg.lever_stuck",
     "miss": "msg.miss",
+    "missile_wall": "msg.missile_wall",
     "no_drop_here": "msg.no_drop",
+    "no_magic": "msg.no_magic",
     "no_room": "msg.no_room",
+    "no_room_for_portal": "msg.no_room_for_portal",
+    "no_room_for_wall": "msg.no_room_for_wall",
     "not_a_creature": "msg.nothing_hit",
+    "not_memorized": "msg.not_memorized",
+    "only_spell": "msg.only_spell",
     "skill_up": "msg.skill_up",
     "slot_stuck": "msg.slot_stuck",
     "slot_wrong_item": "msg.wrong_item",
+    "wall_failed": "msg.wall_failed",
     "weapon_breaks": "msg.breaks"
   }
 }

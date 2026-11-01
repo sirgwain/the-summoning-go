@@ -1,0 +1,19 @@
+{
+  "id": "item.scroll",
+  "name": "item.scroll.name",
+  "weight": 1,
+  "size": 1,
+  "icon": {
+    "sprite": "sprite.items.icons",
+    "frame": 11
+  },
+  "floor": {
+    "sprite": "sprite.items.floor",
+    "frame": 11
+  },
+  "teaches": "IBF",
+  "picture": {
+    "sprite": "sprite.scroll",
+    "frame": 0
+  }
+}

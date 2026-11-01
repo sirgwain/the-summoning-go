@@ -81,6 +81,15 @@ type Thing struct {
 	// Shown is the damage shown over the thing, until the step ShownUntil.
 	Shown      int
 	ShownUntil int64
+	// Lasts is how many more updates a conjured thing lasts; Frame shows a frame of its sprite
+	// in place of its animations; Portal is where a portal leads; Mute is a creature that no
+	// longer talks.
+	Lasts  int
+	Frame  *int
+	Portal *content.Destination
+	Mute   bool
+	// casting counts a stationary caster's updates to its next cast.
+	casting int
 	// walkDir (0..3, 4 resting) and walkCount are a walker's current walk.
 	walkDir, walkCount int
 	// next is the step of its next update.

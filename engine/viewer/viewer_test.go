@@ -121,9 +121,9 @@ func TestPauseAndStep(t *testing.T) {
 }
 
 func TestChangeLevel(t *testing.T) {
-	// Levels go in id order, wrapping: the hall is last, then the arena.
+	// Levels go in id order, wrapping: the study follows the hall.
 	v := run(t, `[{"at": 0, "select": [7, 3], "keys": ["PageDown"]}]`)
-	if v.Shown != devpack.Arena || v.Selected != nil {
+	if v.Shown != devpack.Study || v.Selected != nil {
 		t.Errorf("shown %s, selected %v", v.Shown, v.Selected)
 	}
 	v = run(t, `[{"at": 0, "keys": ["BracketRight"]}, {"at": 1, "keys": ["BracketLeft"]}]`)
@@ -221,7 +221,7 @@ func TestParseScript(t *testing.T) {
 		t.Errorf("script %+v", s)
 	}
 	for _, bad := range []string{
-		`[{"at": 0, "keys": ["Y"]}]`,
+		`[{"at": 0, "keys": ["F11"]}]`,
 		`[{"at": 0, "clik": [1, 1]}]`,
 		`[{"at": -1}]`,
 	} {
@@ -247,7 +247,7 @@ func TestPlayScript(t *testing.T) {
 		{"at": 0, "play": true},
 		{"at": 1, "hold": ["W", "D"], "for": %d},
 		{"at": %d, "hold": ["W", "A"], "for": %d},
-		{"at": %d, "keys": ["E"]}
+		{"at": %d, "keys": ["Enter"]}
 	]`, 12*n, 12*n+1, 4*n, 16*n+3))
 	if !v.Play || v.SeeAll {
 		t.Fatal("the script did not switch to playing")
@@ -257,7 +257,7 @@ func TestPlayScript(t *testing.T) {
 		t.Fatalf("walked to %v (%d, %d)", c, p.U, p.V)
 	}
 	if f := feature(t, v, "lever.a"); f.Shows != "on" {
-		t.Errorf("E did not pull lever A: %s", f.Shows)
+		t.Errorf("Enter did not pull lever A: %s", f.Shows)
 	}
 	if got := v.Dump().World.Player; got == nil || got.Cell != p.Cell() {
 		t.Errorf("the dump's player %+v", got)
@@ -374,4 +374,148 @@ func TestGameKeys(t *testing.T) {
 			t.Errorf("%s with %v: %v, want %v", c.key, c.held, got, c.want)
 		}
 	}
+}
+
+// TestTalkWaitsForAKey talks to the study's sage with input as a shell reads it, every key in
+// the snapshot and only some down: a line stays until a key goes down.
+func TestTalkWaitsForAKey(t *testing.T) {
+	v, err := New(devpack.Build(), 1, devpack.Study, 2, false, image.Pt(1280, 800))
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.SetPlay(true)
+	v.World.Update([]input.Command{input.PlacePlayer{Cell: content.Cell{1, 3}}})
+	snapshot := func(down ...Key) Input {
+		in := Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: image.Pt(-1, -1)}
+		for _, k := range Keys {
+			in.Held[k], in.Pressed[k] = false, false
+		}
+		for _, k := range down {
+			in.Held[k], in.Pressed[k] = true, true
+		}
+		return in
+	}
+	v.Update(snapshot("E"))
+	tk := v.World.Talk()
+	if tk == nil || tk.Line == nil {
+		t.Fatal("E did not start the sage's conversation")
+	}
+	for range 5 {
+		v.Update(snapshot())
+	}
+	if tk.Line == nil || tk.Line.Text != "talk.sage.hello" {
+		t.Fatalf("the first line went by without a key: %+v", tk.Line)
+	}
+	v.Update(snapshot(KeySpace))
+	if tk.Line != nil {
+		t.Errorf("Space did not go on: %+v", tk.Line)
+	}
+	if tv := v.Talk(); tv == nil || len(tv.Buttons) != 2 || tv.Buttons[0].Label != "name" {
+		t.Errorf("the offered keywords: %+v", tv)
+	}
+}
+
+// playIn returns a playing viewer of the dev pack on level with the player on cell c.
+func playIn(t *testing.T, level string, c content.Cell) *Viewer {
+	t.Helper()
+	v, err := New(devpack.Build(), 1, level, 2, false, image.Pt(1280, 800))
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.SetPlay(true)
+	v.World.Update([]input.Command{input.PlacePlayer{Cell: c}})
+	v.rebuild()
+	v.Recenter()
+	return v
+}
+
+// tapAt taps the left button at screen point pt.
+func tapAt(v *Viewer, pt image.Point) {
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: pt, Left: Button{Pressed: true, Released: true}})
+}
+
+// TestSelectingScrollReadsIt takes the scroll from a shelf onto the pointer: that reads it,
+// teaching its icons and showing its picture until the next key.
+func TestSelectingScrollReadsIt(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	p := v.World.Player()
+	v.World.Update([]input.Command{input.Drop{Cell: devpack.StudyStart, Item: devpack.ItemScroll}, input.PickUp{}})
+	if p.Slots[0] == nil || p.Magic.Knows('I') {
+		t.Fatalf("the scroll is not on shelf 0 unread: %+v, icons %q", p.Slots[0], p.Magic.Icons)
+	}
+	r, _ := v.Hotbar().SlotRect(0)
+	tapAt(v, r.Min.Add(r.Max).Div(2))
+	if p.Hand == nil || p.Hand.Item != devpack.ItemScroll || p.Magic.Icons != "BDFIJ" {
+		t.Fatalf("selecting the scroll: hand %+v, icons %q", p.Hand, p.Magic.Icons)
+	}
+	if v.Reading == nil || *v.Reading != *v.Pack.Items[devpack.ItemScroll].Picture {
+		t.Errorf("the scroll's picture is not shown: %+v", v.Reading)
+	}
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{KeySpace: true}, Cursor: image.Pt(-1, -1)})
+	if v.Reading != nil {
+		t.Error("a key did not put the picture away")
+	}
+}
+
+// TestTalkPointer moves the pointer over the sage: it becomes the speech bubble, and a click
+// there opens the conversation, twice the size and centered in the view above the hotbar.
+func TestTalkPointer(t *testing.T) {
+	v := playIn(t, devpack.Study, content.Cell{2, 4})
+	var at image.Point
+	for _, c := range v.Cmds {
+		if c.Thing == "sage" {
+			at = v.ScreenPoint(image.Pt(c.X, c.Y)).Add(image.Pt(v.Scale*4, v.Scale*4))
+		}
+	}
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: at})
+	if img, _, ok := v.Pointer(); !ok || img != *v.Pack.Pointers.Talk {
+		t.Fatalf("the pointer over the sage is %+v (%v)", img, ok)
+	}
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: image.Pt(5, 5)})
+	if img, _, _ := v.Pointer(); img != v.Pack.Pointers.Arrow {
+		t.Errorf("the pointer away from the sage is %+v", img)
+	}
+	tapAt(v, at)
+	tv := v.Talk()
+	if tv == nil {
+		t.Fatal("a click on the sage did not talk")
+	}
+	bar := v.Hotbar().Rect
+	mid := tv.Rect.Min.Add(tv.Rect.Max).Div(2)
+	if tv.Scale != 2 || tv.Rect.Max.Y > bar.Min.Y || abs(mid.X-v.Screen.X/2) > 1 || abs(mid.Y-(bar.Min.Y-Margin)/2) > 1 {
+		t.Errorf("the window is at %v, scale %d; the hotbar at %v", tv.Rect, tv.Scale, bar)
+	}
+}
+
+// TestMouthSaysBesideIt clicks the hall's mouth: no conversation opens, and its message shows
+// beside it until the player acts.
+func TestMouthSaysBesideIt(t *testing.T) {
+	v := playIn(t, devpack.Hall, content.Cell{devpack.Mouth[0], devpack.Mouth[1] - 1})
+	f := v.World.Current().Feature("mouth")
+	tl, ok := v.mouthTopLeft(f)
+	if !ok {
+		t.Fatal("the mouth has no look")
+	}
+	at := v.ScreenPoint(tl).Add(image.Pt(v.Scale*4, v.Scale*4))
+	if id, ok := v.TalkTarget(at); !ok || id != "mouth" {
+		t.Fatalf("the pointer over the mouth targets %q (%v)", id, ok)
+	}
+	tapAt(v, at)
+	if v.World.Talk() != nil {
+		t.Error("the mouth opened a conversation")
+	}
+	if v.Said == nil || !strings.Contains(v.Said.Text, "mechanisms") {
+		t.Fatalf("the mouth said %+v", v.Said)
+	}
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{"W": true}, Cursor: image.Pt(-1, -1)})
+	if v.Said != nil {
+		t.Error("acting did not put the message away")
+	}
+}
+
+func abs(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
 }

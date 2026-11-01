@@ -397,16 +397,52 @@ func (w *World) startPower(power, sign int) bool {
 }
 
 // useObject uses the object in hand by a use or use-up action: its power starts unless it
-// refuses, then a used-up object, or one out of charges, becomes its spent object.
+// refuses, or it casts its spell or starts its conversation; then a used-up object, or one out of
+// charges, becomes its spent object (docs/spec/items.md, Using objects).
 func (w *World) useObject(hand int, o *Object, a content.ItemAction) {
 	it := w.pack.Items[o.Item]
-	if it.Power == 0 || !w.usable(it.Power) {
+	switch {
+	case it.Casts != nil:
+		sp := w.pack.Spells[it.Casts.Spell]
+		if sp == nil {
+			return
+		}
+		if it.Casts.Message != "" {
+			w.message(w.Current(), w.player.Cell(), it.Casts.Message, "")
+		}
+		power := noPower
+		if it.Casts.Power != (content.Dice{}) {
+			power = w.roll(it.Casts.Power)
+		}
+		w.castSpell(w.playerCaster(), sp, power)
+	case it.Conversation != "":
+		tmpl := w.pack.Things[it.Conversation]
+		if tmpl == nil {
+			return
+		}
+		t := w.startTalk(tmpl, nil)
+		if t == nil || !it.UseResult {
+			return
+		}
+		t.use = func() {
+			if c := w.pack.Manifest.Counters; c != nil && w.counters[c.UseResult] != 0 {
+				w.usedUp(hand, o, it, a)
+			}
+		}
+		return
+	case it.Power == 0 || !w.usable(it.Power) || !w.startPower(it.Power, 1):
 		return
 	}
-	if !w.startPower(it.Power, 1) {
-		return
-	}
+	w.usedUp(hand, o, it, a)
+}
+
+// usedUp takes a use from object o in hand: one charge for a use action, else all of it; an
+// object used up becomes its spent object.
+func (w *World) usedUp(hand int, o *Object, it *content.Item, a content.ItemAction) {
 	slot := SlotRightHand + hand
+	if w.player.Slots[slot] != o {
+		return
+	}
 	if a.Kind == content.ActionUse {
 		if o.Value--; o.Value > 0 {
 			return

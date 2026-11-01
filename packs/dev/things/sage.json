@@ -1,0 +1,16 @@
+{
+  "id": "thing.sage",
+  "kind": "creature",
+  "sprite": "sprite.sage",
+  "facing": 3,
+  "interval_ms": 330,
+  "weight": 100,
+  "hit_points": "30",
+  "behaviors": [
+    "never_hostile",
+    "stationary",
+    "talks"
+  ],
+  "conversation": "conversation.sage",
+  "talk_portrait": "portrait.sage"
+}

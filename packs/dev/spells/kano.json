@@ -1,0 +1,19 @@
+{
+  "id": "spell.kano",
+  "name": "spell.kano.name",
+  "school": 1,
+  "cost": 5,
+  "gesture": "DB",
+  "icon": {
+    "sprite": "sprite.spell_icons",
+    "frame": 2
+  },
+  "effects": [
+    {
+      "missile": {
+        "opens": true,
+        "sprite": "sprite.bolt"
+      }
+    }
+  ]
+}

@@ -71,6 +71,17 @@ type Viewer struct {
 	// Events are the latest lines of the event log.
 	Events []string
 
+	// SpellsOpen shows the spell panel, and Entered is the gesture entered on it. Typed is the
+	// word typed in a conversation, PlayerName the name texts give the player, and Reading the
+	// picture of a scroll being read, shown above the hotbar until the next key or click.
+	SpellsOpen bool
+	Entered    string
+	// Said is a mouth's message showing beside it, nil when none is.
+	Said       *Said
+	Typed      string
+	PlayerName string
+	Reading    *content.Image
+
 	// press is where the mouse button went down; drag where the view was last dragged from.
 	press, drag *image.Point
 	// wheel accumulates scrolling not yet turned into zoom steps.
@@ -227,6 +238,17 @@ func (v *Viewer) CellPoint(c content.Cell) image.Point {
 func (v *Viewer) Update(in Input) {
 	v.Ticks++
 	v.Cursor = in.Cursor
+	acted := in.anyPressed() || in.Left.Released || in.Right.Released
+	if v.Said != nil && (v.Ticks > v.Said.Until || acted) {
+		v.Said = nil
+	}
+	if acted {
+		v.Reading = nil
+	}
+	if cmds, ok := v.modal(in); ok {
+		v.updateWorld(cmds)
+		return
+	}
 	v.pan(in)
 	v.scroll(in)
 	cmds := v.mouse(in)
@@ -258,8 +280,38 @@ func (v *Viewer) Update(in Input) {
 	if v.Paused && (v.Play || len(cmds) == 0) && !in.pressed("N") {
 		return
 	}
+	v.updateWorld(cmds)
+}
+
+// modal handles input while a conversation, a scroll's picture or the spell panel takes it,
+// returning the commands and true when one does.
+func (v *Viewer) modal(in Input) ([]input.Command, bool) {
+	switch {
+	case v.World.Talk() != nil:
+		return v.talkInput(in), true
+	case v.SpellsOpen:
+		cmds := v.spellKeys(in)
+		if sp := v.SpellPanel(); sp != nil && in.Cursor.In(sp.Rect) && (in.Left.Released || in.Right.Released) {
+			v.press, v.drag = nil, nil
+			return append(cmds, v.spellClick(sp, in.Cursor, in.Right.Released)...), true
+		}
+		return append(cmds, v.mouse(in)...), true
+	}
+	return nil, false
+}
+
+// updateWorld runs the world's update with cmds and brings the view up to date.
+func (v *Viewer) updateWorld(cmds []input.Command) {
 	events := v.World.Update(cmds)
 	v.log(events)
+	v.hear(events)
+	for _, e := range events {
+		if e.Kind == sim.EventMagic && e.Detail == "read" {
+			if it := v.Pack.Items[e.Item]; it != nil && it.Picture != nil {
+				v.Reading = it.Picture
+			}
+		}
+	}
 	// Shown damage runs out without an event, so a view showing some rebuilds each update.
 	if len(events) > 0 || len(v.Labels) > 0 {
 		v.rebuild()
@@ -361,10 +413,19 @@ func (v *Viewer) mouse(in Input) []input.Command {
 		return nil
 	}
 	if onBar {
+		if b, ok := slotAt(bar.Slots, bar.at(cursor)); ok && in.held(KeyShift) {
+			return []input.Command{input.Read{Slot: b.Slot}}
+		}
 		return bar.click(v, cursor, false)
+	}
+	if id, ok := v.TalkTarget(cursor); ok && v.World.Player().Hand == nil {
+		return []input.Command{input.Talk{Thing: id}}
 	}
 	pt := v.ViewPoint(cursor)
 	if v.Play && v.onPlayer(pt) {
+		if in.held(KeyShift) && v.World.Player().Hand != nil {
+			return []input.Command{input.Read{Slot: input.SlotHand}}
+		}
 		return v.clickPlayer()
 	}
 	c := drawlist.CellAt(pt)
@@ -498,12 +559,14 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 		{"F", input.PickUp{}},
 		{"G", input.PutDown{}},
 		{KeyEnter, input.Activate{}},
-		{"E", input.Activate{}},
+		{"E", input.Talk{}},
+		{"C", input.Talk{}},
 	} {
 		if in.pressed(k.key) {
 			cmds = append(cmds, k.cmd)
 		}
 	}
+	cmds = append(cmds, v.castKeys(in)...)
 	switch {
 	case in.pressed("H"):
 		v.Recenter()
@@ -616,7 +679,7 @@ func (v *Viewer) LogLines() []string {
 	n := v.LogRect().Dx()/CharWidth - 1
 	lines := make([]string, len(v.Events))
 	for i, s := range v.Events {
-		lines[i] = clip(s, n)
+		lines[i] = Clip(s, n)
 	}
 	return lines
 }
@@ -637,7 +700,9 @@ func (v *Viewer) PanelLines() []string {
 		lines = append(lines, "", "WASD/arrows walk (two: diagonal), Home PgUp End PgDn",
 			"Space right hand (Shift: 2nd)  X throw right",
 			"Q left hand (Shift: 2nd)  Z throw left",
-			"F take  G put down  Enter lever/key  E talk/use",
+			"F take  G put down  Enter lever/key  E/C talk",
+			"F1-F4 cast (Shift: next spell)  F10 spells",
+			"Shift+click read",
 			"Click the player: take / put down; click a slot:",
 			"swap with the hand; right click: hand to a shelf",
 			"Ctrl+1-0 shelf (Shift 10-19)  Ctrl+R/L hands",
@@ -650,7 +715,7 @@ func (v *Viewer) PanelLines() []string {
 		}
 		n := v.panelWidth()/CharWidth - 1
 		for i, s := range lines {
-			lines[i] = clip(s, n)
+			lines[i] = Clip(s, n)
 		}
 		return lines
 	}
@@ -682,12 +747,13 @@ func (v *Viewer) PanelLines() []string {
 		"F12 play  ~ hide the debug overlay")
 	n := v.panelWidth()/CharWidth - 1
 	for i, s := range lines {
-		lines[i] = clip(s, n)
+		lines[i] = Clip(s, n)
 	}
 	return lines
 }
 
-func clip(s string, n int) string {
+// Clip shortens s to n characters, ending it with "..." when it is cut.
+func Clip(s string, n int) string {
 	if r := []rune(s); len(r) > n && n > 3 {
 		return string(r[:n-3]) + "..."
 	}

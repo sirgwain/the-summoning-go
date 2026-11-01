@@ -31,7 +31,7 @@ Behavior bits:
 | 0001h | The player has talked to it (set by the game) |
 | 0002h | Dead (set by the game when one of its creatures dies) |
 | 0004h | Never turns hostile |
-| 0008h | Cleared by the game when it turns hostile; meaning otherwise unknown |
+| 0008h | Can be talked to; cleared by the game when it turns hostile |
 | 0010h | Leaves a corpse |
 | 0040h | Poisonous: its hits poison 2 times in 8; worth 123 more experience |
 | 0080h | Hurts on contact: 1 damage when it walks into the player |
@@ -75,7 +75,7 @@ Each update a creature counts down its current walk. When the count runs out it 
 
 Then, if it is not resting, it steps 8 units in its direction:
 
-- **The step succeeds.** With a magic attack, 1 in 10 steps it casts it: a hostile creature turns to the player first (only if it is chasing this very step), others face a random direction; the spell's power is 5d5. Otherwise it advances its walk frame.
+- **The step succeeds.** With a magic attack, 1 in 10 steps it casts it: a hostile creature turns to the player first and casts only if it is chasing the player this very step; others face a random direction; the spell's power is 5d5. Otherwise it advances its walk frame.
 - **Blocked by the player, while hostile:** it attacks (combat.md), facing the player.
 - **Blocked by the player, when it hurts on contact:** 1 damage, poisoning if the creature is poisonous.
 - **Blocked otherwise:** it turns around and rests 5–9 steps (a hostile one picks a random direction instead).
@@ -117,7 +117,9 @@ Each NPC record `n` becomes a thing template `thing.npc.n` of kind creature:
 - **Sprite**: NPC base + byte 7, with the creature anchor (entities.md). **Speed** as under Spawning, 0 for animated objects. **Interval**: byte 11 in milliseconds (`ticks × 1000 / 18.2`, rounded). **Weight** 100.
 - **Hit points**: `(byte 3)d10 + 4 × byte 2`.
 - **Facing**: for walkers, direction table entry `2 × byte 6`; for stationary casters, 2.
-- **Behaviors**: `hostile` (0100h), `never_hostile` (0004h or 1000h), `leaves_corpse` (0010h), `resists_teleport` (0200h), `invulnerable` (1000h).
+- **Behaviors**: `hostile` (0100h), `never_hostile` (0004h or 1000h), `leaves_corpse` (0010h), `resists_teleport` (0200h), `invulnerable` (1000h), `talks` (0008h).
+- **Conversation**: `conversation.n` for script `n` of byte 0 when the record talks; **talk portrait** `portrait.p` for byte 1. Portraits past F's rows are the people banks `people base + p`, imported as portraits with only an image.
+- **Spell**: the spell of byte 12 (spells.md), when it is one.
 - **Stats**: `resistance` (byte 4), `bonus` (byte 5), `accuracy` (byte 10).
 - **Animations**, the template's own (the sprite is shared by records that start on different frames), named by engine direction `e = 2d` for a creature direction `d`:
   - walkers with `n` frames: `idle.e` frame `d`; `walk.e` frames `d, d + 4` (with more than 12 frames, `d, d + 4, d, d + 8`); `attack.e` frame `d + n − 4`, all modulo `n`; `dead` the bank's last frame (Death), whatever `n` is;
@@ -133,12 +135,13 @@ A creature template carries what fighting needs: `attack` (dice, byte 9), `vulne
 - **Walking.** Creature direction `d` is engine direction `2d`. A walker's step tests its ground point like the player's (entities.md, Moving) and refuses avoided floors, and pits and open trapdoors unless it resists teleporting; it then backs off from other things by 2 units per axis. A step that moves nothing is blocked; what it met is the blocker.
 - **Waking.** A creature whose ground point is farther than 320 units (half the Manhattan distance) from the player does not move.
 - **Counting.** The walk count and rests count the creature's updates (`interval_ms`).
-- **Animated objects** (pattern 100 or more) and stationary casters do not walk; the casters' casting comes with Magic.
+- **Animated objects** (pattern 100 or more) and stationary casters do not walk.
+- **Casting.** A creature's `spell` names the spell it casts (Walkers; Stationary casters). Casting turns it as the rules above say and casts at the creature's facing with the power given; casting needs no gesture, magic points or memorization.
+- **Talking.** `conversation` names the conversation record of its NPC record, `talk_portrait` the portrait shown (byte 1), and the behavior `talks` (0008h) that it can be talked to; turning hostile takes `talks` away from that creature.
 - **Showing.** A walking creature shows `walk.e`, stepped by its moves; attacking it shows `attack.e` for its next update; a corpse shows `dead`.
 - **Dying.** Its items drop on its cell, the player gains its experience, and it becomes a corpse (`leaves_corpse`) or is removed. Corpses weigh on plates and can be pushed.
 - **Poison.** A poisoned creature is a state of the thing, not of the template.
 
 ## Unknowns
 
-- Behavior bit 0008h.
 - The exact heading rule toward the player at shallow angles: within 4 units on `v` it goes along `u`; otherwise it compares the slope of the gap. An implementation may use any rule that heads along the larger gap; refine if play shows a difference.

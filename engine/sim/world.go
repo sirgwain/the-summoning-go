@@ -42,6 +42,11 @@ type World struct {
 	status int64
 	// rules is the combat rule set the pack names.
 	rules combat.Rules
+	// talk is the open conversation, nil when none is; records are what the world keeps about
+	// thing templates; counters the story's counters, by name (absent: 0).
+	talk     *Talk
+	records  map[string]*Record
+	counters map[string]int
 }
 
 var summoningRules combat.Rules = summoning.Rules{}
@@ -49,7 +54,8 @@ var summoningRules combat.Rules = summoning.Rules{}
 // New returns a world for pack p at its start level. The seed makes its random choices
 // reproducible.
 func New(p *content.Pack, seed uint64) (*World, error) {
-	w := &World{pack: p, rng: rand.New(rand.NewPCG(seed, seed^0x9E3779B97F4A7C15)), levels: map[string]*Level{}, rules: rulesFor(p)}
+	w := &World{pack: p, rng: rand.New(rand.NewPCG(seed, seed^0x9E3779B97F4A7C15)), levels: map[string]*Level{}, rules: rulesFor(p),
+		records: map[string]*Record{}, counters: map[string]int{}}
 	for _, id := range sortedKeys(p.Items) {
 		if p.Items[id].Random {
 			w.randomItems = append(w.randomItems, id)
@@ -82,8 +88,27 @@ func (w *World) Level(id string) *Level { return w.levels[id] }
 // Update applies cmds, advances one step and returns what happened.
 func (w *World) Update(cmds []input.Command) []Event {
 	w.events = nil
+	if w.talk != nil {
+		// A conversation pauses the world: only its own commands are taken.
+		for _, c := range cmds {
+			if w.talk == nil || !w.talkCommand(c) {
+				w.emit(Event{Kind: EventRefused, Level: w.current, Detail: "in a conversation"})
+			}
+		}
+		events := w.events
+		w.events = nil
+		return events
+	}
 	for _, c := range cmds {
 		w.apply(c)
+		if w.talk != nil {
+			break
+		}
+	}
+	if w.talk != nil {
+		events := w.events
+		w.events = nil
+		return events
 	}
 	if p := w.player; p != nil && w.step >= p.next {
 		w.updatePlayer()
@@ -179,6 +204,12 @@ const (
 	EventNotYet = "not_yet"
 	// EventRefused reports a command that could not be carried out: Detail says why.
 	EventRefused = "refused"
+	// EventMagic reports the player's magic changed: a spell learned, memorized, selected, cast
+	// (Item the spell, Damage its power) or an object read (Item the object's item).
+	EventMagic = "magic"
+	// EventTalk reports a conversation started or ended (Item the conversation), or a line said
+	// (Text its text key, Detail its kind).
+	EventTalk = "talk"
 )
 
 // Event is something that happened in an update, for the presentation to show.

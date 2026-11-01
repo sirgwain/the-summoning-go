@@ -160,9 +160,14 @@ func TestImport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The fixture has six item templates, none of the starting inventory's.
+	// The fixture has six item templates, none of the starting inventory's, and no spell art, so
+	// its spells are left out.
 	for _, line := range report.Lines() {
-		if !strings.HasPrefix(line, "starting inventory:") {
+		ok := false
+		for _, prefix := range []string{"starting inventory:", "spell ", "gesture icons:", "magic wall:", "gateway:", "portrait ", "pointers:"} {
+			ok = ok || strings.HasPrefix(line, prefix)
+		}
+		if !ok {
 			t.Errorf("report: %v", line)
 		}
 	}

@@ -349,6 +349,11 @@ var itemArt = []struct {
 		c.fill(ellipse(.5*s, .62*s, .3*s, .3*s), solid(red+4))
 		c.rect(int(.42*s), int(.12*s), int(.58*s), int(.36*s), gray+10)
 	}},
+	{"scroll", func(c *canvas, s float64) {
+		c.rect(int(.2*s), int(.3*s), int(.8*s), int(.7*s), tan+6)
+		c.rect(int(.15*s), int(.25*s), int(.25*s), int(.75*s), wood+3)
+		c.rect(int(.75*s), int(.25*s), int(.85*s), int(.75*s), wood+3)
+	}},
 }
 
 func items(size int) []*canvas {

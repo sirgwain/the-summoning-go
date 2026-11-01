@@ -1,0 +1,9 @@
+{
+  "id": "thing.portal",
+  "kind": "portal",
+  "sprite": "sprite.portal",
+  "facing": 0,
+  "interval_ms": 500,
+  "footprint": 16,
+  "weight": 0
+}

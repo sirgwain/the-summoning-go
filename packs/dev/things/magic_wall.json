@@ -1,0 +1,9 @@
+{
+  "id": "thing.magic_wall",
+  "kind": "conjured",
+  "sprite": "sprite.magic_wall",
+  "facing": 0,
+  "interval_ms": 1000,
+  "footprint": 16,
+  "weight": 100
+}

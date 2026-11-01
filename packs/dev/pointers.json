@@ -1,0 +1,15 @@
+{
+  "id": "pointers",
+  "arrow": {
+    "sprite": "sprite.pointer",
+    "frame": 0
+  },
+  "talk": {
+    "sprite": "sprite.pointer",
+    "frame": 1
+  },
+  "wait": {
+    "sprite": "sprite.pointer",
+    "frame": 2
+  }
+}

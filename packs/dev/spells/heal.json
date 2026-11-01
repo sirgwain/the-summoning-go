@@ -1,0 +1,20 @@
+{
+  "id": "spell.heal",
+  "name": "spell.heal.name",
+  "school": 3,
+  "cost": 10,
+  "gesture": "FHBEHL",
+  "icon": {
+    "sprite": "sprite.spell_icons",
+    "frame": 6
+  },
+  "needs": {
+    "hurt": true
+  },
+  "practice": 5,
+  "effects": [
+    {
+      "heal": "3000"
+    }
+  ]
+}

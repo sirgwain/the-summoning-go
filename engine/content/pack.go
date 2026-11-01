@@ -25,6 +25,12 @@ type Pack struct {
 	// Messages is messages.json, or nil when the pack has none.
 	Messages *Messages
 	Levels   map[string]*Level
+	Spells   map[string]*Spell
+	// Magic is magic.json and Keywords keywords.json, or nil when the pack has none.
+	Magic         *Magic
+	Keywords      *Keywords
+	Pointers      *Pointers
+	Conversations map[string]*Conversation
 }
 
 // NewPack returns an empty pack with the given manifest.
@@ -41,6 +47,9 @@ func NewPack(m Manifest) *Pack {
 		Portraits: map[string]*Portrait{},
 		Texts:     map[string]*Text{},
 		Levels:    map[string]*Level{},
+		Spells:    map[string]*Spell{},
+
+		Conversations: map[string]*Conversation{},
 	}
 }
 
@@ -58,6 +67,8 @@ type Manifest struct {
 	Player string `json:"player,omitempty"`
 	// Rules names the combat rule set; empty means RulesSummoning.
 	Rules string `json:"rules,omitempty"`
+	// Counters names the counters the engine itself uses.
+	Counters *Counters `json:"counters,omitempty"`
 }
 
 // RulesSummoning is the Summoning's combat rule set, the only one.

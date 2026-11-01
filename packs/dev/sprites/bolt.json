@@ -1,0 +1,7 @@
+{
+  "id": "sprite.bolt",
+  "frame_size": [16, 16],
+  "columns": 5,
+  "frames": 5,
+  "transparent": 255
+}

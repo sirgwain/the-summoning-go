@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"sort"
+	"strconv"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
 )
@@ -13,6 +14,8 @@ type Source struct {
 	Colors, Init, Resource, Levels, Text, Objects, NPC []byte
 	// F holds the portraits and premade characters; without it there are no portraits.
 	F []byte
+	// Interact and Keywords hold the conversations; without them there are none.
+	Interact, Keywords []byte
 }
 
 // ReadSource reads the data files from dir.
@@ -24,6 +27,7 @@ func ReadSource(dir string) (*Source, error) {
 	}{
 		{FileColors, &s.Colors}, {FileInit, &s.Init}, {FileResource, &s.Resource}, {FileLevels, &s.Levels},
 		{FileText, &s.Text}, {FileObjects, &s.Objects}, {FileNPC, &s.NPC}, {FileClassData, &s.F},
+		{FileInteract, &s.Interact}, {FileKeywords, &s.Keywords},
 	} {
 		data, err := ReadDataFile(dir, f.name)
 		if err != nil {
@@ -115,6 +119,11 @@ type importer struct {
 	strings map[string]string
 	itemIDs []string
 	levels  int
+	// keywordIDs are the keywords by number; talkers the NPC templates conversations and objects
+	// name; interact is INTERACT.
+	keywordIDs []string
+	talkers    map[string]bool
+	interact   *Interact
 }
 
 // Import converts the data files into a content pack.
@@ -161,6 +170,10 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 			Palette: paletteID(0),
 			Start:   content.Start{Level: levelID(int(in.StartLevel)), Cell: content.Cell{int(in.StartX), int(in.StartY)}},
 			Rules:   content.RulesSummoning,
+			Counters: &content.Counters{
+				AfterConversation: varID(varAfterConversation), UseResult: varID(varUseResult),
+				Transformed: varID(varTransformed),
+			},
 		}),
 		init:      in,
 		resources: resources,
@@ -169,6 +182,7 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 		objects:   objects,
 		npcs:      npcs,
 		levels:    len(levels),
+		talkers:   map[string]bool{},
 	}
 	for i, p := range palettes {
 		pal := &content.Palette{ID: paletteID(i), Colors: p, Effects: paletteEffects()}
@@ -189,6 +203,35 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 		}
 		im.portraits(rows)
 	}
+	if sid, _, err := im.rawSprite(int(in.Bases.NPC) + npcTransformed); err == nil {
+		im.pack.Manifest.Counters.TransformedLook = sid
+	}
+	if src.Keywords != nil {
+		words, err := ReadKeywords(src.Keywords)
+		if err != nil {
+			return nil, nil, err
+		}
+		im.keywords(words, len(text)+1)
+	}
+	if src.Interact != nil {
+		in, err := ReadInteract(src.Interact)
+		if err != nil {
+			return nil, nil, err
+		}
+		im.conversations(in)
+	}
+	for _, id := range sortedKeys(im.talkers) {
+		if _, ok := im.pack.Things[id]; !ok {
+			n, _ := strconv.Atoi(id[len("thing.npc."):])
+			if _, err := im.creature(n); err != nil {
+				im.report.addf("%s: %v", id, err)
+			}
+		}
+	}
+	if err := im.spells(); err != nil {
+		return nil, nil, err
+	}
+	im.pointers()
 
 	for i, l := range levels {
 		cl, err := im.level(i, l)

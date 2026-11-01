@@ -25,6 +25,8 @@ const (
 	gap          = 4
 	// actionWidth is an action button's width; two per hand, a slot high each.
 	actionWidth = 40
+	// gestureSize is the gesture box's side: two slots high.
+	gestureSize = 2 * SlotSize
 	// hotbarWidthPer is the screen width that buys each step of hotbar scale.
 	hotbarWidthPer = 600
 	maxHotbarScale = 4
@@ -68,11 +70,33 @@ type Hotbar struct {
 	// Slots are the hands' boxes, right then left, and then the shelves'.
 	Slots   []SlotBox
 	Actions []ActionButton
+	// Spells are the schools' boxes, each showing its selected spell; Gesture shows the gesture
+	// playing, and opens the spell panel.
+	Spells  [content.Schools]SpellBox
+	Gesture GestureBox
+}
+
+// SpellBox is a school's box on the hotbar: its selected spell and how often it is memorized.
+type SpellBox struct {
+	Rect   image.Rectangle
+	School int
+	// Icon is the selected spell's icon, if Has; Count its memorizations.
+	Icon  content.Image
+	Has   bool
+	Count int
+}
+
+// GestureBox shows the icon of the gesture playing, or the empty panel.
+type GestureBox struct {
+	Rect image.Rectangle
+	Icon content.Image
+	Has  bool
 }
 
 // hotbarSize is the hotbar's size in hotbar pixels.
 func hotbarSize() image.Point {
-	w := portraitSize + gap + gaugeCount*(gaugeWidth+gap) + SlotSize + actionWidth*2 + gap + ShelfColumns*SlotSize
+	w := portraitSize + gap + gaugeCount*(gaugeWidth+gap) + SlotSize + actionWidth*2 + gap + ShelfColumns*SlotSize +
+		gap + 2*SlotSize + gap + gestureSize
 	return image.Pt(w, ShelfRows*SlotSize)
 }
 
@@ -119,6 +143,22 @@ func (v *Viewer) Hotbar() *Hotbar {
 		bx, by := x+(i%ShelfColumns)*SlotSize, (i/ShelfColumns)*SlotSize
 		h.Slots = append(h.Slots, SlotBox{Rect: image.Rect(bx, by, bx+SlotSize, by+SlotSize), Slot: i})
 	}
+	x += ShelfColumns*SlotSize + gap
+	for s := range content.Schools {
+		bx, by := x+(s/2)*SlotSize, (s%2)*SlotSize
+		b := SpellBox{Rect: image.Rect(bx, by, bx+SlotSize, by+SlotSize), School: s}
+		if sp := v.Pack.Spells[p.Magic.Selected[s]]; sp != nil && sp.Icon != nil {
+			b.Icon, b.Has, b.Count = *sp.Icon, true, p.Magic.Memorized[sp.ID]
+		}
+		h.Spells[s] = b
+	}
+	x += 2*SlotSize + gap
+	h.Gesture.Rect = image.Rect(x, 0, x+gestureSize, gestureSize)
+	if c, ok := p.Magic.Icon(v.Pack); ok && v.Pack.Magic != nil && int(c-'A') < len(v.Pack.Magic.Icons) {
+		h.Gesture.Icon, h.Gesture.Has = v.Pack.Magic.Icons[c-'A'], true
+	} else if m := v.Pack.Magic; m != nil && m.Panel != nil {
+		h.Gesture.Icon, h.Gesture.Has = *m.Panel, true
+	}
 	return h
 }
 
@@ -164,11 +204,25 @@ func (h *Hotbar) SlotRect(slot int) (image.Rectangle, bool) {
 // (a right click on a slot does nothing more than on the view: the hand goes to a shelf).
 func (h *Hotbar) click(v *Viewer, pt image.Point, right bool) []input.Command {
 	if right {
+		for _, b := range h.Spells {
+			if h.at(pt).In(b.Rect) {
+				return []input.Command{input.NextSpell{School: b.School}}
+			}
+		}
 		return v.rightClick(false)
 	}
 	at := h.at(pt)
 	if b, ok := slotAt(h.Slots, at); ok {
 		return v.clickSlot(b.Slot)
+	}
+	for _, b := range h.Spells {
+		if at.In(b.Rect) {
+			return []input.Command{input.Cast{School: b.School}}
+		}
+	}
+	if at.In(h.Gesture.Rect) {
+		v.OpenSpells()
+		return nil
 	}
 	for _, a := range h.Actions {
 		if at.In(a.Rect) {
@@ -183,6 +237,14 @@ func (v *Viewer) HoverText(cursor image.Point) string {
 	h := v.Hotbar()
 	if h == nil || !cursor.In(h.Rect) {
 		return ""
+	}
+	for _, s := range h.Spells {
+		if h.at(cursor).In(s.Rect) {
+			if sp := v.Pack.Spells[v.World.Player().Magic.Selected[s.School]]; sp != nil {
+				return inspect.Text(v.Pack, sp.Name)
+			}
+			return ""
+		}
 	}
 	b, ok := slotAt(h.Slots, h.at(cursor))
 	if !ok {

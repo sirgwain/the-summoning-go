@@ -1,0 +1,27 @@
+{
+  "id": "spell.magic_wall",
+  "name": "spell.magic_wall.name",
+  "school": 1,
+  "cost": 15,
+  "power": "2d6",
+  "power_bonus": 4,
+  "gesture": "BIKG",
+  "icon": {
+    "sprite": "sprite.spell_icons",
+    "frame": 4
+  },
+  "needs": {
+    "floor_ahead": 16,
+    "else": "no_room_for_wall"
+  },
+  "practice": 5,
+  "effects": [
+    {
+      "conjure": {
+        "thing": "thing.magic_wall",
+        "distance": 16,
+        "look_per_skill": 3
+      }
+    }
+  ]
+}

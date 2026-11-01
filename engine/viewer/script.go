@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/input"
@@ -43,6 +45,16 @@ type Step struct {
 	Slot        *int  `json:"slot,omitempty"`
 	Action      []int `json:"action,omitempty"`
 	Right       bool  `json:"right,omitempty"`
+	// Tap taps a named part of the play UI (TapPoint): "spell.0" a school's box, "gesture" the
+	// gesture box, "icon.A" an icon of the spell panel, "learn", "back" and "close" its buttons,
+	// "book.0" a spellbook entry, "offer.0" a conversation's offered keyword (by place), "bye",
+	// "word.<text>" a marked word of the line shown, and "talk.<id>" the middle of the box where
+	// the pointer talks to a creature or mouth of the shown level.
+	Tap string `json:"tap,omitempty"`
+	// Hover moves the cursor onto a part named as Tap's, without a click.
+	Hover string `json:"hover,omitempty"`
+	// Type types text, as characters.
+	Type string `json:"type,omitempty"`
 	// Wheel scrolls, positive to zoom in.
 	Wheel float64 `json:"wheel,omitempty"`
 	// Shot saves the screen after the update, and Dump the viewer's state, to these files.
@@ -203,9 +215,95 @@ func (r *Runner) Before(v *Viewer) (Input, error) {
 			}
 			tap(pt)
 		}
+		if st.Tap != "" {
+			pt, err := v.TapPoint(st.Tap)
+			if err != nil {
+				return in, fmt.Errorf("update %d: %w", r.at, err)
+			}
+			tap(pt)
+		}
+		if st.Hover != "" {
+			pt, err := v.TapPoint(st.Hover)
+			if err != nil {
+				return in, fmt.Errorf("update %d: %w", r.at, err)
+			}
+			in.Cursor = pt
+		}
+		in.Chars = append(in.Chars, []rune(st.Type)...)
 		in.Wheel += st.Wheel
 	}
 	return in, nil
+}
+
+// TapPoint returns the screen point of a named part of the play UI (Step.Tap).
+func (v *Viewer) TapPoint(name string) (image.Point, error) {
+	mid := func(r image.Rectangle) image.Point { return r.Min.Add(r.Max).Div(2) }
+	kind, arg, _ := strings.Cut(name, ".")
+	n, _ := strconv.Atoi(arg)
+	switch kind {
+	case "spell", "gesture":
+		h := v.Hotbar()
+		if h == nil {
+			return image.Point{}, fmt.Errorf("no hotbar while not playing")
+		}
+		if kind == "gesture" {
+			return mid(h.Screen(h.Gesture.Rect)), nil
+		}
+		if n < 0 || n >= len(h.Spells) {
+			return image.Point{}, fmt.Errorf("no school %d", n)
+		}
+		return mid(h.Screen(h.Spells[n].Rect)), nil
+	case "icon", "learn", "back", "close", "book":
+		sp := v.SpellPanel()
+		if sp == nil {
+			return image.Point{}, fmt.Errorf("the spell panel is closed")
+		}
+		switch kind {
+		case "icon":
+			for _, b := range sp.Icons {
+				if string(b.Letter) == arg {
+					return mid(sp.Screen(b.Rect)), nil
+				}
+			}
+		case "book":
+			if n >= 0 && n < len(sp.Book) {
+				return mid(sp.Screen(sp.Book[n].Rect)), nil
+			}
+		default:
+			for _, b := range sp.Buttons {
+				if b.Name == kind {
+					return mid(sp.Screen(b.Rect)), nil
+				}
+			}
+		}
+	case "talk":
+		for _, c := range v.Cmds {
+			if c.Thing == arg {
+				return v.ScreenPoint(image.Pt(c.X, c.Y).Add(image.Pt(talkBox/2-talkInset, talkBox/2-talkInset))), nil
+			}
+		}
+		if f := v.World.Current().Feature(arg); f != nil {
+			if tl, ok := v.mouthTopLeft(f); ok {
+				return v.ScreenPoint(tl.Add(image.Pt(talkBox/2-talkInset, talkBox/2-talkInset))), nil
+			}
+		}
+	case "offer", "bye", "word":
+		tv := v.Talk()
+		if tv == nil {
+			return image.Point{}, fmt.Errorf("no conversation")
+		}
+		for _, b := range tv.Buttons {
+			if b.Name == name {
+				return mid(tv.Screen(b.Rect)), nil
+			}
+		}
+		for _, w := range tv.Words {
+			if kind == "word" && w.Keyword && strings.EqualFold(keywordOf(w), arg) {
+				return mid(tv.Screen(w.Rect)), nil
+			}
+		}
+	}
+	return image.Point{}, fmt.Errorf("nothing to tap named %q", name)
 }
 
 // covered reports whether screen point pt is under the panel, the log or the hotbar.

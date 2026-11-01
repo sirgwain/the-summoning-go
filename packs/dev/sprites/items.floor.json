@@ -2,6 +2,6 @@
   "id": "sprite.items.floor",
   "frame_size": [14, 14],
   "columns": 8,
-  "frames": 11,
+  "frames": 12,
   "transparent": 255
 }
