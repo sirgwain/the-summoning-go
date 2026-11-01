@@ -282,6 +282,9 @@ leaves out shows nothing. Later milestones add keys.
   `power`.
 - `teaches` are the gesture icons reading a scroll teaches (`"EIB"`), `picture` the image shown
   when it is read.
+- `doll` is how the item shows on the inventory's figure when worn: `{ "image", "at" }`, `at` the
+  pixel of the figure its image's top-left goes on (mirrored for the right hand). An action's
+  `icon` is the image its box shows.
 - `held` is how the item looks in the player's hands:
   `{ "right": { "behind": sprite, "front": sprite }, "left": { … } }`. Each sprite has a frame for
   every frame of the player's sprite, drawn with it (an empty frame for none), and its own anchor
@@ -439,6 +442,33 @@ the schools' names.
 
 `arrow` is the pointer over the view; `talk` over a creature that talks or a mouth, which a click
 talks to; `wait` while the game waits. Without the file the system's pointer is used.
+
+## Inventory
+
+`inventory.json`: what the inventory panel and the hotbar's hands draw.
+
+```json
+{
+  "id": "inventory",
+  "doll": { "sprite": "sprite.strip.8", "frame": 0 },
+  "quiver_slot": { "image": { "sprite": "sprite.strip.386", "frame": 0 }, "at": [12, 3] },
+  "bare_hands": [{ "sprite": "sprite.res.50", "frame": 1 }, { "sprite": "sprite.res.50", "frame": 0 }],
+  "strike_icon": { "sprite": "sprite.res.48", "frame": 8 },
+  "throw_icon": { "sprite": "sprite.res.48", "frame": 0 },
+  "weapon_icons": ["…four images…"], "school_icons": ["…four…"],
+  "weapon_ratings": ["msg.1", "…ten, for levels 1–10…"], "school_ratings": ["msg.11", "…"],
+  "level_titles": ["msg.21", "…one for each level from 0…"],
+  "labels": { "weight": "msg.129", "damage": "msg.130", "damage_after": "msg.131",
+              "armor": "msg.132", "two_handed": "msg.133" }
+}
+```
+
+- `doll` is the figure the worn objects are drawn on, `quiver_slot` how an object in the quiver
+  slot shows on it (in place of its own `doll` look).
+- `bare_hands` are the right and left hands' pictures when empty; `strike_icon` and `throw_icon`
+  the icons of striking bare-handed and of throwing.
+- The icons, ratings and titles name the skills and levels; `labels` are the details' words.
+  Every field is optional.
 
 ## Keywords
 

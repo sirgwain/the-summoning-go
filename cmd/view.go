@@ -60,10 +60,10 @@ its first letter, asks it next. Then click an offered keyword, or type a word an
 Escape, a right click or Bye leaves.
 
 The hotbar along the bottom shows the portrait, hit points, magic points and load, the hands
-with their actions, and the twenty shelves. Clicking the player takes the top object underfoot
-onto the pointer, or puts the pointer's object down (stand on a keyhole and click the player to
-put a key in); clicking a hand or shelf swaps it with the pointer; clicking an action acts with
-that hand. The right button puts the pointer's object on the first empty shelf, or takes the
+with their action boxes (each hand's actions, then throwing), and the twenty shelves. Clicking
+the player takes the top object underfoot onto the pointer, or puts the pointer's object down
+(stand on a keyhole and click the player to put a key in); clicking a hand or shelf swaps it with
+the pointer; clicking an action box acts with that hand. The right button puts the pointer's object on the first empty shelf, or takes the
 object underfoot straight there. Shift and a click reads an object (a shelf, a hand, or the
 pointer's on the player): a scroll shows its picture and teaches its icons, as selecting it
 (taking it from a shelf onto the pointer) does. The four boxes after
@@ -72,9 +72,11 @@ the end shows the gesture playing, and opens the spell panel. Over a creature th
 mouth (a skull), the pointer becomes a speech bubble: a click talks to the creature, or shows the
 mouth's message beside it. Taking a scroll onto the pointer reads it.
 
-Until the inventory has its panel, Ctrl reaches the rest: Ctrl+1-9 and 0 swap the hand with shelves
-0-9 (with Shift, 10-19), Ctrl+R and Ctrl+L with the right and left hands, Ctrl+W puts what is in
-hand on (worn, or in the right hand), Ctrl+F1-F8 swap with the pack (the bag in the left hand).
+I or Tab, or clicking the portrait, opens the inventory panel (Escape closes it): the figure
+showing what it wears, with a box for each worn slot (head, neck, arms, right hand on the left;
+quiver, body, left hand, feet on the right), the pack of a bag held in the left hand, the details
+of the object under the pointer or on it, and the character's attributes, points, armor, level,
+experience and skills. Its boxes work as the hotbar's: a click swaps a box with the pointer.
 
 V shows the whole level, F12 switches to the viewer's tools (see summoning view --help),
 clicking a cell inspects it, ~ hides or shows the debug overlay: the text, and the outlines of
@@ -201,6 +203,7 @@ var (
 	spellEdgeColor = color.RGBA{120, 140, 220, 255}
 	talkColor      = color.RGBA{16, 12, 10, 235}
 	keywordColor   = color.RGBA{230, 200, 90, 255}
+	waitShade      = color.RGBA{0, 0, 0, 140}
 )
 
 // shell runs a viewer in a window: it reads Ebitengine's input into snapshots, or takes them
@@ -221,9 +224,9 @@ type shell struct {
 	err    error
 	// art holds index images for the hotbar's and the pointer's art, by size.
 	art map[image.Point]*ebiten.Image
-	// talk and said are the conversation window and a mouth's message, drawn at their own pixels
-	// and scaled onto the screen.
-	talk, said *ebiten.Image
+	// talk, said and inv are the conversation window, a mouth's message and the inventory panel,
+	// drawn at their own pixels and scaled onto the screen.
+	talk, said, inv *ebiten.Image
 }
 
 func newShell(v *viewer.Viewer) (*shell, error) {
@@ -324,6 +327,7 @@ func (s *shell) Draw(screen *ebiten.Image) {
 	s.drawLabels(screen)
 	s.drawHotbar(screen)
 	s.drawSpellPanel(screen)
+	s.drawInventory(screen)
 	s.drawSaid(screen)
 	s.drawTalk(screen)
 	s.drawReading(screen)
@@ -434,7 +438,9 @@ func (s *shell) drawHotbar(screen *ebiten.Image) {
 		}
 		fill(r, c)
 		stroke(r, slotEdgeColor)
-		ebitenutil.DebugPrintAt(screen, a.Label, r.Min.X+(r.Dx()-len(a.Label)*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+		if a.Icon == nil {
+			ebitenutil.DebugPrintAt(screen, a.Label, r.Min.X+(r.Dx()-len(a.Label)*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+		}
 	}
 
 	art := s.artImage(h.Rect.Size().Div(h.Scale))
@@ -463,16 +469,96 @@ func (s *shell) drawHotbar(screen *ebiten.Image) {
 			centered(b.Icon, b.Rect)
 		}
 	}
+	// An action box shows the object's picture with the action's icon over it.
+	for _, a := range h.Actions {
+		if a.Picture != nil {
+			centered(*a.Picture, a.Rect)
+		}
+		if a.Icon != nil {
+			centered(*a.Icon, a.Rect)
+		}
+	}
 	if h.Gesture.Has {
 		centered(h.Gesture.Icon, h.Gesture.Rect)
 	}
 	s.presenter.PresentAt(screen, art, h.Scale, h.Rect.Min)
+	for _, a := range h.Actions {
+		if !a.Ready {
+			fill(h.Screen(a.Rect).Inset(1), waitShade)
+		}
+	}
 	for _, b := range h.Spells {
 		if b.Count > 1 {
 			r := h.Screen(b.Rect)
 			ebitenutil.DebugPrintAt(screen, fmt.Sprint(min(b.Count, 9)), r.Max.X-viewer.CharWidth-2, r.Max.Y-viewer.LineHeight)
 		}
 	}
+}
+
+// drawInventory draws the inventory panel: the figure with what it wears, the worn slots' and
+// the pack's boxes with their objects, and the lines of details and stats. It draws the panel at
+// its own pixels, then scales it onto the screen.
+func (s *shell) drawInventory(screen *ebiten.Image) {
+	v := s.v
+	ip := v.Inventory()
+	if ip == nil {
+		return
+	}
+	size := ip.Rect.Size().Div(ip.Scale)
+	if s.inv == nil || s.inv.Bounds().Size() != size {
+		if s.inv != nil {
+			s.inv.Deallocate()
+		}
+		s.inv = ebiten.NewImage(size.X, size.Y)
+	}
+	win := s.inv
+	win.Fill(talkColor)
+	vector.StrokeRect(win, 0.5, 0.5, float32(size.X-1), float32(size.Y-1), 1, slotEdgeColor, false)
+	for _, b := range ip.Slots {
+		r := b.Rect.Inset(1)
+		vector.FillRect(win, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), slotColor, false)
+		edge := slotEdgeColor
+		if b.Slot >= sim.Shelves && b.Slot < sim.SlotPack {
+			edge = handEdgeColor
+		}
+		vector.StrokeRect(win, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx()-1), float32(r.Dy()-1), 1, edge, false)
+	}
+	art := s.artImage(size)
+	draw := func(img content.Image, at image.Point, mirrored bool) {
+		if err := s.sprites.DrawImage(art, img, at.X, at.Y, mirrored); err != nil && s.err == nil {
+			s.err = err
+		}
+	}
+	if ip.HasDoll {
+		draw(ip.Doll, ip.DollAt, false)
+		for _, part := range ip.Parts {
+			draw(part.Image, ip.DollAt.Add(part.At), part.Mirrored)
+		}
+	}
+	for _, b := range ip.Slots {
+		if img, ok := v.SlotImage(b.Slot); ok {
+			fs := v.Pack.Sprites[img.Sprite].FrameSize
+			draw(img, b.Rect.Min.Add(image.Pt((b.Rect.Dx()-fs[0])/2, (b.Rect.Dy()-fs[1])/2)), false)
+		}
+	}
+	textAt := map[int]int{}
+	for i, l := range ip.Lines {
+		if l.Icon == nil {
+			continue
+		}
+		draw(*l.Icon, l.At.Add(image.Pt(0, 4)), false)
+		if b := v.Pack.Sprites[l.Icon.Sprite]; b != nil {
+			textAt[i] = b.FrameSize[0] + 4
+		}
+	}
+	s.presenter.PresentAt(win, art, 1, image.Point{})
+	for i, l := range ip.Lines {
+		ebitenutil.DebugPrintAt(win, l.Text, l.At.X+textAt[i], l.At.Y)
+	}
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(float64(ip.Scale), float64(ip.Scale))
+	op.GeoM.Translate(float64(ip.Rect.Min.X), float64(ip.Rect.Min.Y))
+	screen.DrawImage(win, op)
 }
 
 // drawSpellPanel draws the spell panel: the icons known, the gesture entered, the buttons and the
@@ -690,6 +776,7 @@ func (s *shell) drawPointer(screen *ebiten.Image) {
 		ebitenutil.DebugPrintAt(screen, text, at.X+2, at.Y)
 	}
 	img, centered, ok := v.Pointer()
+	ok = ok && cursor.In(image.Rectangle{Max: v.Screen})
 	mode := ebiten.CursorModeVisible
 	if ok && !s.scripted() {
 		mode = ebiten.CursorModeHidden

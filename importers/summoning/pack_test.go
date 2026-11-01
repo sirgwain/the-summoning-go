@@ -164,7 +164,7 @@ func TestImport(t *testing.T) {
 	// its spells are left out.
 	for _, line := range report.Lines() {
 		ok := false
-		for _, prefix := range []string{"starting inventory:", "spell ", "gesture icons:", "magic wall:", "gateway:", "portrait ", "pointers:"} {
+		for _, prefix := range []string{"starting inventory:", "spell ", "gesture icons:", "magic wall:", "gateway:", "portrait ", "pointers:", "inventory:", "worn image "} {
 			ok = ok || strings.HasPrefix(line, prefix)
 		}
 		if !ok {

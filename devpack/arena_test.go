@@ -10,7 +10,7 @@ import (
 
 // TestArenaFight plays the arena by its script (scripts/arena.json) through the viewer, as a
 // person would: the player takes the sword onto the pointer (a click on the player) and puts it
-// on, in the right hand (Ctrl+W), turns toward the goblin, and strikes (Space) whenever the hand
+// in the right hand (a click on its box on the hotbar), turns toward the goblin, and strikes (Space) whenever the hand
 // is ready. The goblin comes and fights. The test checks
 // what a person would see: the sword drawn in the player's hand, damage shown over both, and the
 // goblin lying as a corpse at the end. Watch it with

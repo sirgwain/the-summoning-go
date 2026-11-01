@@ -72,6 +72,7 @@ func (p *Pack) Verify() error {
 	v.magic()
 	v.keywords()
 	v.pointers()
+	v.inventory()
 	for _, id := range sortedKeys(p.Spells) {
 		v.spell(p.Spells[id])
 	}
@@ -240,6 +241,14 @@ func (v *verifier) itemRecord(i *Item) {
 	}
 	v.frame(owner+" icon", i.Icon.Sprite, i.Icon.Frame)
 	v.frame(owner+" floor", i.Floor.Sprite, i.Floor.Frame)
+	if i.Doll != nil {
+		v.frame(owner+" doll", i.Doll.Image.Sprite, i.Doll.Image.Frame)
+	}
+	for n, a := range i.Actions {
+		if a.Icon != nil {
+			v.frame(owner+" action "+itoa(n)+" icon", a.Icon.Sprite, a.Icon.Frame)
+		}
+	}
 	if i.Casts != nil {
 		v.spellRef(owner, i.Casts.Spell)
 	}

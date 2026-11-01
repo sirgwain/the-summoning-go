@@ -14,5 +14,12 @@
   "armor": 1,
   "wear": "feet",
   "power": 10,
-  "power_worn": true
+  "power_worn": true,
+  "doll": {
+    "image": {
+      "sprite": "sprite.doll.parts",
+      "frame": 0
+    },
+    "at": [28, 104]
+  }
 }

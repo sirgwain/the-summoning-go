@@ -55,7 +55,7 @@ var Keys = func() []Key {
 	for d := '0'; d <= '9'; d++ {
 		keys = append(keys, Key("Digit"+string(d)))
 	}
-	for f := 1; f <= packKeys; f++ {
+	for f := 1; f <= functionKeys; f++ {
 		keys = append(keys, Key(fmt.Sprintf("F%d", f)))
 	}
 	return keys

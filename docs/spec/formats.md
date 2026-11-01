@@ -199,7 +199,7 @@ Tables read in order:
 | 6 | Three u16: frontend base (1232), view-effect base (1315), end-scene base (1440) |
 | 22 | Eleven u16 resource bases, in order: small object (100), worn (333), tiny object (566), people (799), music (1487), scroll (894), character animation (919), held-item animation (963), terrain (1012), NPC (1080), wall decoration (1186) |
 | 1 | `N` (233) |
-| 2N | Worn-image offsets: N pairs `(col, row)` |
+| 2N | Worn-image offsets: N pairs `(row, column)`, where worn image `i` is drawn on the paper doll (items.md, The inventory panel) |
 | 256 | Texture shades (panel stone texture; FFh ends the cycle) |
 | 256 | Base color map |
 | 96 | Figure frame shifts |

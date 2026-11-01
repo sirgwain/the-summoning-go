@@ -25,7 +25,19 @@ it once done.
    (`slots.go`); a key goes into a keyhole by mouse (`TestKeyIntoSlotWithMouse`). Portraits
    import from F and give the figure its colors E0h–E3h.
 
-7. **Magic and talk** (done out of order, before Fight's last items and the Inventory panel).
+6. **Inventory** (done before Fight's last items). The inventory panel (`engine/viewer/inventory.go`),
+   opened with I, Tab or a click on the portrait: the game's paper doll with each worn object's
+   worn look (mirrored in the right hand, the quiver slot's own look), a box for each worn slot,
+   the pack of a bag in the left hand, the details of the object under the pointer or on it
+   (weight in half kilograms, damage, armor, two hands), and the attributes with their maxima,
+   points, armor, level title, experience and the skills with their icons and ratings. The
+   hotbar's hands have three action boxes each, the object's picture under the action's icon,
+   the third throwing. The importer writes `inventory.json` and each item's `doll` look and
+   action icons; the Ctrl stand-in keys are gone. Scripts keep the cursor where they last tapped,
+   so the pointer's object shows in their screenshots. Tested by `TestInventoryPanel` and
+   `TestHandActionBoxes`.
+
+7. **Magic and talk** (done out of order, before Fight's last items).
    Spells are records with effects from the action registry (missiles, timed effects, conjured
    walls, portals, teleports, dispel, join, freeze, shape change, transmute, cures); the player
    knows gesture icons, learns spells into a spellbook by entering gestures, memorizes within
@@ -103,16 +115,15 @@ a whole fight.
 
 - See above. Also confusion in walking, and haste and battle rage in the speed formula.
 
-### 6. Inventory
+### 6. Inventory, left
 
-- The inventory panel: the mannequin with the worn slots (head, arms, hands, feet, quiver, body,
-  neck), the pack of the bag in the left hand, the stats (attributes, skills, armor, experience),
-  the chosen object's details. Built on the hotbar's `SlotBox` and pointer code; the game's object
-  icons, no panel art. It replaces the Ctrl stand-in keys (Ctrl+R/L hands, Ctrl+W put on,
-  Ctrl+F1–F8 pack).
-- Hotbar action buttons as the game's action icons rather than words.
-- The pointer's object drawn over the hotbar's cursor in scripts (scripts park the cursor off
-  screen between clicks).
+- Clicking the figure itself: the game picks a worn slot by the region clicked (items.md, The
+  inventory panel); the engine's panel has a box for each slot beside the figure instead.
+- A bag in the left hand shows on the figure by how full it is (worn images 2Fh on), and the
+  chest has a look of its own; neither is imported. Which hand objects count as the armor drawn
+  last is a guess (those with an armor bonus).
+- The game draws an attribute below or above its maximum in another color, and an armor gauge;
+  the panel writes the maximum after it and the armor class as a number.
 
 ### 7. Magic and talk, left
 

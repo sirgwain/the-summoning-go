@@ -18,24 +18,25 @@ import (
 
 // Pack layout.
 const (
-	manifestFile = "pack.json"
-	palettesDir  = "palettes"
-	spritesDir   = "sprites"
-	floorsDir    = "tiles/floors"
-	wallsDir     = "tiles/walls"
-	looksDir     = "looks"
-	itemsDir     = "items"
-	thingsDir    = "things"
-	portraitsDir = "portraits"
-	textDir      = "text"
-	messagesFile = "messages.json"
-	levelsDir    = "levels"
-	levelFile    = "level.json"
-	spellsDir    = "spells"
-	magicFile    = "magic.json"
-	keywordsFile = "keywords.json"
-	pointersFile = "pointers.json"
-	talkDir      = "conversations"
+	manifestFile  = "pack.json"
+	palettesDir   = "palettes"
+	spritesDir    = "sprites"
+	floorsDir     = "tiles/floors"
+	wallsDir      = "tiles/walls"
+	looksDir      = "looks"
+	itemsDir      = "items"
+	thingsDir     = "things"
+	portraitsDir  = "portraits"
+	textDir       = "text"
+	messagesFile  = "messages.json"
+	levelsDir     = "levels"
+	levelFile     = "level.json"
+	spellsDir     = "spells"
+	magicFile     = "magic.json"
+	keywordsFile  = "keywords.json"
+	pointersFile  = "pointers.json"
+	inventoryFile = "inventory.json"
+	talkDir       = "conversations"
 )
 
 // Load reads the pack in fsys and verifies it.
@@ -113,6 +114,7 @@ func Load(fsys fs.FS) (*Pack, error) {
 		{magicFile, func() any { p.Magic = &Magic{}; return p.Magic }},
 		{keywordsFile, func() any { p.Keywords = &Keywords{}; return p.Keywords }},
 		{pointersFile, func() any { p.Pointers = &Pointers{}; return p.Pointers }},
+		{inventoryFile, func() any { p.Inventory = &Inventory{}; return p.Inventory }},
 	} {
 		if _, err := fs.Stat(fsys, f.name); err == nil {
 			if err := readJSON(fsys, f.name, f.set()); err != nil {
@@ -260,7 +262,7 @@ func Write(p *Pack, dir string) error {
 		name string
 		v    any
 		ok   bool
-	}{{messagesFile, p.Messages, p.Messages != nil}, {magicFile, p.Magic, p.Magic != nil}, {keywordsFile, p.Keywords, p.Keywords != nil}, {pointersFile, p.Pointers, p.Pointers != nil}} {
+	}{{messagesFile, p.Messages, p.Messages != nil}, {magicFile, p.Magic, p.Magic != nil}, {keywordsFile, p.Keywords, p.Keywords != nil}, {pointersFile, p.Pointers, p.Pointers != nil}, {inventoryFile, p.Inventory, p.Inventory != nil}} {
 		if f.ok {
 			if err := writeJSON(dir, f.name, f.v); err != nil {
 				return err

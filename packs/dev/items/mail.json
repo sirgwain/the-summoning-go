@@ -16,5 +16,12 @@
   },
   "armor": 4,
   "durability": 7500,
-  "wear": "body"
+  "wear": "body",
+  "doll": {
+    "image": {
+      "sprite": "sprite.doll.parts",
+      "frame": 1
+    },
+    "at": [26, 36]
+  }
 }

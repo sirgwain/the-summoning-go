@@ -1,0 +1,7 @@
+{
+  "id": "sprite.bare_hands",
+  "frame_size": [16, 16],
+  "columns": 2,
+  "frames": 2,
+  "transparent": 255
+}

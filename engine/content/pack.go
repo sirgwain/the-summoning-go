@@ -30,6 +30,7 @@ type Pack struct {
 	Magic         *Magic
 	Keywords      *Keywords
 	Pointers      *Pointers
+	Inventory     *Inventory
 	Conversations map[string]*Conversation
 }
 

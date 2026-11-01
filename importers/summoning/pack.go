@@ -193,6 +193,7 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 	if err := im.items(); err != nil {
 		return nil, nil, err
 	}
+	im.inventory()
 	if err := im.player(); err != nil {
 		return nil, nil, err
 	}

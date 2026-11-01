@@ -344,7 +344,9 @@ func (w *World) startPower(power, sign int) bool {
 			if w.chance(1, 2) {
 				n = -1
 			}
-			p.Attributes[attributeNames[w.rng.IntN(6)]] += n
+			a := attributeNames[w.rng.IntN(6)]
+			p.Attributes[a] += n
+			p.MaxAttributes[a] += n
 		}
 	case 0x15:
 		p.Poisoned, p.Confusion = false, 0

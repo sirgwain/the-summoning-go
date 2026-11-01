@@ -62,8 +62,9 @@ type Player struct {
 	Facing                      int
 	HitPoints, MaxHitPoints     int
 	MagicPoints, MaxMagicPoints int
-	// Attributes are the player's attributes by name.
-	Attributes map[string]int
+	// Attributes are the player's attributes by name, as they are now; MaxAttributes their
+	// maxima, from which fatigue, boosts and worn objects move them.
+	Attributes, MaxAttributes map[string]int
 	// IntervalBonus is the ticks worn objects and powers add to the interval.
 	IntervalBonus int
 	// Portrait is the player's portrait, which gives its figure's colors.
@@ -182,6 +183,12 @@ func (w *World) newPlayer() *Player {
 			}
 		default:
 			p.Attributes[k] = v
+		}
+	}
+	p.MaxAttributes = map[string]int{}
+	for _, a := range attributeNames {
+		if v, ok := p.Attributes[a]; ok {
+			p.MaxAttributes[a] = v
 		}
 	}
 	p.NextLevel = w.rules.LevelThreshold(0)

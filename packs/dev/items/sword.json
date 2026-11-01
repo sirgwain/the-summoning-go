@@ -20,13 +20,21 @@
       "kind": "attack",
       "damage": "2d6",
       "delay": 4,
-      "skill": 1
+      "skill": 1,
+      "icon": {
+        "sprite": "sprite.action_icons",
+        "frame": 2
+      }
     },
     {
       "kind": "attack",
       "damage": "1d10",
       "delay": 3,
-      "skill": 2
+      "skill": 2,
+      "icon": {
+        "sprite": "sprite.action_icons",
+        "frame": 3
+      }
     }
   ],
   "held": {
@@ -34,5 +42,12 @@
       "behind": "sprite.sword.held.behind",
       "front": "sprite.sword.held.front"
     }
+  },
+  "doll": {
+    "image": {
+      "sprite": "sprite.doll.parts",
+      "frame": 2
+    },
+    "at": [6, 40]
   }
 }

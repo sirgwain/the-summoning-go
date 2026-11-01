@@ -237,8 +237,8 @@ func TestParseScript(t *testing.T) {
 }
 
 // TestPlayScript plays the dev pack by script, walking with held keys to lever A and using it;
-// then by key presses picks a rock up (F), shelves it (Ctrl+1), takes it back and puts it down
-// (G).
+// then by key presses picks a rock up (F), shelves it, takes it back with a click on its shelf and
+// puts it down (G).
 func TestPlayScript(t *testing.T) {
 	// The player steps every n updates: 12 steps up and right (−u) from the start, then 4 up and
 	// left (−v).
@@ -277,9 +277,10 @@ func TestPlayScript(t *testing.T) {
 	if p := v.World.Player(); p.Hand != nil || p.Slots[0] == nil || p.Slots[0].Item != devpack.ItemRock {
 		t.Fatalf("F did not put the rock on shelf 0: hand %v, shelf %v", p.Hand, p.Slots[0])
 	}
-	key("Digit1", KeyControl)
+	r, _ := v.Hotbar().SlotRect(0)
+	tapAt(v, r.Min.Add(r.Max).Div(2))
 	if p := v.World.Player(); p.Hand == nil || p.Slots[0] != nil {
-		t.Fatal("Ctrl+1 did not take the rock off shelf 0")
+		t.Fatal("clicking shelf 0 did not take the rock off it")
 	}
 	key("G")
 	if p := v.World.Player(); p.Hand != nil || len(v.World.Current().Objects[devpack.RocksB[0]]) != 1 {
@@ -365,9 +366,6 @@ func TestGameKeys(t *testing.T) {
 		{KeyPageUp, nil, input.Walk{Direction: 0}},   // up and right: −u
 		{KeyEnd, nil, input.Walk{Direction: 4}},      // down and left: +u
 		{KeyPageDown, nil, input.Walk{Direction: 2}}, // down and right: +v
-		{"W", []Key{KeyControl}, input.PutOn{}},
-		{"Digit3", []Key{KeyControl, KeyShift}, input.Swap{Slot: 12}},
-		{"F2", []Key{KeyControl}, input.Swap{Slot: 29}},
 	} {
 		got := press(c.key, c.held...)
 		if len(got) != 1 || got[0] != c.want {

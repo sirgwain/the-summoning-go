@@ -1,0 +1,7 @@
+{
+  "id": "sprite.doll",
+  "frame_size": [96, 128],
+  "columns": 1,
+  "frames": 1,
+  "transparent": 255
+}

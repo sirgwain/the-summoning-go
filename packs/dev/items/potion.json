@@ -15,7 +15,11 @@
   "actions": [
     {
       "kind": "use_up",
-      "delay": 3
+      "delay": 3,
+      "icon": {
+        "sprite": "sprite.action_icons",
+        "frame": 4
+      }
     }
   ],
   "power": 40

@@ -116,10 +116,14 @@ type Runner struct {
 	first, last int
 	// held are earlier steps whose keys are still held.
 	held []Step
+	// cursor is where the last tap or hover left the cursor, off the screen before any.
+	cursor image.Point
 }
 
 // NewRunner returns a runner for script s that writes its files relative to dir.
-func NewRunner(s Script, dir string) *Runner { return &Runner{script: s, dir: dir} }
+func NewRunner(s Script, dir string) *Runner {
+	return &Runner{script: s, dir: dir, cursor: image.Pt(-1, -1)}
+}
 
 // Done reports whether every step has run and no keys are still held.
 func (r *Runner) Done() bool {
@@ -142,7 +146,7 @@ func (r *Runner) Before(v *Viewer) (Input, error) {
 		r.next++
 	}
 	r.last = r.next
-	in := Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: image.Pt(-1, -1)}
+	in := Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: r.cursor}
 	held := r.held[:0]
 	for _, st := range r.held {
 		if r.at < st.At+st.For {
@@ -185,7 +189,7 @@ func (r *Runner) Before(v *Viewer) (Input, error) {
 			in.Held[Key(k)], in.Pressed[Key(k)] = true, true
 		}
 		tap := func(pt image.Point) {
-			in.Cursor = pt
+			in.Cursor, r.cursor = pt, pt
 			if st.Right {
 				in.Right = Button{Pressed: true, Released: true}
 			} else {
@@ -227,7 +231,7 @@ func (r *Runner) Before(v *Viewer) (Input, error) {
 			if err != nil {
 				return in, fmt.Errorf("update %d: %w", r.at, err)
 			}
-			in.Cursor = pt
+			in.Cursor, r.cursor = pt, pt
 		}
 		in.Chars = append(in.Chars, []rune(st.Type)...)
 		in.Wheel += st.Wheel
@@ -311,6 +315,9 @@ func (v *Viewer) covered(pt image.Point) bool {
 	if pt.In(v.PanelRect()) || pt.In(v.LogRect()) {
 		return true
 	}
+	if ip := v.Inventory(); ip != nil && pt.In(ip.Rect) {
+		return true
+	}
 	h := v.Hotbar()
 	return h != nil && pt.In(h.Rect)
 }
@@ -322,6 +329,11 @@ func hotbarPoint(v *Viewer, st Step) (image.Point, error) {
 		return image.Point{}, fmt.Errorf("no hotbar while not playing")
 	}
 	mid := func(r image.Rectangle) image.Point { return r.Min.Add(r.Max).Div(2) }
+	if ip := v.Inventory(); st.Slot != nil && ip != nil {
+		if r, ok := ip.SlotRect(*st.Slot); ok {
+			return mid(r), nil
+		}
+	}
 	if st.Slot != nil {
 		r, ok := h.SlotRect(*st.Slot)
 		if !ok {

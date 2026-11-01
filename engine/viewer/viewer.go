@@ -76,6 +76,8 @@ type Viewer struct {
 	// picture of a scroll being read, shown above the hotbar until the next key or click.
 	SpellsOpen bool
 	Entered    string
+	// InventoryOpen shows the inventory panel.
+	InventoryOpen bool
 	// Said is a mouth's message showing beside it, nil when none is.
 	Said       *Said
 	Typed      string
@@ -371,7 +373,9 @@ func (v *Viewer) pan(in Input) {
 func (v *Viewer) mouse(in Input) []input.Command {
 	cursor := in.Cursor
 	bar := v.Hotbar()
-	onBar := bar != nil && cursor.In(bar.Rect)
+	inv := v.Inventory()
+	onInv := inv != nil && cursor.In(inv.Rect)
+	onBar := bar != nil && cursor.In(bar.Rect) || onInv
 	if cursor.In(image.Rectangle{Max: v.Screen}) && !cursor.In(v.PanelRect()) && !onBar {
 		c := drawlist.CellAt(v.ViewPoint(cursor))
 		v.Hover = &c
@@ -404,6 +408,8 @@ func (v *Viewer) mouse(in Input) []input.Command {
 		switch {
 		case !clicked() || !v.Play || bar == nil:
 			return nil
+		case onInv:
+			return v.inventoryClick(inv, cursor, true, false)
 		case onBar:
 			return bar.click(v, cursor, true)
 		}
@@ -412,7 +418,14 @@ func (v *Viewer) mouse(in Input) []input.Command {
 	if !in.Left.Released || !clicked() {
 		return nil
 	}
+	if onInv {
+		return v.inventoryClick(inv, cursor, false, in.held(KeyShift))
+	}
 	if onBar {
+		if cursor.In(bar.Screen(bar.PortraitRect)) {
+			v.ToggleInventory()
+			return nil
+		}
 		if b, ok := slotAt(bar.Slots, bar.at(cursor)); ok && in.held(KeyShift) {
 			return []input.Command{input.Read{Slot: b.Slot}}
 		}
@@ -508,8 +521,8 @@ func (v *Viewer) keys(in Input) []input.Command {
 	return nil
 }
 
-// packKeys are the function keys that reach pack slots while playing.
-const packKeys = 8
+// functionKeys are the function keys the viewer reads, F1 on.
+const functionKeys = 8
 
 // playKeys turns the keys into the player's commands, laid out as the game's are:
 //
@@ -518,14 +531,11 @@ const packKeys = 8
 //   - Space acts with the right hand (Shift+Space its second action) and X throws from it; Q acts
 //     with the left hand (Shift+Q) and Z throws from it.
 //   - F takes from the floor, G puts down, Enter pulls the lever underfoot or uses a key on the
-//     keyhole underfoot, E talks (for now uses a mouth), H recenters the view, P pauses.
-//
-// Until the inventory has its panel, Ctrl reaches it: Ctrl+1–0 swap the hand with shelves 0–9
-// (with Shift, 10–19), Ctrl+R and Ctrl+L with the right and left hands, Ctrl+W puts the hand's
-// object on, Ctrl+F1–F8 swap with the pack.
+//     keyhole underfoot, E talks, H recenters the view, P pauses.
+//   - I or Tab opens and closes the inventory panel, as clicking the portrait does.
 func (v *Viewer) playKeys(in Input) []input.Command {
 	if in.held(KeyControl) {
-		return v.inventoryKeys(in)
+		return nil
 	}
 	var cmds []input.Command
 	var x, y int
@@ -568,39 +578,14 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 	}
 	cmds = append(cmds, v.castKeys(in)...)
 	switch {
+	case in.pressed("I", KeyTab):
+		v.ToggleInventory()
+	case in.pressed(KeyEscape) && v.InventoryOpen:
+		v.InventoryOpen = false
 	case in.pressed("H"):
 		v.Recenter()
 	case in.pressed("P"):
 		v.Paused = !v.Paused
-	}
-	return cmds
-}
-
-// inventoryKeys are the keys held with Ctrl while playing: the inventory's stand-in until it has
-// its panel.
-func (v *Viewer) inventoryKeys(in Input) []input.Command {
-	var cmds []input.Command
-	switch {
-	case in.pressed("R"):
-		cmds = append(cmds, input.Swap{Slot: sim.SlotRightHand})
-	case in.pressed("L"):
-		cmds = append(cmds, input.Swap{Slot: sim.SlotLeftHand})
-	case in.pressed("W"):
-		cmds = append(cmds, input.PutOn{})
-	}
-	for d := range 10 {
-		if in.pressed(Key(fmt.Sprintf("Digit%d", (d+1)%10))) {
-			slot := d
-			if in.held(KeyShift) {
-				slot += 10
-			}
-			cmds = append(cmds, input.Swap{Slot: slot})
-		}
-	}
-	for f := range packKeys {
-		if in.pressed(Key(fmt.Sprintf("F%d", f+1))) {
-			cmds = append(cmds, input.Swap{Slot: sim.SlotPack + f})
-		}
 	}
 	return cmds
 }
@@ -705,8 +690,7 @@ func (v *Viewer) PanelLines() []string {
 			"Shift+click read",
 			"Click the player: take / put down; click a slot:",
 			"swap with the hand; right click: hand to a shelf",
-			"Ctrl+1-0 shelf (Shift 10-19)  Ctrl+R/L hands",
-			"Ctrl+W put on  Ctrl+F1-F8 pack",
+			"I/Tab or click the portrait: inventory",
 			"H recenter  P pause  N step  M magnify",
 			"V see all  F12 tools  ~ debug")
 		if v.Selected != nil {

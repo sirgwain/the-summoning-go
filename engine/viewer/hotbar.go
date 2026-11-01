@@ -23,8 +23,8 @@ const (
 	portraitSize = 48
 	gaugeWidth   = 6
 	gap          = 4
-	// actionWidth is an action button's width; two per hand, a slot high each.
-	actionWidth = 40
+	// actionBoxes is how many action boxes each hand has, a slot square each.
+	actionBoxes = 3
 	// gestureSize is the gesture box's side: two slots high.
 	gestureSize = 2 * SlotSize
 	// hotbarWidthPer is the screen width that buys each step of hotbar scale.
@@ -47,13 +47,17 @@ type Gauge struct {
 	Value, Max int
 }
 
-// ActionButton is a button acting with a hand by one of its object's actions.
+// ActionButton is a box acting with a hand by one of its object's actions, or throwing it
+// (Action ThrowAction).
 type ActionButton struct {
 	Rect         image.Rectangle
 	Hand, Action int
 	// Label names the action; Ready is false while the hand waits its delay.
 	Label string
 	Ready bool
+	// Picture is the object's image (or the bare hand's) and Icon the action's over it, when
+	// the pack has them.
+	Picture, Icon *content.Image
 }
 
 // Hotbar is the hotbar laid out on the screen.
@@ -95,7 +99,7 @@ type GestureBox struct {
 
 // hotbarSize is the hotbar's size in hotbar pixels.
 func hotbarSize() image.Point {
-	w := portraitSize + gap + gaugeCount*(gaugeWidth+gap) + SlotSize + actionWidth*2 + gap + ShelfColumns*SlotSize +
+	w := portraitSize + gap + gaugeCount*(gaugeWidth+gap) + SlotSize + actionBoxes*SlotSize + gap + ShelfColumns*SlotSize +
 		gap + 2*SlotSize + gap + gestureSize
 	return image.Pt(w, ShelfRows*SlotSize)
 }
@@ -127,18 +131,13 @@ func (v *Viewer) Hotbar() *Hotbar {
 	for hand := range 2 {
 		y := hand * SlotSize
 		h.Slots = append(h.Slots, SlotBox{Rect: image.Rect(x, y, x+SlotSize, y+SlotSize), Slot: sim.SlotRightHand + hand})
-		labels := v.actionLabels(p, hand)
-		for a, label := range labels {
-			// One action takes both buttons' room.
-			w := 2 * actionWidth / len(labels)
-			ax := x + SlotSize + a*w
-			h.Actions = append(h.Actions, ActionButton{
-				Rect: image.Rect(ax, y, ax+w, y+SlotSize), Hand: hand, Action: a,
-				Label: label, Ready: p.Delays[hand] == 0 && !p.Dead,
-			})
+		for _, b := range v.actionButtons(p, hand) {
+			ax := x + SlotSize + b.Action*SlotSize
+			b.Rect = image.Rect(ax, y, ax+SlotSize, y+SlotSize)
+			h.Actions = append(h.Actions, b)
 		}
 	}
-	x += SlotSize + 2*actionWidth + gap
+	x += SlotSize + actionBoxes*SlotSize + gap
 	for i := range sim.Shelves {
 		bx, by := x+(i%ShelfColumns)*SlotSize, (i/ShelfColumns)*SlotSize
 		h.Slots = append(h.Slots, SlotBox{Rect: image.Rect(bx, by, bx+SlotSize, by+SlotSize), Slot: i})
@@ -162,24 +161,38 @@ func (v *Viewer) Hotbar() *Hotbar {
 	return h
 }
 
-// actionLabels names the actions of what hand holds: bare hands strike.
-func (v *Viewer) actionLabels(p *sim.Player, hand int) []string {
+// ThrowAction is the action number of a hand's throw box.
+const ThrowAction = 2
+
+// actionButtons are the action boxes of what hand holds (docs/spec/items.md, The inventory
+// panel): its actions, then throwing; bare hands only strike.
+func (v *Viewer) actionButtons(p *sim.Player, hand int) []ActionButton {
+	inv := v.Pack.Inventory
+	if inv == nil {
+		inv = &content.Inventory{}
+	}
+	ready := p.Delays[hand] == 0 && !p.Dead
 	o := p.Slots[sim.SlotRightHand+hand]
 	if o == nil {
-		return []string{"strike"}
+		b := ActionButton{Hand: hand, Action: 0, Label: "strike", Ready: ready, Icon: inv.StrikeIcon}
+		if hand < len(inv.BareHands) {
+			b.Picture = &inv.BareHands[hand]
+		}
+		return []ActionButton{b}
 	}
 	it := v.Pack.Items[o.Item]
 	if it == nil {
 		return nil
 	}
-	var labels []string
-	for _, a := range it.Actions[:min(len(it.Actions), 2)] {
-		labels = append(labels, map[string]string{
-			content.ActionAttack: "strike", content.ActionAttackBoth: "swing", content.ActionFire: "fire",
-			content.ActionUseUp: "use", content.ActionUse: "use",
-		}[a.Kind])
+	var out []ActionButton
+	for a, act := range it.Actions[:min(len(it.Actions), 2)] {
+		out = append(out, ActionButton{Hand: hand, Action: a, Ready: ready, Icon: act.Icon, Picture: &it.Icon,
+			Label: map[string]string{
+				content.ActionAttack: "strike", content.ActionAttackBoth: "swing", content.ActionFire: "fire",
+				content.ActionUseUp: "use", content.ActionUse: "use",
+			}[act.Kind]})
 	}
-	return labels
+	return append(out, ActionButton{Hand: hand, Action: ThrowAction, Label: "throw", Ready: ready, Icon: inv.ThrowIcon, Picture: &it.Icon})
 }
 
 // Screen returns the screen rectangle of hotbar rectangle r.
@@ -226,6 +239,9 @@ func (h *Hotbar) click(v *Viewer, pt image.Point, right bool) []input.Command {
 	}
 	for _, a := range h.Actions {
 		if at.In(a.Rect) {
+			if a.Action == ThrowAction {
+				return []input.Command{input.Throw{Hand: a.Hand}}
+			}
 			return []input.Command{input.Strike{Hand: a.Hand, Action: a.Action}}
 		}
 	}
@@ -234,6 +250,14 @@ func (h *Hotbar) click(v *Viewer, pt image.Point, right bool) []input.Command {
 
 // HoverText names what is under the cursor on the hotbar: an object in a slot.
 func (v *Viewer) HoverText(cursor image.Point) string {
+	if ip := v.Inventory(); ip != nil && cursor.In(ip.Rect) {
+		if b, ok := slotAt(ip.Slots, ip.at(cursor)); ok {
+			if o := v.World.Player().Slot(v.Pack, b.Slot); o != nil {
+				return inspect.ItemName(v.Pack, o.Item)
+			}
+		}
+		return ""
+	}
 	h := v.Hotbar()
 	if h == nil || !cursor.In(h.Rect) {
 		return ""

@@ -44,6 +44,8 @@ type Item struct {
 	// Teaches are the gesture icons reading it teaches; Picture what reading it shows.
 	Teaches string `json:"teaches,omitempty"`
 	Picture *Image `json:"picture,omitempty"`
+	// Doll is how it shows on the inventory's figure when worn.
+	Doll *DollImage `json:"doll,omitempty"`
 }
 
 // Held is how an item looks in each of the player's hands.
@@ -115,6 +117,8 @@ type ItemAction struct {
 	Delay int `json:"delay"`
 	// Skill is the weapon class skill level an attack needs.
 	Skill int `json:"skill,omitempty"`
+	// Icon is the image its box shows.
+	Icon *Image `json:"icon,omitempty"`
 }
 
 // Attack reports whether the action strikes.

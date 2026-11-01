@@ -1,0 +1,7 @@
+{
+  "id": "sprite.doll.parts",
+  "frame_size": [40, 40],
+  "columns": 4,
+  "frames": 4,
+  "transparent": 255
+}

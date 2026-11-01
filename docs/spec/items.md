@@ -76,6 +76,20 @@ Objects given by the game (conversations, powers) go into the first empty shelf,
 
 With the right button, an object on the pointer goes to the first empty shelf; with an empty pointer, clicking the player's figure takes the top object underfoot straight to the first empty shelf. With no empty shelf the right button does nothing.
 
+## The inventory panel
+
+The game shows the inventory in panels below the view.
+
+- **The paper doll.** RESOURCE 8, a strip 96 pixels wide and 128 high, is the figure. Each worn slot's object is drawn on it with its worn image: RESOURCE `worn base + i` (INIT), a strip, where `i` is the object's image byte (byte 10), at the worn-image offset `i` from INIT (row, column) from the doll's top-left. The quiver slot's object is drawn with worn image 35h instead, and a quiver anywhere else with 36h. The right hand's image is mirrored left to right and drawn at column `96 − column − width`. They are drawn in the order quiver, body, head, feet, neck, arms, then the two hands, the hands' armor last. A click on the doll picks the slot by the region it falls in: the top-left corner (rows below 38, columns below 38) is the quiver; the top (rows below 32) the head; the neck around (31..45, 39..54) while something is worn there; rows from 102 the feet; from 79 the body; from 53 the right hand left of column 44 and the left hand right of it, and from 38 too while that hand holds something; an empty hand's region is the arms when something is worn there; anything else the body. An object on the pointer goes to the slot its category takes instead (Wearing), arrows to the quiver.
+- **The hands.** Each hand has three action boxes, RESOURCE 31h: its first two actions and throwing. A box shows the object's small image with the action's icon over it, RESOURCE 30h frame `(icon − 100) / 10 + 1` for icons from 100 and frame `icon` below; the throw box frame 0. An empty hand shows RESOURCE 32h (frame 1 for the right hand, 0 for the left) with the strike icon, frame 8.
+- **The pack.** A bag held in the left hand opens as the pack: its picture, a bar as long as its capacity (RESOURCE 27h), and its contents in two rows of slots.
+- **The character page**, one of three: the six attributes as `STR: 18`, an attribute below or above its maximum drawn in another color with the maximum after it; the weapon classes with a level, highest first, each with its icon (RESOURCE 12h, frame = class) and its rating, TEXT 1..10 by level (at most 10); the schools the same way (RESOURCE 13h, TEXT 11..20).
+- **The information panel** shows the object on the pointer: a scroll's picture (spells.md, Scrolls), or the object's small image, its name, "Weight: " (TEXT 81h) and its weight, for a weapon "Can do " (82h) its largest damage and " damage points" (83h), "AC bonus of " (84h) its armor (its effective armor when worn down, with the full bonus in parentheses), and "Requires two hands" (85h) for two-handed objects. With nothing on the pointer it shows the character's name, its level's title (TEXT `15h + level`) and the weight carried, and always the armor gauge (30 − armor class, RESOURCE 0Fh) and the experience.
+
+Weights are in half kilograms: a weight `w` shows as `w / 2` kg, with ".5" for an odd `w`.
+
+**Engine model.** The pack's inventory record gives the doll's picture, the quiver slot's look, the empty hands' pictures, the strike and throw icons, the skills' icons and ratings, the level titles and the panel's labels; an item gives its worn look (`doll`, an image and where it goes on the doll) and each action its icon. The engine's panel shows the doll with the worn looks and a box for each worn slot beside it, the pack's slots, the character's attributes, skills, hit and magic points, armor, level and experience, and the details of the object under the pointer or on it. Its boxes work as the hotbar's do (The mouse). The hotbar's hands show three action boxes each, the third throwing.
+
 **Engine model.** The player has a hand and slots numbered as above. Commands:
 
 - **Pick up** takes the top object of the player's cell, as the take key does: an arrow into a worn quiver with room, anything else into the first empty shelf, else message 7Fh (`no_room`) and it stays on the floor. **Pick up into the hand**, as clicking the player with an empty pointer does, takes it onto the pointer instead; with an object already in hand it is a plain pick up. Taking it off the floor lifts its weight off a plate.
@@ -246,5 +260,6 @@ Template 0 in a level becomes a random object rather than the item itself.
 
 - Whether the game also magnifies floor objects on its own, for example while the player has timed sight (player.md) or by interaction variable 98 (dialogue.md).
 - Which bank the thrown-look frames index.
-- The worn-look flags in byte 11 and the image tables; specified with character drawing.
+- The worn-look flags in byte 11 and the image tables for the figure in the view; specified with character drawing.
+- Which hand objects count as armor drawn last on the doll; the engine draws those with an armor bonus last. The pictures of a bag in the left hand, which show how full it is (worn images 2Fh on by a third of its contents), are not imported.
 - Category 6, and the hand delay formula beyond what is given.

@@ -1,0 +1,59 @@
+{
+  "id": "inventory",
+  "doll": {
+    "sprite": "sprite.doll",
+    "frame": 0
+  },
+  "quiver_slot": {
+    "image": {
+      "sprite": "sprite.doll.parts",
+      "frame": 3
+    },
+    "at": [2, 2]
+  },
+  "bare_hands": [
+    {
+      "sprite": "sprite.bare_hands",
+      "frame": 0
+    },
+    {
+      "sprite": "sprite.bare_hands",
+      "frame": 1
+    }
+  ],
+  "strike_icon": {
+    "sprite": "sprite.action_icons",
+    "frame": 1
+  },
+  "throw_icon": {
+    "sprite": "sprite.action_icons",
+    "frame": 0
+  },
+  "weapon_ratings": [
+    "rating.weapon.1",
+    "rating.weapon.2",
+    "rating.weapon.3",
+    "rating.weapon.4",
+    "rating.weapon.5"
+  ],
+  "school_ratings": [
+    "rating.school.1",
+    "rating.school.2",
+    "rating.school.3",
+    "rating.school.4",
+    "rating.school.5"
+  ],
+  "level_titles": [
+    "title.0",
+    "title.1",
+    "title.2",
+    "title.3"
+  ],
+  "labels": {
+    "armor": "label.armor",
+    "damage": "label.damage",
+    "damage_after": "label.damage_after",
+    "two_handed": "label.two_handed",
+    "weight": "label.weight"
+  }
+}
