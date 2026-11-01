@@ -23,7 +23,7 @@ const (
 	talkPortrait   = 48
 	talkFieldWidth = 240
 	maxField       = 39
-	// DefaultName is the player's name in texts until the player has one.
+	// DefaultName is the player's name in texts when the player has none.
 	DefaultName = "Stranger"
 )
 
@@ -139,11 +139,15 @@ func (tv *TalkView) at(pt image.Point) image.Point { return pt.Sub(tv.Rect.Min).
 
 // lineText returns text key's text with the player's name in place of @.
 func (v *Viewer) lineText(key string) string {
-	name := v.PlayerName
-	if name == "" {
-		name = DefaultName
+	return strings.ReplaceAll(inspect.Text(v.Pack, key), "@", v.playerName())
+}
+
+// playerName returns the player's name, or DefaultName while it has none.
+func (v *Viewer) playerName() string {
+	if p := v.World.Player(); p != nil && p.Name != "" {
+		return p.Name
 	}
-	return strings.ReplaceAll(inspect.Text(v.Pack, key), "@", name)
+	return DefaultName
 }
 
 // keywordWord returns keyword id's word.

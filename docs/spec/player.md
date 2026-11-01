@@ -13,7 +13,7 @@ Six attributes, each with a current value and a maximum:
 | 4 | Talent | TAL |
 | 5 | Power | POW |
 
-The character is made in the frontend (scenes.md): name, attributes, sex, portrait, one weapon skill and one magic school, each starting at level 1.
+The character is made in the frontend (scenes.md): name, attributes, sex, portrait, one weapon skill and one magic school, each starting at level 1. Each attribute's maximum starts at its value.
 
 ## Derived values
 

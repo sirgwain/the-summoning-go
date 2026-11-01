@@ -31,6 +31,8 @@ type Pack struct {
 	Keywords      *Keywords
 	Pointers      *Pointers
 	Inventory     *Inventory
+	Creation      *Creation
+	Scenes        map[string]*Scene
 	Conversations map[string]*Conversation
 }
 
@@ -49,6 +51,7 @@ func NewPack(m Manifest) *Pack {
 		Texts:     map[string]*Text{},
 		Levels:    map[string]*Level{},
 		Spells:    map[string]*Spell{},
+		Scenes:    map[string]*Scene{},
 
 		Conversations: map[string]*Conversation{},
 	}

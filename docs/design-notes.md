@@ -100,6 +100,14 @@ directory per pack (`--saves` to choose). A conversation in progress cannot be s
 by kind, the player, the level's name) and the minimap shows it small in the top-left corner,
 unless the level refuses it. Power 22h (the Palimpsest) shows the map too and is never used up.
 
+**Done (character creation, in the simulation).** The pack's creation record (`creation.json`):
+portraits, the three attribute methods, the weapon classes and schools with what each adds, the
+objects every character starts with, the body armor picked at random, the premade characters, the
+new game's counter, opening conversation and scene, and the ending. The importer writes it from F
+(portraits and premade characters) and the starting rules of player.md, with the door and the
+ending as scenes (`scenes/`). `sim.NewGame` starts a world from a made character
+(`TestNewGame`); the player's name replaces @ in texts. The dev pack has a creation record.
+
 ## Left from Walk
 
 - **Play a real level through.** Only a short walk on level 0 of the imported game has been tried.

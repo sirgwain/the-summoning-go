@@ -72,7 +72,7 @@ type Viewer struct {
 	Events []string
 
 	// SpellsOpen shows the spell panel, and Entered is the gesture entered on it. Typed is the
-	// word typed in a conversation, PlayerName the name texts give the player, and Reading the
+	// word typed in a conversation, and Reading the
 	// picture of a scroll being read, shown above the hotbar until the next key or click.
 	SpellsOpen bool
 	Entered    string
@@ -84,10 +84,9 @@ type Viewer struct {
 	Notice      string
 	NoticeUntil int64
 	// Said is a mouth's message showing beside it, nil when none is.
-	Said       *Said
-	Typed      string
-	PlayerName string
-	Reading    *content.Image
+	Said    *Said
+	Typed   string
+	Reading *content.Image
 
 	// press is where the mouse button went down; drag where the view was last dragged from.
 	press, drag *image.Point

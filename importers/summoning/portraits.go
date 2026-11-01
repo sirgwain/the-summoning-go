@@ -29,7 +29,39 @@ func (r *PortraitRow) Other() int   { return int(r[5]) }
 func (r *PortraitRow) Talk() int    { return int(r[6]) }
 func (r *PortraitRow) Female() bool { return r[7] != 0 }
 
-// ReadPortraits reads F's portrait rows; the premade characters after them are not read yet.
+// Premade is one of F's premade characters.
+type Premade struct {
+	Name     string
+	Portrait int
+	// Attributes are STR, AGI, END, ACC, TAL, POW.
+	Attributes          [6]int
+	School, WeaponClass int
+}
+
+// ReadPremades reads F's premade characters.
+func ReadPremades(data []byte) ([]Premade, error) {
+	r := &reader{data: data}
+	rows := int(r.u16())
+	r.u16()
+	r.u16()
+	n := int(r.u16())
+	r.bytes(rows * portraitRowSize)
+	out := make([]Premade, n)
+	for i := range out {
+		b := r.bytes(premadeSize)
+		p := Premade{Name: decode437([]byte(cString(b[:26]))), Portrait: int(b[26]), School: int(b[33]), WeaponClass: int(b[34])}
+		for a := range p.Attributes {
+			p.Attributes[a] = int(b[27+a])
+		}
+		out[i] = p
+	}
+	if r.err != nil {
+		return nil, fmt.Errorf("f: %w", r.err)
+	}
+	return out, nil
+}
+
+// ReadPortraits reads F's portrait rows.
 func ReadPortraits(data []byte) ([]PortraitRow, error) {
 	r := &reader{data: data}
 	rows := make([]PortraitRow, r.u16())

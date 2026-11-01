@@ -485,6 +485,57 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
 - The icons, ratings and titles name the skills and levels; `labels` are the details' words.
   Every field is optional.
 
+## Creation
+
+`creation.json`: what character creation offers and how a new game starts
+(`docs/spec/scenes.md`, The frontend).
+
+```json
+{
+  "id": "creation",
+  "portraits": ["portrait.0", "…"],
+  "methods": [
+    { "name": "Rolled", "roll": ["3d4", "2d5"], "max": 20 },
+    { "name": "Spent", "points": ["28d5"], "max": 20 },
+    { "name": "Rolled and spent", "roll": ["2d5"], "points": ["14d5"], "max": 20 }
+  ],
+  "weapon_classes": [{ "icon": { "sprite": "…", "frame": 0 }, "inventory": [{ "slot": 22, "item": "item.falchion" }] }],
+  "schools": [{ "name": "msg.42", "icons": "DJ", "inventory": [{ "slot": 2, "item": "item.flame_arrow_parchment" }] }],
+  "inventory": [{ "slot": 0, "item": "item.apple_of_vigor" }],
+  "body_armor": ["item.leather_trews", "…"],
+  "premade": [{ "name": "Kordan", "portrait": "portrait.3", "weapon_class": 0, "school": 1,
+                "attributes": { "strength": 18, "…": 0 } }],
+  "counter": "var.34", "opening": "thing.npc.125", "scene": "scene.door"
+}
+```
+
+- `methods` roll each attribute as the sum of `roll`'s dice (0 without), at most `max`; `points`
+  are then spent by hand, each attribute between its roll and `max`.
+- A weapon class (by its place, 0–3) and a school have a `name` (a text key) or an `icon`, the
+  skill they start at level 1, and the objects they add, by inventory slot. `icons` are the gesture
+  icons a school starts knowing.
+- `inventory` is what every character starts with; one of `body_armor` goes on the body.
+- A new game sets `counter` to 1, plays `scene`, and starts `opening`'s conversation on arrival.
+
+## Scenes
+
+`scenes/<name>.json`: steps the presentation plays in order on a 320 × 200 picture
+(`docs/spec/scenes.md`, Scenes).
+
+```json
+{ "id": "scene.door", "steps": [
+  { "picture": { "sprite": "sprite.picture.62", "frame": 0 }, "ms": 1000 },
+  { "picture": { "sprite": "sprite.res.85", "frame": 0 }, "at": [135, 0], "ms": 275 },
+  { "part": { "left": {…}, "right": {…}, "background": {…}, "from": 0, "to": 20, "step_ms": 110 } },
+  { "caption": "msg.343", "banner": { "sprite": "…" }, "ms": 2500 },
+  { "fade": "#ffffff", "ms": 500 }
+] }
+```
+
+A `picture` draws over what is there (`clear` first to start afresh); `part` draws the background
+and the two halves moved `8 × spread` pixels outward, spread going from `from` to `to`; `caption`
+shows a text at the bottom, over `banner` if given; `fade` fades to a color. `ms` holds the step.
+
 ## Keywords
 
 `keywords.json`: the words the player can ask about in conversations.

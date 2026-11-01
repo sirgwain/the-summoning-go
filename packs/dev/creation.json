@@ -1,0 +1,85 @@
+{
+  "id": "creation",
+  "portraits": [
+    "portrait.player"
+  ],
+  "methods": [
+    {
+      "name": "Rolled",
+      "roll": [
+        "3d4",
+        "2d5"
+      ],
+      "max": 20
+    },
+    {
+      "name": "Spent",
+      "points": [
+        "28d5"
+      ],
+      "max": 20
+    },
+    {
+      "name": "Rolled and spent",
+      "roll": [
+        "2d5"
+      ],
+      "points": [
+        "14d5"
+      ],
+      "max": 20
+    }
+  ],
+  "weapon_classes": [
+    {
+      "name": "msg.class.sword",
+      "inventory": [
+        {
+          "slot": 22,
+          "item": "item.sword"
+        }
+      ]
+    }
+  ],
+  "schools": [
+    {
+      "name": "msg.school.fire",
+      "icons": "BDJ",
+      "inventory": [
+        {
+          "slot": 2,
+          "item": "item.scroll"
+        }
+      ]
+    }
+  ],
+  "inventory": [
+    {
+      "slot": 0,
+      "item": "item.potion"
+    },
+    {
+      "slot": 24,
+      "item": "item.boots"
+    }
+  ],
+  "body_armor": [
+    "item.mail"
+  ],
+  "premade": [
+    {
+      "name": "Arden",
+      "portrait": "portrait.player",
+      "attributes": {
+        "accuracy": 16,
+        "agility": 20,
+        "endurance": 18,
+        "power": 16,
+        "strength": 18,
+        "talent": 16
+      },
+      "weapon_class": 0,
+      "school": 0
+    }
+  ]
+}

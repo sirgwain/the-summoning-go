@@ -152,7 +152,9 @@ func portraitsFixture() []byte {
 	f := fixture{}.u16(2, 0, 49, 1)
 	f = f.u8(1, 5, 6, 7, 8, 1, 1, 0)
 	f = f.u8(0, 1, 2, 3, 4, 0, 0, 1)
-	return f.zeros(premadeSize)
+	// Kordan: portrait 1, attributes 18, 17, 16, 15, 14, 13, school 2, weapon class 3.
+	f = f.str("Kordan").zeros(26 - len("Kordan"))
+	return f.u8(1, 18, 17, 16, 15, 14, 13, 2, 3)
 }
 
 func TestImport(t *testing.T) {
@@ -160,11 +162,11 @@ func TestImport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The fixture has six item templates, none of the starting inventory's, and no spell art, so
-	// its spells are left out.
+	// The fixture has six item templates, none of the starting inventory's or creation's, no spell
+	// art and no door pictures, so its spells and scenes are left out.
 	for _, line := range report.Lines() {
 		ok := false
-		for _, prefix := range []string{"starting inventory:", "spell ", "gesture icons:", "magic wall:", "gateway:", "portrait ", "pointers:", "inventory:", "worn image "} {
+		for _, prefix := range []string{"starting inventory:", "spell ", "gesture icons:", "magic wall:", "gateway:", "portrait ", "pointers:", "inventory:", "worn image ", "character creation:", "door picture ", "the door scene:", "the ending scene:"} {
 			ok = ok || strings.HasPrefix(line, prefix)
 		}
 		if !ok {
@@ -589,5 +591,30 @@ func TestHeldLayers(t *testing.T) {
 	}
 	if px(behind, 2, 0, 0) != 0 || px(front, 2, 0, 0) != 0 {
 		t.Error("frame 2 draws something")
+	}
+}
+
+func TestImportCreation(t *testing.T) {
+	p, _, err := Import(importFixture())
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := p.Creation
+	if c == nil {
+		t.Fatal("no creation record")
+	}
+	if len(c.Portraits) != 2 || len(c.Methods) != 3 || len(c.WeaponClasses) != 4 || len(c.Schools) != 4 || c.Counter != "var.34" {
+		t.Errorf("creation %+v", *c)
+	}
+	if len(c.Premade) != 1 {
+		t.Fatalf("premade %+v", c.Premade)
+	}
+	pm := c.Premade[0]
+	if pm.Name != "Kordan" || pm.Portrait != "portrait.1" || pm.School != 2 || pm.WeaponClass != 3 ||
+		pm.Attributes["strength"] != 18 || pm.Attributes["power"] != 13 {
+		t.Errorf("premade %+v", pm)
+	}
+	if err := p.Verify(); err != nil {
+		t.Error(err)
 	}
 }

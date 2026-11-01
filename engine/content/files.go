@@ -36,6 +36,8 @@ const (
 	keywordsFile  = "keywords.json"
 	pointersFile  = "pointers.json"
 	inventoryFile = "inventory.json"
+	creationFile  = "creation.json"
+	scenesDir     = "scenes"
 	talkDir       = "conversations"
 )
 
@@ -115,6 +117,7 @@ func Load(fsys fs.FS) (*Pack, error) {
 		{keywordsFile, func() any { p.Keywords = &Keywords{}; return p.Keywords }},
 		{pointersFile, func() any { p.Pointers = &Pointers{}; return p.Pointers }},
 		{inventoryFile, func() any { p.Inventory = &Inventory{}; return p.Inventory }},
+		{creationFile, func() any { p.Creation = &Creation{}; return p.Creation }},
 	} {
 		if _, err := fs.Stat(fsys, f.name); err == nil {
 			if err := readJSON(fsys, f.name, f.set()); err != nil {
@@ -128,6 +131,9 @@ func Load(fsys fs.FS) (*Pack, error) {
 		return nil, err
 	}
 	if err := loadRecords(fsys, talkDir+"/*.json", p.Conversations, func(c *Conversation) string { return c.ID }); err != nil {
+		return nil, err
+	}
+	if err := loadRecords(fsys, scenesDir+"/*.json", p.Scenes, func(s *Scene) string { return s.ID }); err != nil {
 		return nil, err
 	}
 	if err := loadRecords(fsys, levelsDir+"/*/"+levelFile, p.Levels, func(l *Level) string { return l.ID }); err != nil {
@@ -262,7 +268,7 @@ func Write(p *Pack, dir string) error {
 		name string
 		v    any
 		ok   bool
-	}{{messagesFile, p.Messages, p.Messages != nil}, {magicFile, p.Magic, p.Magic != nil}, {keywordsFile, p.Keywords, p.Keywords != nil}, {pointersFile, p.Pointers, p.Pointers != nil}, {inventoryFile, p.Inventory, p.Inventory != nil}} {
+	}{{messagesFile, p.Messages, p.Messages != nil}, {magicFile, p.Magic, p.Magic != nil}, {keywordsFile, p.Keywords, p.Keywords != nil}, {pointersFile, p.Pointers, p.Pointers != nil}, {inventoryFile, p.Inventory, p.Inventory != nil}, {creationFile, p.Creation, p.Creation != nil}} {
 		if f.ok {
 			if err := writeJSON(dir, f.name, f.v); err != nil {
 				return err
@@ -273,6 +279,9 @@ func Write(p *Pack, dir string) error {
 		return err
 	}
 	if err := writeRecords(dir, talkDir, "conversation.", p.Conversations); err != nil {
+		return err
+	}
+	if err := writeRecords(dir, scenesDir, "scene.", p.Scenes); err != nil {
 		return err
 	}
 	for _, id := range sortedKeys(p.Levels) {

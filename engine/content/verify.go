@@ -73,6 +73,10 @@ func (p *Pack) Verify() error {
 	v.keywords()
 	v.pointers()
 	v.inventory()
+	v.creation()
+	for _, id := range sortedKeys(p.Scenes) {
+		v.scene(p.Scenes[id])
+	}
 	for _, id := range sortedKeys(p.Spells) {
 		v.spell(p.Spells[id])
 	}

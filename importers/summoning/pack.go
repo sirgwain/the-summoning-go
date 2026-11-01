@@ -124,6 +124,9 @@ type importer struct {
 	keywordIDs []string
 	talkers    map[string]bool
 	interact   *Interact
+	// premades are F's premade characters; portraitRows how many portrait rows F has.
+	premades     []Premade
+	portraitRows int
 }
 
 // Import converts the data files into a content pack.
@@ -203,6 +206,10 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 			return nil, nil, err
 		}
 		im.portraits(rows)
+		if im.premades, err = ReadPremades(src.F); err != nil {
+			return nil, nil, err
+		}
+		im.portraitRows = len(rows)
 	}
 	if sid, _, err := im.rawSprite(int(in.Bases.NPC) + npcTransformed); err == nil {
 		im.pack.Manifest.Counters.TransformedLook = sid
@@ -233,6 +240,9 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 		return nil, nil, err
 	}
 	im.pointers()
+	if im.portraitRows > 0 {
+		im.creation(im.portraitRows, im.premades)
+	}
 
 	for i, l := range levels {
 		cl, err := im.level(i, l)

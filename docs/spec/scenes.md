@@ -42,13 +42,35 @@ When the player changes level the new view is drawn hidden and then shown by one
 
 The view sits in a frame of panels: the character's portrait and gauges, the hands, the spell panel, the message line. Panels are drawn over a stone texture made from the INIT texture shades. The engine draws its own panels (design.md); the original layout is reference only.
 
+## The frontend
+
+The game starts at a main menu: create a character, restore a game, or select a premade character.
+
+**Creating a character** goes through:
+
+1. **The descendant**: one of F's portrait rows (formats.md, F), shown as its portrait; the arrows step through them and R picks one at random. The row gives the character's sex, other-sex portrait and talk portrait.
+2. **The name**, at most 25 characters. An empty name takes a stock name by sex.
+3. **The attributes**, by one of three methods:
+   - **Rolled**: each attribute 3d4 + 2d5, at most 20; rolled again until kept.
+   - **Spent**: every attribute starts at 0, with 28d5 points to spend.
+   - **Rolled and spent**: each attribute 2d5, with 14d5 points to spend.
+
+   Spent points raise an attribute up to 20, and can be taken back down to its starting value; the character is kept only when every point is spent. Hit points `STR + END + 20` and magic points `TAL + POW + 20` show as the attributes change.
+4. **The training**: a weapon class (0 sword, 1 axe, 2 spear, 3 bow) and a magic school.
+
+**A premade character** comes from F's premade records: its name, portrait, attributes, school and weapon class.
+
 ## New game
 
-The frontend makes the character (player.md) and hands it to play. A new game shows the opening door pictures and the door opening, then the player arrives on the starting level, and the opening conversation (7Dh) starts (dialogue.md).
+The new character starts as player.md (Starting a new game) says. A new game shows the door: the closed door (RESOURCE 3Eh), the door pictures drawn over it at column 135, each held 5 ticks (RESOURCE 55h frames 0–3 at row 0, then 56h frames 0–9 at row 0 with frame `n + 10` below it at row 100), and the door opening (RESOURCE 54h's halves moving apart over the dungeon behind, RESOURCE 3, in 20 steps). Then the player arrives on the starting level; interaction variable 34 is set to 1, which starts the opening conversation (NPC record 7Dh) on arrival (dialogue.md).
+
+The door pictures 3Eh and 54h are 320 × 200 pictures stored as 160 tiles of 8 × 50 pixels, four rows of forty, row by row. Drawn with a spread `s`, the columns within `s` of either edge are left out and the rest move `s` columns outward from the middle, so the halves part.
+
+**Engine model.** The pack's creation record (`creation.json`) gives what character creation offers: the portraits to choose from, the attribute methods, the weapon classes and schools with their names and what each adds to the starting inventory, the objects every character starts with, the body armor picked among at random, the premade characters, and what a new game does (the counter it sets, the conversation that opens it, the scene it shows). The engine's frontend runs these rules with its own menus; the game's own captions and stock names are in its program, not its data files, so a pack gives its own or does without.
 
 ## Death
 
-When the player's hit points reach 0 at a status tick, or a death blow lands, play ends and the game returns to the main menu.
+When the player's hit points reach 0 at a status tick, or a death blow lands, play ends and the game returns to the main menu. The engine shows the player dead for a moment, then the main menu.
 
 ## Endings
 
@@ -58,11 +80,13 @@ Power 5Eh (items.md) and the conversations choose an ending:
 - holding WarMonger (64h): ending G, with NPC record 5;
 - holding the Necklace of Runes (59h): ending E, with NPC record 3, after conversation 79h.
 
-The choice is stored in interaction variable 32. The ending shows the closing picture spread in, a fade to white, the final scene, and the closing texts (TEXT records 157h–170h). End-scene art starts at RESOURCE `end-scene base` (INIT).
+The choice is stored in interaction variable 32. The ending shows the closing picture spread in (the door closing: RESOURCE 54h's halves coming together over the view, then 3Eh), a fade to white, the final scene (RESOURCE 5Ah, then frames 0–4 of 5Bh), and the closing texts (TEXT records 157h–170h), each shown for 2Dh ticks on the banner RESOURCE 5Ch. Then the frontend plays the chosen end scene. End-scene art starts at RESOURCE `end-scene base` (INIT).
+
+**Scenes, engine model.** A scene is a record of steps the presentation plays in order: show a picture, part or close a picture's halves over a background in a number of steps, show a caption, fade to a color, wait. A key or a click skips to the end. The importer writes the new-game door and the ending as scenes; the end scenes and the intro, whose captions are in the game's program, are left out.
 
 ## Unknowns
 
-- The frontend: menus, character creation (attribute rolls, portraits), the save and load screens.
+- The frontend's captions, its stock names and the end scenes' captions, which are in the game's program rather than its data files; the save and load screens.
 - The frame lists and placement of each view effect.
 - Which track plays in which scene and level.
 - The full ending sequences and which closing texts belong to which ending.

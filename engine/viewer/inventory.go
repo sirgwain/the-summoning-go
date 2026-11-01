@@ -224,11 +224,7 @@ func (v *Viewer) details(ip *InventoryPanel) []string {
 		o = p.Hand
 	}
 	if o == nil {
-		name := v.PlayerName
-		if name == "" {
-			name = DefaultName
-		}
-		return []string{name, v.levelTitle(p.Level), v.label(content.LabelWeight, "Weight: ") + weight(p.Carried(v.Pack))}
+		return []string{v.playerName(), v.levelTitle(p.Level), v.label(content.LabelWeight, "Weight: ") + weight(p.Carried(v.Pack))}
 	}
 	it := v.Pack.Items[o.Item]
 	if it == nil {

@@ -103,6 +103,8 @@ type Player struct {
 	Return *content.Destination
 	// WeaponCount is the damage counted weapons have dealt (combat.md, Special weapons).
 	WeaponCount int
+	// Name is the character's name, which texts give for @.
+	Name string
 
 	// want is the direction a walk was asked for since the last update, or −1.
 	want int

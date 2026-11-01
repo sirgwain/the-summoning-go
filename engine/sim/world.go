@@ -48,6 +48,8 @@ type World struct {
 	talk     *Talk
 	records  map[string]*Record
 	counters map[string]int
+	// opening is the thing template whose conversation a new game starts on its first update.
+	opening *content.Thing
 }
 
 var summoningRules combat.Rules = summoning.Rules{}
@@ -90,6 +92,11 @@ func (w *World) Level(id string) *Level { return w.levels[id] }
 // Update applies cmds, advances one step and returns what happened.
 func (w *World) Update(cmds []input.Command) []Event {
 	w.events = nil
+	if w.opening != nil && w.talk == nil {
+		t := w.opening
+		w.opening = nil
+		w.startTalk(t, nil)
+	}
 	if w.talk != nil {
 		// A conversation pauses the world: only its own commands are taken.
 		for _, c := range cmds {

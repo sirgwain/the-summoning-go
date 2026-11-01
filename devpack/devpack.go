@@ -33,6 +33,7 @@ func Build() *content.Pack {
 	cellar(p)
 	arena(p)
 	study(p)
+	creation(p)
 	return p
 }
 
@@ -172,6 +173,7 @@ const textID = "text.en"
 func text(p *content.Pack) {
 	s := map[string]string{
 		"msg.lever_stuck": "The lever won't budge.",
+		"msg.class.sword": "Sword", "msg.school.fire": "Fire",
 		"msg.wrong_item":  "The {item} doesn't fit.",
 		"msg.slot_stuck":  "Nothing more fits in the {item}'s place.",
 		"msg.no_drop":     "It sinks out of sight.",
