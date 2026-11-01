@@ -35,7 +35,10 @@ type World struct {
 	// levels holds every level entered so far, as it was left.
 	levels  map[string]*Level
 	current string
-	events  []Event
+	// theme is the music track a creature in sight started, empty for none; music the track a
+	// new game starts at its first update.
+	theme, music string
+	events       []Event
 	// randomItems are the items a random object is chosen from.
 	randomItems []string
 	// player is the player, nil when the pack has none; status the step of the next status tick.
@@ -97,6 +100,10 @@ func (w *World) Update(cmds []input.Command) []Event {
 	if w.ended != nil {
 		return nil
 	}
+	if w.music != "" {
+		w.startMusic(w.music)
+		w.music = ""
+	}
 	if w.opening != nil && w.talk == nil {
 		t := w.opening
 		w.opening = nil
@@ -138,6 +145,7 @@ func (w *World) Update(cmds []input.Command) []Event {
 		w.statusTick()
 	}
 	w.see()
+	w.updateTheme(w.Current())
 	w.step++
 	events := w.events
 	w.events = nil
@@ -150,8 +158,12 @@ func (w *World) enter(id string) error {
 		return err
 	}
 	if w.current != id {
+		changed := w.current != ""
 		w.current = id
 		w.emit(Event{Kind: EventLevelChanged, Level: id})
+		if changed {
+			w.stopMusic()
+		}
 	}
 	return nil
 }

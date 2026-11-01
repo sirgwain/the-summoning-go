@@ -40,6 +40,7 @@ type Cues struct {
 // Engine sound cues: what the simulation names when it makes a sound.
 const (
 	CueLever         = "lever"
+	CueFootstep      = "footstep"
 	CueDoor          = "door"
 	CueUnseal        = "unseal"
 	CueTeleport      = "teleport"
@@ -49,7 +50,7 @@ const (
 )
 
 var cueKeys = map[string]bool{
-	CueLever: true, CueDoor: true, CueUnseal: true, CueTeleport: true, CueLevelUp: true,
+	CueLever: true, CueFootstep: true, CueDoor: true, CueUnseal: true, CueTeleport: true, CueLevelUp: true,
 	CueWeaponSkillUp: true, CueMagicSkillUp: true,
 }
 
@@ -174,5 +175,12 @@ func (v *verifier) cues() {
 		if v.p.Sounds[c.Cues[key]] == nil {
 			v.fail("%s: cue %s plays %q, which is not a sound", cuesFile, key, c.Cues[key])
 		}
+	}
+}
+
+// music fails unless id is empty or a music track of the pack.
+func (v *verifier) music(owner, id string) {
+	if id != "" && (!strings.HasPrefix(id, MusicPrefix) || v.p.Sounds[id] == nil) {
+		v.fail("%s: %q is not a music track", owner, id)
 	}
 }

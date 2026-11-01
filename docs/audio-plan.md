@@ -111,9 +111,10 @@ the timing corrected the spec: the timer's divisor comes from 1193180, but it co
 
 ### 6. Which track plays where
 
-- [ ] The rest of the effects: combat, inventory, spells, projectiles, hazards, footsteps and the
+- [ ] The rest of the effects: combat, inventory, spells, projectiles, hazards and the
       view effects all play effects or tracks; the spec names only the mechanisms' so far.
-- [ ] The game's combat state starts track 8 (12 bars) and slow-fades it on leaving; leaving play
+- [x] Footsteps, a new game's track 0, the theme track 8 of the creature of NPC record 0Dh while
+      it is in sight, and the slow fade on a change of level or a restore; leaving play
       quick-fades.
 - [ ] Track assignment for levels, menus, character creation, death and the endings (spec
       **Unknowns**, with scenes). Fill [spec/audio.md](spec/audio.md) and

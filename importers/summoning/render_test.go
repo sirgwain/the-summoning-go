@@ -95,7 +95,7 @@ func TestImportAudio(t *testing.T) {
 		t.Fatalf("music.1 WAV %+v %v, want %d samples", w, err, m.Intro+m.Loop)
 	}
 	if p.Cues == nil || p.Cues.Cues[content.CueDoor] != "sfx.23" ||
-		p.Cues.Cues[content.CueLevelUp] != "music.10" {
+		p.Cues.Cues[content.CueLevelUp] != "music.10" || p.Cues.Cues[content.CueFootstep] != "sfx.0" {
 		t.Fatalf("cues %+v", p.Cues)
 	}
 	if p.Sounds["music.2"].Loop != 0 {

@@ -39,6 +39,8 @@ type Level struct {
 	// Map, if set, refuses the level map: a message (a text key) or a thing template's
 	// conversation in its place.
 	Map *MapRefusal `json:"map,omitempty"`
+	// Footsteps is the sound of the player's steps here, in place of the footstep cue.
+	Footsteps string `json:"footsteps,omitempty"`
 	// Size is the number of rows and columns.
 	Size   [2]int `json:"size"`
 	Floors string `json:"floors"`

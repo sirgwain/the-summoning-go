@@ -51,6 +51,9 @@ func (v *Viewer) LoadGame(name string) {
 		return
 	}
 	v.setWorld(w)
+	if v.Audio != nil {
+		v.Audio.StopMusic()
+	}
 	if warning != "" {
 		v.notice("Loaded; " + warning)
 		return

@@ -89,6 +89,8 @@ const RulesSummoning = "summoning"
 type Start struct {
 	Level string `json:"level"`
 	Cell  Cell   `json:"cell"`
+	// Music is the music track a new game starts, if any.
+	Music string `json:"music,omitempty"`
 }
 
 // Cell is a cell address (x, y): row x, column y.

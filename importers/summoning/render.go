@@ -19,9 +19,20 @@ const firstEffect = 0x11
 // trackCues are the tracks the engine's cues play (audio.md, Songs).
 var trackCues = map[string]int{
 	content.CueLevelUp: 10, content.CueWeaponSkillUp: 11, content.CueMagicSkillUp: 12,
-	content.CueLever: firstEffect + 9, content.CueUnseal: firstEffect + 0x16,
+	content.CueFootstep: firstEffect, content.CueLever: firstEffect + 9, content.CueUnseal: firstEffect + 0x16,
 	content.CueTeleport: firstEffect + 0x16, content.CueDoor: firstEffect + 0x17,
 }
+
+// Music in play and footsteps (audio.md, Music in play and Footsteps).
+const (
+	newGameTrack  = 0
+	themeTrack    = 8
+	themeNPC      = 0x0D
+	otherFootstep = firstEffect + 1
+)
+
+// otherFootstepLevels are the levels whose footsteps are effect 1.
+var otherFootstepLevels = []int{0x21, 0x22, 0x23}
 
 // loopBars are the tracks the game loops, and for how many bars (audio.md, Songs).
 var loopBars = map[int]int{0: 40, 1: 48, 4: 8, 5: 24, 6: 16, 7: 8, 8: 12, 15: 8}
@@ -216,6 +227,19 @@ func (im *importer) audio() {
 		}
 	}
 	im.pack.Cues = &content.Cues{ID: "cues", Cues: cues}
+	if id := soundID(newGameTrack); im.pack.Sounds[id] != nil {
+		im.pack.Manifest.Start.Music = id
+	}
+	if t, id := im.pack.Things[npcID(themeNPC)], soundID(themeTrack); t != nil && im.pack.Sounds[id] != nil {
+		t.Theme = id
+	}
+	if id := soundID(otherFootstep); im.pack.Sounds[id] != nil {
+		for _, n := range otherFootstepLevels {
+			if l := im.pack.Levels[levelID(n)]; l != nil {
+				l.Footsteps = id
+			}
+		}
+	}
 }
 
 // cutPrefix splits a sound id into its kind and name.

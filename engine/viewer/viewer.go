@@ -657,12 +657,12 @@ func screenDirection(x, y int) int {
 	return (facings[[2]int{x, y}] + 7) % 8
 }
 
-// log adds what happened to the event log, leaving out sounds.
+// log adds what happened to the event log, leaving out sounds and music.
 func (v *Viewer) log(events []sim.Event) {
 	for _, e := range events {
 		var line string
 		switch e.Kind {
-		case sim.EventSound:
+		case sim.EventSound, sim.EventMusic:
 			continue
 		case sim.EventMessage:
 			line = fmt.Sprintf("%v says: %s", e.Cell, inspect.Message(v.Pack, e))

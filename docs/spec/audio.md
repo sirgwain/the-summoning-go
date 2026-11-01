@@ -33,6 +33,14 @@ The game starts these tracks with a loop; every other track plays once. The fron
 | 16h | A sealed door opens; the player is teleported |
 | 17h | A moving door steps while between open and closed |
 
+**Footsteps.** The player keeps a step count, 0..5. It is 1 when the game starts, and is set back to 1 when the player turns to its standing frame after 8 idle updates, when an action's frames end, and on every step while levitating. Otherwise each walk step that moves the player adds 1 to it, wrapping 5 to 0, and a count of 1 or 4 plays effect 0, or effect 1 on levels 21h–23h. So walking from standing sounds on the third step and every third step after.
+
+**Music in play.**
+
+- A new game starts track 0 (40 bars) as play begins. Restoring a saved game starts none.
+- Once per pass over the creatures, the game checks whether a creature of NPC record 0Dh is on screen. When one first is, it starts track 8 (12 bars); when none is any longer, it stops the music track playing with the slow fade.
+- A change of level, and restoring a game, stop the music track playing with the slow fade.
+
 ## Song descriptor (24 bytes)
 
 | Offset | Type | Meaning |

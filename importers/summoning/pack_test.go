@@ -203,7 +203,7 @@ func TestImport(t *testing.T) {
 	if fx := p.Palettes["palette.0"].Effects; len(fx) != 3 || fx[0].First != 0xE0 || fx[1].Groups != 3 || fx[2].Index != 0xFC || fx[0].PeriodMS != 440 {
 		t.Errorf("palette effects %+v", fx)
 	}
-	if p.Manifest.Start != (content.Start{Level: "level.00", Cell: content.Cell{1, 1}}) {
+	if p.Manifest.Start != (content.Start{Level: "level.00", Cell: content.Cell{1, 1}, Music: "music.0"}) {
 		t.Errorf("start %+v", p.Manifest.Start)
 	}
 

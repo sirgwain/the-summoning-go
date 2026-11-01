@@ -38,6 +38,7 @@ func NewGame(p *content.Pack, seed uint64, c Character) (*World, error) {
 	if pl == nil {
 		return nil, fmt.Errorf("pack %s has no player", p.Manifest.ID)
 	}
+	w.music = p.Manifest.Start.Music
 	pl.Name = c.Name
 	if c.Portrait != "" {
 		pl.Portrait = c.Portrait

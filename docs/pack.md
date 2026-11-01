@@ -76,7 +76,8 @@ conversation ends, `use_result` decides whether an object whose conversation has
 used, `transformed` is set to 1 by a Shape Change into the look named by `transformed_look`,
 and cleared when it ends, and while `quiet_combat` is not 0 the combat messages are not shown.
 While `transcript` is not 0, what conversations say goes to the transcript. `menu` is the thing
-template whose conversation the menu key opens.
+template whose conversation the menu key opens. `start` may give a `music` track, which a new
+game starts.
 
 ## Palettes
 
@@ -366,6 +367,8 @@ leaves out shows nothing. Later milestones add keys.
 - `conversation` (creatures) is the conversation held with it, and `talk_portrait` the portrait
   shown; the behavior `talks` lets the player talk to it, until it turns hostile. Powers and
   events start conversations with templates that no level places.
+- `theme` (creatures) is a music track. It starts when the player first sees a creature of the
+  template, and fades out once the player sees none.
 - `spell` (creatures) is the spell it casts, and `spell_power` the dice of its power.
 - `name` (creatures) is a text key, shown when the player's blow kills it unless it has a
   conversation; `kill_practice` is the practice that blow gives. The behavior `mirrors` passes
@@ -675,6 +678,7 @@ template), `full_health`, `carries_count` (`{ "item", "count" }`), `slot_empty` 
   are fixed art standing in a cell, drawn back to front with the walls. Offsets are from the cell.
 - `name` is a text key, the level's name. `map` refuses the level map:
   `{ "message": text }` or `{ "conversation": thing }` (`docs/spec/world.md`, Level map).
+  `footsteps` is the sound of the player's steps on the level, in place of the `footstep` cue.
 
 ### Floor types
 
@@ -825,7 +829,7 @@ audio/sfx/<name>.wav
 { "id": "cues", "cues": { "lever": "sfx.9", "level_up": "music.10" } }
 ```
 
-The cues: `lever` (a lever pulled), `door` (a door moving), `unseal` (a sealed door opening),
+The cues: `footstep` (every third walk step, not while levitating), `lever` (a lever pulled), `door` (a door moving), `unseal` (a sealed door opening),
 `teleport`, `level_up`, `weapon_skill_up` and `magic_skill_up`. A cue the pack leaves out is silent.
 
 ## The Summoning import
@@ -851,7 +855,8 @@ The importer translates the original's encodings into the format above:
   44100 Hz. Track `n` becomes `music.n` and sound effect `n` becomes `sfx.n`. A track the game
   loops keeps two passes: the first is the intro and the second, which starts with the first's
   notes still ringing, is the loop. A song that plays once keeps its release until it is silent.
-  The cues name the tracks and effects the game plays.
+  The cues name the tracks and effects the game plays; the start's `music`, the theme of the
+  creature the game plays a track for, and the levels with other footsteps are set the same way.
   `import --no-audio` skips rendering.
 
 ## Decisions

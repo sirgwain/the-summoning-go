@@ -104,6 +104,7 @@ func (v *verifier) manifest() {
 	if _, ok := v.p.Palettes[m.Palette]; !ok {
 		v.fail("pack.json: palette %q not found", m.Palette)
 	}
+	v.music("pack.json: start", m.Start.Music)
 	if l, ok := v.p.Levels[m.Start.Level]; !ok {
 		v.fail("pack.json: start level %q not found", m.Start.Level)
 	} else if !l.InBounds(m.Start.Cell) {
@@ -284,6 +285,7 @@ func (v *verifier) itemRecord(i *Item) {
 
 func (v *verifier) thing(t *Thing) {
 	owner := "thing " + t.ID
+	v.music(owner+": theme", t.Theme)
 	switch t.Kind {
 	case ThingCreature, ThingBoulder, ThingTrap, ThingPlayer, ThingConjured, ThingPortal:
 	default:
@@ -343,6 +345,9 @@ func (v *verifier) portrait(pt *Portrait) {
 }
 
 func (v *verifier) level(l *Level) {
+	if l.Footsteps != "" && v.p.Sounds[l.Footsteps] == nil {
+		v.fail("level %s: footsteps %q is not a sound", l.ID, l.Footsteps)
+	}
 	lv := &levelVerifier{verifier: v, l: l}
 	lv.verify()
 }

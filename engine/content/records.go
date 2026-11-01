@@ -226,6 +226,8 @@ type Thing struct {
 	// Conversation is the conversation held with it; TalkPortrait the portrait it shows.
 	Conversation string `json:"conversation,omitempty"`
 	TalkPortrait string `json:"talk_portrait,omitempty"`
+	// Theme is a creature's music track, which plays while the player sees one.
+	Theme string `json:"theme,omitempty"`
 	// Icons are the gesture icons a player starts knowing.
 	Icons string `json:"icons,omitempty"`
 	// Name is a creature's name, a text key; KillPractice the practice a player's blow that kills

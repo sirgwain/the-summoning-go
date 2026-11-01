@@ -17,6 +17,9 @@ const deathUpdates = 3 * sim.StepsPerSecond
 
 // OpenFrontend shows the main menu.
 func (v *Viewer) OpenFrontend() {
+	if v.Audio != nil {
+		v.Audio.FadeOutMusic()
+	}
 	v.Front = NewFrontend(v.Pack, v.Seed+uint64(v.Ticks), v.SaveNames(), v.Screen)
 }
 

@@ -74,6 +74,8 @@ type Player struct {
 	Slots [SlotCount]*Object
 	// Moves counts the moves made, for the walk animation; Idle the updates since the last.
 	Moves, Idle int
+	// StepCount counts walk steps for the footsteps, 0..5.
+	StepCount int
 	// Skills are the weapon classes' and schools' levels; Experience, Level and NextLevel the
 	// player's experience, level and the experience the next level needs.
 	Skills                       [Skills]Skill
@@ -168,7 +170,7 @@ func (w *World) newPlayer() *Player {
 	if tmpl == nil {
 		return nil
 	}
-	p := &Player{Template: tmpl, Portrait: tmpl.Portrait, Facing: tmpl.Facing, want: -1, Attributes: map[string]int{}}
+	p := &Player{Template: tmpl, Portrait: tmpl.Portrait, Facing: tmpl.Facing, want: -1, Attributes: map[string]int{}, StepCount: 1}
 	p.Magic.teach(tmpl.Icons)
 	for i := range p.Skills {
 		p.Skills[i].Threshold = skillThreshold
@@ -288,7 +290,7 @@ func (w *World) updatePlayer() {
 	}
 	if p.poseLeft > 0 {
 		if p.poseLeft--; p.poseLeft == 0 {
-			p.Pose = ""
+			p.Pose, p.StepCount = "", 1
 			w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "stands"})
 		}
 	}
@@ -310,6 +312,7 @@ func (w *World) updatePlayer() {
 	if d < 0 || p.Dead {
 		if p.Idle < idleUpdates {
 			if p.Idle++; p.Idle == idleUpdates {
+				p.StepCount = 1
 				w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "idle"})
 			}
 		}
@@ -473,6 +476,7 @@ func (w *World) walk(d int) bool {
 		return false
 	}
 	w.movePlayerBy(l, su, sv)
+	w.stride()
 	return true
 }
 
