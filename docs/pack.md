@@ -614,7 +614,8 @@ template), `full_health`, `carries_count` (`{ "item", "count" }`), `slot_empty` 
 - `overlays` are fixed floor art (hazard tiles), drawn after all floors and before anything
   standing. `decorations` are drawn on their cell's wall face right after it. `props` (not shown)
   are fixed art standing in a cell, drawn back to front with the walls. Offsets are from the cell.
-- Level names are empty for now; the spec does not yet say where the game keeps them.
+- `name` is a text key, the level's name. `map` refuses the level map:
+  `{ "message": text }` or `{ "conversation": thing }` (`docs/spec/world.md`, Level map).
 
 ### Floor types
 

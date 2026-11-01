@@ -1,6 +1,6 @@
 {
   "id": "level.study",
-  "name": "",
+  "name": "level.study.name",
   "size": [7, 12],
   "floors": "floors.dev",
   "walls": "walls.dev",

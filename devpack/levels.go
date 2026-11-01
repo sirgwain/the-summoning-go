@@ -113,7 +113,7 @@ var (
 //
 // The player starts by closet A, wearing boots of speed. Every closet opens by playing.
 func hall(p *content.Pack) {
-	l := &content.Level{ID: Hall, Floors: floorSet, Walls: wallSet, FloorTypes: floorTypes()}
+	l := &content.Level{ID: Hall, Name: levelName(p, Hall, "The Hall of Mechanisms"), Floors: floorSet, Walls: wallSet, FloorTypes: floorTypes()}
 	grid(l, []string{
 		"############################",
 		"#,,,,,#,,,,,#,,,,,#,,,,#,,,#",
@@ -217,7 +217,10 @@ var BruteStart = content.Cell{2, 2}
 // cellar is the level below the hall, where its pit, trapdoor and exits lead, with an exit back
 // up: a hostile brute waits there, and boots of speed and a mail shirt lie by the west exit.
 func cellar(p *content.Pack) {
-	l := &content.Level{ID: Cellar, Floors: floorSet, Walls: wallSet, FloorTypes: floorTypes()}
+	l := &content.Level{ID: Cellar, Name: levelName(p, Cellar, "The Cellar"), Floors: floorSet, Walls: wallSet, FloorTypes: floorTypes()}
+	// The cellar refuses the level map.
+	p.Texts[textID].Strings["msg.no_map"] = "The dark here confuses your sense of place."
+	l.Map = &content.MapRefusal{Message: "msg.no_map"}
 	grid(l, []string{
 		"##########",
 		"#........#",
@@ -256,7 +259,7 @@ var (
 )
 
 func arena(p *content.Pack) {
-	l := &content.Level{ID: Arena, Floors: floorSet, Walls: wallSet, FloorTypes: floorTypes()}
+	l := &content.Level{ID: Arena, Name: levelName(p, Arena, "The Arena"), Floors: floorSet, Walls: wallSet, FloorTypes: floorTypes()}
 	grid(l, []string{
 		"##########",
 		"#........#",
@@ -267,4 +270,11 @@ func arena(p *content.Pack) {
 	l.Things = []*content.PlacedThing{{ID: "goblin", Thing: ThingGoblin, Cell: GoblinStart}}
 	l.Objects = []*content.FloorObject{{Cell: ArenaStart, Object: content.Object{Item: ItemSword}}}
 	p.Levels[l.ID] = l
+}
+
+// levelName adds level id's name to the text and returns its key.
+func levelName(p *content.Pack, id, name string) string {
+	key := id + ".name"
+	p.Texts[textID].Strings[key] = name
+	return key
 }

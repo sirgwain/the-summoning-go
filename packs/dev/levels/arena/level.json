@@ -1,6 +1,6 @@
 {
   "id": "level.arena",
-  "name": "",
+  "name": "level.arena.name",
   "size": [5, 10],
   "floors": "floors.dev",
   "walls": "walls.dev",

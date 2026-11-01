@@ -76,8 +76,8 @@ type Viewer struct {
 	// picture of a scroll being read, shown above the hotbar until the next key or click.
 	SpellsOpen bool
 	Entered    string
-	// InventoryOpen shows the inventory panel.
-	InventoryOpen bool
+	// InventoryOpen shows the inventory panel; MapOpen the full level map.
+	InventoryOpen, MapOpen bool
 	// SaveDir is where saves go, empty for none; Notice is a line shown at the top of the screen
 	// until the update NoticeUntil.
 	SaveDir     string
@@ -265,7 +265,7 @@ func (v *Viewer) Update(in Input) {
 		v.zoomAt(1, v.Screen.Div(2))
 	case in.pressed(KeyMinus, KeyNumpadSubtract):
 		v.zoomAt(-1, v.Screen.Div(2))
-	case in.pressed("M"):
+	case in.pressed("M") && !v.Play:
 		v.Magnify = !v.Magnify
 		v.rebuild()
 	case in.pressed(KeyF12):
@@ -296,6 +296,11 @@ func (v *Viewer) modal(in Input) ([]input.Command, bool) {
 	switch {
 	case v.World.Talk() != nil:
 		return v.talkInput(in), true
+	case v.MapOpen:
+		if in.anyPressed() || in.Left.Released || in.Right.Released {
+			v.MapOpen = false
+		}
+		return nil, true
 	case v.SpellsOpen:
 		cmds := v.spellKeys(in)
 		if sp := v.SpellPanel(); sp != nil && in.Cursor.In(sp.Rect) && (in.Left.Released || in.Right.Released) {
@@ -313,6 +318,7 @@ func (v *Viewer) updateWorld(cmds []input.Command) {
 	v.log(events)
 	v.hear(events)
 	v.autosave(events)
+	v.openMap(events)
 	for _, e := range events {
 		if e.Kind == sim.EventMagic && e.Detail == "read" {
 			if it := v.Pack.Items[e.Item]; it != nil && it.Picture != nil {
@@ -539,7 +545,7 @@ const functionKeys = 8
 //   - F takes from the floor, G puts down, Enter pulls the lever underfoot or uses a key on the
 //     keyhole underfoot, E talks, H recenters the view, P pauses.
 //   - I or Tab opens and closes the inventory panel, as clicking the portrait does.
-//   - F5 saves to the quick save and F9 loads it.
+//   - F5 saves to the quick save and F9 loads it; M shows the level map.
 func (v *Viewer) playKeys(in Input) []input.Command {
 	if in.held(KeyControl) {
 		return nil
@@ -587,6 +593,8 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 	switch {
 	case in.pressed("I", KeyTab):
 		v.ToggleInventory()
+	case in.pressed("M"):
+		cmds = append(cmds, input.ShowMap{})
 	case in.pressed(KeyF5):
 		v.SaveGame(QuickSave)
 	case in.pressed(KeyF9):

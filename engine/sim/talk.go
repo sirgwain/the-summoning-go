@@ -630,3 +630,26 @@ func (w *World) give(o *Object) {
 	}
 	w.drop(l, p.Cell(), o, byWorld, 0)
 }
+
+// EventShowMap asks the presentation to show the level map.
+const EventShowMap = "show_map"
+
+// showMap shows the current level's map, or what the level shows in its stead: a message or a
+// conversation (docs/spec/world.md, Level map).
+func (w *World) showMap() {
+	l := w.Current()
+	m := l.Def.Map
+	switch {
+	case m == nil:
+		w.emit(Event{Kind: EventShowMap, Level: l.ID})
+	case m.Message != "":
+		w.emit(Event{Kind: EventMessage, Level: l.ID, Text: m.Message, Detail: "map refused"})
+	default:
+		if t := w.pack.Things[m.Conversation]; t != nil {
+			w.startTalk(t, nil)
+		}
+	}
+}
+
+// MapRefused reports whether the current level refuses its map, which hides the minimap.
+func (w *World) MapRefused() bool { return w.Current().Def.Map != nil }

@@ -356,7 +356,7 @@ func magicRecords(p *content.Pack) {
 
 // study lays out the study.
 func study(p *content.Pack) {
-	l := &content.Level{ID: Study, Floors: floorSet, Walls: wallSet, FloorTypes: floorTypes()}
+	l := &content.Level{ID: Study, Name: levelName(p, Study, "The Study"), Floors: floorSet, Walls: wallSet, FloorTypes: floorTypes()}
 	grid(l, []string{
 		"############",
 		"#..........#",

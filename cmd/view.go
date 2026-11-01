@@ -49,7 +49,9 @@ its second action, X throws what it holds; Q, Shift+Q and Z do the same with the
 takes the top object of the player's cell to the first empty shelf, G puts down what is in hand,
 Enter pulls the lever underfoot or puts the key a keyhole underfoot takes into it, E or C talks to
 the nearest creature that talks (or hears the nearest mouth), H recenters the view, P pauses.
-F5 saves the game and F9 loads it again; changing level saves it too (the autosave).
+F5 saves the game and F9 loads it again; changing level saves it too (the autosave). M shows the
+level's map (a key or click closes it); the minimap in the top-left corner shows it small. Some
+levels refuse the map.
 
 F1-F4 (or 1-4) cast the selected spell of Wizardry, Sorcery, Enchantment and Healing; with Shift
 they select the school's next memorized spell. F10 opens the spell panel: type the letters A-L of
@@ -337,10 +339,12 @@ func (s *shell) Draw(screen *ebiten.Image) {
 	s.drawSpellPanel(screen)
 	s.drawInventory(screen)
 	s.drawSaid(screen)
+	s.drawMinimap(screen)
 	s.drawTalk(screen)
 	s.drawReading(screen)
 	s.drawTools(screen)
 	s.drawNotice(screen)
+	s.drawFullMap(screen)
 	s.drawPointer(screen)
 	for _, path := range s.shots {
 		if err := saveScreenshot(screen, path); err != nil && s.err == nil {
@@ -743,6 +747,83 @@ func wrap(text string, n int) []string {
 		lines = append(lines, line)
 	}
 	return lines
+}
+
+// mapColors are the level map's colors by cell kind.
+var mapColors = map[int]color.RGBA{
+	viewer.MapFloor: {120, 110, 95, 255}, viewer.MapWall: {55, 50, 48, 255}, viewer.MapDoor: {150, 100, 50, 255},
+	viewer.MapExit: {80, 200, 90, 255}, viewer.MapWater: {50, 90, 190, 255}, viewer.MapHole: {15, 15, 15, 255},
+	viewer.MapTeleporter: {170, 80, 200, 255}, viewer.MapMouth: {220, 220, 220, 255},
+}
+
+// drawLevelMap draws map m's cells as diamonds of half-width s around the middle of r, rows and
+// columns turned as the view turns them, and the player's cell in red.
+func drawLevelMap(screen *ebiten.Image, m *viewer.LevelMap, r image.Rectangle, s float32) {
+	rows, cols := float32(m.Size[0]), float32(m.Size[1])
+	// The map's corners: (0, 0) at the top, (rows, 0) at the left, (0, cols) at the right.
+	ox := float32(r.Min.X+r.Max.X)/2 - (cols-rows)*s/2
+	oy := float32(r.Min.Y+r.Max.Y)/2 - (cols+rows)*s/4
+	paths := map[int]*vector.Path{}
+	diamond := func(path *vector.Path, c content.Cell) {
+		x := ox + float32(c[1]-c[0])*s
+		y := oy + float32(c[0]+c[1])*s/2
+		path.MoveTo(x, y)
+		path.LineTo(x+s, y+s/2)
+		path.LineTo(x, y+s)
+		path.LineTo(x-s, y+s/2)
+		path.Close()
+	}
+	for _, c := range m.Cells {
+		if paths[c.Kind] == nil {
+			paths[c.Kind] = &vector.Path{}
+		}
+		diamond(paths[c.Kind], c.Cell)
+	}
+	for kind, path := range paths {
+		op := &vector.DrawPathOptions{}
+		op.ColorScale.ScaleWithColor(mapColors[kind])
+		vector.FillPath(screen, path, nil, op)
+	}
+	player := &vector.Path{}
+	diamond(player, m.Player)
+	op := &vector.DrawPathOptions{}
+	op.ColorScale.ScaleWithColor(color.RGBA{230, 40, 40, 255})
+	vector.FillPath(screen, player, nil, op)
+}
+
+// drawMinimap draws the level map small in the top-left corner.
+func (s *shell) drawMinimap(screen *ebiten.Image) {
+	v := s.v
+	if !v.MinimapShown() {
+		return
+	}
+	m := v.Map()
+	const size = 200
+	r := image.Rect(viewer.Margin, viewer.Margin, viewer.Margin+size, viewer.Margin+size/2)
+	vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), panelColor, false)
+	cell := float32(size) / float32(m.Size[0]+m.Size[1])
+	drawLevelMap(screen, m, r, cell)
+}
+
+// drawFullMap draws the level map over the whole screen, with the level's name.
+func (s *shell) drawFullMap(screen *ebiten.Image) {
+	v := s.v
+	if !v.MapOpen {
+		return
+	}
+	m := v.Map()
+	if m == nil {
+		return
+	}
+	screen.Fill(color.RGBA{8, 8, 12, 255})
+	r := image.Rect(0, 3*viewer.LineHeight, v.Screen.X, v.Screen.Y-viewer.Margin)
+	cell := min(float32(r.Dx())/float32(m.Size[0]+m.Size[1]), 2*float32(r.Dy())/float32(m.Size[0]+m.Size[1]))
+	drawLevelMap(screen, m, r, cell)
+	name := m.Name
+	if name == "" {
+		name = v.World.Current().ID
+	}
+	ebitenutil.DebugPrintAt(screen, name, (v.Screen.X-len(name)*viewer.CharWidth)/2, viewer.LineHeight)
 }
 
 // drawNotice draws the viewer's notice at the top middle of the screen while it lasts.

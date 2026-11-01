@@ -351,6 +351,21 @@ func (lv *levelVerifier) owner() string { return "level " + lv.l.ID }
 
 func (lv *levelVerifier) verify() {
 	l := lv.l
+	if l.Name != "" {
+		lv.text(lv.owner(), l.Name)
+	}
+	if m := l.Map; m != nil {
+		switch {
+		case (m.Message == "") == (m.Conversation == ""):
+			lv.fail("map refusal: a message or a conversation")
+		case m.Message != "":
+			lv.text(lv.owner(), m.Message)
+		default:
+			if t := lv.thingRef(lv.owner(), m.Conversation); t != nil && t.Conversation == "" {
+				lv.fail("map refusal: %s holds no conversation", m.Conversation)
+			}
+		}
+	}
 	var ok bool
 	if lv.floors, ok = lv.p.Floors[l.Floors]; !ok {
 		lv.fail("floor set %q not found", l.Floors)

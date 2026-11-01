@@ -136,7 +136,7 @@ The game also swaps the shapes of some visible walls according to which of their
 
 ## Level map
 
-The game shows a map of the current level while the player holds the Palimpsest and uses it (power 22h, items.md). The map shows the cells the player has **seen** (drawn while visible; see above), the player's position and the level's name. Cells of level exit markers and mouths are marked as exits.
+The game shows a map of the current level while the player holds the Palimpsest and uses it (power 22h, items.md). The map shows the cells the player has **seen** (drawn while visible; see above), the player's position and the level's name, TEXT `129h + level`. Cells of level exit markers and mouths are marked as exits.
 
 Some levels refuse the map:
 

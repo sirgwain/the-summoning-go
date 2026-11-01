@@ -1,0 +1,96 @@
+package viewer
+
+import (
+	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/inspect"
+	"github.com/sirgwain/the-summoning-go/engine/sim"
+)
+
+// The level map (docs/spec/world.md, Level map): the cells the player has seen, by what they
+// are, and where the player stands. The full map opens with M while playing and closes on the
+// next key or click; the minimap shows in a corner unless the level refuses the map.
+
+// Map cell kinds.
+const (
+	MapFloor = iota
+	MapWall
+	MapDoor
+	MapExit
+	MapWater
+	MapHole
+	MapTeleporter
+	MapMouth
+)
+
+// MapCell is a seen cell of the level map.
+type MapCell struct {
+	Cell content.Cell
+	Kind int
+}
+
+// LevelMap is the current level's map.
+type LevelMap struct {
+	Name  string
+	Size  [2]int
+	Cells []MapCell
+	// Player is the player's cell.
+	Player content.Cell
+}
+
+// Map returns the current level's map as the player has seen it, or nil without a player.
+func (v *Viewer) Map() *LevelMap {
+	p := v.World.Player()
+	if p == nil {
+		return nil
+	}
+	l := v.World.Current()
+	m := &LevelMap{Size: l.Def.Size, Player: p.Cell()}
+	if l.Def.Name != "" {
+		m.Name = inspect.Text(v.Pack, l.Def.Name)
+	}
+	for x := range l.Def.Size[0] {
+		for y := range l.Def.Size[1] {
+			c := content.Cell{x, y}
+			if !l.Seen(c) {
+				continue
+			}
+			kind := MapFloor
+			ft := l.FloorType(c)
+			switch f := l.FeatureAt(c); {
+			case f != nil && f.Kind == content.FeatureDoor:
+				kind = MapDoor
+			case f != nil && f.Kind == content.FeatureExit:
+				kind = MapExit
+			case f != nil && f.Kind == content.FeatureMouth:
+				kind = MapMouth
+			case f != nil && f.Kind == content.FeatureTeleporter && f.Armed:
+				kind = MapTeleporter
+			case f != nil && (f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor):
+				kind = MapHole
+			case l.Wall[x][y] != content.NoFrame:
+				kind = MapWall
+			case ft == nil:
+				continue
+			case ft.Depth > 0:
+				kind = MapWater
+			}
+			m.Cells = append(m.Cells, MapCell{Cell: c, Kind: kind})
+		}
+	}
+	return m
+}
+
+// MinimapShown reports whether the minimap shows: while playing, on a level that does not refuse
+// its map, with no window open over the view.
+func (v *Viewer) MinimapShown() bool {
+	return v.Play && v.World.Player() != nil && !v.World.MapRefused() && !v.MapOpen && v.World.Talk() == nil
+}
+
+// openMap opens the full map when the events show it.
+func (v *Viewer) openMap(events []sim.Event) {
+	for _, e := range events {
+		if e.Kind == sim.EventShowMap {
+			v.MapOpen = true
+		}
+	}
+}

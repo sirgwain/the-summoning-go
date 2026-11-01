@@ -1,6 +1,9 @@
 {
   "id": "level.cellar",
-  "name": "",
+  "name": "level.cellar.name",
+  "map": {
+    "message": "msg.no_map"
+  },
   "size": [10, 10],
   "floors": "floors.dev",
   "walls": "walls.dev",

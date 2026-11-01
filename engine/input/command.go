@@ -148,6 +148,11 @@ type Ask struct{ Word string }
 // Leave leaves a conversation.
 type Leave struct{}
 
+// ShowMap shows the level map, or what the level shows instead.
+type ShowMap struct{}
+
+func (ShowMap) command() {}
+
 func (Learn) command()     {}
 func (Memorize) command()  {}
 func (Cast) command()      {}

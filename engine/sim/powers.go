@@ -49,6 +49,8 @@ var attributeNames = [6]string{AttrStrength, AttrAgility, AttrEndurance, AttrAcc
 
 // Status and effect constants (docs/spec/player.md, items.md).
 const (
+	// powerShowMap shows the level map.
+	powerShowMap     = 0x22
 	maxTimed         = 255
 	confusedOver     = 25
 	confusionBump    = 6
@@ -216,6 +218,10 @@ func (w *World) usable(power int) bool {
 		if p.Status.DeathProtection {
 			return no(content.MsgAlreadyHave)
 		}
+	case powerShowMap:
+		// The map shows, and the object is never used up.
+		w.showMap()
+		return false
 	}
 	return true
 }

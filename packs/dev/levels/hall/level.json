@@ -1,6 +1,6 @@
 {
   "id": "level.hall",
-  "name": "",
+  "name": "level.hall.name",
   "size": [18, 28],
   "floors": "floors.dev",
   "walls": "walls.dev",

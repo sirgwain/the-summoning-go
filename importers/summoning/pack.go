@@ -474,6 +474,19 @@ func (im *importer) level(index int, l *Level) (*content.Level, error) {
 		Wall:       content.NewGrid(l.Rows, l.Columns),
 		Procedures: map[string][]content.Action{},
 	}
+	if id := msgID(msgFirstLevelName + index); im.strings[id] != "" {
+		cl.Name = id
+	}
+	switch {
+	case index == levelMapMessage:
+		cl.Map = &content.MapRefusal{Message: msgID(msgMapRefused)}
+	case index >= levelMapTalkFirst && index <= levelMapTalkLast:
+		if id, err := im.creature(npcMapRefused); err == nil && im.pack.Things[id].Conversation != "" {
+			cl.Map = &content.MapRefusal{Conversation: id}
+		} else {
+			im.report.addf("level %d: no conversation for refusing the map", index)
+		}
+	}
 	var err error
 	if cl.Floors, err = im.floorSet(im.terrain(int(h.FloorBank))); err != nil {
 		return nil, err
@@ -551,3 +564,13 @@ func exitDestination(p *Placement) (*content.Destination, bool) {
 	}
 	return &content.Destination{Level: levelID(int(level)), Cell: content.Cell{int(x), int(y)}}, true
 }
+
+// Level names and the levels that refuse the map (world.md, Level map).
+const (
+	msgFirstLevelName = 0x129
+	levelMapMessage   = 0x13
+	msgMapRefused     = 0x90
+	levelMapTalkFirst = 0x21
+	levelMapTalkLast  = 0x23
+	npcMapRefused     = 0x7D
+)

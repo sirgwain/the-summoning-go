@@ -33,8 +33,12 @@ func (l *Level) Halves(c Cell) int {
 // Level is a level: its grids, the art fixed in it, its features and procedures, and the things
 // and objects it places.
 type Level struct {
-	ID   string `json:"id"`
+	ID string `json:"id"`
+	// Name is a text key, empty for none.
 	Name string `json:"name"`
+	// Map, if set, refuses the level map: a message (a text key) or a thing template's
+	// conversation in its place.
+	Map *MapRefusal `json:"map,omitempty"`
 	// Size is the number of rows and columns.
 	Size   [2]int `json:"size"`
 	Floors string `json:"floors"`
@@ -472,4 +476,10 @@ type Object struct {
 type FloorObject struct {
 	Cell Cell `json:"cell"`
 	Object
+}
+
+// MapRefusal is what a level shows instead of its map: one of its fields is set.
+type MapRefusal struct {
+	Message      string `json:"message,omitempty"`
+	Conversation string `json:"conversation,omitempty"`
 }

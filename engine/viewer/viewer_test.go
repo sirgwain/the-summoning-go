@@ -524,7 +524,9 @@ func TestQuickSaveAndLoad(t *testing.T) {
 	v := playIn(t, devpack.Study, devpack.StudyStart)
 	v.SaveDir = t.TempDir()
 	at := v.World.Player().Cell()
-	press := func(k Key) { v.Update(Input{Held: map[Key]bool{k: true}, Pressed: map[Key]bool{k: true}, Cursor: image.Pt(-1, -1)}) }
+	press := func(k Key) {
+		v.Update(Input{Held: map[Key]bool{k: true}, Pressed: map[Key]bool{k: true}, Cursor: image.Pt(-1, -1)})
+	}
 	press(KeyF5)
 	if v.Notice != "Saved" {
 		t.Fatalf("notice %q", v.Notice)
@@ -533,5 +535,35 @@ func TestQuickSaveAndLoad(t *testing.T) {
 	press(KeyF9)
 	if got := v.World.Player().Cell(); got != at || v.Notice != "Loaded" {
 		t.Errorf("loaded at %v, want %v; notice %q", got, at, v.Notice)
+	}
+}
+
+// TestLevelMap opens the map with M in the hall: it shows the seen cells and the player, and
+// closes on the next key. The cellar refuses it with its message and hides the minimap.
+func TestLevelMap(t *testing.T) {
+	v := playIn(t, devpack.Hall, devpack.HallStart)
+	press := func(k Key) {
+		v.Update(Input{Held: map[Key]bool{k: true}, Pressed: map[Key]bool{k: true}, Cursor: image.Pt(-1, -1)})
+	}
+	if !v.MinimapShown() {
+		t.Error("no minimap in the hall")
+	}
+	press("M")
+	m := v.Map()
+	if !v.MapOpen || m == nil || len(m.Cells) == 0 || m.Name != "The Hall of Mechanisms" || m.Player != devpack.HallStart {
+		t.Fatalf("map open %v: %+v", v.MapOpen, m)
+	}
+	press(KeySpace)
+	if v.MapOpen {
+		t.Error("a key did not close the map")
+	}
+	v.World.Update([]input.Command{input.GoTo{Level: devpack.Cellar}})
+	v.rebuild()
+	if v.MinimapShown() {
+		t.Error("the minimap shows in the cellar, which refuses the map")
+	}
+	press("M")
+	if v.MapOpen || !slices.ContainsFunc(v.Events, func(s string) bool { return strings.Contains(s, "confuses") }) {
+		t.Errorf("the cellar's refusal: open %v, events %v", v.MapOpen, v.Events)
 	}
 }

@@ -95,6 +95,11 @@ name and time, and warns when it loads on another pack or version. In play, F5 s
 save, F9 loads it, and changing level writes the autosave; saves go under the user's config
 directory per pack (`--saves` to choose). A conversation in progress cannot be saved.
 
+**Done (the level map).** Levels have names (TEXT 129h + level) and a map setting; levels 13h and
+21h–23h refuse the map with a message or conversation 7Dh. M shows the full map (the seen cells
+by kind, the player, the level's name) and the minimap shows it small in the top-left corner,
+unless the level refuses it. Power 22h (the Palimpsest) shows the map too and is never used up.
+
 ## Left from Walk
 
 - **Play a real level through.** Only a short walk on level 0 of the imported game has been tried.
@@ -152,9 +157,8 @@ directory per pack (`--saves` to choose). A conversation in progress cannot be s
   and the school's first gesture icons, which the importer gives school 0's for now),
   changing sex (the other-sex portrait), story screens, endings, and the three arrival styles
   when changing level.
-- Audio (music and effects as Ogg with loop points), the level map and its refusals; save and load
-  screens with named saves (the disk menu's conversation actions).
-- Level names, which the import leaves empty.
+- Audio (music and effects as Ogg with loop points); save and load screens with named saves (the
+  disk menu's conversation actions).
 
 ### 9. Remaster UI
 
