@@ -34,6 +34,7 @@ func Build() *content.Pack {
 	arena(p)
 	study(p)
 	creation(p)
+	menu(p)
 	return p
 }
 

@@ -28,6 +28,11 @@ func Write(path, name string, w *sim.World) error {
 	if err != nil {
 		return err
 	}
+	return writeFile(path, &File{Name: name, Saved: time.Now().UTC(), State: s})
+}
+
+// writeFile writes file to path, making its directory.
+func writeFile(path string, file *File) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -37,7 +42,7 @@ func Write(path, name string, w *sim.World) error {
 	}
 	defer os.Remove(f.Name())
 	z := gzip.NewWriter(f)
-	if err := json.NewEncoder(z).Encode(&File{Name: name, Saved: time.Now().UTC(), State: s}); err != nil {
+	if err := json.NewEncoder(z).Encode(file); err != nil {
 		f.Close()
 		return err
 	}
@@ -85,4 +90,20 @@ func Load(path string, p *content.Pack) (w *sim.World, warning string, err error
 	}
 	w, err = sim.Restore(p, s)
 	return w, warning, err
+}
+
+// Rename moves the save at from to to, naming it name.
+func Rename(from, to, name string) error {
+	f, err := Read(from)
+	if err != nil {
+		return err
+	}
+	f.Name = name
+	if err := writeFile(to, f); err != nil {
+		return err
+	}
+	if from == to {
+		return nil
+	}
+	return os.Remove(from)
 }

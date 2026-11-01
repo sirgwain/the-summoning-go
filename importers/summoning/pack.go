@@ -243,6 +243,10 @@ func Import(src *Source) (*content.Pack, *Report, error) {
 	if im.portraitRows > 0 {
 		im.creation(im.portraitRows, im.premades)
 	}
+	// NPC record 0's conversation is the disk menu (dialogue.md).
+	if id, err := im.creature(0); err == nil && im.pack.Things[id].Conversation != "" {
+		im.pack.Manifest.Menu = id
+	}
 
 	for i, l := range levels {
 		cl, err := im.level(i, l)

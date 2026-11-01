@@ -89,9 +89,10 @@ type CellObjects struct {
 	Objects []*Object    `json:"objects"`
 }
 
-// State returns the world's state, or an error while a conversation is open.
+// State returns the world's state, or an error while a conversation is open, unless it waits on
+// a menu: the state then leaves the conversation out.
 func (w *World) State() (*State, error) {
-	if w.talk != nil {
+	if t := w.talk; t != nil && (t.Line == nil || t.Line.Kind != LineMenu) {
 		return nil, fmt.Errorf("the world cannot be saved during a conversation")
 	}
 	rng, err := w.src.MarshalBinary()

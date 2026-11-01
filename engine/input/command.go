@@ -151,7 +151,11 @@ type Leave struct{}
 // ShowMap shows the level map, or what the level shows instead.
 type ShowMap struct{}
 
+// Menu opens the game's menu: the pack's menu conversation.
+type Menu struct{}
+
 func (ShowMap) command() {}
+func (Menu) command()    {}
 
 func (Learn) command()     {}
 func (Memorize) command()  {}

@@ -29,6 +29,9 @@ const (
 	LineSay = "say"
 	// LineTeach shows gesture icons as they are taught.
 	LineTeach = "teach"
+	// LineMenu opens one of the game's menus (Menu, a content.Menu… name); going on returns
+	// from it.
+	LineMenu = "menu"
 )
 
 // Line is what a conversation shows and waits on.
@@ -39,6 +42,7 @@ type Line struct {
 	Portrait string `json:"portrait,omitempty"`
 	// Icons are the icons taught.
 	Icons string `json:"icons,omitempty"`
+	Menu  string `json:"menu,omitempty"`
 }
 
 // Talk is an open conversation.
@@ -503,7 +507,7 @@ func (w *World) talkAction(a content.Action) {
 	case a.Ending:
 		w.closing()
 	case a.Menu != nil:
-		w.emit(Event{Kind: EventNotYet, Level: l.ID, Detail: "the " + *a.Menu + " menu"})
+		w.say(Line{Kind: LineMenu, Menu: *a.Menu})
 	case a.Transcript != nil:
 		w.emit(Event{Kind: EventNotYet, Level: l.ID, Detail: "printing the transcript"})
 	}

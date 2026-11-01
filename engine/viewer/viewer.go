@@ -305,6 +305,10 @@ func (v *Viewer) Update(in Input) {
 func (v *Viewer) modal(in Input) ([]input.Command, bool) {
 	switch {
 	case v.World.Talk() != nil:
+		if l := v.World.Talk().Line; l != nil && l.Kind == sim.LineMenu {
+			v.openMenu(l.Menu)
+			return nil, true
+		}
 		return v.talkInput(in), true
 	case v.MapOpen:
 		if in.anyPressed() || in.Left.Released || in.Right.Released {
@@ -606,6 +610,8 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 		v.ToggleInventory()
 	case in.pressed("M"):
 		cmds = append(cmds, input.ShowMap{})
+	case in.pressed("O"):
+		cmds = append(cmds, input.Menu{})
 	case in.pressed(KeyF5):
 		v.SaveGame(QuickSave)
 	case in.pressed(KeyF9):

@@ -1,6 +1,10 @@
 package devpack
 
-import "github.com/sirgwain/the-summoning-go/engine/content"
+import (
+	"strings"
+
+	"github.com/sirgwain/the-summoning-go/engine/content"
+)
 
 // creation adds the character creation record: the player's portrait, the three attribute
 // methods, a sword fighter and a fire school, and one premade character.
@@ -22,4 +26,30 @@ func creation(p *content.Pack) {
 		Premade: []content.Premade{{Name: "Arden", Portrait: PortraitPlayer, Attributes: map[string]int{
 			"strength": 18, "agility": 20, "endurance": 18, "accuracy": 16, "talent": 16, "power": 16}}},
 	}
+}
+
+// ThingMenu holds the disk menu's conversation, opened with the menu key.
+const ThingMenu = "thing.menu"
+
+// menu adds the disk menu: a conversation offering each of the game's menus by keyword.
+func menu(p *content.Pack) {
+	s := p.Texts[textID].Strings
+	str := func(v string) *string { return &v }
+	s["talk.menu"] = "The disk menu. *Save, *restore, *delete or *rename a game, *leave for the main menu, or *quit."
+	conv := &content.Conversation{ID: "conversation.menu", Name: "Menu", Clauses: []content.Clause{
+		{If: content.Condition{Greeting: true}, Do: []content.Action{{Say: str("talk.menu")}}},
+	}}
+	for _, m := range []string{content.MenuSave, content.MenuRestore, content.MenuDelete, content.MenuRename, content.MenuLeave, content.MenuQuit} {
+		id := keywordID(m)
+		s[id+".word"], s[id+".answer"] = m, strings.ToUpper(m[:1])+m[1:]+"."
+		p.Keywords.Keywords = append(p.Keywords.Keywords, content.Keyword{ID: id, Word: id + ".word", Answer: id + ".answer"})
+		conv.Clauses[0].Do = append(conv.Clauses[0].Do, content.Action{Offer: str(id)})
+		conv.Clauses = append(conv.Clauses, content.Clause{If: content.Condition{Asked: []string{id}},
+			Do: []content.Action{{Menu: str(m)}, {End: true}}})
+	}
+	p.Conversations[conv.ID] = conv
+	t := *p.Things[ThingSage]
+	t.ID, t.Conversation = ThingMenu, conv.ID
+	p.Things[t.ID] = &t
+	p.Manifest.Menu = t.ID
 }

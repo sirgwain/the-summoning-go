@@ -25,6 +25,36 @@
       "id": "keyword.sage",
       "word": "keyword.sage.word",
       "answer": "keyword.sage.answer"
+    },
+    {
+      "id": "keyword.save",
+      "word": "keyword.save.word",
+      "answer": "keyword.save.answer"
+    },
+    {
+      "id": "keyword.restore",
+      "word": "keyword.restore.word",
+      "answer": "keyword.restore.answer"
+    },
+    {
+      "id": "keyword.delete",
+      "word": "keyword.delete.word",
+      "answer": "keyword.delete.answer"
+    },
+    {
+      "id": "keyword.rename",
+      "word": "keyword.rename.word",
+      "answer": "keyword.rename.answer"
+    },
+    {
+      "id": "keyword.leave",
+      "word": "keyword.leave.word",
+      "answer": "keyword.leave.answer"
+    },
+    {
+      "id": "keyword.quit",
+      "word": "keyword.quit.word",
+      "answer": "keyword.quit.answer"
     }
   ]
 }

@@ -68,6 +68,10 @@ type Frontend struct {
 	attr     int
 	// then is the screen after the scene.
 	then string
+	// disk is the menu showing over play (a content.Menu… name), empty for the main frontend;
+	// typed the name being typed on it.
+	disk  string
+	typed string
 
 	// Done is set when the frontend has finished: with Character a new game, with Restore a save
 	// to load, with Quit nothing; otherwise back to play as it was.
@@ -75,6 +79,10 @@ type Frontend struct {
 	Character *sim.Character
 	Restore   string
 	Quit      bool
+	// A menu's results: the name to save as, the save to delete, the save to rename and its new
+	// name, and whether a question was answered yes.
+	SaveAs, Delete, Rename, RenameTo string
+	Confirmed                        bool
 }
 
 // NewFrontend returns the frontend of pack p at its main menu, offering saves to restore.
@@ -122,6 +130,9 @@ type option struct{ name, label string }
 // layout fills in what the screen shows.
 func (f *Frontend) layout() {
 	f.Title, f.Lines, f.Portrait, f.Buttons = "", nil, nil, nil
+	if f.layoutDisk() {
+		return
+	}
 	c := f.creation()
 	var opts []option
 	switch f.Screen {
@@ -368,7 +379,7 @@ func (f *Frontend) Update(in Input) {
 	case in.pressed(KeyArrowUp):
 		f.Choice = (f.Choice + n - 1) % n
 	case in.pressed(KeyEnter):
-		if f.Screen == ScreenName {
+		if f.Screen == ScreenName || f.typing() {
 			pick = "ok"
 		} else {
 			pick = f.Buttons[f.Choice].Name
@@ -388,6 +399,8 @@ func (f *Frontend) Update(in Input) {
 		}
 	case ScreenName:
 		f.typeName(in)
+	case ScreenSave, ScreenRenameTo:
+		f.typeInto(in)
 	case ScreenAttributes:
 		if f.Choice < len(Attributes)*f.attrButtons() {
 			i := f.Choice / f.attrButtons()
@@ -438,6 +451,9 @@ func (f *Frontend) pick(name string) {
 		}
 		_, err := fmt.Sscanf(name[len(prefix):], "%d", &i)
 		return err == nil
+	}
+	if f.pickDisk(name, func(prefix string) (int, bool) { ok := num(prefix); return i, ok }) {
+		return
 	}
 	switch f.Screen {
 	case ScreenMenu:
@@ -528,6 +544,8 @@ func (f *Frontend) pick(name string) {
 		switch {
 		case num("save."):
 			f.Restore, f.Done = f.Saves[i], true
+		case name == "back" && f.disk != "":
+			f.Done = true
 		case name == "back":
 			f.show(ScreenMenu)
 		}

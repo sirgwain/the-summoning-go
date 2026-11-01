@@ -12,5 +12,6 @@
   "player": "thing.player",
   "counters": {
     "after_conversation": "var.after"
-  }
+  },
+  "menu": "thing.menu"
 }

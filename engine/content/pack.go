@@ -73,6 +73,8 @@ type Manifest struct {
 	Rules string `json:"rules,omitempty"`
 	// Counters names the counters the engine itself uses.
 	Counters *Counters `json:"counters,omitempty"`
+	// Menu is the thing template whose conversation the menu key opens: the game's disk menu.
+	Menu string `json:"menu,omitempty"`
 }
 
 // RulesSummoning is the Summoning's combat rule set, the only one.

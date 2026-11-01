@@ -1,0 +1,124 @@
+{
+  "id": "conversation.menu",
+  "name": "Menu",
+  "clauses": [
+    {
+      "if": {
+        "greeting": true
+      },
+      "do": [
+        {
+          "say": "talk.menu"
+        },
+        {
+          "offer": "keyword.save"
+        },
+        {
+          "offer": "keyword.restore"
+        },
+        {
+          "offer": "keyword.delete"
+        },
+        {
+          "offer": "keyword.rename"
+        },
+        {
+          "offer": "keyword.leave"
+        },
+        {
+          "offer": "keyword.quit"
+        }
+      ]
+    },
+    {
+      "if": {
+        "asked": [
+          "keyword.save"
+        ]
+      },
+      "do": [
+        {
+          "menu": "save"
+        },
+        {
+          "end": true
+        }
+      ]
+    },
+    {
+      "if": {
+        "asked": [
+          "keyword.restore"
+        ]
+      },
+      "do": [
+        {
+          "menu": "restore"
+        },
+        {
+          "end": true
+        }
+      ]
+    },
+    {
+      "if": {
+        "asked": [
+          "keyword.delete"
+        ]
+      },
+      "do": [
+        {
+          "menu": "delete"
+        },
+        {
+          "end": true
+        }
+      ]
+    },
+    {
+      "if": {
+        "asked": [
+          "keyword.rename"
+        ]
+      },
+      "do": [
+        {
+          "menu": "rename"
+        },
+        {
+          "end": true
+        }
+      ]
+    },
+    {
+      "if": {
+        "asked": [
+          "keyword.leave"
+        ]
+      },
+      "do": [
+        {
+          "menu": "leave"
+        },
+        {
+          "end": true
+        }
+      ]
+    },
+    {
+      "if": {
+        "asked": [
+          "keyword.quit"
+        ]
+      },
+      "do": [
+        {
+          "menu": "quit"
+        },
+        {
+          "end": true
+        }
+      ]
+    }
+  ]
+}

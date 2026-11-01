@@ -118,6 +118,11 @@ func (v *verifier) manifest() {
 			v.fail("pack.json: player %q is a %s, not a player", m.Player, t.Kind)
 		}
 	}
+	if m.Menu != "" {
+		if t := v.thingRef("pack.json menu", m.Menu); t != nil && t.Conversation == "" {
+			v.fail("pack.json: menu %q holds no conversation", m.Menu)
+		}
+	}
 }
 
 // frames returns the number of frames of sprite, or -1 after reporting it missing.

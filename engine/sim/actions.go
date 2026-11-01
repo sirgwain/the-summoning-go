@@ -189,7 +189,7 @@ func (w *World) apply(cmd input.Command) {
 			refuse(content.Cell{}, err.Error())
 		}
 	case input.Walk, input.PickUp, input.PutDown, input.Swap, input.Activate, input.PlacePlayer, input.Strike, input.PutOn, input.Throw,
-		input.Learn, input.Memorize, input.Cast, input.NextSpell, input.Read, input.Talk, input.ShowMap:
+		input.Learn, input.Memorize, input.Cast, input.NextSpell, input.Read, input.Talk, input.ShowMap, input.Menu:
 		w.playerCommand(c)
 	}
 }
@@ -234,6 +234,10 @@ func (w *World) playerCommand(cmd input.Command) {
 		w.talkTo(c.Thing)
 	case input.ShowMap:
 		w.showMap()
+	case input.Menu:
+		if t := w.pack.Things[w.pack.Manifest.Menu]; t != nil {
+			w.startTalk(t, nil)
+		}
 	case input.PlacePlayer:
 		if !l.InBounds(c.Cell) || l.Blocked(c.Cell) {
 			w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: c.Cell, Detail: "the player cannot stand there"})

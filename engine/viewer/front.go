@@ -61,6 +61,10 @@ func (v *Viewer) frontUpdate(in Input) {
 		return
 	}
 	v.Front = nil
+	if f.disk != "" {
+		v.menuDone(f)
+		return
+	}
 	switch {
 	case f.Quit:
 		v.Quit = true

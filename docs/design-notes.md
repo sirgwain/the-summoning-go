@@ -123,6 +123,11 @@ or click skips. Tested by `TestCreateCharacter`, `TestPremadeAndBack`, `TestDeat
 and `TestSceneRun`. Not yet seen on screen (no display this session): the menus, and the
 imported door and ending scenes.
 
+**Done (the disk menu).** O opens the pack's menu conversation (NPC record 0's; the dev pack's
+offers each menu by keyword). Its `menu` actions open frontend screens over play: save under a
+typed name or over a save, restore, delete, rename, and the quit and leave questions; then the
+conversation goes on (`TestDiskMenu`). Saves are named files under the save directory.
+
 ## Left from Walk
 
 - **Play a real level through.** Only a short walk on level 0 of the imported game has been tried.
@@ -170,8 +175,7 @@ imported door and ending scenes.
 
 ### 8. Game
 
-- From Magic and talk: conversation actions that report "not yet" (the ending, the disk menu's
-  quit, save, restore, delete and rename, printing the transcript) and view effects (`effect.n`
+- From Magic and talk: conversation actions that report "not yet" (printing the transcript) and view effects (`effect.n`
   events, and effect 6's level change, which does happen); the player's name in texts (the
   viewer says "Stranger").
 - Scenes: the intro, character creation (which replaces the starting attributes and bonus the
@@ -179,8 +183,7 @@ imported door and ending scenes.
   and the school's first gesture icons, which the importer gives school 0's for now),
   changing sex (the other-sex portrait), story screens, endings, and the three arrival styles
   when changing level.
-- Audio (music and effects as Ogg with loop points); save and load screens with named saves (the
-  disk menu's conversation actions).
+- Audio (music and effects as Ogg with loop points).
 
 ### 9. Remaster UI
 
