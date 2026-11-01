@@ -1,6 +1,6 @@
 # Audio plan
 
-Status: 2026-11-01. Planned, not started. How music and sound effects get from the game's files to
+Status: 2026-11-01. Phase 1 done. How music and sound effects get from the game's files to
 the speakers, and the order to build it in. Update this file as work lands, and fold what's
 settled into [design.md](design.md#audio), [pack.md](pack.md) and the spec; delete it once audio
 is done.
@@ -42,20 +42,13 @@ Each phase lands with its tests and leaves `go vet ./...` and `go test ./...` pa
 
 ### 1. Settle the spec
 
-[spec/audio.md](spec/audio.md) already covers the song format, the events, timing, frequency
-tables, pitch bend, volume and rhythm mode. To add:
-
-- [ ] The chip's state when a song starts: register 01h (waveform select on), BDh (rhythm mode,
-      no drums keyed), every voice keyed off, and what the voices' registers hold before the first
-      program change.
-- [ ] What happens to sounding notes when a song ends (FCh) and when it restarts: cut, keyed off
-      and left to release, or left playing.
-- [ ] Whether the volume command, the velocity rule and a program change rewrite register 40h on a
-      sounding note at once.
-- [ ] The song player's output, stated as a list of (song tick, register, value), the thing the
-      fixture tests compare.
-
-Check each against the game itself before writing it down, by ear or by its register writes.
+Done. [spec/audio.md](spec/audio.md) now gives the chip's state at game start and song start
+(default instruments, operator resets, carriers fully attenuated until a volume is set), the
+operator slots and the exact bits each instrument parameter writes, the exact clock rate,
+restarting (no notes stopped, the first delay skipped), stopping (keys off, carriers attenuated),
+both fades, and the register-write list as the song player's output. It also corrects two
+things: the descriptor's offset-2 length is not the loop, the game gives loops in bars when it
+starts a track; and a song that ends cuts its carriers rather than ringing on.
 
 ### 2. The chip: `internal/opl2`
 
@@ -70,6 +63,8 @@ A port of opal cut down to the OPL2: one register array, nine two-operator chann
 - [ ] Writes are applied in order between samples. A key-off followed by a key-on in the same
       tick must retrigger the note, so queue writes and apply them one per sample (as the bus
       allows), or confirm that opal's write path already retriggers correctly.
+- [ ] C0h bits 4–7 are ignored, as on the OPL2 (opal's OPL3 uses bits 4–5 as speaker
+      enables; songs can set them through large feedback values).
 - [ ] `internal/opl2/LICENSE` with opal's MIT notice, and a package comment naming opal as the
       source.
 
@@ -110,11 +105,13 @@ writes the spec gives.
 
 - [ ] Render a song: run the song player and the chip together, one song tick of samples at a
       time, then resample to 44100 Hz.
-- [ ] Songs that play once: render to FCh, then keep going until every voice is silent (with an
-      upper limit) so the release tails are kept.
+- [ ] Songs that play once: render to FCh and the stop that follows, then keep going until
+      every voice is silent (with an upper limit): stopping attenuates the carriers, but an
+      additive voice's modulator rings on through its release.
 - [ ] Looping songs: render two passes and store both. The loop region is the second pass, because
       it starts with the first pass's notes still ringing, so the loop is seamless. The intro is
-      the first pass.
+      the first pass. A pass ends at the restart: the loop point (from the track's bars) or FCh,
+      whichever comes first.
 - [ ] Write mono 16-bit WAV (a small writer in the importer, no dependency).
 - [ ] Write `audio/music/<id>.wav` or `audio/sfx/<id>.wav`, plus `<id>.json` with
       `{ "rate": 44100, "intro": samples, "loop": samples }` (`loop` 0 for songs that play once).
@@ -150,7 +147,8 @@ Ebitengine is allowed here; `engine/sim` only emits events.
       **Unknowns**, with scenes). Fill [spec/audio.md](spec/audio.md) and
       [spec/scenes.md](spec/scenes.md), then the importer writes the assignments into the pack
       (level and scene fields).
-- [ ] Which tracks loop when started, and with what loop length when it differs from the header's.
+- [ ] Which tracks loop when started, and with how many bars; the importer needs this to render
+      loops, since songs don't carry it.
 
 ## Checking
 
