@@ -184,7 +184,7 @@ underlined (`TestTranscriptFile`). A debug command sets a counter (`input.SetCou
   when changing level (scroll, fall, fall-through, teleport, ripple).
 - The intro and the end scenes, whose captions are in the game's program; ending G's changes
   to the world and its save.
-- Audio (music and effects with loop points).
+- Audio (music and effects with loop points): the plan is [audio-plan.md](audio-plan.md).
 - Play *The Summoning* from start to end on the imported pack.
 
 ### 9. Remaster UI

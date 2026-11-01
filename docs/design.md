@@ -225,8 +225,8 @@ spells/<id>.json
 templates/<id>.json        puzzle-piece templates (plate, lever, teleporter…)
 levels/<id>/level.json     grid, placements, rules
 scenes/<id>.json
-audio/music/<id>.ogg       with loop points in a sidecar
-audio/sfx/<id>.ogg
+audio/music/<id>.wav       or .ogg, with loop points in a sidecar <id>.json
+audio/sfx/<id>.wav
 ```
 
 The file formats are in [pack.md](pack.md).
@@ -312,10 +312,11 @@ and the editor's play-test can use them later. A game build can leave them unbou
 
 ## Audio
 
-- Music and effects play from Ogg files with loop points.
+- Music and effects play from WAV or Ogg files with loop points.
 - The Summoning's music and effects are AdLib (OPL) sequences. The importer renders them once: it
-  plays each sequence through an OPL emulator and encodes the result to Ogg with loop points. The
-  sequence format and how it plays are in `docs/spec/audio.md`.
+  plays each sequence through an OPL2 emulator (`internal/opl2`, a Go port of opal) and writes WAV
+  with loop points. The sequence format and how it plays are in `docs/spec/audio.md`; the work is
+  planned in [audio-plan.md](audio-plan.md).
 - How many sounds play at once, and which take priority, is a mixer setting.
 
 ## Saves
