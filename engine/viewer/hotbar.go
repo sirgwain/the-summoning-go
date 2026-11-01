@@ -253,12 +253,7 @@ func (h *Hotbar) click(v *Viewer, pt image.Point, right bool) []input.Command {
 // HoverLines describe what is under the cursor on the hotbar or the inventory panel: the name of
 // an object in a box, and for a container what it holds (docs/spec/items.md, The inventory panel).
 func (v *Viewer) HoverLines(cursor image.Point) []string {
-	ip := v.Inventory()
-	if o := v.objectUnder(ip, cursor); o != nil {
-		if ip != nil && cursor.In(ip.Rect) {
-			// The panel's contents column lists what it holds.
-			return v.objectLines(o)[:1]
-		}
+	if o := v.objectUnder(v.Inventory(), cursor); o != nil {
 		return v.objectLines(o)
 	}
 	h := v.Hotbar()

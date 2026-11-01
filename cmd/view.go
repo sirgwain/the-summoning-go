@@ -98,8 +98,8 @@ of the object under the pointer or on it, and the character's attributes, points
 experience and skills. Its boxes work as the hotbar's: a click swaps a box with the pointer.
 A right click on a bag or chest (on the hotbar or the panel, with nothing on the pointer) opens
 it as the pack, where its contents can be taken and put; a second right click closes it, and
-the bag in the left hand is the pack again. Resting the pointer on a container shows what it
-holds.
+the bag in the left hand is the pack again. Resting the pointer on a box names its object, and
+for a container lists what it holds.
 
 V shows the whole level, F12 switches to the viewer's tools (see summoning view --help),
 clicking a cell inspects it, ~ shows or hides the debug overlay (hidden at first; --debug shows
@@ -593,11 +593,6 @@ func (s *shell) drawInventory(screen *ebiten.Image) {
 		}
 		vector.StrokeRect(win, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx()-1), float32(r.Dy()-1), 1, edge, false)
 	}
-	for _, b := range ip.Preview {
-		r := b.Rect.Inset(1)
-		vector.FillRect(win, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), slotColor, false)
-		vector.StrokeRect(win, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx()-1), float32(r.Dy()-1), 1, slotEdgeColor, false)
-	}
 	art := s.artImage(size)
 	draw := func(img content.Image, at image.Point, mirrored bool) {
 		if err := s.sprites.DrawImage(art, img, at.X, at.Y, mirrored); err != nil && s.err == nil {
@@ -614,12 +609,6 @@ func (s *shell) drawInventory(screen *ebiten.Image) {
 		if img, ok := v.SlotImage(b.Slot); ok {
 			fs := v.Pack.Sprites[img.Sprite].FrameSize
 			draw(img, b.Rect.Min.Add(image.Pt((b.Rect.Dx()-fs[0])/2, (b.Rect.Dy()-fs[1])/2)), false)
-		}
-	}
-	for _, b := range ip.Preview {
-		if b.Has {
-			fs := v.Pack.Sprites[b.Icon.Sprite].FrameSize
-			draw(b.Icon, b.Rect.Min.Add(image.Pt((b.Rect.Dx()-fs[0])/2, (b.Rect.Dy()-fs[1])/2)), false)
 		}
 	}
 	textAt := map[int]int{}

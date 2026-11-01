@@ -25,9 +25,6 @@ const (
 	// invTextW is the width of the details and stats columns; detailLines the details' lines.
 	invTextW    = 40 * CharWidth
 	detailLines = 5
-	// previewColumns is how many boxes wide the contents preview is: a container's places in two
-	// rows, as the pack shows them.
-	previewColumns = 6
 )
 
 // wornLeft and wornRight are the worn slots in the boxes left and right of the figure, top down:
@@ -65,16 +62,6 @@ type InventoryPanel struct {
 	// Slots are the worn slots' boxes and the pack's.
 	Slots []SlotBox
 	Lines []TextLine
-	// Preview shows the container the panel describes as the pack would: a box for each of its
-	// places, with the icons of what it holds. Its boxes are only shown, not clicked.
-	Preview []PreviewBox
-}
-
-// PreviewBox is a box of the contents preview, showing Icon if Has.
-type PreviewBox struct {
-	Rect image.Rectangle
-	Icon content.Image
-	Has  bool
 }
 
 // ToggleInventory opens or closes the inventory panel, when playing.
@@ -127,9 +114,6 @@ func (v *Viewer) Inventory() *InventoryPanel {
 	detailsAt := image.Pt(x, y)
 	y += detailLines * LineHeight
 	right := max(x+invTextW, x+invColumn*SlotSize)
-	// The contents preview at the right.
-	previewAt := image.Pt(right+2*invGap, invPad)
-	right = previewAt.X + previewColumns*SlotSize
 	// The stats under the figure, across the panel.
 	y = max(y, invPad+dollH) + invGap
 	stats := v.stats(p, inv)
@@ -156,7 +140,6 @@ func (v *Viewer) Inventory() *InventoryPanel {
 			ip.Lines = append(ip.Lines, TextLine{At: detailsAt.Add(image.Pt(0, i*LineHeight)), Text: s})
 		}
 	}
-	v.preview(ip, o, previewAt)
 	return ip
 }
 
@@ -242,31 +225,6 @@ func (v *Viewer) described(ip *InventoryPanel) *sim.Object {
 		return o
 	}
 	return v.World.Player().Hand
-}
-
-// preview lays out the contents preview of object o at at when it is a container: its name, then
-// a box for each of its places, two rows as the pack's, the first holding what it holds in order.
-func (v *Viewer) preview(ip *InventoryPanel, o *sim.Object, at image.Point) {
-	if o == nil {
-		return
-	}
-	it := v.Pack.Items[o.Item]
-	if it == nil || it.Container == nil || o == v.World.Player().Pack(v.Pack) {
-		return // the pack shows the open one
-	}
-	ip.Lines = append(ip.Lines, TextLine{At: at, Text: inspect.ItemName(v.Pack, o.Item)})
-	n := max(it.Container.Capacity, len(o.Contents))
-	cols := min(max((n+1)/2, 1), previewColumns)
-	for k := range n {
-		bx, by := at.X+(k%cols)*SlotSize, at.Y+LineHeight+(k/cols)*SlotSize
-		b := PreviewBox{Rect: image.Rect(bx, by, bx+SlotSize, by+SlotSize)}
-		if k < len(o.Contents) {
-			if c := v.Pack.Items[o.Contents[k].Item]; c != nil {
-				b.Icon, b.Has = c.IconFor(len(o.Contents[k].Contents)), true
-			}
-		}
-		ip.Preview = append(ip.Preview, b)
-	}
 }
 
 // details are the lines describing object o, the one the panel describes; with none, the
