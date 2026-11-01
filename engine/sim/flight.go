@@ -183,6 +183,9 @@ func (w *World) land(l *Level, f *Flight) {
 		return
 	case it.BreaksInto != "":
 		w.emit(Event{Kind: EventObject, Level: l.ID, Cell: c, Item: o.Item, Detail: "broke"})
+		if l.ID == w.current && l.Visible(c) {
+			w.cue(c, content.CueShatter)
+		}
 		o = w.newObject(it.BreaksInto)
 		w.broke(l, it)
 	}
@@ -237,6 +240,7 @@ func (w *World) fire() bool {
 	damage := max(w.missileDamage(arrow, true)+(p.Attributes[AttrAccuracy]-10)/2, 1)
 	w.launch(l, arrow, p.U, p.V, p.Facing, min(5*p.Attributes[AttrStrength], firedRange), damage, true, true, nil)
 	p.Pose, p.poseLeft = "attack.both", poseUpdates
+	p.bowRelease = w.step + 1
 	w.practice(SkillWeapon+bowClass, 1)
 	return true
 }

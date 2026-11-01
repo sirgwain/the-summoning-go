@@ -111,15 +111,16 @@ the timing corrected the spec: the timer's divisor comes from 1193180, but it co
 
 ### 6. Which track plays where
 
-- [ ] The rest of the effects: combat, inventory, spells, projectiles, hazards and the
-      view effects all play effects or tracks; the spec names only the mechanisms' so far.
+- [x] The effects of combat, the bow, used-up objects, missiles, thrown bottles, handling
+      objects and gestures (spec, Sound effects).
+- [ ] The view effects' effects and tracks, and the new game's door opening (effect 17h a step),
+      with the view effects and scenes.
 - [x] Footsteps, a new game's track 0, the theme track 8 of the creature of NPC record 0Dh while
       it is in sight, and the slow fade on a change of level or a restore; leaving play
       quick-fades.
-- [ ] Track assignment for levels, menus, character creation, death and the endings (spec
-      **Unknowns**, with scenes). Fill [spec/audio.md](spec/audio.md) and
-      [spec/scenes.md](spec/scenes.md), then the importer writes the assignments into the pack
-      (level and scene fields).
+- [ ] The front end's and endings' tracks (spec **Unknowns**, with scenes): 1 (a new
+      character's story, 48 bars), 2 and 3 (the intro), 4 (the closing, 8 bars), 5, 6 and 7 (end
+      scenes). Levels have no music of their own in the game, and the engine keeps it so.
 - [x] Which tracks loop when started, and with how many bars (spec, Songs).
 
 ## Checking

@@ -278,7 +278,8 @@ leaves out shows nothing. Later milestones add keys.
   `weapon_class` (0–3) is a weapon's class, whose skill it practices.
 - `actions` are up to two things the item does in hand: `{ "kind", "damage", "delay", "skill" }`.
   `kind` is `attack`, `attack_both`, `fire`, `use_up` or `use`; `damage` dice; `delay` the player
-  updates the hand then waits; `skill` the class skill an attack needs (`docs/spec/items.md`).
+  updates the hand then waits; `skill` the class skill an attack needs (`docs/spec/items.md`);
+  `sound` the sound a `use_up` action makes when it uses its object up.
 - `power` is the number of the power the item starts when used (`docs/spec/items.md`, Powers), and
   with `power_worn` also when worn. `spent` is the item a used-up object becomes.
 - `casts` makes using the item cast a spell: `{ "spell": "spell.fireball", "power": "1d6" }`, the
@@ -687,7 +688,7 @@ A floor type is a floor set variant and what the floor does. All fields but `var
 | Field | Meaning |
 | --- | --- |
 | `variant` | The floor set's variant drawn |
-| `enter` | An effect on whoever enters: `{ "damage": dice, "type": "fire" }` or `{ "drain_magic": n }` |
+| `enter` | An effect on whoever enters: `{ "damage": dice, "type": "fire" }` or `{ "drain_magic": n }`; `"cue"` names a cue its damage to the player plays |
 | `tick` | An effect on whoever stands there, every status tick |
 | `depth` | Water depth 1..4 (`docs/spec/world.md`, Liquids) |
 | `sinks` | Objects put down here are lost, except on a plate that is up |
@@ -755,7 +756,7 @@ Spells' effects use these actions too, with the cast's power:
 
 | Action | Effect |
 | --- | --- |
-| `{ "missile": { "hurts", "opens", "scatters", "bane", "bane_damage", "sprite", "directional", "cloud", "bounces", "around" } }` | Fly a missile (`docs/spec/spells.md`, Missiles): `hurts` is `fire`, `lightning` or `poison`; `opens` opens doors and starts boulders; `scatters` moves what it hits to a random seen cell; `bane` is a thing template it hurts by `bane_damage`. `directional` draws the frame of the direction it flies; `cloud` is the sprite it ends as; `around` casts four, along the diagonals |
+| `{ "missile": { "hurts", "opens", "scatters", "bane", "bane_damage", "sprite", "directional", "cloud", "bounces", "around" } }` | Fly a missile (`docs/spec/spells.md`, Missiles): `hurts` is `fire`, `lightning` or `poison`; `opens` opens doors and starts boulders; `scatters` moves what it hits to a random seen cell; `bane` is a thing template it hurts by `bane_damage`. `directional` draws the frame of the direction it flies; `cloud` is the sprite it ends as; `around` casts four, along the diagonals; `sound` is the sound it makes on hitting something or meeting a wall where the player sees it |
 | `{ "fire_item": item }` | Fire a new object of the item from the caster |
 | `{ "timed": effect }` | A timed effect for `power` status ticks |
 | `{ "conjure": { "thing", "distance", "look_per_skill" } }` | A new thing half a cell ahead, lasting `power` of its updates, showing frame school skill / `look_per_skill` |
@@ -829,8 +830,14 @@ audio/sfx/<name>.wav
 { "id": "cues", "cues": { "lever": "sfx.9", "level_up": "music.10" } }
 ```
 
-The cues: `footstep` (every third walk step, not while levitating), `lever` (a lever pulled), `door` (a door moving), `unseal` (a sealed door opening),
-`teleport`, `level_up`, `weapon_skill_up` and `magic_skill_up`. A cue the pack leaves out is silent.
+The cues: `footstep` (every third walk step, not while levitating), `lever` (a lever pulled),
+`door` (a door moving), `unseal` (a sealed door opening), `teleport`, `level_up`, `weapon_skill_up`,
+`magic_skill_up`, `miss` (the player's blow fails or does no damage), `hit` (it hurts), `hurt` (the
+player hurt by a creature's blow, a boulder or a closing door, or a floor effect naming it), `bow`
+(a bow shot, an update after the arrow leaves), `shatter` (a thrown object breaking where the
+player sees it), `take` (an object taken from the floor or exchanged with a slot), `drop` (one put
+down), `cast` (a spell's cast starting) and `gesture` (an icon added to or taken off the gesture
+being entered, a gesture entered, the spell panel opened). A cue the pack leaves out is silent.
 
 ## The Summoning import
 

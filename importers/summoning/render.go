@@ -19,8 +19,28 @@ const firstEffect = 0x11
 // trackCues are the tracks the engine's cues play (audio.md, Songs).
 var trackCues = map[string]int{
 	content.CueLevelUp: 10, content.CueWeaponSkillUp: 11, content.CueMagicSkillUp: 12,
-	content.CueFootstep: firstEffect, content.CueLever: firstEffect + 9, content.CueUnseal: firstEffect + 0x16,
+	content.CueFootstep: firstEffect, content.CueMiss: firstEffect + 3, content.CueHurt: firstEffect + 4,
+	content.CueHit: firstEffect + 5, content.CueBow: firstEffect + 6, content.CueTake: firstEffect + 9,
+	content.CueDrop: firstEffect + 9, content.CueCast: firstEffect + 9, content.CueGesture: firstEffect + 9,
+	content.CueShatter: firstEffect + 0x0A, content.CueLever: firstEffect + 9, content.CueUnseal: firstEffect + 0x16,
 	content.CueTeleport: firstEffect + 0x16, content.CueDoor: firstEffect + 0x17,
+}
+
+// useUpTrack is the track of a use-up action by its icon (audio.md, Sound effects).
+var useUpTrack = map[int]int{9: firstEffect + 7, 10: firstEffect + 0x0B}
+
+// missileTrack is the track a missile sounds by what it does (audio.md, Sound effects: types 0
+// and 4 burn, 3 poisons, 5 strikes with lightning, 0Eh scatters).
+func missileTrack(m *content.MissileSpell) (int, bool) {
+	switch {
+	case m.Hurts == content.HurtsFire:
+		return firstEffect + 0x0C, true
+	case m.Hurts == content.HurtsPoison:
+		return firstEffect + 8, true
+	case m.Hurts == content.HurtsLightning, m.Scatters:
+		return firstEffect + 0x0D, true
+	}
+	return 0, false
 }
 
 // Music in play and footsteps (audio.md, Music in play and Footsteps).
@@ -227,6 +247,24 @@ func (im *importer) audio() {
 		}
 	}
 	im.pack.Cues = &content.Cues{ID: "cues", Cues: cues}
+	for id, tracks := range im.useUpTracks {
+		if it := im.pack.Items[id]; it != nil {
+			for n, track := range tracks {
+				if s := soundID(track); im.pack.Sounds[s] != nil && n < len(it.Actions) {
+					it.Actions[n].Sound = s
+				}
+			}
+		}
+	}
+	for _, sp := range im.pack.Spells {
+		for _, e := range sp.Effects {
+			if m := e.Missile; m != nil {
+				if track, ok := missileTrack(m); ok && im.pack.Sounds[soundID(track)] != nil {
+					m.Sound = soundID(track)
+				}
+			}
+		}
+	}
 	if id := soundID(newGameTrack); im.pack.Sounds[id] != nil {
 		im.pack.Manifest.Start.Music = id
 	}

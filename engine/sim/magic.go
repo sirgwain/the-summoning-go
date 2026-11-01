@@ -124,6 +124,7 @@ func (w *World) learn(gesture string) {
 		w.refuse("a gesture is 1 to " + strconv.Itoa(content.MaxGesture) + " icons")
 		return
 	}
+	w.cue(p.Cell(), content.CueGesture)
 	for i := 0; i < len(gesture); i++ {
 		if !m.Knows(gesture[i]) {
 			w.refuse("the icon " + gesture[i:i+1] + " is not known")
@@ -230,6 +231,7 @@ func (w *World) cast(school int) {
 		w.message(l, p.Cell(), content.MsgNoMagic, "")
 		return
 	}
+	w.cue(p.Cell(), content.CueCast)
 	p.MagicPoints -= sp.Cost
 	if m.Memorized[id]--; m.Memorized[id] == 0 {
 		delete(m.Memorized, id)

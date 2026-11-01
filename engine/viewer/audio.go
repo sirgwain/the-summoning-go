@@ -7,8 +7,14 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
 
-// sound plays the world's sound and music events. A level's own footsteps take the place of
-// the footstep cue.
+// cue plays an engine cue the viewer itself sounds.
+func (v *Viewer) cue(name string) {
+	if v.Audio != nil {
+		v.Audio.Cue(name)
+	}
+}
+
+// sound plays the world's sound and music events.
 func (v *Viewer) sound(events []sim.Event) {
 	if v.Audio == nil {
 		return
@@ -19,20 +25,12 @@ func (v *Viewer) sound(events []sim.Event) {
 			v.Audio.StopMusic()
 		case e.Kind == sim.EventMusic:
 			v.Audio.PlayMusic(e.Detail)
-		case e.Kind == sim.EventSound && e.Detail == content.CueFootstep && v.levelFootsteps(e.Level) != "":
-			v.Audio.PlayEffect(v.levelFootsteps(e.Level))
+		case e.Kind == sim.EventSound && e.Item != "":
+			v.Audio.PlayEffect(e.Item)
 		case e.Kind == sim.EventSound:
 			v.Audio.Cue(e.Detail)
 		}
 	}
-}
-
-// levelFootsteps is level id's footstep sound, or "".
-func (v *Viewer) levelFootsteps(id string) string {
-	if l := v.Pack.Levels[id]; l != nil {
-		return l.Footsteps
-	}
-	return ""
 }
 
 // musicMessages announce the music key's settings.

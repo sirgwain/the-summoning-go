@@ -462,6 +462,9 @@ func (w *World) usedUp(hand int, o *Object, it *content.Item, a content.ItemActi
 			return
 		}
 	}
+	if a.Kind == content.ActionUseUp {
+		w.sound(w.player.Cell(), a.Sound)
+	}
 	w.player.Slots[slot] = nil
 	w.takeOff(o)
 	if it.Spent != "" {

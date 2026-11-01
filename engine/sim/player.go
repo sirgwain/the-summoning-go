@@ -97,6 +97,9 @@ type Player struct {
 	// Pose is an action's pose ("attack", "attack.left", "attack.both"), shown poseLeft updates.
 	Pose     string
 	poseLeft int
+	// bowRelease is the step after a bow shot was fired, 0 for none: the bow sounds at the
+	// player's first update from then, unless the player walks first.
+	bowRelease int64
 	// Magic is the player's spells (docs/spec/spells.md).
 	Magic Magic
 	// Look is the sprite a Shape Change gives the player, empty for its own.
@@ -287,6 +290,12 @@ func (w *World) updatePlayer() {
 	}
 	for i := range p.Delays {
 		p.Delays[i] = max(0, p.Delays[i]-1)
+	}
+	if p.bowRelease != 0 && w.step >= p.bowRelease {
+		p.bowRelease = 0
+		if p.want < 0 {
+			w.cue(p.Cell(), content.CueBow)
+		}
 	}
 	if p.poseLeft > 0 {
 		if p.poseLeft--; p.poseLeft == 0 {
@@ -628,6 +637,9 @@ func (w *World) floorEffect(e *content.Effect) {
 			}
 			k = combat.Fire
 		}
+		if e.Cue != "" {
+			w.cue(p.Cell(), e.Cue)
+		}
 		w.hurtPlayer(w.roll(e.Damage), k, by)
 	}
 	if e.DrainMagic > 0 {
@@ -669,6 +681,7 @@ func (w *World) pickUp(toHand bool) {
 	toHand = toHand && p.Hand == nil
 	if !toHand && w.intoQuiver(o) {
 		w.takeFloorObject(l, c)
+		w.cue(c, content.CueTake)
 		return
 	}
 	slot := -1
@@ -685,6 +698,7 @@ func (w *World) pickUp(toHand bool) {
 		}
 	}
 	w.takeFloorObject(l, c)
+	w.cue(c, content.CueTake)
 	if slot < 0 {
 		p.Hand = o
 		w.read(input.SlotHand)
@@ -715,6 +729,7 @@ func (w *World) putDown() {
 	}
 	if w.drop(l, p.Cell(), p.Hand, byPlayer, 0) {
 		p.Hand = nil
+		w.cue(p.Cell(), content.CueDrop)
 	}
 }
 
@@ -724,6 +739,7 @@ func (w *World) swap(i int) {
 	refuse := func(why string) {
 		w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: p.Cell(), Detail: why})
 	}
+	exchanged := p.Hand != nil || p.Slot(w.pack, i) != nil
 	switch {
 	case i >= 0 && i < Shelves:
 		p.Hand, p.Slots[i] = p.Slots[i], p.Hand
@@ -775,6 +791,9 @@ func (w *World) swap(i int) {
 		return
 	}
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "swapped"})
+	if exchanged {
+		w.cue(p.Cell(), content.CueTake)
+	}
 	if p.Hand != nil {
 		w.read(input.SlotHand)
 	}

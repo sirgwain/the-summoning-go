@@ -107,3 +107,21 @@ func TestImportAudio(t *testing.T) {
 		t.Fatalf("no audio: %d sounds, err %v", len(p.Sounds), err)
 	}
 }
+
+func TestMissileTrack(t *testing.T) {
+	for _, tc := range []struct {
+		m    content.MissileSpell
+		want int
+	}{
+		{content.MissileSpell{Hurts: content.HurtsFire}, firstEffect + 0x0C},
+		{content.MissileSpell{Hurts: content.HurtsPoison}, firstEffect + 8},
+		{content.MissileSpell{Hurts: content.HurtsLightning}, firstEffect + 0x0D},
+		{content.MissileSpell{Scatters: true}, firstEffect + 0x0D},
+		{content.MissileSpell{Opens: true}, 0},
+	} {
+		got, ok := missileTrack(&tc.m)
+		if got != tc.want || ok != (tc.want != 0) {
+			t.Errorf("%+v: track %d %v, want %d", tc.m, got, ok, tc.want)
+		}
+	}
+}

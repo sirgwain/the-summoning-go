@@ -278,7 +278,7 @@ func (w *World) creatureStrikes(l *Level, t *Thing) {
 	}
 	w.messageNumbers(l, t.Cell(), content.MsgCreatureHits, r.Score, r.Damage)
 	if r.Damage > 0 {
-		w.hurtPlayer(r.Damage, combat.Physical, t.ID)
+		w.hurtPlayerAloud(r.Damage, combat.Physical, t.ID)
 		if t.Template.Has(content.BehaviorPoisonous) && w.chance(2, 8) {
 			p.Poisoned = true
 		}
@@ -394,9 +394,11 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 	switch {
 	case b == nil || b.thing == nil || !alive(b.thing):
 		w.message(l, p.Cell(), content.MsgNotACreature, "")
+		w.cue(p.Cell(), content.CueMiss)
 		return
 	case b.thing.Template.Has(content.BehaviorAnimated) && !b.thing.Template.Has(content.BehaviorMirrors):
 		w.message(l, p.Cell(), content.MsgCannotHurt, "")
+		w.cue(p.Cell(), content.CueMiss)
 		return
 	}
 	t := b.thing
@@ -425,13 +427,16 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 	r := w.rules.PlayerStrikes(w.rng, s)
 	if !r.Hit {
 		w.messageNumbers(l, p.Cell(), content.MsgMiss, r.Score, 0)
+		w.cue(p.Cell(), content.CueMiss)
 		return
 	}
 	w.messageNumbers(l, p.Cell(), content.MsgHit, r.Score, r.Damage)
 	w.turnHostile(t)
 	if r.Damage == 0 {
+		w.cue(p.Cell(), content.CueMiss)
 		return
 	}
+	w.cue(p.Cell(), content.CueHit)
 	if it != nil {
 		w.countWeapon(o, it, r.Damage)
 	}

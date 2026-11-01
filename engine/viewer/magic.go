@@ -65,6 +65,7 @@ type SpellPanel struct {
 func (v *Viewer) OpenSpells() {
 	if v.Play && v.World.Player() != nil {
 		v.SpellsOpen, v.Entered = true, ""
+		v.cue(content.CueGesture)
 	}
 }
 
@@ -139,6 +140,15 @@ func (v *Viewer) enter(c byte) {
 		return
 	}
 	v.Entered += string(c)
+	v.cue(content.CueGesture)
+}
+
+// takeOffEntered takes the last icon off the gesture being entered.
+func (v *Viewer) takeOffEntered() {
+	if n := len(v.Entered); n > 0 {
+		v.Entered = v.Entered[:n-1]
+		v.cue(content.CueGesture)
+	}
 }
 
 // learnEntered sends the gesture entered and clears it.
@@ -159,9 +169,7 @@ func (v *Viewer) spellKeys(in Input) []input.Command {
 		v.SpellsOpen = false
 		return nil
 	case in.pressed(KeyBackspace):
-		if n := len(v.Entered); n > 0 {
-			v.Entered = v.Entered[:n-1]
-		}
+		v.takeOffEntered()
 		return nil
 	case in.pressed(KeyEnter):
 		return v.learnEntered()

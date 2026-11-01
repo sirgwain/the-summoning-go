@@ -126,6 +126,8 @@ type ItemAction struct {
 	Skill int `json:"skill,omitempty"`
 	// Icon is the image its box shows.
 	Icon *Image `json:"icon,omitempty"`
+	// Sound is the sound a use-up action makes when it uses its object up.
+	Sound string `json:"sound,omitempty"`
 }
 
 // Attack reports whether the action strikes.

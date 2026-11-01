@@ -182,7 +182,7 @@ func (w *World) rollBoulders(l *Level) {
 		if b != nil {
 			hurt := w.roll(content.Dice{Count: 3, Sides: 4})
 			if b.thing == nil {
-				w.hurtPlayer(hurt, combat.Physical, "boulder")
+				w.hurtPlayerAloud(hurt, combat.Physical, "boulder")
 			} else {
 				w.hurtThing(l, b.thing, hurt, combat.Physical)
 				if b.thing.Template.Kind == content.ThingBoulder {

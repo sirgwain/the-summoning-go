@@ -114,6 +114,8 @@ type Effect struct {
 	Damage     Dice   `json:"damage,omitzero"`
 	Type       string `json:"type,omitempty"`
 	DrainMagic int    `json:"drain_magic,omitempty"`
+	// Cue is the cue played when its damage hurts the player.
+	Cue string `json:"cue,omitempty"`
 }
 
 // Feature kinds.

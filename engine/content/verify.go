@@ -252,6 +252,7 @@ func (v *verifier) itemRecord(i *Item) {
 		if !actionKinds[a.Kind] || a.Delay < 0 || a.Skill < 0 {
 			v.fail("%s: action %d: bad kind %q, delay or skill", owner, n, a.Kind)
 		}
+		v.effect(fmt.Sprintf("%s: action %d sound", owner, n), a.Sound)
 	}
 	v.frame(owner+" icon", i.Icon.Sprite, i.Icon.Frame)
 	v.frame(owner+" floor", i.Floor.Sprite, i.Floor.Frame)
@@ -397,6 +398,11 @@ func (lv *levelVerifier) verify() {
 		}
 		if ft.Depth < 0 || ft.Depth > 4 {
 			lv.fail("floor type %d: depth %d", i, ft.Depth)
+		}
+		for _, e := range []*Effect{ft.Enter, ft.Tick} {
+			if e != nil {
+				lv.cue(fmt.Sprintf("level %s: floor type %d", l.ID, i), e.Cue)
+			}
 		}
 	}
 

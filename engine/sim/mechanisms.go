@@ -63,7 +63,7 @@ func (w *World) doorClosed(l *Level, f *Feature) {
 	if p := w.player; p != nil && w.current == l.ID && p.Cell() == f.Cell {
 		reopen = true
 		if w.chance(3, 10) {
-			w.hurtPlayer(1, combat.Physical, "a door")
+			w.hurtPlayerAloud(1, combat.Physical, "a door")
 		}
 	}
 	for _, t := range l.ThingsAt(f.Cell) {

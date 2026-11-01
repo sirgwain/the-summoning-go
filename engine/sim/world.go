@@ -209,7 +209,7 @@ func sortedKeys[V any](m map[string]V) []string {
 const (
 	// EventMessage shows a text: Text is its key, Item the item it names.
 	EventMessage = "message"
-	// EventSound plays a sound: Detail names it.
+	// EventSound plays a sound: Detail names an engine cue, or Item gives a sound id.
 	EventSound = "sound"
 	// EventEffect starts a view effect: Detail names it.
 	EventEffect = "effect"

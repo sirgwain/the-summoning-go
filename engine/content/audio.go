@@ -45,13 +45,23 @@ const (
 	CueUnseal        = "unseal"
 	CueTeleport      = "teleport"
 	CueLevelUp       = "level_up"
+	CueMiss          = "miss"
+	CueHit           = "hit"
+	CueHurt          = "hurt"
+	CueBow           = "bow"
+	CueShatter       = "shatter"
+	CueTake          = "take"
+	CueDrop          = "drop"
+	CueCast          = "cast"
+	CueGesture       = "gesture"
 	CueWeaponSkillUp = "weapon_skill_up"
 	CueMagicSkillUp  = "magic_skill_up"
 )
 
 var cueKeys = map[string]bool{
 	CueLever: true, CueFootstep: true, CueDoor: true, CueUnseal: true, CueTeleport: true, CueLevelUp: true,
-	CueWeaponSkillUp: true, CueMagicSkillUp: true,
+	CueWeaponSkillUp: true, CueMagicSkillUp: true, CueMiss: true, CueHit: true, CueHurt: true, CueBow: true,
+	CueShatter: true, CueTake: true, CueDrop: true, CueCast: true, CueGesture: true,
 }
 
 // soundDir is the directory of a sound record by its id, or "" for an id of no sound kind.
@@ -182,5 +192,19 @@ func (v *verifier) cues() {
 func (v *verifier) music(owner, id string) {
 	if id != "" && (!strings.HasPrefix(id, MusicPrefix) || v.p.Sounds[id] == nil) {
 		v.fail("%s: %q is not a music track", owner, id)
+	}
+}
+
+// effect fails unless id is empty or a sound of the pack.
+func (v *verifier) effect(owner, id string) {
+	if id != "" && v.p.Sounds[id] == nil {
+		v.fail("%s: %q is not a sound", owner, id)
+	}
+}
+
+// cue fails unless name is empty or an engine cue.
+func (v *verifier) cue(owner, name string) {
+	if name != "" && !cueKeys[name] {
+		v.fail("%s: unknown cue %q", owner, name)
 	}
 }

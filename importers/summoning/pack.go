@@ -106,12 +106,15 @@ var diagonalShapes = [wallShapes]string{
 const sheetColumns = 16
 
 type importer struct {
-	pack      *content.Pack
-	init      *Init
-	resources [][]byte
-	palette   *content.Palette
-	banks     map[int]*SpriteBank
-	report    *Report
+	pack *content.Pack
+	// useUpTracks are the tracks of items' use-up actions, by item id and action, set with the
+	// audio.
+	useUpTracks map[string]map[int]int
+	init        *Init
+	resources   [][]byte
+	palette     *content.Palette
+	banks       map[int]*SpriteBank
+	report      *Report
 
 	objects *Objects
 	npcs    []NPCRecord

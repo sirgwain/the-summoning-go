@@ -25,13 +25,25 @@ The game starts these tracks with a loop; every other track plays once. The fron
 | 8 | 12 |
 | 15 | 8 |
 
-**Sound effects.** The effects of the world's mechanisms:
+**Sound effects.** What plays each effect:
 
 | Effect | When |
 |---|---|
-| 9 | A lever is pulled |
+| 3 | The player's blow meets no creature or one it cannot hurt, misses, or hits for no damage |
+| 4 | The player is hurt by a creature's blow, a rolling boulder running into it, a closing door catching it, the burning floor's damage at a status tick, or the hurting liquid it steps into |
+| 5 | The player's blow hurts a creature |
+| 6 | A bow shot: at the player's first update after the arrow leaves, unless the player walks first |
+| 7 | An object of use-up icon 9 is used up |
+| 8 | A type-3 missile hits something or meets a wall, on screen |
+| 9 | A lever is pulled; an object is taken from the floor, put down, or exchanged with an inventory slot (not when both are empty); an icon is added to or taken off the gesture strip, a gesture is entered on it, or memorizing by gesture starts; a spell's cast starts |
+| 0Ah | A thrown bottle breaks, on screen |
+| 0Bh | An object of use-up icon 10 is used up |
+| 0Ch | A type-0 or type-4 missile hits something or meets a wall, on screen |
+| 0Dh | A type-5 or type-0Eh missile hits something or meets a wall, on screen |
 | 16h | A sealed door opens; the player is teleported |
-| 17h | A moving door steps while between open and closed |
+| 17h | A moving door steps while between open and closed; each step of the new game's door opening (scenes.md) |
+
+"On screen" is the missile or bottle shown in the view when it ends. A bouncing missile sounds at each wall it meets. Falls, contact with a creature, missiles, poison and the other hurts make no sound. The view effects (scenes.md) play effects 0Eh–15h and 18h, and tracks 0Eh, 0Fh and 10h; they are specified with the view effects.
 
 **Footsteps.** The player keeps a step count, 0..5. It is 1 when the game starts, and is set back to 1 when the player turns to its standing frame after 8 idle updates, when an action's frames end, and on every step while levitating. Otherwise each walk step that moves the player adds 1 to it, wrapping 5 to 0, and a count of 1 or 4 plays effect 0, or effect 1 on levels 21h–23h. So walking from standing sounds on the third step and every third step after.
 
@@ -237,4 +249,4 @@ The song player's output, the thing to test, is the list of register writes in o
 
 ## Unknowns
 
-- Which track plays where (levels, menus, endings); specified with scenes.
+- The view effects' effects and tracks, and the menus' and endings' tracks; specified with scenes.

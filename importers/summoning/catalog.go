@@ -270,6 +270,13 @@ func (im *importer) fighting(i int, tm *ObjectTemplate, it *content.Item) {
 			}
 		case icon == 9 || icon == 10:
 			act.Kind = content.ActionUseUp
+			if im.useUpTracks == nil {
+				im.useUpTracks = map[string]map[int]int{}
+			}
+			if im.useUpTracks[it.ID] == nil {
+				im.useUpTracks[it.ID] = map[int]int{}
+			}
+			im.useUpTracks[it.ID][len(it.Actions)] = useUpTrack[icon]
 		case icon >= 11 && icon <= 20:
 			act.Kind = content.ActionUse
 		default:

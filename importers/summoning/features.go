@@ -100,6 +100,7 @@ func (lb *levelBuilder) floorTypes(variants int) {
 	}
 	var plain *content.FloorType
 	fire := &content.Effect{Damage: content.Dice{Count: 2, Sides: 2}, Type: "fire"}
+	burning := &content.Effect{Damage: fire.Damage, Type: fire.Type, Cue: content.CueHurt}
 	switch {
 	case h.DeepWater():
 		for k := range types {
@@ -108,15 +109,15 @@ func (lb *levelBuilder) floorTypes(variants int) {
 		plain = &content.FloorType{Sinks: true}
 	case h.LiquidKind == LiquidWater:
 		if variants > 3 {
-			types[2].Enter, types[2].Avoided = &content.Effect{Damage: content.Dice{Bonus: 1}}, true
+			types[2].Enter, types[2].Avoided = &content.Effect{Damage: content.Dice{Bonus: 1}, Cue: content.CueHurt}, true
 			types[3].Enter = &content.Effect{DrainMagic: 1}
 		}
 		plain = &content.FloorType{}
 	case h.LiquidKind == LiquidFire:
 		for k := range types {
-			types[k].Enter, types[k].Tick = fire, fire
+			types[k].Enter, types[k].Tick = fire, burning
 		}
-		plain = &content.FloorType{Tick: fire}
+		plain = &content.FloorType{Tick: burning}
 	}
 	lb.cl.FloorTypes = types
 	if plain != nil {

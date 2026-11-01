@@ -142,6 +142,7 @@ func (w *World) bounce(l *Level, f *Flight, du, dv int) {
 // spellMeetsWall is spell flight f meeting blocked cell c: one that opens opens a door that a
 // spell opens, or else says the door or wall resists.
 func (w *World) spellMeetsWall(l *Level, f *Flight, c content.Cell) {
+	w.soundInSight(l, f.Cell(), f.Spell.Missile.Sound)
 	if !f.Spell.Missile.Opens {
 		return
 	}
@@ -168,6 +169,7 @@ func (w *World) spellMeetsWall(l *Level, f *Flight, c content.Cell) {
 func (w *World) spellHits(l *Level, f *Flight, b *body) {
 	s := f.Spell
 	m := s.Missile
+	w.soundInSight(l, f.Cell(), m.Sound)
 	t := b.thing
 	if t != nil && f.ByPlayer {
 		w.turnHostile(t)

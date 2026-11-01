@@ -188,6 +188,8 @@ type MissileSpell struct {
 	Bounces bool   `json:"bounces,omitempty"`
 	// Around casts four, along the diagonals of the caster's facing.
 	Around bool `json:"around,omitempty"`
+	// Sound is the sound it makes on hitting something or meeting a wall in the player's sight.
+	Sound string `json:"sound,omitempty"`
 }
 
 // Timed effects a spell starts.

@@ -159,6 +159,7 @@ func (v *verifier) spellEffect(owner string, a Action) {
 	case a.Missile != nil:
 		m := a.Missile
 		v.frames(owner, m.Sprite)
+		v.effect(owner+" sound", m.Sound)
 		if m.Cloud != "" {
 			v.frames(owner+" cloud", m.Cloud)
 		}
