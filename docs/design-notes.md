@@ -206,8 +206,9 @@ box opens it as the pack where it lies; resting the pointer on one lists what it
   a death blow; it names the socket's and Mending's by word (`socket_complete`, `joined`) rather
   than as effects 8 and 9; `seal_broken` should be a sparkle and `ripple` an arrival style.
   Healing and cures play no sparkle yet (scenes.md, Sparkles).
-- The intro and the end scenes, whose captions are in the game's program; ending G's changes
-  to the world and its save.
+- The intro, the new character's story and the end scenes, whose captions are in the game's
+  program: the plan for their spec is [scenes-plan.md](scenes-plan.md). Ending G's changes to
+  the world and its save.
 - Audio's last phase ([audio-plan.md](audio-plan.md)): the view effects' sounds and tracks, the
   new game's door, and the front end's and endings' tracks 1–7, with the scenes.
 - Play *The Summoning* from start to end on the imported pack.
