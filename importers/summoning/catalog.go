@@ -43,6 +43,7 @@ var engineMessages = map[string]struct {
 	content.MsgCreatureHits:  {0x7D, []string{"score", "damage"}},
 	content.MsgCreatureMiss:  {0x7E, []string{"score"}},
 	content.MsgWeaponBreaks:  {0x8A, []string{"item"}},
+	content.MsgVanishes:      {0x32, []string{"item"}},
 	content.MsgSkillUp:       {0x44, []string{"skill"}},
 	content.MsgLevelUp:       {0xA5, nil},
 

@@ -117,6 +117,7 @@ func (w *World) raiseSkill(i, n int, quiet bool) {
 // exertion and fatigue (docs/spec/player.md, Status tick).
 func (w *World) statusTickPlayer() {
 	p, l := w.player, w.Current()
+	w.runDownTimed()
 	for i := range p.Boosts {
 		b := &p.Boosts[i]
 		if b.Ticks > 0 {
@@ -451,6 +452,47 @@ func (w *World) useObject(hand int, o *Object, a content.ItemAction) {
 		return
 	}
 	w.usedUp(hand, o, it, a)
+}
+
+// lastingPower reports whether power lasts while worn (docs/spec/items.md, Powers).
+func lastingPower(power int) bool {
+	switch power {
+	case powerSpeed2Lasting, 0x0F, 0x16, 0x17, 0x47, 0x4C:
+		return true
+	}
+	return power >= 0x30 && power <= 0x41
+}
+
+// runDownTimed counts down the timed objects in worn slots: those whose power starts worn and
+// lasts. Each loses one from its value, or its item's shared charges, as a 16-bit number; one
+// reaching 0 comes off, is announced and is gone (docs/spec/items.md, Timed objects).
+func (w *World) runDownTimed() {
+	p := w.player
+	for slot := Shelves; slot < SlotCount; slot++ {
+		o := p.Slots[slot]
+		if o == nil {
+			continue
+		}
+		it := w.pack.Items[o.Item]
+		if it == nil || !it.PowerWorn || !lastingPower(it.Power) {
+			continue
+		}
+		left := 0
+		if it.SharedCharges {
+			w.shared[o.Item] = (w.shared[o.Item] - 1) & 0xFFFF
+			left = w.shared[o.Item]
+		} else {
+			o.Value = (o.Value - 1) & 0xFFFF
+			left = o.Value
+		}
+		if left != 0 {
+			continue
+		}
+		p.Slots[slot] = nil
+		w.takeOff(o)
+		w.message(w.Current(), p.Cell(), content.MsgVanishes, o.Item)
+		w.emit(Event{Kind: EventObject, Level: w.current, Cell: p.Cell(), Item: o.Item, Detail: "used"})
+	}
 }
 
 // usedUp takes a use from object o in hand: one charge for a use action, leaving the object in

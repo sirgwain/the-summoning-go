@@ -78,6 +78,7 @@
     "msg.skill_up": "You are better at {skill}.",
     "msg.slot_stuck": "Nothing more fits in the {item}'s place.",
     "msg.struck": "It hits you (rolled {score}) for {damage}.",
+    "msg.vanishes": "Your {item} vanishes.",
     "msg.wall_failed": "The wall would not form.",
     "msg.wrong_item": "The {item} doesn't fit.",
     "rating.school.1": "Beginner mage",

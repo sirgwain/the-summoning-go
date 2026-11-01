@@ -187,6 +187,7 @@ func text(p *content.Pack) {
 		"msg.struck":      "It hits you (rolled {score}) for {damage}.",
 		"msg.missed":      "It misses you (rolled {score}).",
 		"msg.breaks":      "Your {item} breaks.",
+		"msg.vanishes":    "Your {item} vanishes.",
 		"msg.skill_up":    "You are better at {skill}.",
 		"msg.level_up":    "You have gained a level.",
 		"msg.music_all":   "Music and sound effects on.",
@@ -204,7 +205,7 @@ func text(p *content.Pack) {
 		content.MsgSlotStuck: "msg.slot_stuck", content.MsgNoDropHere: "msg.no_drop",
 		content.MsgNoRoom: "msg.no_room", content.MsgNotACreature: "msg.nothing_hit", content.MsgCannotHurt: "msg.not_hurt",
 		content.MsgMiss: "msg.miss", content.MsgHit: "msg.hit", content.MsgCreatureHits: "msg.struck",
-		content.MsgCreatureMiss: "msg.missed", content.MsgWeaponBreaks: "msg.breaks", content.MsgSkillUp: "msg.skill_up",
+		content.MsgCreatureMiss: "msg.missed", content.MsgWeaponBreaks: "msg.breaks", content.MsgVanishes: "msg.vanishes", content.MsgSkillUp: "msg.skill_up",
 		content.MsgLevelUp: "msg.level_up", content.MsgMusicAll: "msg.music_all", content.MsgMusicEffects: "msg.music_fx",
 		content.MsgMusicSilent: "msg.music_off",
 	}}

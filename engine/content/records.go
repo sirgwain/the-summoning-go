@@ -398,6 +398,7 @@ const (
 	MsgCreatureHits          = "creature_hits"
 	MsgCreatureMiss          = "creature_misses"
 	MsgWeaponBreaks          = "weapon_breaks"
+	MsgVanishes              = "vanishes"
 	MsgSkillUp               = "skill_up"
 	MsgLevelUp               = "level_up"
 	MsgFullHealth            = "full_health"
@@ -464,7 +465,7 @@ const (
 var messageKeys = map[string]bool{
 	MsgLeverStuck: true, MsgSlotWrongItem: true, MsgSlotStuck: true, MsgNoDropHere: true, MsgNoRoom: true,
 	MsgNotACreature: true, MsgCannotHurt: true, MsgMiss: true, MsgHit: true, MsgCreatureHits: true,
-	MsgCreatureMiss: true, MsgWeaponBreaks: true, MsgSkillUp: true, MsgLevelUp: true,
+	MsgCreatureMiss: true, MsgWeaponBreaks: true, MsgVanishes: true, MsgSkillUp: true, MsgLevelUp: true,
 	MsgFullHealth:            true,
 	MsgFullMagic:             true,
 	MsgNotPoisoned:           true,

@@ -227,7 +227,9 @@ An object's power starts when it is worn (if it lasts while worn) or used. Some 
 
 Taking off a lasting object undoes its effect (interval, status, attribute).
 
-Timed objects in worn slots count down their quantity each status tick and end when it runs out.
+**Timed objects.** An object in a worn slot (20–27, the hands included) whose use handler has 80h and whose power lasts while worn is timed. Each status tick (player.md) its value, or its template's shared count for 72h–7Bh, drops by 1 as a 16-bit number: a value of 0 becomes 65535 and so lasts that many ticks more. On reaching 0 the object comes off, ending its power and armor; message 32h shows with its name; it flashes in its slot and is destroyed. Body armor counts down the same value that wear takes down, so a timed cloak lasts at most 7500 ticks.
+
+**Engine model.** The engine counts timed objects down on each status tick before attribute boosts, and announces one that runs out with the engine message `vanishes` (32h, `{item}` its name).
 
 ## Using objects
 

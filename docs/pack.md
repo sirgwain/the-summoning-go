@@ -233,12 +233,12 @@ text to UTF-8.
 ```
 
 The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slot_stuck`,
-`weapon_breaks` and `filled`, `{item}` stands for the item's name; in `not_memorized` and
+`weapon_breaks`, `vanishes` and `filled`, `{item}` stands for the item's name; in `not_memorized` and
 `only_spell`, `{school}` for the school's name; in `killed`, `{name}` for the creature's; in
 `absorbed`, `{damage}` for the damage absorbed; in `miss`, `hit`, `creature_hits` and
 `creature_misses`, `{score}` and `{damage}` stand for the numbers. The keys: `lever_stuck`,
 `slot_wrong_item`, `slot_stuck`, `no_drop_here`, `no_room`, `not_a_creature`, `cannot_hurt`,
-`miss`, `hit`, `creature_hits`, `creature_misses`, `weapon_breaks`, `skill_up`, `level_up`,
+`miss`, `hit`, `creature_hits`, `creature_misses`, `weapon_breaks`, `vanishes`, `skill_up`, `level_up`,
 `full_health`, `full_magic`, `not_poisoned`, `not_poisoned_or_confused`, `not_fatigued`,
 `no_destination`, `no_creatures`, `already_have`, `healed` (`{damage}` the amount), `protected`,
 `boost_extended`, `poisoned`, `slowed`, `lost_weapon_skills`, `lost_magic_skills`, `no_quiver`,

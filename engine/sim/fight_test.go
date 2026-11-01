@@ -583,3 +583,54 @@ func TestSharedCharges(t *testing.T) {
 		t.Errorf("a weapon without charges was used: %v", ev)
 	}
 }
+
+// TestTimedObjects runs down worn objects whose power lasts while worn: one runs out after its
+// value's status ticks, coming off and vanishing; a value of 0 lasts 65535 ticks; objects of a
+// shared count each take one from it; an object whose power does not last is not timed.
+func TestTimedObjects(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Items["item.bracers"] = &content.Item{ID: "item.bracers", Weight: 1, Size: 1, Wear: content.WearArms,
+			Power: 0x17, PowerWorn: true, Charges: 2}
+		p.Items["item.boots"] = &content.Item{ID: "item.boots", Weight: 1, Size: 1, Wear: content.WearFeet,
+			Power: powerSpeed2Lasting, PowerWorn: true}
+		p.Items["item.buckler"] = &content.Item{ID: "item.buckler", Weight: 1, Size: 1, Power: powerSpeed2Lasting,
+			PowerWorn: true, Durability: 1000, Charges: 5, SharedCharges: true}
+		p.Items["item.ring"] = &content.Item{ID: "item.ring", Weight: 1, Size: 1, Wear: content.WearNeck,
+			Power: powerSpeed2, PowerWorn: true, Charges: 1}
+	},
+		"####",
+		"#@.#",
+		"####")
+	p := w.Player()
+	p.Slots[SlotFeet] = nil
+	wear := func(slot int, item string) *Object {
+		o := w.newObject(item)
+		p.Slots[slot] = o
+		w.putOn(o)
+		return o
+	}
+	wear(SlotArms, "item.bracers")
+	boots := wear(SlotFeet, "item.boots")
+	wear(SlotRightHand, "item.buckler")
+	buckler := wear(SlotLeftHand, "item.buckler")
+	ring := wear(SlotNeck, "item.ring")
+	if !p.Status.Regenerating {
+		t.Fatal("the bracers do not regenerate")
+	}
+	w.statusTickPlayer()
+	if p.Slots[SlotArms] == nil || w.Quantity(buckler) != 3 || buckler.Value != 1000 || ring.Value != 1 {
+		t.Fatalf("one tick: bracers %v, shared %d, buckler %d, ring %d", p.Slots[SlotArms], w.Quantity(buckler), buckler.Value, ring.Value)
+	}
+	w.events = nil
+	w.statusTickPlayer()
+	if p.Slots[SlotArms] != nil || p.Status.Regenerating || !has(w.events, EventMessage, content.MsgVanishes) {
+		t.Errorf("two ticks: bracers %v, regenerating %v, events %v", p.Slots[SlotArms], p.Status.Regenerating, w.events)
+	}
+	if boots.Value != 65534 {
+		t.Errorf("boots of value 0 have %d after two ticks", boots.Value)
+	}
+	w.statusTickPlayer()
+	if p.Slots[SlotRightHand] != nil || p.Slots[SlotLeftHand] == nil {
+		t.Errorf("the shared count ran out: right %v, left %v", p.Slots[SlotRightHand], p.Slots[SlotLeftHand])
+	}
+}
