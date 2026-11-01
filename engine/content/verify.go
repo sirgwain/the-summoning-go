@@ -140,6 +140,14 @@ func (v *verifier) frames(owner, sprite string) int {
 	return b.Frames
 }
 
+// figureLook checks that a figure look's sprites exist.
+func (v *verifier) figureLook(owner string, l FigureLook) {
+	v.frames(owner, l.Sprite)
+	if l.Female != "" {
+		v.frames(owner+" female", l.Female)
+	}
+}
+
 // frame checks that sprite has frame i.
 func (v *verifier) frame(owner, sprite string, i int) {
 	if n := v.frames(owner, sprite); n >= 0 && (i < 0 || i >= n) {
@@ -260,6 +268,9 @@ func (v *verifier) itemRecord(i *Item) {
 	if i.Doll != nil {
 		v.frame(owner+" doll", i.Doll.Image.Sprite, i.Doll.Image.Frame)
 	}
+	for name, l := range i.Looks {
+		v.figureLook(owner+" look "+name, l)
+	}
 	if f := i.Fill; f != nil {
 		if f.Per <= 0 || i.Container == nil {
 			v.fail("%s: fill needs a container and per above 0", owner)
@@ -311,6 +322,9 @@ func (v *verifier) thing(t *Thing) {
 	}
 	if t.Speed < 0 || t.IntervalMS < 0 || t.Weight < 0 || t.Footprint < 0 {
 		v.fail("%s: negative speed, interval, weight or footprint", owner)
+	}
+	for _, l := range t.Figure {
+		v.figureLook(owner+" figure "+l.Name, l.FigureLook)
 	}
 	for _, io := range t.Inventory {
 		if t.Kind != ThingPlayer || io.Slot < 0 || io.Slot >= 28 {

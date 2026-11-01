@@ -46,6 +46,8 @@ type Item struct {
 	Picture *Image `json:"picture,omitempty"`
 	// Doll is how it shows on the inventory's figure when worn.
 	Doll *DollImage `json:"doll,omitempty"`
+	// Looks are the looks it puts on the player's figure layers while worn, by layer name.
+	Looks map[string]FigureLook `json:"looks,omitempty"`
 	// Fill gives a container a look for how full it is.
 	Fill *Fill `json:"fill,omitempty"`
 	// Poisons makes its blows poison; Grows and Levels make it a counted weapon; OnBreak runs
@@ -280,8 +282,31 @@ type Thing struct {
 	Inventory []InventoryObject `json:"inventory,omitempty"`
 	// Portrait is a player's portrait, which also gives its figure's colors.
 	Portrait string `json:"portrait,omitempty"`
+	// Figure draws a player in layers, bottom up, in place of its sprite.
+	Figure []FigureLayer `json:"figure,omitempty"`
 	// Animations are the thing's own; a name it does not have comes from its sprite.
 	Animations map[string]Animation `json:"animations,omitempty"`
+}
+
+// FigureLayer is a layer of a player's figure: its name, which items' looks name, and its own look.
+type FigureLayer struct {
+	Name string `json:"name"`
+	FigureLook
+}
+
+// FigureLook is a sprite drawn as a layer of a player's figure, frame for frame with the player's
+// sprite, and the sprite for a female player when it differs.
+type FigureLook struct {
+	Sprite string `json:"sprite"`
+	Female string `json:"female,omitempty"`
+}
+
+// For returns the look's sprite for a player, female or not.
+func (l FigureLook) For(female bool) string {
+	if female && l.Female != "" {
+		return l.Female
+	}
+	return l.Sprite
 }
 
 // Animation returns the animation the thing shows under name, falling back as docs/pack.md

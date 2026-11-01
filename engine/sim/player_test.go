@@ -541,3 +541,39 @@ func TestPlayerSpeed(t *testing.T) {
 		t.Errorf("with a bonus of −2: %d steps, want %d", got, steps(2))
 	}
 }
+
+// TestFigureLooks draws each figure layer as its own look until an item worn in a worn slot (not
+// a hand) gives it another, with the female sprite for a female portrait.
+func TestFigureLooks(t *testing.T) {
+	pk := walkPack("@.")
+	pk.Things["thing.player"].Figure = []content.FigureLayer{
+		{Name: "body", FigureLook: content.FigureLook{Sprite: "bare", Female: "bare.f"}},
+		{Name: "head", FigureLook: content.FigureLook{Sprite: "hair"}},
+	}
+	pk.Items["item.mail"] = &content.Item{ID: "item.mail", Wear: content.WearBody,
+		Looks: map[string]content.FigureLook{"body": {Sprite: "mail"}}}
+	pk.Items["item.helm"] = &content.Item{ID: "item.helm", Wear: content.WearHead,
+		Looks: map[string]content.FigureLook{"head": {Sprite: "helm", Female: "helm.f"}}}
+	pk.Portraits["portrait.f"] = &content.Portrait{ID: "portrait.f", Female: true}
+	w, err := New(pk, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := w.Player()
+	check := func(want ...string) {
+		t.Helper()
+		got := p.FigureLooks(pk)
+		if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+			t.Errorf("looks %v, want %v", got, want)
+		}
+	}
+	check("bare", "hair")
+	p.Slots[SlotBody] = &Object{Item: "item.mail"}
+	p.Slots[SlotRightHand] = &Object{Item: "item.helm"} // a hand shows no worn look
+	check("mail", "hair")
+	p.Slots[SlotHead] = p.Slots[SlotRightHand]
+	p.Portrait = "portrait.f"
+	check("mail", "helm.f")
+	p.Slots[SlotBody] = nil
+	check("bare.f", "helm.f")
+}

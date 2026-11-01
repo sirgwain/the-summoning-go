@@ -124,13 +124,14 @@ func importFixture() *Source {
 	resources[24] = rawBank(4, 1, 1, 0, plus(90))
 	resources[25] = rawBank(6, 2, 2, 0, plus(110))
 	resources[26] = rawBank(10, 1, 1, 0, plus(120))
-	// The player's figure: the body (character animation base 16), the legs (17), the body look
-	// (16 + 25h) and the head look (18, the wall bank, standing in for one).
+	// The player's figure: the body (character animation base 16), the legs (17), the body looks
+	// (16 + 25h and 26h) and the head looks (18, the wall bank, and 19 standing in for them).
 	// Portraits 0 and 1 (people base 13): strips of frames, a row each.
 	resources[14] = rawBank(3, 1, 1, 0, plus(14))
 	resources[16] = rawBank(48, 2, 1, 0, plus(130))
 	resources[17] = rawBank(48, 1, 1, 0, plus(180))
 	resources[16+bodyLook] = rawBank(56, 1, 1, 0, plus(150))
+	resources[16+bareBodyFemale] = rawBank(56, 1, 1, 0, plus(150))
 	for n := range firstEffect + 0x18 {
 		resources[fixtureMusic+n] = songRecord(0x00, 0xC0, 0x00, 0x00, 0x90, byte(0x30+n), 0x60, 0x30, 0x80, 0x30, 0x00, 0x00, 0xFC)
 	}

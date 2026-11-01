@@ -65,6 +65,9 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 	}
 	if p := w.Player(); p != nil && w.Current() == l {
 		th := Thing{ID: sim.PlayerID, Template: p.Template.ID, U: p.U, V: p.V, Facing: p.Facing, Sprite: p.Look}
+		if p.Look == "" && !w.DeepWater() {
+			th.Looks = p.FigureLooks(w.Pack())
+		}
 		if w.Step() < p.ShownUntil {
 			th.Shown = p.Shown
 		}

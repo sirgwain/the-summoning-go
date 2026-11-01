@@ -270,6 +270,6 @@ Template 0 in a level becomes a random object rather than the item itself.
 ## Unknowns
 
 - Whether the game also magnifies floor objects on its own, for example while the player has timed sight (player.md) or by interaction variable 98 (dialogue.md).
-- The worn-look flags in byte 11 and the image tables for the figure in the view; specified with character drawing.
+- The figure in water, and the figure frame shifts in INIT.
 - Which hand objects count as armor drawn last on the doll; the engine draws those with an armor bonus last.
 - Category 6, and the hand delay formula beyond what is given.

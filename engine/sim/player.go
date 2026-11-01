@@ -334,6 +334,38 @@ func (w *World) updatePlayer() {
 	}
 }
 
+// wornLookSlots are the slots whose objects' looks the figure shows: the worn slots but the hands.
+var wornLookSlots = []int{SlotHead, SlotArms, SlotFeet, SlotQuiver, SlotBody, SlotNeck}
+
+// FigureLooks returns the sprites of the player's figure layers, bottom up: each layer's look from
+// what is worn, else its own, for the player's sex (docs/spec/player.md, Worn looks). It is nil
+// when the template draws no layers.
+func (p *Player) FigureLooks(pk *content.Pack) []string {
+	layers := p.Template.Figure
+	if len(layers) == 0 {
+		return nil
+	}
+	female := false
+	if pt := pk.Portraits[p.Portrait]; pt != nil {
+		female = pt.Female
+	}
+	out := make([]string, len(layers))
+	for i, l := range layers {
+		look := l.FigureLook
+		for _, s := range wornLookSlots {
+			if o := p.Slots[s]; o != nil {
+				if it := pk.Items[o.Item]; it != nil {
+					if lk, ok := it.Looks[l.Name]; ok {
+						look = lk
+					}
+				}
+			}
+		}
+		out[i] = look.For(female)
+	}
+	return out
+}
+
 // Carried returns the weight the player carries: the hand and every slot, with their contents
 // (docs/spec/items.md, Weight and containers).
 func (p *Player) Carried(pk *content.Pack) int {

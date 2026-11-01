@@ -299,6 +299,9 @@ leaves out shows nothing. Later milestones add keys.
   at the player's ground point.
 - `fill` gives a container a look for how full it is: `{ "per", "icons", "dolls" }`, step `k`
   (from 1) shown while it holds more than `(k − 1) × per` objects, its own icon and doll empty.
+- `looks` are the looks the item puts on the player's figure layers while worn (not in a hand),
+  by layer name: `{ "body": { "sprite", "female" }, … }`, `female` the sprite for a female player
+  when it differs.
 - `missile` is how the item hurts in flight: `{ "damage": dice, "fired_only": bool }`; without it a
   thrown object does `weight / 10 + 1`. `breaks_into` is the item a landing bottle becomes, and
   `on_break` actions run when it breaks (`set_counter`, `converse`, `remove_all`, `experience`).
@@ -365,6 +368,9 @@ leaves out shows nothing. Later milestones add keys.
   `player`'s attributes `strength`, `agility`, `endurance`, `accuracy`, `talent` and `power`,
   from which its speed is worked out (`docs/spec/player.md`, Speed), and its starting
   `interval_bonus` in ticks; a player without attributes walks at its base interval.
+- `figure` (players) draws the player in layers, bottom up, in place of its sprite:
+  `[{ "name", "sprite", "female" }]`. Each layer shows the look a worn item's `looks` give it, or
+  its own; each sprite has a frame for every frame of the player's sprite and its own anchor.
 - `portrait` (players) is the player's portrait, which also gives its figure's colors. `icons`
   (players) are the gesture icons it starts knowing.
 - `conversation` (creatures) is the conversation held with it, and `talk_portrait` the portrait
