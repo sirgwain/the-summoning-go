@@ -76,6 +76,8 @@ Objects given by the game (conversations, powers) go into the first empty shelf,
 - Clicking the player's figure with an object on the pointer puts it down on the player's cell (put down), so an object meant for a keyhole, a socket or a plate goes in by standing on it and clicking the player.
 - Clicking a slot (a shelf, a hand, a worn slot, a pack slot) swaps the pointer's object with the slot's.
 
+A click counts as on the player's figure for these, rather than walking, anywhere within 32 view pixels of the point 8 right and 2 down from the top-left of the player's sprite, measured from the pointer's hot spot as `|dx| + |dy| < 32`. The engine also counts the figure's own pixels and its cell's ground.
+
 With the right button, an object on the pointer goes to the first empty shelf; with an empty pointer, clicking the player's figure takes the top object underfoot straight to the first empty shelf. With no empty shelf the right button does nothing.
 
 ## The inventory panel

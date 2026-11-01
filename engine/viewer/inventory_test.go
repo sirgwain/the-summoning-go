@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirgwain/the-summoning-go/devpack"
 	"github.com/sirgwain/the-summoning-go/engine/input"
+	"github.com/sirgwain/the-summoning-go/engine/render/drawlist"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
 
@@ -100,3 +101,35 @@ func hasLine(ip *InventoryPanel, text string) bool {
 }
 
 func itoa(n int64) string { return strconv.FormatInt(n, 10) }
+
+// TestClickNearPlayer puts down and picks up with a click near the figure, off its pixels and its
+// cell's ground, as the game's reach allows; a click past the reach walks instead.
+func TestClickNearPlayer(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	p := v.World.Player()
+	b := v.Pack.Sprites[p.Template.Sprite]
+	anchor, _ := b.AnchorOf(0)
+	at := drawlist.RefPoint(p.U, p.V).Sub(image.Pt(anchor[0], anchor[1])).Add(reachAt)
+	// Left of the reach point by most of the reach, and far off the player's cell.
+	near := at.Add(image.Pt(-(reachDistance - 2), 0))
+	if drawlist.CellAt(near) == p.Cell() {
+		t.Fatalf("the near point %v is on the player's cell", near)
+	}
+	if id, _, ok := drawlist.ThingAt(v.Pack, v.Cmds, near); ok && id == sim.PlayerID {
+		t.Fatalf("the near point %v is on the figure", near)
+	}
+	p.Hand = &sim.Object{Item: devpack.ItemKey}
+	tapAt(v, v.ScreenPoint(near))
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: v.ScreenPoint(near)})
+	if p.Hand != nil || len(v.World.Current().Objects[p.Cell()]) == 0 {
+		t.Fatalf("a click near the player did not put the key down: hand %+v", p.Hand)
+	}
+	tapAt(v, v.ScreenPoint(near))
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: v.ScreenPoint(near)})
+	if p.Hand == nil || p.Hand.Item != devpack.ItemKey {
+		t.Fatalf("a click near the player did not pick the key up: hand %+v", p.Hand)
+	}
+	if far := at.Add(image.Pt(-reachDistance-40, 0)); v.onPlayer(far) {
+		t.Errorf("a click at %v, past the reach, counts as on the player", far)
+	}
+}

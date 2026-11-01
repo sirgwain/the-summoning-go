@@ -511,13 +511,6 @@ func TestMouthSaysBesideIt(t *testing.T) {
 	}
 }
 
-func abs(a int) int {
-	if a < 0 {
-		return -a
-	}
-	return a
-}
-
 // TestQuickSaveAndLoad saves with F5, walks on, and loads with F8: the player is back where it
 // was saved.
 func TestQuickSaveAndLoad(t *testing.T) {

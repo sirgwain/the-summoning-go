@@ -73,16 +73,37 @@ func firstEmptyShelf(p *sim.Player) int {
 	return -1
 }
 
-// onPlayer reports whether view pixel pt is on the player: its figure, or its cell's ground.
+// Where a click counts as on the player (docs/spec/items.md, The mouse): within reachDistance view
+// pixels, across plus down, of the point reachAt from its sprite's top-left.
+var reachAt = image.Pt(8, 2)
+
+const reachDistance = 32
+
+// onPlayer reports whether view pixel pt is on the player: near its figure (as the game reaches
+// it), on its figure, or on its cell's ground.
 func (v *Viewer) onPlayer(pt image.Point) bool {
 	p := v.World.Player()
 	if p == nil {
 		return false
 	}
+	if b := v.Pack.Sprites[p.Template.Sprite]; b != nil {
+		anchor, _ := b.AnchorOf(0)
+		d := pt.Sub(drawlist.RefPoint(p.U, p.V).Sub(image.Pt(anchor[0], anchor[1])).Add(reachAt))
+		if abs(d.X)+abs(d.Y) < reachDistance {
+			return true
+		}
+	}
 	if id, _, ok := drawlist.ThingAt(v.Pack, v.Cmds, pt); ok && id == sim.PlayerID {
 		return true
 	}
 	return drawlist.CellAt(pt) == p.Cell()
+}
+
+func abs(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
 }
 
 // HandImage returns the image of the object on the pointer, if any.
