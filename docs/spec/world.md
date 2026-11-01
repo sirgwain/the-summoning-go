@@ -138,6 +138,20 @@ The game also swaps the shapes of some visible walls according to which of their
 
 The game shows a map of the current level while the player holds the Palimpsest and uses it (power 22h, items.md). The map shows the cells the player has **seen** (drawn while visible; see above), the player's position and the level's name, TEXT `129h + level`. Cells of level exit markers and mouths are marked as exits.
 
+Each seen cell is drawn with a small icon (RESOURCE 4Ch, 8×4 frames) by its terrain; floors, item slots, levers and hazard tiles draw nothing:
+
+| Terrain | Frame |
+| --- | --- |
+| A wall or door (below 11h) holding a teleporter or exit (feature bits 2 and 4) | 22h for wall shape 1, else 23h |
+| 00h–0Eh walls, 10h and 11h doors | terrain + 4 |
+| A level exit marker's cell, a mouth's cell | 16h, 17h |
+| 1Fh, 20h weight plate up, down | terrain − 7 |
+| 21h–23h rune marks | terrain − 7 |
+| 24h teleporter, only while armed (feature bits 2 and 4) | terrain − 7 |
+| 25h pit, 26h and 27h trapdoor open and closed, 28h gem socket | terrain − 7 |
+
+The player is frames 0–3 side by side. The screen is framed by RESOURCE 4Bh (the backdrop, a line per row) and the strips 4Dh–51h, and "Press F1 to print" (TEXT 94h) shows in its corner.
+
 Some levels refuse the map:
 
 | Level | Instead |
@@ -145,7 +159,7 @@ Some levels refuse the map:
 | 13h | Message 90h |
 | 21h, 22h, 23h | Conversation 7Dh |
 
-**Engine model.** The map belongs to the interface, not to an item. A minimap and a full map are always available and show the same seen cells. Each level has a map setting: shown, or refused with a message or a conversation. While the map is refused the minimap is hidden, and trying to open the map shows the message or runs the conversation. The importer sets levels 13h, 21h, 22h and 23h from the table above and every other level to shown. Power 22h imports as "open the map", following the same rule.
+**Engine model.** The map belongs to the interface, not to an item. A minimap and a full map are always available and show the same seen cells. A seen cell shows what it is, as the game's icons tell apart: wall, door, exit (an exit marker, or a teleporter or exit in a wall), mouth, armed teleporter, weight plate, rune mark, pit or open trapdoor, closed trapdoor, gem socket; the engine also shows floor and water. The full map has a legend naming the color of each kind it shows, and the player's. Each level has a map setting: shown, or refused with a message or a conversation. While the map is refused the minimap is hidden, and trying to open the map shows the message or runs the conversation. The importer sets levels 13h, 21h, 22h and 23h from the table above and every other level to shown. Power 22h imports as "open the map", following the same rule.
 
 ## Liquids
 

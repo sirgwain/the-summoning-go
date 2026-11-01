@@ -65,7 +65,7 @@ starts, or another key or a click comes; it will not start with full magic point
 near.
 F5 saves the game and F8 loads it again; F9 cycles music and effects, effects only, and silence; changing level saves it too (the autosave). O opens the
 disk menu: save under a name, restore, delete or rename a save, leave for the main menu, or quit. M shows the
-level's map (a key or click closes it); the minimap in the top-left corner shows it small. Some
+level's map, with a legend (a key or click closes it); the minimap in the top-left corner shows it small. Some
 levels refuse the map.
 
 F1-F4 (or 1-4) cast the selected spell of Wizardry, Sorcery, Enchantment and Healing; with Shift
@@ -798,7 +798,12 @@ var mapColors = map[int]color.RGBA{
 	viewer.MapFloor: {120, 110, 95, 255}, viewer.MapWall: {55, 50, 48, 255}, viewer.MapDoor: {150, 100, 50, 255},
 	viewer.MapExit: {80, 200, 90, 255}, viewer.MapWater: {50, 90, 190, 255}, viewer.MapHole: {15, 15, 15, 255},
 	viewer.MapTeleporter: {170, 80, 200, 255}, viewer.MapMouth: {220, 220, 220, 255},
+	viewer.MapPlate: {220, 190, 60, 255}, viewer.MapMark: {60, 200, 210, 255},
+	viewer.MapTrapdoor: {120, 75, 40, 255}, viewer.MapSocket: {230, 110, 40, 255},
 }
+
+// mapPlayerColor is the player's cell on the level map.
+var mapPlayerColor = color.RGBA{230, 40, 40, 255}
 
 // drawLevelMap draws map m's cells as diamonds of half-width s around the middle of r, rows and
 // columns turned as the view turns them, and the player's cell in red.
@@ -831,7 +836,7 @@ func drawLevelMap(screen *ebiten.Image, m *viewer.LevelMap, r image.Rectangle, s
 	player := &vector.Path{}
 	diamond(player, m.Player)
 	op := &vector.DrawPathOptions{}
-	op.ColorScale.ScaleWithColor(color.RGBA{230, 40, 40, 255})
+	op.ColorScale.ScaleWithColor(mapPlayerColor)
 	vector.FillPath(screen, player, nil, op)
 }
 
@@ -860,7 +865,8 @@ func (s *shell) drawFullMap(screen *ebiten.Image) {
 		return
 	}
 	screen.Fill(color.RGBA{8, 8, 12, 255})
-	r := image.Rect(0, 3*viewer.LineHeight, v.Screen.X, v.Screen.Y-viewer.Margin)
+	legendW := s.drawMapLegend(screen, m)
+	r := image.Rect(legendW, 3*viewer.LineHeight, v.Screen.X, v.Screen.Y-viewer.Margin)
 	cell := min(float32(r.Dx())/float32(m.Size[0]+m.Size[1]), 2*float32(r.Dy())/float32(m.Size[0]+m.Size[1]))
 	drawLevelMap(screen, m, r, cell)
 	name := m.Name
@@ -868,6 +874,26 @@ func (s *shell) drawFullMap(screen *ebiten.Image) {
 		name = v.World.Current().ID
 	}
 	ebitenutil.DebugPrintAt(screen, name, (v.Screen.X-len(name)*viewer.CharWidth)/2, viewer.LineHeight)
+}
+
+// drawMapLegend draws the full map's legend down its left side, a swatch and a name for the
+// player and for each kind the map shows, and returns the width it takes.
+func (s *shell) drawMapLegend(screen *ebiten.Image, m *viewer.LevelMap) int {
+	const swatch = 10
+	x, y := viewer.Margin, 3*viewer.LineHeight
+	width := 0
+	line := func(c color.Color, name string) {
+		vector.FillRect(screen, float32(x), float32(y+(viewer.LineHeight-swatch)/2), swatch, swatch, c, false)
+		vector.StrokeRect(screen, float32(x), float32(y+(viewer.LineHeight-swatch)/2), swatch, swatch, 1, slotEdgeColor, false)
+		ebitenutil.DebugPrintAt(screen, name, x+swatch+viewer.CharWidth, y)
+		width = max(width, swatch+viewer.CharWidth*(1+len(name)))
+		y += viewer.LineHeight + 4
+	}
+	line(mapPlayerColor, "You")
+	for _, k := range m.Legend {
+		line(mapColors[k], viewer.MapKindNames[k])
+	}
+	return x + width + viewer.Margin
 }
 
 // drawNotice draws the viewer's notice at the top middle of the screen while it lasts.

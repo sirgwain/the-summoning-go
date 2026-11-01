@@ -546,6 +546,22 @@ func TestLevelMap(t *testing.T) {
 	if !v.MapOpen || m == nil || len(m.Cells) == 0 || m.Name != "The Hall of Mechanisms" || m.Player != devpack.HallStart {
 		t.Fatalf("map open %v: %+v", v.MapOpen, m)
 	}
+	// The game's kinds show where seen, each named in the legend: a plate, a closed trapdoor, a
+	// rune mark and a gem socket.
+	kinds := map[content.Cell]int{}
+	for _, c := range m.Cells {
+		kinds[c.Cell] = c.Kind
+	}
+	for c, want := range map[content.Cell]int{devpack.PlateB: MapPlate, devpack.Trapdoor: MapTrapdoor, devpack.Mark: MapMark, devpack.Socket: MapSocket} {
+		got, seen := kinds[c]
+		if !seen {
+			t.Errorf("%s at %v not seen", MapKindNames[want], c)
+			continue
+		}
+		if got != want || !slices.Contains(m.Legend, want) {
+			t.Errorf("%v shows %s, want %s; legend %v", c, MapKindNames[got], MapKindNames[want], m.Legend)
+		}
+	}
 	press(KeySpace)
 	if v.MapOpen {
 		t.Error("a key did not close the map")
