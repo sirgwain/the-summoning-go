@@ -17,7 +17,7 @@ const SampleRate = 44100
 const firstEffect = 0x11
 
 // loopBars are the tracks the game loops, and for how many bars (audio.md, Songs).
-var loopBars = map[int]int{1: 48, 5: 24, 6: 16, 7: 8, 8: 12, 15: 8}
+var loopBars = map[int]int{0: 40, 1: 48, 4: 8, 5: 24, 6: 16, 7: 8, 8: 12, 15: 8}
 
 // writeTime is how long the game's driver takes over each register write (audio.md,
 // Register writes).

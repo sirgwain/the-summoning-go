@@ -94,8 +94,8 @@ func TestImportAudio(t *testing.T) {
 	if err != nil || w.Rate != SampleRate || w.Channels != 1 || w.Frames != m.Intro+m.Loop {
 		t.Fatalf("music.1 WAV %+v %v, want %d samples", w, err, m.Intro+m.Loop)
 	}
-	if p.Sounds["music.0"].Loop != 0 {
-		t.Fatal("music.0 loops")
+	if p.Sounds["music.2"].Loop != 0 {
+		t.Fatal("music.2 loops")
 	}
 
 	p, _, err = Import(importFixture(), Options{NoAudio: true})

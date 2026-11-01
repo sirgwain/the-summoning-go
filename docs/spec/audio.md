@@ -15,7 +15,9 @@ The game starts these tracks with a loop; every other track plays once. The fron
 
 | Track | Bars |
 |---|---|
+| 0 | 40 |
 | 1 | 48 |
+| 4 | 8 |
 | 5 | 24 |
 | 6 | 16 |
 | 7 | 8 |
