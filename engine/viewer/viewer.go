@@ -565,7 +565,7 @@ const functionKeys = 8
 //   - F takes from the floor, G puts down, Enter pulls the lever underfoot or uses a key on the
 //     keyhole underfoot, E talks, H recenters the view, P pauses.
 //   - I or Tab opens and closes the inventory panel, as clicking the portrait does.
-//   - F5 saves to the quick save and F9 loads it; M shows the level map.
+//   - F5 saves to the quick save and F8 loads it; F9 cycles the sound; M shows the level map.
 func (v *Viewer) playKeys(in Input) []input.Command {
 	if in.held(KeyControl) {
 		return nil
@@ -619,9 +619,9 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 		cmds = append(cmds, input.Menu{})
 	case in.pressed(KeyF5):
 		v.SaveGame(QuickSave)
-	case in.pressed(KeyF9):
+	case in.pressed(KeyF8):
 		v.LoadGame(QuickSave)
-	case in.pressed(KeyF8) && v.Audio != nil:
+	case in.pressed(KeyF9) && v.Audio != nil:
 		v.cycleMusic()
 	case in.pressed(KeyEscape) && v.InventoryOpen:
 		v.InventoryOpen = false

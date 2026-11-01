@@ -31,7 +31,7 @@ terms and is complete enough to implement from on its own.
 ## Non-goals
 
 - Fidelity to the original's code, timing, 16-bit arithmetic or random numbers.
-- Reading or writing the original's save files.
+- Writing the original's save files. The importer reads them (below); the engine never writes them.
 - A scripting language for now. Rules are data; a scripting layer could later add conditions and
   actions to the same registry.
 - Shipping the original's data. See [Distribution](#distribution).
@@ -331,14 +331,16 @@ and the editor's play-test can use them later. A game build can leave them unbou
   (a carrier at full output level). The quick fade steps every 1/18.2 s as the game does; the slow
   fade, which in the game steps with the song's events, steps every 125 ms, about the mean over the
   game's looping tracks.
-- F8 cycles music and effects, effects only, and silence (the game's F9, which the engine uses for
-  quick load). `--mute` plays nothing.
+- F9 cycles music and effects, effects only, and silence, as the game's music key does; F8 is quick
+  load. `--mute` plays nothing.
 
 ## Saves
 
 - A save is the world state, versioned and encoded as compressed JSON.
 - It records the content packs and versions it was made with, and warns on a mismatch.
 - Quick save, quick load and autosave on level change.
+- The Summoning importer converts the original's save files into engine saves (`docs/spec/saves.md`),
+  so a game begun in the original carries on in the engine.
 
 ## The Summoning importer
 
@@ -354,6 +356,8 @@ and the editor's play-test can use them later. A game build can leave them unbou
 - **Summoning defaults.** The importer also writes the Summoning's stat model, combat parameters,
   spells and character creation, as the specs give them.
 - **Report.** Each import writes a report of anything it could not map, so gaps are visible.
+- **Saves.** `import-save` reads the game's save files with its data files and the imported pack, and
+  writes engine saves: a new world on the pack with each save's state laid over it.
 
 ## Editor
 
@@ -398,6 +402,7 @@ of truth: code implements the spec, and a change in behavior starts as a change 
 | `rules.md` | Events, conditions, actions, and the puzzle templates built from them |
 | `combat.md` | The combat interface and the Summoning's formulas |
 | `spells.md` | Spells, gestures, costs, targeting, effects |
+| `saves.md` | The original's save files and how they import |
 | `dialogue.md` | Keywords, topics, NPC reactions |
 | `scenes.md` | Intro, character creation, story screens, endings |
 | `audio.md` | The music sequence format and how it plays |

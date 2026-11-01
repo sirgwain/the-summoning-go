@@ -16,6 +16,7 @@ This directory describes *The Summoning* (Event Horizon Software, 1992): what th
 | [dialogue.md](dialogue.md) | Keywords, conversation scripts, interaction variables |
 | [scenes.md](scenes.md) | View effects, story screens, endings, palette animation |
 | [audio.md](audio.md) | The music data and how it plays |
+| [saves.md](saves.md) | The game's save files, and importing them as engine saves |
 
 Each file gives the engine model, the mapping from the game's data, the special cases, and an **Unknowns** list. A section is written before the milestone that implements it, and corrected whenever testing against the game shows it wrong.
 

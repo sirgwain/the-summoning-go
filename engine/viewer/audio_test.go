@@ -21,7 +21,7 @@ func (s *testSpeaker) Play(snd *content.Sound) (audio.Voice, error) {
 	return &testVoice{}, nil
 }
 
-// TestLeverSound pulls the hall's lever: its cue plays. F8 then turns sound off, announcing it.
+// TestLeverSound pulls the hall's lever: its cue plays. F9 then turns sound off, announcing it.
 func TestLeverSound(t *testing.T) {
 	v := playIn(t, devpack.Hall, devpack.LeverA)
 	sp := &testSpeaker{}
@@ -30,12 +30,12 @@ func TestLeverSound(t *testing.T) {
 	if len(sp.played) == 0 || sp.played[0] != devpack.SFXBlip {
 		t.Fatalf("played %v, want %s", sp.played, devpack.SFXBlip)
 	}
-	pressKey(v, KeyF8)
+	pressKey(v, KeyF9)
 	if v.Audio.Mode() != audio.ModeEffects || v.Notice != "Sound effects only." {
-		t.Errorf("after F8: mode %v, notice %q", v.Audio.Mode(), v.Notice)
+		t.Errorf("after F9: mode %v, notice %q", v.Audio.Mode(), v.Notice)
 	}
-	pressKey(v, KeyF8)
+	pressKey(v, KeyF9)
 	if v.Audio.Mode() != audio.ModeSilent || v.Notice != "Sound off." {
-		t.Errorf("after F8 twice: mode %v, notice %q", v.Audio.Mode(), v.Notice)
+		t.Errorf("after F9 twice: mode %v, notice %q", v.Audio.Mode(), v.Notice)
 	}
 }

@@ -92,7 +92,7 @@ it once done.
 templates and things by id and the random source's state, so a restored world runs on exactly as
 the saved one would (`TestStateRoundTrip`). `engine/save` writes it gzipped as JSON with the save's
 name and time, and warns when it loads on another pack or version. In play, F5 saves to the quick
-save, F9 loads it, and changing level writes the autosave; saves go under the user's config
+save, F8 loads it, and changing level writes the autosave; saves go under the user's config
 directory per pack (`--saves` to choose). A conversation in progress cannot be saved.
 
 **Done (the level map).** Levels have names (TEXT 129h + level) and a map setting; levels 13h and

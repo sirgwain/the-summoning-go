@@ -168,6 +168,12 @@ func (w *World) enter(id string) error {
 	return nil
 }
 
+// LoadLevel loads level id as it starts, if the world has not loaded it, without entering it.
+func (w *World) LoadLevel(id string) error {
+	_, err := w.load(id)
+	return err
+}
+
 // load returns level id, placing what it holds the first time it is asked for.
 func (w *World) load(id string) (*Level, error) {
 	if l, ok := w.levels[id]; ok {

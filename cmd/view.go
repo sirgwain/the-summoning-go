@@ -20,6 +20,7 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/render"
 	"github.com/sirgwain/the-summoning-go/engine/render/drawlist"
+	"github.com/sirgwain/the-summoning-go/engine/save"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 	"github.com/spf13/cobra"
@@ -32,7 +33,7 @@ func init() {
 // newViewCmd returns the view command, or with play the play command, which opens the same
 // window driving the player.
 func newViewCmd(play bool) *cobra.Command {
-	var level, screenshot, script, out, saves string
+	var level, screenshot, script, out, saves, load string
 	var scale, shotTicks int
 	var magnify, menu, mute bool
 	var at, sel []int
@@ -58,7 +59,7 @@ its second action, X throws what it holds; Q, Shift+Q and Z do the same with the
 takes the top object of the player's cell to the first empty shelf, G puts down what is in hand,
 Enter pulls the lever underfoot or puts the key a keyhole underfoot takes into it, E or C talks to
 the nearest creature that talks (or hears the nearest mouth), H recenters the view, P pauses.
-F5 saves the game and F9 loads it again; F8 cycles music and effects, effects only, and silence; changing level saves it too (the autosave). O opens the
+F5 saves the game and F8 loads it again; F9 cycles music and effects, effects only, and silence; changing level saves it too (the autosave). O opens the
 disk menu: save under a name, restore, delete or rename a save, leave for the main menu, or quit. M shows the
 level's map (a key or click closes it); the minimap in the top-left corner shows it small. Some
 levels refuse the map.
@@ -158,9 +159,13 @@ of live input, and exits when it ends. Its files are written under --out.`,
 				v.Audio = audio.New(speaker.New(), pack)
 			}
 			if v.SaveDir == "" && script == "" {
-				if dir, err := os.UserConfigDir(); err == nil {
-					v.SaveDir = filepath.Join(dir, "summoning", "saves", pack.Manifest.ID)
+				v.SaveDir = save.DefaultDir(pack.Manifest.ID)
+			}
+			if load != "" {
+				if err := v.LoadFile(load); err != nil {
+					return err
 				}
+				menu = false
 			}
 			if play {
 				if v.World.Player() == nil {
@@ -204,6 +209,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 	viewCmd.Flags().Uint64Var(&seed, "seed", 1, "seed for the simulation's random choices")
 	viewCmd.Flags().StringVar(&script, "script", "", "run this script instead of live input, then exit")
 	viewCmd.Flags().StringVar(&out, "out", ".", "directory for a script's screenshots and dumps")
+	viewCmd.Flags().StringVar(&load, "load", "", "start from the saved game in this file")
 	viewCmd.Flags().StringVar(&saves, "saves", "", "directory for saved games (default: the user's config directory; none while a script runs)")
 	if play {
 		viewCmd.Flags().BoolVar(&menu, "menu", true, "start at the main menu when the pack has character creation (not while a script runs)")

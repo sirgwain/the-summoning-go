@@ -34,3 +34,28 @@ func TestWriteAndLoad(t *testing.T) {
 		t.Error("no warning for another version")
 	}
 }
+
+func TestWriteState(t *testing.T) {
+	p := devpack.Build()
+	w, err := sim.New(p, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := w.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Player.HitPoints = 1
+	path := filepath.Join(t.TempDir(), "imported.sav")
+	if err := WriteState(path, "imported", s); err != nil {
+		t.Fatal(err)
+	}
+	f, err := Read(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, _, err := Load(path, p)
+	if err != nil || f.Name != "imported" || r.Player().HitPoints != 1 {
+		t.Errorf("loaded %q with %d hit points: %v", f.Name, r.Player().HitPoints, err)
+	}
+}

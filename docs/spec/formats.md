@@ -255,7 +255,7 @@ The copy-protection images: 1-bit PCX files (version 5, RLE). The engine does no
 
 ## JAZ and saves
 
-JAZ is the game's runtime cache of visited levels and holds no content. The importer ignores it and the game's save files.
+JAZ is the game's runtime cache of visited levels and holds no content; the importer ignores it. The game's save files are in [saves.md](saves.md), with how the importer turns them into engine saves.
 
 ## Fixed resources
 

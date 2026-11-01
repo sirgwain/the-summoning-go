@@ -7,7 +7,7 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
 
-// Saving and loading while playing (docs/design.md, Saves): F5 saves to the quick save, F9 loads
+// Saving and loading while playing (docs/design.md, Saves): F5 saves to the quick save, F8 loads
 // it, and changing level writes the autosave. Saves go in SaveDir; without one there are none.
 
 // Save names.
@@ -45,10 +45,16 @@ func (v *Viewer) LoadGame(name string) {
 		v.notice("No place to load from")
 		return
 	}
-	w, warning, err := save.Load(v.savePath(name), v.Pack)
-	if err != nil {
+	if err := v.LoadFile(v.savePath(name)); err != nil {
 		v.notice("Not loaded: " + err.Error())
-		return
+	}
+}
+
+// LoadFile replaces the world with the save at path.
+func (v *Viewer) LoadFile(path string) error {
+	w, warning, err := save.Load(path, v.Pack)
+	if err != nil {
+		return err
 	}
 	v.setWorld(w)
 	if v.Audio != nil {
@@ -56,9 +62,10 @@ func (v *Viewer) LoadGame(name string) {
 	}
 	if warning != "" {
 		v.notice("Loaded; " + warning)
-		return
+		return nil
 	}
 	v.notice("Loaded")
+	return nil
 }
 
 // autosave writes the autosave when events change level while playing.

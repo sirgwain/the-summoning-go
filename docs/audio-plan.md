@@ -107,7 +107,7 @@ the timing corrected the spec: the timer's divisor comes from 1193180, but it co
       loops with `NewInfiniteLoopWithIntro`.
 - [x] Cues: the simulation names its sounds (`lever`, `door`, `unseal`, `teleport`, `level_up`,
       `weapon_skill_up`, `magic_skill_up`); `audio/cues.json` maps them to sounds.
-- [x] `summoning play` plays them; F8 cycles the music key, `--mute` silences it.
+- [x] `summoning play` plays them; F9 cycles the music key, `--mute` silences it.
 
 ### 6. Which track plays where
 

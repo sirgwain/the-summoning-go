@@ -31,6 +31,21 @@ func Write(path, name string, w *sim.World) error {
 	return writeFile(path, &File{Name: name, Saved: time.Now().UTC(), State: s})
 }
 
+// WriteState saves state s as name to path, making its directory.
+func WriteState(path, name string, s *sim.State) error {
+	return writeFile(path, &File{Name: name, Saved: time.Now().UTC(), State: s})
+}
+
+// DefaultDir returns where saves of pack go when no directory is given, or "" when there is no
+// configuration directory.
+func DefaultDir(pack string) string {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(dir, "summoning", "saves", pack)
+}
+
 // writeFile writes file to path, making its directory.
 func writeFile(path string, file *File) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

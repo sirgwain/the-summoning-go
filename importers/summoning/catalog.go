@@ -142,17 +142,16 @@ func (im *importer) text(strs []string) {
 	im.pack.Messages = m
 }
 
-// items adds an item for every OBJECTS template, named after its name.
-func (im *importer) items() error {
-	o := im.objects
+// itemIDs returns the id of every OBJECTS template's item, named after its name in strings, TEXT
+// by message id (items.md, Import).
+func itemIDs(o *Objects, strings map[string]string) ([]string, error) {
 	used := map[string]int{}
-	im.itemIDs = make([]string, len(o.Templates))
+	ids := make([]string, len(o.Templates))
 	for i := range o.Templates {
-		tm := &o.Templates[i]
-		name := msgID(o.NameBase + tm.NameIndex())
-		s, ok := im.strings[name]
+		name := msgID(o.NameBase + o.Templates[i].NameIndex())
+		s, ok := strings[name]
 		if !ok {
-			return fmt.Errorf("object template %02Xh: no name text %s", i, name)
+			return nil, fmt.Errorf("object template %02Xh: no name text %s", i, name)
 		}
 		id := "item." + slug(s)
 		if id == "item." {
@@ -161,7 +160,22 @@ func (im *importer) items() error {
 		if used[id]++; used[id] > 1 {
 			id = fmt.Sprintf("%s.%d", id, used[id])
 		}
-		im.itemIDs[i] = id
+		ids[i] = id
+	}
+	return ids, nil
+}
+
+// items adds an item for every OBJECTS template, named after its name.
+func (im *importer) items() error {
+	o := im.objects
+	var err error
+	if im.itemIDs, err = itemIDs(o, im.strings); err != nil {
+		return err
+	}
+	for i := range o.Templates {
+		tm := &o.Templates[i]
+		name := msgID(o.NameBase + tm.NameIndex())
+		id := im.itemIDs[i]
 
 		icon, err := im.image(int(im.init.Bases.SmallObject) + tm.Image())
 		if err != nil {

@@ -518,7 +518,7 @@ func abs(a int) int {
 	return a
 }
 
-// TestQuickSaveAndLoad saves with F5, walks on, and loads with F9: the player is back where it
+// TestQuickSaveAndLoad saves with F5, walks on, and loads with F8: the player is back where it
 // was saved.
 func TestQuickSaveAndLoad(t *testing.T) {
 	v := playIn(t, devpack.Study, devpack.StudyStart)
@@ -532,7 +532,7 @@ func TestQuickSaveAndLoad(t *testing.T) {
 		t.Fatalf("notice %q", v.Notice)
 	}
 	v.World.Update([]input.Command{input.PlacePlayer{Cell: devpack.StudyScroll}})
-	press(KeyF9)
+	press(KeyF8)
 	if got := v.World.Player().Cell(); got != at || v.Notice != "Loaded" {
 		t.Errorf("loaded at %v, want %v; notice %q", got, at, v.Notice)
 	}
