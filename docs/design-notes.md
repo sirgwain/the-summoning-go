@@ -86,6 +86,15 @@ it once done.
    `TestStudy` (`devpack/scripts/study.json`); the imported game's first conversation (Malachi,
    level 0) plays through.
 
+## In progress: 8. Game
+
+**Done (saves).** The world as plain data (`engine/sim/state.go`): everything that changes, with
+templates and things by id and the random source's state, so a restored world runs on exactly as
+the saved one would (`TestStateRoundTrip`). `engine/save` writes it gzipped as JSON with the save's
+name and time, and warns when it loads on another pack or version. In play, F5 saves to the quick
+save, F9 loads it, and changing level writes the autosave; saves go under the user's config
+directory per pack (`--saves` to choose). A conversation in progress cannot be saved.
+
 ## Left from Walk
 
 - **Play a real level through.** Only a short walk on level 0 of the imported game has been tried.
@@ -143,7 +152,8 @@ it once done.
   and the school's first gesture icons, which the importer gives school 0's for now),
   changing sex (the other-sex portrait), story screens, endings, and the three arrival styles
   when changing level.
-- Saves, audio (music and effects as Ogg with loop points), the level map and its refusals.
+- Audio (music and effects as Ogg with loop points), the level map and its refusals; save and load
+  screens with named saves (the disk menu's conversation actions).
 - Level names, which the import leaves empty.
 
 ### 9. Remaster UI

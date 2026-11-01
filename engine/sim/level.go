@@ -65,7 +65,7 @@ func (f *Feature) Moving() bool {
 // Thing is a thing standing in a level.
 type Thing struct {
 	ID       string
-	Template *content.Thing
+	Template *content.Thing `json:"-"`
 	// U and V are its ground point in world units.
 	U, V      int
 	Facing    int

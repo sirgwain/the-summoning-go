@@ -29,6 +29,7 @@ func Steps(ticks int) int64 {
 type World struct {
 	pack *content.Pack
 	rng  *rand.Rand
+	src  *rand.PCG
 	// step counts updates since the world began.
 	step int64
 	// levels holds every level entered so far, as it was left.
@@ -54,7 +55,8 @@ var summoningRules combat.Rules = summoning.Rules{}
 // New returns a world for pack p at its start level. The seed makes its random choices
 // reproducible.
 func New(p *content.Pack, seed uint64) (*World, error) {
-	w := &World{pack: p, rng: rand.New(rand.NewPCG(seed, seed^0x9E3779B97F4A7C15)), levels: map[string]*Level{}, rules: rulesFor(p),
+	src := rand.NewPCG(seed, seed^0x9E3779B97F4A7C15)
+	w := &World{pack: p, src: src, rng: rand.New(src), levels: map[string]*Level{}, rules: rulesFor(p),
 		records: map[string]*Record{}, counters: map[string]int{}}
 	for _, id := range sortedKeys(p.Items) {
 		if p.Items[id].Random {

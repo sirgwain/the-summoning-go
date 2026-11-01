@@ -29,7 +29,7 @@ func init() {
 // newViewCmd returns the view command, or with play the play command, which opens the same
 // window driving the player.
 func newViewCmd(play bool) *cobra.Command {
-	var level, screenshot, script, out string
+	var level, screenshot, script, out, saves string
 	var scale, shotTicks int
 	var magnify bool
 	var at, sel []int
@@ -49,6 +49,7 @@ its second action, X throws what it holds; Q, Shift+Q and Z do the same with the
 takes the top object of the player's cell to the first empty shelf, G puts down what is in hand,
 Enter pulls the lever underfoot or puts the key a keyhole underfoot takes into it, E or C talks to
 the nearest creature that talks (or hears the nearest mouth), H recenters the view, P pauses.
+F5 saves the game and F9 loads it again; changing level saves it too (the autosave).
 
 F1-F4 (or 1-4) cast the selected spell of Wizardry, Sorcery, Enchantment and Healing; with Shift
 they select the school's next memorized spell. F10 opens the spell panel: type the letters A-L of
@@ -140,6 +141,12 @@ of live input, and exits when it ends. Its files are written under --out.`,
 			if err != nil {
 				return err
 			}
+			v.SaveDir = saves
+			if v.SaveDir == "" && script == "" {
+				if dir, err := os.UserConfigDir(); err == nil {
+					v.SaveDir = filepath.Join(dir, "summoning", "saves", pack.Manifest.ID)
+				}
+			}
 			if play {
 				if v.World.Player() == nil {
 					return fmt.Errorf("pack %s has no player", pack.Manifest.ID)
@@ -179,6 +186,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 	viewCmd.Flags().Uint64Var(&seed, "seed", 1, "seed for the simulation's random choices")
 	viewCmd.Flags().StringVar(&script, "script", "", "run this script instead of live input, then exit")
 	viewCmd.Flags().StringVar(&out, "out", ".", "directory for a script's screenshots and dumps")
+	viewCmd.Flags().StringVar(&saves, "saves", "", "directory for saved games (default: the user's config directory; none while a script runs)")
 	viewCmd.Flags().StringVar(&screenshot, "screenshot", "", "save a frame to this PNG file and exit")
 	viewCmd.Flags().IntVar(&shotTicks, "screenshot-ticks", 0, "updates to run before the screenshot")
 	return viewCmd
@@ -332,6 +340,7 @@ func (s *shell) Draw(screen *ebiten.Image) {
 	s.drawTalk(screen)
 	s.drawReading(screen)
 	s.drawTools(screen)
+	s.drawNotice(screen)
 	s.drawPointer(screen)
 	for _, path := range s.shots {
 		if err := saveScreenshot(screen, path); err != nil && s.err == nil {
@@ -734,6 +743,18 @@ func wrap(text string, n int) []string {
 		lines = append(lines, line)
 	}
 	return lines
+}
+
+// drawNotice draws the viewer's notice at the top middle of the screen while it lasts.
+func (s *shell) drawNotice(screen *ebiten.Image) {
+	v := s.v
+	if v.Notice == "" || v.Ticks > v.NoticeUntil {
+		return
+	}
+	w := len(v.Notice)*viewer.CharWidth + 8
+	x, y := (v.Screen.X-w)/2, viewer.Margin
+	vector.FillRect(screen, float32(x), float32(y), float32(w), float32(viewer.LineHeight+4), panelColor, false)
+	ebitenutil.DebugPrintAt(screen, v.Notice, x+4, y+2)
 }
 
 // drawReading draws the picture of a scroll being read in a small window centered above the

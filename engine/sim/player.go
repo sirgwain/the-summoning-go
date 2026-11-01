@@ -55,7 +55,7 @@ const (
 
 // Player is the player: it belongs to no level and goes with the world from level to level.
 type Player struct {
-	Template *content.Thing
+	Template *content.Thing `json:"-"`
 	// U and V are its ground point on the current level, in world units.
 	U, V int
 	// Facing is a table direction.

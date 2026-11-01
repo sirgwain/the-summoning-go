@@ -78,6 +78,11 @@ type Viewer struct {
 	Entered    string
 	// InventoryOpen shows the inventory panel.
 	InventoryOpen bool
+	// SaveDir is where saves go, empty for none; Notice is a line shown at the top of the screen
+	// until the update NoticeUntil.
+	SaveDir     string
+	Notice      string
+	NoticeUntil int64
 	// Said is a mouth's message showing beside it, nil when none is.
 	Said       *Said
 	Typed      string
@@ -307,6 +312,7 @@ func (v *Viewer) updateWorld(cmds []input.Command) {
 	events := v.World.Update(cmds)
 	v.log(events)
 	v.hear(events)
+	v.autosave(events)
 	for _, e := range events {
 		if e.Kind == sim.EventMagic && e.Detail == "read" {
 			if it := v.Pack.Items[e.Item]; it != nil && it.Picture != nil {
@@ -533,6 +539,7 @@ const functionKeys = 8
 //   - F takes from the floor, G puts down, Enter pulls the lever underfoot or uses a key on the
 //     keyhole underfoot, E talks, H recenters the view, P pauses.
 //   - I or Tab opens and closes the inventory panel, as clicking the portrait does.
+//   - F5 saves to the quick save and F9 loads it.
 func (v *Viewer) playKeys(in Input) []input.Command {
 	if in.held(KeyControl) {
 		return nil
@@ -580,6 +587,10 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 	switch {
 	case in.pressed("I", KeyTab):
 		v.ToggleInventory()
+	case in.pressed(KeyF5):
+		v.SaveGame(QuickSave)
+	case in.pressed(KeyF9):
+		v.LoadGame(QuickSave)
 	case in.pressed(KeyEscape) && v.InventoryOpen:
 		v.InventoryOpen = false
 	case in.pressed("H"):

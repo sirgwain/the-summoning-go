@@ -31,7 +31,7 @@ type Flight struct {
 	// threw it, if a creature did. Fired is an object shot rather than thrown.
 	ByPlayer bool
 	Fired    bool
-	Thrower  *Thing
+	Thrower  *Thing `json:"-"`
 	waited   bool
 	next     int64
 }
