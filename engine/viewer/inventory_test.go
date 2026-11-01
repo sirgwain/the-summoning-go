@@ -201,3 +201,36 @@ func TestInventoryContents(t *testing.T) {
 		t.Error("no preview for the panel's box")
 	}
 }
+
+// TestRightClickOpens right-clicks a sack on a shelf with nothing on the pointer: it opens as the
+// pack, the inventory panel opens with its boxes, and a click on the first takes its key; a
+// second right click closes it.
+func TestRightClickOpens(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	p := v.World.Player()
+	sack := &sim.Object{Item: devpack.ItemSack, Contents: []*sim.Object{{Item: devpack.ItemKey}}}
+	p.Slots[5] = sack
+	r, _ := v.Hotbar().SlotRect(5)
+	at := r.Min.Add(r.Max).Div(2)
+	rightAt := func(pt image.Point) {
+		v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: pt, Right: Button{Pressed: true, Released: true}})
+	}
+	rightAt(at)
+	if p.Pack(v.Pack) != sack || !v.InventoryOpen {
+		t.Fatalf("right click: pack %+v, panel open %v", p.Pack(v.Pack), v.InventoryOpen)
+	}
+	pr, ok := v.Inventory().SlotRect(sim.SlotPack)
+	if !ok {
+		t.Fatal("no pack boxes for the opened sack")
+	}
+	tapAt(v, pr.Min.Add(pr.Max).Div(2))
+	if p.Hand == nil || p.Hand.Item != devpack.ItemKey || len(sack.Contents) != 0 {
+		t.Fatalf("took %+v from the opened sack", p.Hand)
+	}
+	p.Hand = nil
+	r, _ = v.Hotbar().SlotRect(5)
+	rightAt(r.Min.Add(r.Max).Div(2))
+	if p.Pack(v.Pack) != nil {
+		t.Errorf("a second right click left %+v open", p.Pack(v.Pack))
+	}
+}

@@ -72,6 +72,9 @@ type Player struct {
 	// Hand is the object held on the pointer; Slots the inventory's fixed slots.
 	Hand  *Object
 	Slots [SlotCount]*Object
+	// Opened is one more than the fixed slot whose container is open as the pack, 0 for none:
+	// then the bag in the left hand is the pack.
+	Opened int
 	// Moves counts the moves made, for the walk animation; Idle the updates since the last.
 	Moves, Idle int
 	// StepCount counts walk steps for the footsteps, 0..5.
@@ -142,13 +145,47 @@ func (p *Player) baseWeight() int {
 	return playerWeight
 }
 
-// Pack returns the container in the left hand, whose contents are the pack slots, or nil.
+// Pack returns the container whose contents are the pack slots, or nil: the one opened while it
+// is still in its slot, else the one in the left hand (docs/spec/items.md, Opening containers).
 func (p *Player) Pack(pk *content.Pack) *Object {
-	o := p.Slots[SlotLeftHand]
-	if o == nil || pk.Items[o.Item] == nil || pk.Items[o.Item].Container == nil {
-		return nil
+	if s, ok := p.OpenSlot(pk); ok {
+		return p.Slots[s]
 	}
-	return o
+	if o := p.Slots[SlotLeftHand]; isContainer(pk, o) {
+		return o
+	}
+	return nil
+}
+
+// OpenSlot returns the fixed slot of the container opened as the pack, and false when none is
+// open or it has left its slot.
+func (p *Player) OpenSlot(pk *content.Pack) (int, bool) {
+	s := p.Opened - 1
+	if s < 0 || s >= SlotCount || !isContainer(pk, p.Slots[s]) {
+		return 0, false
+	}
+	return s, true
+}
+
+func isContainer(pk *content.Pack, o *Object) bool {
+	return o != nil && pk.Items[o.Item] != nil && pk.Items[o.Item].Container != nil
+}
+
+// open opens the container in fixed slot i as the pack, or closes it when it is open
+// (docs/spec/items.md, Opening containers).
+func (w *World) open(i int) {
+	p, l := w.player, w.Current()
+	if s, ok := p.OpenSlot(w.pack); ok && s == i {
+		p.Opened = 0
+		w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "closed"})
+		return
+	}
+	if i < 0 || i >= SlotCount || !isContainer(w.pack, p.Slots[i]) {
+		w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: p.Cell(), Detail: "nothing to open there"})
+		return
+	}
+	p.Opened = i + 1
+	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "opened"})
 }
 
 // Slot returns the object in slot i, pack slots included, or nil.
@@ -795,7 +832,7 @@ func (w *World) swap(i int) {
 	case i >= SlotPack:
 		bag := p.Pack(w.pack)
 		if bag == nil {
-			refuse("no bag in the left hand")
+			refuse("no container open")
 			return
 		}
 		box := w.pack.Items[bag.Item].Container

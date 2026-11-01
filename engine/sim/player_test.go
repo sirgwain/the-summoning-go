@@ -577,3 +577,42 @@ func TestFigureLooks(t *testing.T) {
 	p.Slots[SlotBody] = nil
 	check("bare.f", "helm.f")
 }
+
+// TestOpenContainer opens a bag on a shelf as the pack: its contents are the pack slots, and a
+// swap takes from it; opened again it closes, and the bag in the left hand is the pack again, as
+// it is once the opened bag leaves its slot.
+func TestOpenContainer(t *testing.T) {
+	w := walkWorld(t, "@.")
+	pk := w.Pack()
+	p := w.Player()
+	shelfBag := &Object{Item: "item.bag", Contents: []*Object{{Item: "item.key"}}}
+	handBag := &Object{Item: "item.bag"}
+	p.Slots[3], p.Slots[SlotLeftHand] = shelfBag, handBag
+	if p.Pack(pk) != handBag {
+		t.Fatal("the pack is not the bag in the left hand at first")
+	}
+	w.Update([]input.Command{input.Open{Slot: 3}})
+	if p.Pack(pk) != shelfBag || p.Slot(pk, SlotPack) == nil {
+		t.Fatalf("opened: pack %+v", p.Pack(pk))
+	}
+	w.Update([]input.Command{input.Swap{Slot: SlotPack}})
+	if p.Hand == nil || p.Hand.Item != "item.key" || len(shelfBag.Contents) != 0 {
+		t.Fatalf("took %+v; bag holds %d", p.Hand, len(shelfBag.Contents))
+	}
+	w.Update([]input.Command{input.Swap{Slot: SlotPack}})
+	if p.Hand != nil || len(shelfBag.Contents) != 1 {
+		t.Fatalf("put back: hand %+v, bag holds %d", p.Hand, len(shelfBag.Contents))
+	}
+	w.Update([]input.Command{input.Open{Slot: 3}})
+	if p.Pack(pk) != handBag {
+		t.Error("opened again, the shelf bag did not close")
+	}
+	w.Update([]input.Command{input.Open{Slot: 3}, input.Swap{Slot: 3}})
+	if p.Hand != shelfBag || p.Pack(pk) != handBag {
+		t.Errorf("taken from its slot, the opened bag is still the pack: %+v", p.Pack(pk))
+	}
+	w.Update([]input.Command{input.Open{Slot: 4}})
+	if p.Pack(pk) != handBag {
+		t.Error("opening an empty shelf changed the pack")
+	}
+}

@@ -251,8 +251,8 @@ func (v *Viewer) preview(ip *InventoryPanel, o *sim.Object, at image.Point) {
 		return
 	}
 	it := v.Pack.Items[o.Item]
-	if it == nil || it.Container == nil {
-		return
+	if it == nil || it.Container == nil || o == v.World.Player().Pack(v.Pack) {
+		return // the pack shows the open one
 	}
 	ip.Lines = append(ip.Lines, TextLine{At: at, Text: inspect.ItemName(v.Pack, o.Item)})
 	n := max(it.Container.Capacity, len(o.Contents))
@@ -385,10 +385,15 @@ func (v *Viewer) objectUnder(ip *InventoryPanel, pt image.Point) *sim.Object {
 // inventoryClick is a click on the inventory panel at screen point pt: a box swaps with the hand
 // (with Shift, reads its object); the right button sends the hand to a shelf.
 func (v *Viewer) inventoryClick(ip *InventoryPanel, pt image.Point, right, shift bool) []input.Command {
+	b, ok := slotAt(ip.Slots, ip.at(pt))
 	if right {
+		if ok {
+			if cmds, opened := v.openClick(b.Slot); opened {
+				return cmds
+			}
+		}
 		return v.rightClick(false)
 	}
-	b, ok := slotAt(ip.Slots, ip.at(pt))
 	if !ok {
 		return nil
 	}

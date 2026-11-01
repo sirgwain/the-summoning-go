@@ -93,9 +93,13 @@ mouth's message beside it. Taking a scroll onto the pointer reads it.
 
 I or Tab, or clicking the portrait, opens the inventory panel (Escape closes it): the figure
 showing what it wears, with a box for each worn slot (head, body, arms, feet on the left;
-quiver, neck, right hand, left hand on the right), the pack of a bag held in the left hand, the details
+quiver, neck, right hand, left hand on the right), the pack (an opened container, or a bag held in the left hand), the details
 of the object under the pointer or on it, and the character's attributes, points, armor, level,
 experience and skills. Its boxes work as the hotbar's: a click swaps a box with the pointer.
+A right click on a bag or chest (on the hotbar or the panel, with nothing on the pointer) opens
+it as the pack, where its contents can be taken and put; a second right click closes it, and
+the bag in the left hand is the pack again. Resting the pointer on a container shows what it
+holds.
 
 V shows the whole level, F12 switches to the viewer's tools (see summoning view --help),
 clicking a cell inspects it, ~ shows or hides the debug overlay (hidden at first; --debug shows
@@ -238,6 +242,8 @@ var (
 	slotColor      = color.RGBA{40, 36, 32, 230}
 	slotEdgeColor  = color.RGBA{150, 130, 100, 255}
 	handEdgeColor  = color.RGBA{220, 190, 120, 255}
+	// openEdgeColor marks the box of the container open as the pack.
+	openEdgeColor  = color.RGBA{90, 220, 120, 255}
 	actionColor    = color.RGBA{70, 50, 30, 230}
 	waitColor      = color.RGBA{40, 40, 40, 230}
 	gaugeColors    = [...]color.RGBA{{200, 30, 30, 255}, {40, 90, 220, 255}, {200, 160, 40, 255}}
@@ -482,6 +488,9 @@ func (s *shell) drawHotbar(screen *ebiten.Image) {
 		if b.Slot >= sim.Shelves {
 			edge = handEdgeColor
 		}
+		if s, ok := v.World.Player().OpenSlot(v.Pack); ok && s == b.Slot {
+			edge = openEdgeColor
+		}
 		stroke(r, edge)
 	}
 	for _, b := range h.Spells {
@@ -578,6 +587,9 @@ func (s *shell) drawInventory(screen *ebiten.Image) {
 		edge := slotEdgeColor
 		if b.Slot >= sim.Shelves && b.Slot < sim.SlotPack {
 			edge = handEdgeColor
+		}
+		if s, ok := v.World.Player().OpenSlot(v.Pack); ok && s == b.Slot {
+			edge = openEdgeColor
 		}
 		vector.StrokeRect(win, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx()-1), float32(r.Dy()-1), 1, edge, false)
 	}

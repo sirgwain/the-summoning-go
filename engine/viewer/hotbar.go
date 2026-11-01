@@ -219,6 +219,11 @@ func (h *Hotbar) click(v *Viewer, pt image.Point, right bool) []input.Command {
 				return []input.Command{input.NextSpell{School: b.School}}
 			}
 		}
+		if b, ok := slotAt(h.Slots, h.at(pt)); ok {
+			if cmds, ok := v.openClick(b.Slot); ok {
+				return cmds
+			}
+		}
 		return v.rightClick(false)
 	}
 	at := h.at(pt)

@@ -63,6 +63,24 @@ func (v *Viewer) rightClick(onPlayer bool) []input.Command {
 	return nil
 }
 
+// openClick is a right click on a slot's box with an empty pointer: a container there opens as
+// the pack, shown on the inventory panel, which opens too; clicked again it closes. It reports
+// false when the click is not one.
+func (v *Viewer) openClick(slot int) ([]input.Command, bool) {
+	p := v.World.Player()
+	if p.Hand != nil || slot < 0 || slot >= sim.SlotCount {
+		return nil, false
+	}
+	o := p.Slots[slot]
+	if o == nil || v.Pack.Items[o.Item] == nil || v.Pack.Items[o.Item].Container == nil {
+		return nil, false
+	}
+	if s, open := p.OpenSlot(v.Pack); !open || s != slot {
+		v.InventoryOpen = true
+	}
+	return []input.Command{input.Open{Slot: slot}}, true
+}
+
 // firstEmptyShelf returns the player's first empty shelf, or −1.
 func firstEmptyShelf(p *sim.Player) int {
 	for i := range sim.Shelves {

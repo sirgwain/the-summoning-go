@@ -80,6 +80,9 @@ type PutDown struct{}
 // Swap exchanges the hand with an inventory slot.
 type Swap struct{ Slot int }
 
+// Open opens the container in a fixed inventory slot as the pack, or closes it when it is.
+type Open struct{ Slot int }
+
 // Activate uses the lever in the player's cell, or the nearest mouth in reach.
 type Activate struct{}
 
@@ -106,6 +109,7 @@ func (Walk) command()        {}
 func (PickUp) command()      {}
 func (PutDown) command()     {}
 func (Swap) command()        {}
+func (Open) command()        {}
 func (Activate) command()    {}
 func (PlacePlayer) command() {}
 
