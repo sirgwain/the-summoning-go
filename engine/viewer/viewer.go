@@ -332,6 +332,7 @@ func (v *Viewer) updateWorld(cmds []input.Command) {
 	v.log(events)
 	v.hear(events)
 	v.autosave(events)
+	v.transcribe(events)
 	v.openMap(events)
 	for _, e := range events {
 		if e.Kind == sim.EventMagic && e.Detail == "read" {

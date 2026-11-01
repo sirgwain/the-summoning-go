@@ -128,6 +128,11 @@ offers each menu by keyword). Its `menu` actions open frontend screens over play
 typed name or over a save, restore, delete, rename, and the quit and leave questions; then the
 conversation goes on (`TestDiskMenu`). Saves are named files under the save directory.
 
+**Done (smaller rules).** Changing sex (power 14h) takes the portrait's other-sex portrait. The
+transcript: while variable 99 is set, conversation lines and questions, and the headings of
+action 1Ch, go to `transcript.txt` beside the saves, wrapped at 80 columns with keywords
+underlined (`TestTranscriptFile`). A debug command sets a counter (`input.SetCounter`).
+
 ## Left from Walk
 
 - **Play a real level through.** Only a short walk on level 0 of the imported game has been tried.
@@ -175,15 +180,12 @@ conversation goes on (`TestDiskMenu`). Saves are named files under the save dire
 
 ### 8. Game
 
-- From Magic and talk: conversation actions that report "not yet" (printing the transcript) and view effects (`effect.n`
-  events, and effect 6's level change, which does happen); the player's name in texts (the
-  viewer says "Stranger").
-- Scenes: the intro, character creation (which replaces the starting attributes and bonus the
-  importer writes, and chooses the portrait in place of portrait 0; F's premade characters,
-  and the school's first gesture icons, which the importer gives school 0's for now),
-  changing sex (the other-sex portrait), story screens, endings, and the three arrival styles
-  when changing level.
-- Audio (music and effects as Ogg with loop points).
+- View effects (`effect.n` events; effect 6's level change does happen) and the arrival styles
+  when changing level (scroll, fall, fall-through, teleport, ripple).
+- The intro and the end scenes, whose captions are in the game's program; ending G's changes
+  to the world and its save.
+- Audio (music and effects with loop points).
+- Play *The Summoning* from start to end on the imported pack.
 
 ### 9. Remaster UI
 

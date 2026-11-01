@@ -62,7 +62,7 @@ A record's file is named after its id without the kind prefix (`item.dagger` is
   "player": "thing.player",
   "rules": "summoning",
   "counters": { "after_conversation": "var.97", "use_result": "var.19", "transformed": "var.14",
-                "quiet_combat": "var.96" },
+                "quiet_combat": "var.96", "transcript": "var.99" },
   "menu": "thing.npc.0"
 }
 ```
@@ -75,7 +75,8 @@ itself uses (`docs/spec/dialogue.md`, Engine model): `after_conversation` is cle
 conversation ends, `use_result` decides whether an object whose conversation has `use_result` is
 used, `transformed` is set to 1 by a Shape Change into the look named by `transformed_look`,
 and cleared when it ends, and while `quiet_combat` is not 0 the combat messages are not shown.
-`menu` is the thing template whose conversation the menu key opens.
+While `transcript` is not 0, what conversations say goes to the transcript. `menu` is the thing
+template whose conversation the menu key opens.
 
 ## Palettes
 

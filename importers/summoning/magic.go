@@ -49,6 +49,7 @@ const (
 	varUseResult         = 19
 	varEnding            = 32
 	varAfterConversation = 97
+	varTranscript        = 99
 )
 
 // Where the Gateway leads (spells.md, Effects).

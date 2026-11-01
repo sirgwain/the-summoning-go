@@ -378,6 +378,9 @@ const (
 	MsgKilled               = "killed"
 	MsgAbsorbed             = "absorbed"
 	MsgNoEnding             = "no_ending"
+	// MsgTranscriptHeading and MsgTranscriptContinued head the transcript.
+	MsgTranscriptHeading   = "transcript_heading"
+	MsgTranscriptContinued = "transcript_continued"
 )
 
 var messageKeys = map[string]bool{
@@ -393,6 +396,8 @@ var messageKeys = map[string]bool{
 	MsgNoCreatures:           true,
 	MsgAlreadyHave:           true,
 	MsgNoEnding:              true,
+	MsgTranscriptHeading:     true,
+	MsgTranscriptContinued:   true,
 	MsgHealed:                true,
 	MsgProtected:             true,
 	MsgBoostExtended:         true,

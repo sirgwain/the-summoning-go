@@ -376,7 +376,8 @@ type Action struct {
 	Jump          *int         `json:"jump,omitempty"`
 	Ending        bool         `json:"ending,omitempty"`
 	Menu          *string      `json:"menu,omitempty"`
-	Transcript    *string      `json:"transcript,omitempty"`
+	// Transcript prints the transcript's heading: TranscriptHeading or TranscriptContinued.
+	Transcript *string `json:"transcript,omitempty"`
 }
 
 // SetHook points a feature's hook at a procedure, or at none.
@@ -483,3 +484,9 @@ type MapRefusal struct {
 	Message      string `json:"message,omitempty"`
 	Conversation string `json:"conversation,omitempty"`
 }
+
+// The transcript action's headings.
+const (
+	TranscriptHeading   = "heading"
+	TranscriptContinued = "continued"
+)

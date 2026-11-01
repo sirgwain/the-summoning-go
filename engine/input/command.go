@@ -57,6 +57,12 @@ type FollowExit struct{ Feature string }
 // GoTo makes a level the current one.
 type GoTo struct{ Level string }
 
+// SetCounter sets a counter.
+type SetCounter struct {
+	Counter string
+	Value   int
+}
+
 // Player commands: what the player does (docs/spec/entities.md, docs/spec/items.md).
 
 // Walk asks the player to walk a step along a direction at its next update. A presentation
@@ -112,6 +118,7 @@ func (Switch) command()     {}
 func (Run) command()        {}
 func (FollowExit) command() {}
 func (GoTo) command()       {}
+func (SetCounter) command() {}
 
 // Magic and talk commands (docs/spec/spells.md, docs/spec/dialogue.md).
 

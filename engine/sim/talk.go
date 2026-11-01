@@ -286,6 +286,7 @@ func (w *World) ask(word string) {
 		return
 	}
 	t.Transcript = append(t.Transcript, "Q: "+word)
+	w.transcribe(word, TranscriptQuestion)
 	t.pass = &pass{keyword: k.ID}
 	w.runTalk()
 }
@@ -432,6 +433,7 @@ func (w *World) say(l Line) {
 	t.Line = &l
 	if l.Text != "" {
 		t.Transcript = append(t.Transcript, l.Text)
+		w.transcribe(l.Text, TranscriptLine)
 	}
 	w.emit(Event{Kind: EventTalk, Level: w.current, Text: l.Text, Detail: l.Kind})
 }
@@ -509,7 +511,13 @@ func (w *World) talkAction(a content.Action) {
 	case a.Menu != nil:
 		w.say(Line{Kind: LineMenu, Menu: *a.Menu})
 	case a.Transcript != nil:
-		w.emit(Event{Kind: EventNotYet, Level: l.ID, Detail: "printing the transcript"})
+		key := content.MsgTranscriptContinued
+		if *a.Transcript == content.TranscriptHeading {
+			key = content.MsgTranscriptHeading
+		}
+		if m := w.pack.Messages; m != nil && m.Messages[key] != "" {
+			w.emit(Event{Kind: EventTranscript, Level: l.ID, Text: m.Messages[key], Detail: TranscriptHeading})
+		}
 	}
 }
 
@@ -664,3 +672,21 @@ func (w *World) showMap() {
 
 // MapRefused reports whether the current level refuses its map, which hides the minimap.
 func (w *World) MapRefused() bool { return w.Current().Def.Map != nil }
+
+// EventTranscript sends a text to the transcript: Text is its key (a question's word), Detail
+// what it is.
+const EventTranscript = "transcript"
+
+// Transcript entries.
+const (
+	TranscriptLine     = "line"
+	TranscriptQuestion = "question"
+	TranscriptHeading  = "heading"
+)
+
+// transcribe sends text to the transcript while the pack's transcript counter is set.
+func (w *World) transcribe(text, kind string) {
+	if c := w.pack.Manifest.Counters; c != nil && c.Transcript != "" && w.counters[c.Transcript] != 0 {
+		w.emit(Event{Kind: EventTranscript, Level: w.current, Text: text, Detail: kind})
+	}
+}

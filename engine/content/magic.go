@@ -150,6 +150,8 @@ type Counters struct {
 	TransformedLook string `json:"transformed_look,omitempty"`
 	// QuietCombat hides the combat messages while it is not 0.
 	QuietCombat string `json:"quiet_combat,omitempty"`
+	// Transcript sends what conversations say to the transcript while it is not 0.
+	Transcript string `json:"transcript,omitempty"`
 }
 
 // Cast is a spell an item casts when used.

@@ -350,7 +350,7 @@ func (w *World) startPower(power, sign int) bool {
 		}
 	case 0x14:
 		if w.chance(1, 2) {
-			p.Status.Female = !p.Status.Female
+			w.changeSex()
 		} else {
 			n := 1
 			if w.chance(1, 2) {
@@ -470,4 +470,13 @@ func (w *World) usedUp(hand int, o *Object, it *content.Item, a content.ItemActi
 		w.putOn(spent)
 	}
 	w.emit(Event{Kind: EventObject, Level: w.current, Cell: w.player.Cell(), Item: o.Item, Detail: "used"})
+}
+
+// changeSex changes the player's sex, and its portrait to its portrait's other-sex one.
+func (w *World) changeSex() {
+	p := w.player
+	p.Status.Female = !p.Status.Female
+	if pt := w.pack.Portraits[p.Portrait]; pt != nil && pt.Other != "" {
+		p.Portrait = pt.Other
+	}
 }

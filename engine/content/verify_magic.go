@@ -333,6 +333,10 @@ func (v *verifier) talkAction(owner string, a Action, clauses int) {
 		if !menus[*a.Menu] {
 			v.fail("%s: unknown menu %q", owner, *a.Menu)
 		}
+	case a.Transcript != nil:
+		if *a.Transcript != TranscriptHeading && *a.Transcript != TranscriptContinued {
+			v.fail("%s: unknown transcript heading %q", owner, *a.Transcript)
+		}
 	}
 }
 

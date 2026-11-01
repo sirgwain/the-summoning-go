@@ -119,6 +119,23 @@ func (im *importer) text(strs []string) {
 		}
 		m.Messages[key] = id
 	}
+	// The transcript's headings are four records each, joined as lines (dialogue.md).
+	for key, recs := range map[string][]int{
+		content.MsgTranscriptHeading:   {0x74, 0x75, 0x76, 0x78},
+		content.MsgTranscriptContinued: {0x77, 0x75, 0x76, 0x78},
+	} {
+		var lines []string
+		for _, r := range recs {
+			if s, ok := t.Strings[msgID(r)]; ok {
+				lines = append(lines, s)
+			}
+		}
+		if len(lines) == len(recs) {
+			id := "msg." + key
+			t.Strings[id] = strings.Join(lines, "\n")
+			m.Messages[key] = id
+		}
+	}
 	im.pack.Messages = m
 }
 

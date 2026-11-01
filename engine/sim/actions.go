@@ -176,6 +176,8 @@ func (w *World) apply(cmd input.Command) {
 		if err := w.enter(f.To.Level); err != nil {
 			refuse(f.Cell, err.Error())
 		}
+	case input.SetCounter:
+		w.setCounter(c.Counter, c.Value)
 	case input.GoTo:
 		if w.player != nil {
 			if dest, err := w.load(c.Level); err != nil {

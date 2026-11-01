@@ -60,3 +60,25 @@ func TestNewGameNeedsCreation(t *testing.T) {
 		t.Error("a new game on a pack without a creation record")
 	}
 }
+
+func TestChangeSexTakesOtherPortrait(t *testing.T) {
+	p := devpack.Build()
+	other := *p.Portraits[devpack.PortraitPlayer]
+	other.ID, other.Female, other.Other = "portrait.other", true, devpack.PortraitPlayer
+	p.Portraits[other.ID] = &other
+	p.Portraits[devpack.PortraitPlayer].Other = other.ID
+	w, err := New(p, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pl := w.Player()
+	pl.Portrait = devpack.PortraitPlayer
+	w.changeSex()
+	if !pl.Status.Female || pl.Portrait != other.ID {
+		t.Errorf("female %v, portrait %q", pl.Status.Female, pl.Portrait)
+	}
+	w.changeSex()
+	if pl.Status.Female || pl.Portrait != devpack.PortraitPlayer {
+		t.Errorf("back: female %v, portrait %q", pl.Status.Female, pl.Portrait)
+	}
+}
