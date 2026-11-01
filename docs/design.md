@@ -71,7 +71,7 @@ engine/combat/summoning/  the original's calculations
 engine/content/        pack schema (Go structs), loader, validation, mod overlay
 engine/render/         palette shader, sprite atlases, world draw list, effects
 engine/ui/             panels, quickbar, windows, text, pointer, gestures
-engine/audio/          music and effects
+engine/audio/          music and effects: the mixer's rules; speaker/ plays through Ebitengine
 engine/input/          commands (plain data, no Ebitengine); bindings in a subpackage
 engine/inspect/        the simulation's state in words and as JSON dumps, for tools
 engine/viewer/         the viewer's controls and scripts, from input snapshots; no Ebitengine
@@ -228,6 +228,7 @@ levels/<id>/level.json     grid, placements, rules
 scenes/<id>.json
 audio/music/<id>.wav       or .ogg, with loop points in a sidecar <id>.json
 audio/sfx/<id>.wav
+audio/cues.json            the sounds of the engine's cues
 ```
 
 The file formats are in [pack.md](pack.md).
@@ -318,7 +319,16 @@ and the editor's play-test can use them later. A game build can leave them unbou
   plays each sequence through an OPL2 emulator (`internal/opl2`, a Go port of opal) and writes WAV
   with loop points. The sequence format and how it plays are in `docs/spec/audio.md`; the work is
   planned in [audio-plan.md](audio-plan.md).
-- How many sounds play at once, and which take priority, is a mixer setting.
+- `engine/audio` decides what plays and `engine/audio/speaker` plays it through Ebitengine, so the
+  rules test without a sound card. One sound plays at a time, by the game's rules: a music track
+  stops whatever plays; an effect waits for no track and no effect of higher priority. The
+  simulation names sounds by cue (`lever`, `door`, `level_up`, …) and the pack maps cues to sounds.
+- The fades lower a master volume, 0..127, by 3 a step, applied as up to 47.25 dB of attenuation
+  (a carrier at full output level). The quick fade steps every 1/18.2 s as the game does; the slow
+  fade, which in the game steps with the song's events, steps every 125 ms, about the mean over the
+  game's looping tracks.
+- F8 cycles music and effects, effects only, and silence (the game's F9, which the engine uses for
+  quick load). `--mute` plays nothing.
 
 ## Saves
 

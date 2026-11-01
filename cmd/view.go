@@ -9,11 +9,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/sirgwain/the-summoning-go/engine/audio"
+	"github.com/sirgwain/the-summoning-go/engine/audio/speaker"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/render"
 	"github.com/sirgwain/the-summoning-go/engine/render/drawlist"
@@ -31,7 +34,7 @@ func init() {
 func newViewCmd(play bool) *cobra.Command {
 	var level, screenshot, script, out, saves string
 	var scale, shotTicks int
-	var magnify, menu bool
+	var magnify, menu, mute bool
 	var at, sel []int
 	var seed uint64
 	use, short, long := "view [pack-dir]", "Look around a content pack's levels and work their mechanisms",
@@ -55,7 +58,7 @@ its second action, X throws what it holds; Q, Shift+Q and Z do the same with the
 takes the top object of the player's cell to the first empty shelf, G puts down what is in hand,
 Enter pulls the lever underfoot or puts the key a keyhole underfoot takes into it, E or C talks to
 the nearest creature that talks (or hears the nearest mouth), H recenters the view, P pauses.
-F5 saves the game and F9 loads it again; changing level saves it too (the autosave). O opens the
+F5 saves the game and F9 loads it again; F8 cycles music and effects, effects only, and silence; changing level saves it too (the autosave). O opens the
 disk menu: save under a name, restore, delete or rename a save, leave for the main menu, or quit. M shows the
 level's map (a key or click closes it); the minimap in the top-left corner shows it small. Some
 levels refuse the map.
@@ -151,6 +154,9 @@ of live input, and exits when it ends. Its files are written under --out.`,
 				return err
 			}
 			v.SaveDir = saves
+			if !mute && script == "" && screenshot == "" {
+				v.Audio = audio.New(speaker.New(), pack)
+			}
 			if v.SaveDir == "" && script == "" {
 				if dir, err := os.UserConfigDir(); err == nil {
 					v.SaveDir = filepath.Join(dir, "summoning", "saves", pack.Manifest.ID)
@@ -202,6 +208,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 	if play {
 		viewCmd.Flags().BoolVar(&menu, "menu", true, "start at the main menu when the pack has character creation (not while a script runs)")
 	}
+	viewCmd.Flags().BoolVar(&mute, "mute", false, "play no music or sound effects (none while a script runs)")
 	viewCmd.Flags().StringVar(&screenshot, "screenshot", "", "save a frame to this PNG file and exit")
 	viewCmd.Flags().IntVar(&shotTicks, "screenshot-ticks", 0, "updates to run before the screenshot")
 	return viewCmd
@@ -318,6 +325,9 @@ func (s *shell) Update() error {
 	}
 	if s.v.Quit {
 		return ebiten.Termination
+	}
+	if s.v.Audio != nil {
+		s.v.Audio.Update(time.Second / time.Duration(ebiten.TPS()))
 	}
 	if s.script == nil {
 		s.v.Update(s.input())

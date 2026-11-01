@@ -189,6 +189,9 @@ func text(p *content.Pack) {
 		"msg.breaks":      "Your {item} breaks.",
 		"msg.skill_up":    "You are better at {skill}.",
 		"msg.level_up":    "You have gained a level.",
+		"msg.music_all":   "Music and sound effects on.",
+		"msg.music_fx":    "Sound effects only.",
+		"msg.music_off":   "Sound off.",
 		"msg.mouth":       "Welcome to the hall of *mechanisms.",
 		"msg.mouth.after": "The *socket is complete.",
 	}
@@ -202,7 +205,8 @@ func text(p *content.Pack) {
 		content.MsgNoRoom: "msg.no_room", content.MsgNotACreature: "msg.nothing_hit", content.MsgCannotHurt: "msg.not_hurt",
 		content.MsgMiss: "msg.miss", content.MsgHit: "msg.hit", content.MsgCreatureHits: "msg.struck",
 		content.MsgCreatureMiss: "msg.missed", content.MsgWeaponBreaks: "msg.breaks", content.MsgSkillUp: "msg.skill_up",
-		content.MsgLevelUp: "msg.level_up",
+		content.MsgLevelUp: "msg.level_up", content.MsgMusicAll: "msg.music_all", content.MsgMusicEffects: "msg.music_fx",
+		content.MsgMusicSilent: "msg.music_off",
 	}}
 }
 

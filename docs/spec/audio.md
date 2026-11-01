@@ -6,8 +6,9 @@ The game's music and sound effects are songs for an OPL2 FM synthesizer (an AdLi
 
 Track `n` is RESOURCE `music base + n` (formats.md, INIT). Sound effect `n` is track `11h + n`.
 
-- A sound effect plays only when no music track is playing and no higher-numbered effect is still sounding.
-- Track 10 plays on a level-up and track 11 on a skill rising (player.md).
+- A sound effect plays only when no music track is playing and no higher-numbered effect is still sounding. Otherwise it starts like any song, stopping a lower- or equal-numbered effect. A track or effect that has ended no longer counts as playing.
+- Track 10 plays on a level-up, track 11 on a weapon skill rising and track 12 on a school of magic rising (player.md). A rise that brings a level-up plays track 11 or 12, then track 10 over it.
+- **The music key** (F9) cycles three settings, showing message A6h, A7h or A8h for the new one: music and effects (the start), effects only, and silence. Leaving the first stops the song playing. In "effects only" the game starts no music track, so effects are never held back by one; in silence nothing plays. Coming back to the first starts a looping track again from its start if one was stopped by the key.
 - One song plays at a time; starting a song stops the one playing (Stopping).
 - A song plays once unless the game starts it with a loop of `B` bars. Then its loop point is `B × beats per bar × ticks per beat − 1` song ticks, and it restarts from its start at the loop point or at its end, whichever comes first (Timing).
 
@@ -23,6 +24,14 @@ The game starts these tracks with a loop; every other track plays once. The fron
 | 7 | 8 |
 | 8 | 12 |
 | 15 | 8 |
+
+**Sound effects.** The effects of the world's mechanisms:
+
+| Effect | When |
+|---|---|
+| 9 | A lever is pulled |
+| 16h | A sealed door opens; the player is teleported |
+| 17h | A moving door steps while between open and closed |
 
 ## Song descriptor (24 bytes)
 

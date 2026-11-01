@@ -15,9 +15,10 @@ const maxDepth = 32
 
 // Door sounds and effects, named for the presentation.
 const (
-	soundDoor     = "door"
-	soundLever    = "lever"
-	soundTeleport = "teleport"
+	soundDoor     = content.CueDoor
+	soundUnseal   = content.CueUnseal
+	soundLever    = content.CueLever
+	soundTeleport = content.CueTeleport
 	effectSocket  = "socket_complete"
 	effectSeal    = "seal_broken"
 )
@@ -265,7 +266,7 @@ func (w *World) drop(l *Level, c content.Cell, o *Object, by, depth int) bool {
 		case f.Kind == content.FeatureDoor && f.SealedBy != "" && o.Item == f.SealedBy:
 			f.SealedBy, f.Stage, f.State = "", stageOpen, content.DoorOpen
 			w.emit(Event{Kind: EventEffect, Level: l.ID, Cell: c, Feature: f.ID, Detail: effectSeal})
-			w.emit(Event{Kind: EventSound, Level: l.ID, Cell: c, Detail: soundDoor})
+			w.emit(Event{Kind: EventSound, Level: l.ID, Cell: c, Detail: soundUnseal})
 			w.featureChanged(l, f)
 		}
 	}

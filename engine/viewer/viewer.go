@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/sirgwain/the-summoning-go/engine/audio"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
@@ -83,6 +84,8 @@ type Viewer struct {
 	SaveDir     string
 	Notice      string
 	NoticeUntil int64
+	// Audio plays the world's sounds; nil plays none.
+	Audio *audio.Mixer
 	// Said is a mouth's message showing beside it, nil when none is.
 	Said    *Said
 	Typed   string
@@ -331,6 +334,7 @@ func (v *Viewer) updateWorld(cmds []input.Command) {
 	events := v.World.Update(cmds)
 	v.log(events)
 	v.hear(events)
+	v.sound(events)
 	v.autosave(events)
 	v.transcribe(events)
 	v.openMap(events)
@@ -617,6 +621,8 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 		v.SaveGame(QuickSave)
 	case in.pressed(KeyF9):
 		v.LoadGame(QuickSave)
+	case in.pressed(KeyF8) && v.Audio != nil:
+		v.cycleMusic()
 	case in.pressed(KeyEscape) && v.InventoryOpen:
 		v.InventoryOpen = false
 	case in.pressed("H"):

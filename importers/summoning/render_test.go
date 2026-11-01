@@ -94,6 +94,10 @@ func TestImportAudio(t *testing.T) {
 	if err != nil || w.Rate != SampleRate || w.Channels != 1 || w.Frames != m.Intro+m.Loop {
 		t.Fatalf("music.1 WAV %+v %v, want %d samples", w, err, m.Intro+m.Loop)
 	}
+	if p.Sounds["sfx.17"].Priority != 17 || p.Cues == nil || p.Cues.Cues[content.CueDoor] != "sfx.23" ||
+		p.Cues.Cues[content.CueLevelUp] != "music.10" {
+		t.Fatalf("sfx.17 priority %d, cues %+v", p.Sounds["sfx.17"].Priority, p.Cues)
+	}
 	if p.Sounds["music.2"].Loop != 0 {
 		t.Fatal("music.2 loops")
 	}

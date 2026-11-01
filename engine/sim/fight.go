@@ -484,6 +484,11 @@ func (w *World) practice(i, n int) {
 	s.Level++
 	s.Practice -= s.Threshold
 	s.Threshold = w.rules.SkillThreshold(s.Threshold)
+	cue := content.CueWeaponSkillUp
+	if i >= SkillSchool {
+		cue = content.CueMagicSkillUp
+	}
+	w.emit(Event{Kind: EventSound, Level: w.current, Cell: p.Cell(), Detail: cue})
 	w.emit(Event{Kind: EventMessage, Level: w.current, Cell: p.Cell(), Text: w.messageText(content.MsgSkillUp),
 		Detail: content.MsgSkillUp, Item: "skill." + strconv.Itoa(i)})
 	w.gainExperience(w.rules.SkillExperience())
@@ -513,6 +518,7 @@ func (w *World) gainExperience(n int) {
 		p.MaxMagicPoints += m
 		p.MagicPoints += m
 		p.NextLevel = w.rules.LevelThreshold(p.Level)
+		w.emit(Event{Kind: EventSound, Level: w.current, Cell: p.Cell(), Detail: content.CueLevelUp})
 		w.message(w.Current(), p.Cell(), content.MsgLevelUp, "")
 	}
 }

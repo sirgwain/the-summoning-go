@@ -118,6 +118,7 @@ func Load(fsys fs.FS) (*Pack, error) {
 		{pointersFile, func() any { p.Pointers = &Pointers{}; return p.Pointers }},
 		{inventoryFile, func() any { p.Inventory = &Inventory{}; return p.Inventory }},
 		{creationFile, func() any { p.Creation = &Creation{}; return p.Creation }},
+		{cuesFile, func() any { p.Cues = &Cues{}; return p.Cues }},
 	} {
 		if _, err := fs.Stat(fsys, f.name); err == nil {
 			if err := readJSON(fsys, f.name, f.set()); err != nil {
@@ -287,7 +288,7 @@ func Write(p *Pack, dir string) error {
 		name string
 		v    any
 		ok   bool
-	}{{messagesFile, p.Messages, p.Messages != nil}, {magicFile, p.Magic, p.Magic != nil}, {keywordsFile, p.Keywords, p.Keywords != nil}, {pointersFile, p.Pointers, p.Pointers != nil}, {inventoryFile, p.Inventory, p.Inventory != nil}, {creationFile, p.Creation, p.Creation != nil}} {
+	}{{messagesFile, p.Messages, p.Messages != nil}, {magicFile, p.Magic, p.Magic != nil}, {keywordsFile, p.Keywords, p.Keywords != nil}, {pointersFile, p.Pointers, p.Pointers != nil}, {inventoryFile, p.Inventory, p.Inventory != nil}, {creationFile, p.Creation, p.Creation != nil}, {cuesFile, p.Cues, p.Cues != nil}} {
 		if f.ok {
 			if err := writeJSON(dir, f.name, f.v); err != nil {
 				return err

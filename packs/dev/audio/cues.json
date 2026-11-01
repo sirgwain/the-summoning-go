@@ -1,0 +1,9 @@
+{
+  "id": "cues",
+  "cues": {
+    "door": "sfx.blip",
+    "lever": "sfx.blip",
+    "teleport": "sfx.blip",
+    "unseal": "sfx.blip"
+  }
+}

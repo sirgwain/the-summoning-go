@@ -1,6 +1,6 @@
 # Audio plan
 
-Status: 2026-11-01. Phases 1–4 done. How music and sound effects get from the game's files to
+Status: 2026-11-01. Phases 1–5 done. How music and sound effects get from the game's files to
 the speakers, and the order to build it in. Update this file as work lands, and fold what's
 settled into [design.md](design.md#audio), [pack.md](pack.md) and the spec; delete it once audio
 is done.
@@ -100,22 +100,20 @@ the timing corrected the spec: the timer's divisor comes from 1193180, but it co
 
 ### 5. The engine: `engine/audio`
 
-Ebitengine is allowed here; `engine/sim` only emits events.
-
-- [ ] One `audio.Context` at 44100 Hz. Decode WAV and Ogg; loop with
-      `NewInfiniteLoopWithIntro`.
-- [ ] Music: one track at a time; starting one stops the last; a fade lowers the gain to silence
-      over the time the spec's fade takes (3 of 127 per song tick, stopping at 30), then stops.
-- [ ] Effects: the game's rule, as a mixer setting. An effect plays only when no music is playing
-      and no higher-numbered effect is still sounding.
-- [ ] Wire the simulation's events: level-up plays track 10, a skill rising plays track 11
-      ([spec/player.md](spec/player.md)), and `sound` actions from the rules.
-- [ ] Music and effect volume settings, and a mute key.
-- [ ] Tests without a display: the mixer's choices (what plays, what is refused, what fades) as
-      plain logic behind an interface, with the Ebitengine player as a thin layer.
+- [x] The mixer (`engine/audio`): one sound at a time, the effect rule with priorities, the music
+      key's three settings, both fades, music and effect volumes. Tested with a fake backend.
+- [x] The Ebitengine backend (`engine/audio/speaker`): decodes WAV and Ogg to the context's rate,
+      loops with `NewInfiniteLoopWithIntro`.
+- [x] Cues: the simulation names its sounds (`lever`, `door`, `unseal`, `teleport`, `level_up`,
+      `weapon_skill_up`, `magic_skill_up`); `audio/cues.json` maps them to sounds.
+- [x] `summoning play` plays them; F8 cycles the music key, `--mute` silences it.
 
 ### 6. Which track plays where
 
+- [ ] The rest of the effects: combat, inventory, spells, projectiles, hazards, footsteps and the
+      view effects all play effects or tracks; the spec names only the mechanisms' so far.
+- [ ] The game's combat state starts track 8 (12 bars) and slow-fades it on leaving; leaving play
+      quick-fades.
 - [ ] Track assignment for levels, menus, character creation, death and the endings (spec
       **Unknowns**, with scenes). Fill [spec/audio.md](spec/audio.md) and
       [spec/scenes.md](spec/scenes.md), then the importer writes the assignments into the pack

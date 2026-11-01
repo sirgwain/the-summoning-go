@@ -50,7 +50,7 @@ var fixtureItems = []struct {
 
 // textFixture is TEXT with the fixture's item names and the engine's messages.
 func textFixture() []byte {
-	recs := make([][]byte, 0xA6)
+	recs := make([][]byte, 0xA9)
 	for i := range recs {
 		recs[i] = textRecord(fmt.Sprintf("text %d", i))
 	}
@@ -100,7 +100,7 @@ func songRecord(events ...byte) []byte {
 	return append(rec, events...)
 }
 
-// fixtureMusic is where the import fixture's songs start: tracks 0-16 and one sound effect.
+// fixtureMusic is where the import fixture's songs start: tracks 0-16 and sound effects 0-17h.
 const fixtureMusic = 60
 
 func importFixture() *Source {
@@ -111,7 +111,7 @@ func importFixture() *Source {
 	colors := fixture{}.u8(16).zeros(256 * 3)
 
 	plus := func(n int) func(int) uint8 { return func(i int) uint8 { return uint8(n + i) } }
-	resources := make([][]byte, 100)
+	resources := make([][]byte, 110)
 	for _, r := range []int{10, 11, 12, 13, mouthResource, exitMarkerResource} {
 		resources[r] = rawBank(1, 2, 1, 0, plus(r))
 	}
@@ -131,7 +131,7 @@ func importFixture() *Source {
 	resources[16] = rawBank(48, 2, 1, 0, plus(130))
 	resources[17] = rawBank(48, 1, 1, 0, plus(180))
 	resources[16+bodyLook] = rawBank(56, 1, 1, 0, plus(150))
-	for n := range firstEffect + 1 {
+	for n := range firstEffect + 0x18 {
 		resources[fixtureMusic+n] = songRecord(0x00, 0xC0, 0x00, 0x00, 0x90, byte(0x30+n), 0x60, 0x30, 0x80, 0x30, 0x00, 0x00, 0xFC)
 	}
 

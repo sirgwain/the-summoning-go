@@ -1,6 +1,7 @@
 package sim
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
@@ -378,5 +379,30 @@ func TestStatusesAndStartingInventory(t *testing.T) {
 	w.exert(end + 4)
 	if p.Attributes[AttrEndurance] != end-1 || p.Fatigue != 1 {
 		t.Errorf("exertion: endurance %d, fatigue %d", p.Attributes[AttrEndurance], p.Fatigue)
+	}
+}
+
+func TestSkillRiseFanfares(t *testing.T) {
+	w := fightWorld(t, nil, "###", "#@#", "###")
+	p := w.Player()
+	cues := func() []string {
+		var out []string
+		for _, e := range w.events {
+			if e.Kind == EventSound {
+				out = append(out, e.Detail)
+			}
+		}
+		w.events = nil
+		return out
+	}
+	w.events = nil
+	w.practice(SkillSchool+1, p.Skills[SkillSchool+1].Threshold)
+	if got := cues(); !slices.Equal(got, []string{content.CueMagicSkillUp}) {
+		t.Errorf("a school rising: %v", got)
+	}
+	p.Experience = p.NextLevel - 1
+	w.practice(SkillWeapon, p.Skills[SkillWeapon].Threshold)
+	if got := cues(); !slices.Equal(got, []string{content.CueWeaponSkillUp, content.CueLevelUp}) {
+		t.Errorf("a weapon skill rising to a level: %v", got)
 	}
 }

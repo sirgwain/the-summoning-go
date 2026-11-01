@@ -37,4 +37,7 @@ func sounds(p *content.Pack) {
 	p.Sounds[SFXBlip] = &content.Sound{
 		ID: SFXBlip, File: "blip.wav", Data: content.EncodeWAV(tone(soundRate/20, 25, 8000), soundRate),
 	}
+	p.Cues = &content.Cues{ID: "cues", Cues: map[string]string{
+		content.CueLever: SFXBlip, content.CueDoor: SFXBlip, content.CueUnseal: SFXBlip, content.CueTeleport: SFXBlip,
+	}}
 }

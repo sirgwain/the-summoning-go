@@ -18,6 +18,8 @@ type Sound struct {
 	// once.
 	Intro int `json:"intro,omitempty"`
 	Loop  int `json:"loop,omitempty"`
+	// Priority ranks effects: an effect does not interrupt one of higher priority.
+	Priority int `json:"priority,omitempty"`
 	// Data is the audio file's contents.
 	Data []byte `json:"-"`
 }
@@ -28,7 +30,30 @@ const (
 	SFXPrefix   = "sfx."
 	musicDir    = "audio/music"
 	sfxDir      = "audio/sfx"
+	cuesFile    = "audio/cues.json"
 )
+
+// Cues maps the engine's sound cues to sounds.
+type Cues struct {
+	ID   string            `json:"id"`
+	Cues map[string]string `json:"cues"`
+}
+
+// Engine sound cues: what the simulation names when it makes a sound.
+const (
+	CueLever         = "lever"
+	CueDoor          = "door"
+	CueUnseal        = "unseal"
+	CueTeleport      = "teleport"
+	CueLevelUp       = "level_up"
+	CueWeaponSkillUp = "weapon_skill_up"
+	CueMagicSkillUp  = "magic_skill_up"
+)
+
+var cueKeys = map[string]bool{
+	CueLever: true, CueDoor: true, CueUnseal: true, CueTeleport: true, CueLevelUp: true,
+	CueWeaponSkillUp: true, CueMagicSkillUp: true,
+}
 
 // soundDir is the directory of a sound record by its id, or "" for an id of no sound kind.
 func soundDir(id string) (dir, prefix string) {
@@ -120,6 +145,9 @@ func (v *verifier) sound(s *Sound) {
 		v.fail("sound %s: file %q is not a .wav or .ogg beside the record", s.ID, s.File)
 		return
 	}
+	if s.Priority != 0 && !strings.HasPrefix(s.ID, SFXPrefix) {
+		v.fail("sound %s: only effects have a priority", s.ID)
+	}
 	if s.Intro < 0 || s.Loop < 0 {
 		v.fail("sound %s: negative intro or loop", s.ID)
 	}
@@ -136,5 +164,20 @@ func (v *verifier) sound(s *Sound) {
 	}
 	if s.Intro+s.Loop > w.Frames {
 		v.fail("sound %s: intro %d and loop %d run past the file's %d samples", s.ID, s.Intro, s.Loop, w.Frames)
+	}
+}
+
+func (v *verifier) cues() {
+	c := v.p.Cues
+	if c == nil {
+		return
+	}
+	for _, key := range sortedKeys(c.Cues) {
+		if !cueKeys[key] {
+			v.fail("%s: unknown cue %q", cuesFile, key)
+		}
+		if v.p.Sounds[c.Cues[key]] == nil {
+			v.fail("%s: cue %s plays %q, which is not a sound", cuesFile, key, c.Cues[key])
+		}
 	}
 }

@@ -16,6 +16,13 @@ const SampleRate = 44100
 // firstEffect is the track of sound effect 0 (audio.md, Songs).
 const firstEffect = 0x11
 
+// trackCues are the tracks the engine's cues play (audio.md, Songs).
+var trackCues = map[string]int{
+	content.CueLevelUp: 10, content.CueWeaponSkillUp: 11, content.CueMagicSkillUp: 12,
+	content.CueLever: firstEffect + 9, content.CueUnseal: firstEffect + 0x16,
+	content.CueTeleport: firstEffect + 0x16, content.CueDoor: firstEffect + 0x17,
+}
+
 // loopBars are the tracks the game loops, and for how many bars (audio.md, Songs).
 var loopBars = map[int]int{0: 40, 1: 48, 4: 8, 5: 24, 6: 16, 7: 8, 8: 12, 15: 8}
 
@@ -195,11 +202,24 @@ func (im *importer) audio() {
 			continue
 		}
 		_, name, _ := cutPrefix(id)
-		im.pack.Sounds[id] = &content.Sound{
+		s := &content.Sound{
 			ID: id, File: name + ".wav", Intro: j.out.Intro, Loop: j.out.Loop,
 			Data: content.EncodeWAV(j.out.Samples, SampleRate),
 		}
+		if j.track >= firstEffect {
+			s.Priority = j.track - firstEffect
+		}
+		im.pack.Sounds[id] = s
 	}
+	cues := map[string]string{}
+	for cue, track := range trackCues {
+		if id := soundID(track); im.pack.Sounds[id] != nil {
+			cues[cue] = id
+		} else {
+			im.report.addf("cue %s: no %s", cue, id)
+		}
+	}
+	im.pack.Cues = &content.Cues{ID: "cues", Cues: cues}
 }
 
 // cutPrefix splits a sound id into its kind and name.

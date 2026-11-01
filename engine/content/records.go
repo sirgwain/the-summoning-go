@@ -378,6 +378,10 @@ const (
 	MsgKilled               = "killed"
 	MsgAbsorbed             = "absorbed"
 	MsgNoEnding             = "no_ending"
+	// MsgMusicAll, MsgMusicEffects and MsgMusicSilent announce the music key's settings.
+	MsgMusicAll     = "music_all"
+	MsgMusicEffects = "music_effects"
+	MsgMusicSilent  = "music_silent"
 	// MsgTranscriptHeading and MsgTranscriptContinued head the transcript.
 	MsgTranscriptHeading   = "transcript_heading"
 	MsgTranscriptContinued = "transcript_continued"
@@ -396,6 +400,9 @@ var messageKeys = map[string]bool{
 	MsgNoCreatures:           true,
 	MsgAlreadyHave:           true,
 	MsgNoEnding:              true,
+	MsgMusicAll:              true,
+	MsgMusicEffects:          true,
+	MsgMusicSilent:           true,
 	MsgTranscriptHeading:     true,
 	MsgTranscriptContinued:   true,
 	MsgHealed:                true,

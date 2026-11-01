@@ -155,7 +155,7 @@ func (w *World) updateFlights(l *Level) {
 func (w *World) unseal(l *Level, f *Feature) {
 	f.SealedBy, f.Stage, f.State = "", stageOpen, content.DoorOpen
 	w.emit(Event{Kind: EventEffect, Level: l.ID, Cell: f.Cell, Feature: f.ID, Detail: effectSeal})
-	w.emit(Event{Kind: EventSound, Level: l.ID, Cell: f.Cell, Detail: soundDoor})
+	w.emit(Event{Kind: EventSound, Level: l.ID, Cell: f.Cell, Detail: soundUnseal})
 	w.featureChanged(l, f)
 }
 

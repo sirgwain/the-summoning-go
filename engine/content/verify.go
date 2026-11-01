@@ -80,6 +80,7 @@ func (p *Pack) Verify() error {
 	for _, id := range sortedKeys(p.Sounds) {
 		v.sound(p.Sounds[id])
 	}
+	v.cues()
 	for _, id := range sortedKeys(p.Spells) {
 		v.spell(p.Spells[id])
 	}
