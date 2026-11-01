@@ -339,6 +339,7 @@ and the editor's play-test can use them later. A game build can leave them unbou
 - A save is the world state, versioned and encoded as compressed JSON.
 - It records the content packs and versions it was made with, and warns on a mismatch.
 - Quick save, quick load and autosave on level change.
+- `play --load` takes a save file's path, or a name in the saves directory (`--load quick.sav`).
 - The Summoning importer converts the original's save files into engine saves (`docs/spec/saves.md`),
   so a game begun in the original carries on in the engine.
 

@@ -167,7 +167,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 				v.SaveDir = save.DefaultDir(pack.Manifest.ID)
 			}
 			if load != "" {
-				if err := v.LoadFile(load); err != nil {
+				if err := v.LoadFile(savePath(load, v.SaveDir)); err != nil {
 					return err
 				}
 				menu = false
@@ -214,7 +214,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 	viewCmd.Flags().Uint64Var(&seed, "seed", 1, "seed for the simulation's random choices")
 	viewCmd.Flags().StringVar(&script, "script", "", "run this script instead of live input, then exit")
 	viewCmd.Flags().StringVar(&out, "out", ".", "directory for a script's screenshots and dumps")
-	viewCmd.Flags().StringVar(&load, "load", "", "start from the saved game in this file")
+	viewCmd.Flags().StringVar(&load, "load", "", "start from the saved game in this file, looked for in the saves directory when not found as given")
 	viewCmd.Flags().StringVar(&saves, "saves", "", "directory for saved games (default: the user's config directory; none while a script runs)")
 	if play {
 		viewCmd.Flags().BoolVar(&menu, "menu", true, "start at the main menu when the pack has character creation (not while a script runs)")
@@ -1027,4 +1027,21 @@ func saveScreenshot(screen *ebiten.Image, path string) error {
 func (s *shell) Layout(outsideWidth, outsideHeight int) (int, int) {
 	s.v.Screen = image.Pt(outsideWidth, outsideHeight)
 	return outsideWidth, outsideHeight
+}
+
+// savePath returns path when a file is there, or else the file of that name in the saves
+// directory dir when one is there, so --load takes a bare save name like quick.sav.
+func savePath(path, dir string) string {
+	if fileExists(path) || dir == "" || filepath.IsAbs(path) {
+		return path
+	}
+	if alt := filepath.Join(dir, path); fileExists(alt) {
+		return alt
+	}
+	return path
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
