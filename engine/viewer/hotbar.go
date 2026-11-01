@@ -55,9 +55,9 @@ type ActionButton struct {
 	// Label names the action; Ready is false while the hand waits its delay.
 	Label string
 	Ready bool
-	// Picture is the object's image (or the bare hand's) and Icon the action's over it, when
-	// the pack has them.
-	Picture, Icon *content.Image
+	// Icon is the action's icon, when the pack has one; the hand's box beside the actions shows
+	// the object.
+	Icon *content.Image
 }
 
 // Hotbar is the hotbar laid out on the screen.
@@ -174,26 +174,21 @@ func (v *Viewer) actionButtons(p *sim.Player, hand int) []ActionButton {
 	ready := p.Delays[hand] == 0 && !p.Dead
 	o := p.Slots[sim.SlotRightHand+hand]
 	if o == nil {
-		b := ActionButton{Hand: hand, Action: 0, Label: "strike", Ready: ready, Icon: inv.StrikeIcon}
-		if hand < len(inv.BareHands) {
-			b.Picture = &inv.BareHands[hand]
-		}
-		return []ActionButton{b}
+		return []ActionButton{{Hand: hand, Action: 0, Label: "strike", Ready: ready, Icon: inv.StrikeIcon}}
 	}
 	it := v.Pack.Items[o.Item]
 	if it == nil {
 		return nil
 	}
 	var out []ActionButton
-	icon := it.IconFor(len(o.Contents))
 	for a, act := range it.Actions[:min(len(it.Actions), 2)] {
-		out = append(out, ActionButton{Hand: hand, Action: a, Ready: ready, Icon: act.Icon, Picture: &icon,
+		out = append(out, ActionButton{Hand: hand, Action: a, Ready: ready, Icon: act.Icon,
 			Label: map[string]string{
 				content.ActionAttack: "strike", content.ActionAttackBoth: "swing", content.ActionFire: "fire",
 				content.ActionUseUp: "use", content.ActionUse: "use",
 			}[act.Kind]})
 	}
-	return append(out, ActionButton{Hand: hand, Action: ThrowAction, Label: "throw", Ready: ready, Icon: inv.ThrowIcon, Picture: &icon})
+	return append(out, ActionButton{Hand: hand, Action: ThrowAction, Label: "throw", Ready: ready, Icon: inv.ThrowIcon})
 }
 
 // Screen returns the screen rectangle of hotbar rectangle r.

@@ -524,11 +524,8 @@ func (s *shell) drawHotbar(screen *ebiten.Image) {
 			centered(b.Icon, b.Rect)
 		}
 	}
-	// An action box shows the object's picture with the action's icon over it.
+	// An action box shows the action's icon alone; the hand's box shows the object.
 	for _, a := range h.Actions {
-		if a.Picture != nil {
-			centered(*a.Picture, a.Rect)
-		}
 		if a.Icon != nil {
 			centered(*a.Icon, a.Rect)
 		}

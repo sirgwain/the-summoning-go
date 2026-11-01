@@ -84,7 +84,7 @@ func TestHandActionBoxes(t *testing.T) {
 	if len(right) != 3 || right[0].Icon == nil || right[1].Icon == nil || right[2].Action != ThrowAction || right[2].Icon == nil {
 		t.Fatalf("the right hand's boxes %+v", right)
 	}
-	if left := v.Hotbar().Actions[len(v.Hotbar().Actions)-1]; left.Hand != 1 || left.Label != "strike" || left.Picture == nil {
+	if left := v.Hotbar().Actions[len(v.Hotbar().Actions)-1]; left.Hand != 1 || left.Label != "strike" {
 		t.Errorf("the empty left hand's box %+v", left)
 	}
 	if err := NewRunner(mustScript(t, `[{"at": `+itoa(v.Ticks)+`, "action": [0, 2]}]`), t.TempDir()).Run(v); err != nil {
