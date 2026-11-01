@@ -150,6 +150,10 @@ Every 109 ticks:
 
 On each of the player's updates: the hands' delays count down (items.md), spell gestures play (spells.md), and regeneration, mana regeneration and poison roll their chances.
 
+## Napping
+
+Napping is the engine's own addition, to wait for magic points without leaving the game running: holding N runs the whole world 32 times as fast. A press of N starts a nap unless the magic points are full ("Your magic points are full.") or a living creature is near the player (within the distance power 12h reaches, items.md; "A creature is near."). The nap goes on while N is held, and stops when N is released, the magic points become full, a creature comes near, the player is hurt, a message is shown or a conversation starts, or another key or a click is taken. While it runs, the top of the screen shows "Waiting: " with the magic points and the time played (hours, minutes and seconds of world time). After a stop, N starts a nap again only once released and pressed again.
+
 ## Starting a new game
 
 The player starts on the level and cell from INIT, with:

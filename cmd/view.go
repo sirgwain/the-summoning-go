@@ -59,6 +59,10 @@ its second action, X throws what it holds; Q, Shift+Q and Z do the same with the
 takes the top object of the player's cell to the first empty shelf, G puts down what is in hand,
 Enter pulls the lever underfoot or puts the key a keyhole underfoot takes into it, E or C talks to
 the nearest creature that talks (or hears the nearest mouth), H recenters the view, P pauses.
+Holding N naps: the world runs 32 times as fast, to get magic points back, until N is released,
+the magic points are full, a creature comes near, the player is hurt, a message or conversation
+starts, or another key or a click comes; it will not start with full magic points or a creature
+near.
 F5 saves the game and F8 loads it again; F9 cycles music and effects, effects only, and silence; changing level saves it too (the autosave). O opens the
 disk menu: save under a name, restore, delete or rename a save, leave for the main menu, or quit. M shows the
 level's map (a key or click closes it); the minimap in the top-left corner shows it small. Some
