@@ -43,7 +43,7 @@ The game starts these tracks with a loop; every other track plays once. The fron
 | 16h | A sealed door opens; the player is teleported |
 | 17h | A moving door steps while between open and closed; each step of the new game's door opening (scenes.md) |
 
-"On screen" is the missile or bottle shown in the view when it ends. A bouncing missile sounds at each wall it meets. Falls, contact with a creature, missiles, poison and the other hurts make no sound. The view effects (scenes.md) play effects 0Eh–15h and 18h, and tracks 0Eh, 0Fh and 10h; they are specified with the view effects.
+"On screen" is the missile or bottle shown in the view when it ends. A bouncing missile sounds at each wall it meets. Falls, contact with a creature, missiles, poison and the other hurts make no sound. The view effects (scenes.md) play effects 0Dh–15h, 17h and 18h, and tracks 0Eh, 0Fh and 10h; they are specified with the view effects.
 
 **Footsteps.** The player keeps a step count, 0..5. It is 1 when the game starts, and is set back to 1 when the player turns to its standing frame after 8 idle updates, when an action's frames end, and on every step while levitating. Otherwise each walk step that moves the player adds 1 to it, wrapping 5 to 0, and a count of 1 or 4 plays effect 0, or effect 1 on levels 21h–23h. So walking from standing sounds on the third step and every third step after.
 
@@ -249,4 +249,4 @@ The song player's output, the thing to test, is the list of register writes in o
 
 ## Unknowns
 
-- The view effects' effects and tracks, and the menus' and endings' tracks; specified with scenes.
+- The menus' and endings' tracks; specified with scenes.

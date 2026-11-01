@@ -61,7 +61,7 @@ A closed door's cell is terrain 10h (11h vertical) and blocks movement and sight
 
 **Closing on entities.** When a door closes on its cell, boulders, traps, conjured things and corpses there are removed. Anything else is pushed to the cell's edge, hurt 1 point with a 3 in 10 chance, and the door opens again.
 
-**Sealed doors** (stages 5–7) open only to a thrown sphere of the matching kind flying into them: the Rainbow Sphere (C9h) for stage 5, the Energy Sphere (CBh) for 6, the Shadow Sphere (CDh) for 7. The door opens at once (stage 4) with a sound and an effect, and the sphere is used up.
+**Sealed doors** (stages 5–7) open only to a thrown sphere of the matching kind flying into them: the Rainbow Sphere (C9h) for stage 5, the Energy Sphere (CBh) for 6, the Shadow Sphere (CDh) for 7. The door opens at once (stage 4) with sound 16h and, when the door is on screen, a sparkle (scenes.md, Sparkles), and the sphere is used up.
 
 **Kano** (spells.md) switches on a door with bit 20h; any other door gives message 34h.
 
@@ -84,7 +84,7 @@ An entity entering an armed teleporter cell is moved by it, unless it resists (c
 - **In a wall** of shape 1 or 3: the player walking into it, facing 1 or 5 for shape 1, or 3 or 7 for shape 3, changes level (sliding).
 - **A pit (25h)**: the player falls to the destination, with 4d5 damage, unless facing 2–4 (stepping down carefully), which takes no damage. A levitating player passes over. Creatures that do not resist fall and are removed.
 - **A trapdoor (26h open, 27h closed)**: open, it acts as a pit. Opening one sends the objects on it to the destination level and cell, and makes the entities on it fall.
-- **An exit marker** (entity kind 6, placed when the entry's marker byte is 0): the player walking into it goes through the cell's exit.
+- **An exit marker** (entity kind 6, placed when the entry's marker byte is 0): the player walking into it climbs through it (view effect 1) and goes through the cell's exit.
 
 ## Level procedures
 
@@ -134,7 +134,7 @@ An object put down on a cell is handled in this order:
 
 ## Changing level
 
-The player changes level by an exit, a pit, a conversation or a spell. The current level keeps its state; the new one is loaded, or restored as it was left. The player arrives at the destination cell. The arrival has three styles: falling from above (pits), sliding down from above (fall-through), and scrolling (walls, conversations).
+The player changes level by an exit, a pit, a conversation or a spell. The current level keeps its state; the new one is loaded, or restored as it was left. The player arrives at the destination cell. The arrival has three styles (scenes.md, Level transitions): rising from below (pits and open trapdoors), descending from above (exit markers), and scrolling (walls, conversations). A pit plays view effect 0 or 2 first and an exit marker view effect 1 (scenes.md).
 
 ## The player and the features
 

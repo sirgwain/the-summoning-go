@@ -199,8 +199,13 @@ box opens it as the pack where it lies; resting the pointer on one lists what it
 
 ### 8. Game
 
-- View effects (`effect.n` events; effect 6's level change does happen) and the arrival styles
-  when changing level (scroll, fall, fall-through, teleport, ripple).
+- View effects, sparkles and arrival styles, specified in scenes.md: the importer plays each of the 16
+  effects into a flipbook, the presentation plays `effect` events in a framed box with the world
+  paused, and changing level shows the new view by its style (scroll, rise, descend, teleport,
+  ripple). The simulation does not yet emit effects for pits, exit markers, a caster's death or
+  a death blow; it names the socket's and Mending's by word (`socket_complete`, `joined`) rather
+  than as effects 8 and 9; `seal_broken` should be a sparkle and `ripple` an arrival style.
+  Healing and cures play no sparkle yet (scenes.md, Sparkles).
 - The intro and the end scenes, whose captions are in the game's program; ending G's changes
   to the world and its save.
 - Audio's last phase ([audio-plan.md](audio-plan.md)): the view effects' sounds and tracks, the
