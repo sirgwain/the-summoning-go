@@ -13,16 +13,18 @@ import (
 
 // Cmd draws one sprite frame, or the part of it Part names, with its top-left corner at (X, Y),
 // in view pixels relative to the tile box of cell (0, 0). A Cmd with no Sprite blanks a tile box,
-// or the part of one, at (X, Y) instead. Thing names the thing a Cmd draws, if it draws one.
+// or the part of one, at (X, Y) instead. Thing names the thing a Cmd draws, if it draws one, and
+// Feature the feature.
 // Fixed draws with the palette's own colors rather than its effects: the player's figure and
 // what it holds (docs/pack.md, Palettes).
 type Cmd struct {
-	Sprite string
-	Frame  int
-	X, Y   int
-	Part   Part
-	Thing  string
-	Fixed  bool
+	Sprite  string
+	Frame   int
+	X, Y    int
+	Part    Part
+	Thing   string
+	Feature string
+	Fixed   bool
 }
 
 // Scene is a level as it is to be drawn: its definition's fixed art, and the grids, features,
@@ -125,6 +127,7 @@ func (s Scene) shows(c content.Cell) bool { return s.Visible == nil || s.Visible
 
 // Feature is a feature to draw: its look, in a state of the look.
 type Feature struct {
+	ID    string
 	Cell  content.Cell
 	Kind  string
 	Look  string
@@ -173,7 +176,7 @@ type Label struct {
 func LevelScene(p *content.Pack, l *content.Level) Scene {
 	s := Scene{Level: l, Floor: l.Floor, Wall: l.Wall}
 	for _, f := range l.Features {
-		s.Features = append(s.Features, Feature{Cell: f.Cell, Kind: f.Kind, Look: f.Look, State: f.LookState(), Set: f.Set})
+		s.Features = append(s.Features, Feature{ID: f.ID, Cell: f.Cell, Kind: f.Kind, Look: f.Look, State: f.LookState(), Set: f.Set})
 	}
 	for _, o := range l.Objects {
 		s.Objects = append(s.Objects, Object{Cell: o.Cell, Item: o.Item})
@@ -402,7 +405,7 @@ func featureCmds(p *content.Pack, f Feature) []Cmd {
 	box := TileBox(f.Cell)
 	cmds := make([]Cmd, len(parts))
 	for i, pt := range parts {
-		cmds[i] = Cmd{Sprite: pt.Sprite, Frame: pt.Frame, X: box.X + pt.Offset[0], Y: box.Y + pt.Offset[1]}
+		cmds[i] = Cmd{Sprite: pt.Sprite, Frame: pt.Frame, X: box.X + pt.Offset[0], Y: box.Y + pt.Offset[1], Feature: f.ID}
 	}
 	return cmds
 }

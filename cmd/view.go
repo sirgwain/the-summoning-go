@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -20,6 +21,7 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/audio"
 	"github.com/sirgwain/the-summoning-go/engine/audio/speaker"
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/inspect"
 	"github.com/sirgwain/the-summoning-go/engine/render"
 	"github.com/sirgwain/the-summoning-go/engine/render/drawlist"
 	"github.com/sirgwain/the-summoning-go/engine/save"
@@ -105,7 +107,7 @@ for a container lists what it holds.
 
 V shows the whole level, F12 switches to the viewer's tools (see summoning view --help),
 clicking a cell inspects it, ~ shows or hides the debug overlay (hidden at first; --debug shows
-it): the text, and the outlines of the selection and the cell under the mouse.
+it): the text, the selection's glow and links, and the white glow of what is under the mouse.
 `
 	}
 	viewCmd := &cobra.Command{
@@ -118,10 +120,18 @@ Arrows or WASD (with Shift, faster) or dragging with the mouse move the view. Sc
 around the cursor, as do + and - around the center. Page Up and Page Down (or [ and ]) change
 level, Home recenters, M magnifies objects on the floor.
 
-Click a cell or a thing to inspect it. Then U uses it, T toggles its feature, 1–9 run its
-hooks' procedures, E follows its exit, O drops the chosen object on it and X takes its top
-object; I and Shift+I choose the object. P places the chosen thing, C and Shift+C choose it, and
-Shift+click moves the selected thing to the clicked cell. Space pauses, N steps while paused.
+Click a cell or a thing to inspect it. It glows, and arrows show its links: what its feature's
+hooks do (green switches on, red off, orange over; violet rewires a hook, blue sets a threshold,
+an item or a message, cyan changes a cell, pink shoots, tan rolls a boulder, purple is where it
+sends things), dashed for what a rewired hook would do. What acts on the selection shows the
+same way and is listed in the panel, and everything a link reaches glows in its color.
+
+U or Enter uses the selection; on a plate it adds the weight the plate lacks
+to go down, and again takes that weight off, leaving what is on it; on a slot it puts in the
+item the slot takes. T toggles its feature, R resets it to how the level starts it (its state,
+hooks and settings; a plate keeps what lies on it), 1–9 run its hooks' procedures, E follows
+its exit and X takes its top object. Shift+click moves the selected thing to the clicked cell. Space
+pauses, N steps while paused.
 
 B and Shift+B choose one of the pack's flipbooks and K plays it, in play too: a framed one as a
 view effect, placed by the selected thing, else the selected cell, else the player; any other as
@@ -242,8 +252,7 @@ const windowWidth, windowHeight = 1280, 800
 var (
 	panelColor     = color.RGBA{0, 0, 0, 200}
 	selectionColor = color.RGBA{255, 220, 0, 255}
-	hoverColor     = color.RGBA{255, 255, 255, 160}
-	thingColor     = color.RGBA{0, 220, 255, 255}
+	hoverColor     = color.RGBA{255, 255, 255, 255}
 	damageColor    = color.RGBA{170, 20, 20, 230}
 	hotbarColor    = color.RGBA{12, 10, 8, 240}
 	slotColor      = color.RGBA{40, 36, 32, 230}
@@ -270,6 +279,7 @@ type shell struct {
 	sprites   *render.Sprites
 	view      *render.LevelView
 	presenter *render.Presenter
+	glow      *render.Glow
 	palette   *content.Palette
 	// version is the viewer's draw commands the view holds.
 	version int
@@ -284,6 +294,8 @@ type shell struct {
 	// talk, said, inv and log are the conversation window, a mouth's message, the inventory
 	// panel and the conversation log, drawn at their own pixels and scaled onto the screen.
 	talk, said, inv, log *ebiten.Image
+	// tint holds a line of text printed to be drawn in a color.
+	tint *ebiten.Image
 }
 
 func newShell(v *viewer.Viewer) (*shell, error) {
@@ -291,8 +303,12 @@ func newShell(v *viewer.Viewer) (*shell, error) {
 	if err != nil {
 		return nil, err
 	}
+	glow, err := render.NewGlow()
+	if err != nil {
+		return nil, err
+	}
 	s := &shell{
-		v: v, sprites: render.NewSprites(v.Pack), presenter: pr,
+		v: v, sprites: render.NewSprites(v.Pack), presenter: pr, glow: glow,
 		palette: v.Pack.Palettes[v.Pack.Manifest.Palette], keys: map[viewer.Key]ebiten.Key{},
 		art: map[image.Point]*ebiten.Image{},
 	}
@@ -396,6 +412,9 @@ func (s *shell) Draw(screen *ebiten.Image) {
 	s.view.Draw(s.buffer, v.Origin)
 	s.presenter.SetColors(s.palette.At(v.Ticks*1000/int64(ebiten.TPS())), v.FixedColors(s.palette))
 	s.presenter.Present(screen, s.buffer, v.Scale)
+	links := v.Links()
+	s.drawGlow(screen, links)
+	s.drawLinks(screen, links)
 	s.drawLabels(screen)
 	s.drawHotbar(screen)
 	s.drawSpellPanel(screen)
@@ -429,30 +448,197 @@ func (s *shell) drawTools(screen *ebiten.Image) {
 	if v.HideDebug {
 		return
 	}
-	if v.Hover != nil && (v.Selected == nil || *v.Hover != *v.Selected) {
-		s.diamond(screen, *v.Hover, hoverColor)
-	}
-	if v.Selected != nil {
+	// A selected thing glows in place of its cell's outline.
+	if v.Selected != nil && v.Thing == "" {
 		s.diamond(screen, *v.Selected, selectionColor)
 	}
-	if v.Thing != "" {
-		for _, c := range v.Cmds {
-			if c.Thing == v.Thing {
-				size := v.Pack.Sprites[c.Sprite].FrameSize
-				at := image.Pt(c.X, c.Y)
-				s.outline(screen, image.Rectangle{at, at.Add(image.Pt(size[0], size[1]))}, thingColor)
+	text := func(r image.Rectangle, lines []inspect.Line) {
+		vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), panelColor, false)
+		for i, line := range lines {
+			x, y := r.Min.X+viewer.Margin/2, r.Min.Y+i*viewer.LineHeight
+			if c, ok := markColors[string(line.Kind)]; ok && line.Kind != "" {
+				s.printColored(screen, line.Text, x, y, c)
+			} else {
+				ebitenutil.DebugPrintAt(screen, line.Text, x, y)
+			}
+			if line.Item != "" {
+				s.drawItemIcon(screen, line.Item, x+utf8.RuneCountInString(line.Text)*viewer.CharWidth+4, y, r.Max.X)
 			}
 		}
 	}
-	text := func(r image.Rectangle, lines []string) {
-		vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), panelColor, false)
-		for i, line := range lines {
-			ebitenutil.DebugPrintAt(screen, line, r.Min.X+viewer.Margin/2, r.Min.Y+i*viewer.LineHeight)
+	text(v.PanelRect(), v.Panel())
+	if r := v.LogRect(); !r.Empty() {
+		var lines []inspect.Line
+		for _, l := range v.LogLines() {
+			lines = append(lines, inspect.Line{Text: l})
+		}
+		text(r, lines)
+	}
+}
+
+// drawItemIcon draws item's inventory icon with its left edge at x, ending by right, its
+// middle on the line of text at y.
+func (s *shell) drawItemIcon(screen *ebiten.Image, item string, x, y, right int) {
+	it := s.v.Pack.Items[item]
+	if it == nil {
+		return
+	}
+	b := s.v.Pack.Sprites[it.Icon.Sprite]
+	if b == nil {
+		return
+	}
+	size := image.Pt(b.FrameSize[0], b.FrameSize[1])
+	art := s.artImage(size)
+	if err := s.sprites.DrawImage(art, it.Icon, 0, 0, false); err != nil {
+		return
+	}
+	x = min(x, right-size.X-2)
+	s.presenter.PresentAt(screen, art, 1, image.Pt(x, y+(viewer.LineHeight-size.Y)/2))
+}
+
+// printColored prints text at (x, y) on the screen in color c: the debug font's white, tinted.
+func (s *shell) printColored(screen *ebiten.Image, text string, x, y int, c color.RGBA) {
+	w := utf8.RuneCountInString(text)*viewer.CharWidth + viewer.CharWidth
+	if s.tint == nil || s.tint.Bounds().Dx() < w {
+		if s.tint != nil {
+			s.tint.Deallocate()
+		}
+		s.tint = ebiten.NewImage(max(w, 512), viewer.LineHeight)
+	}
+	s.tint.Clear()
+	ebitenutil.DebugPrintAt(s.tint, text, 0, 0)
+	var op ebiten.DrawImageOptions
+	op.GeoM.Translate(float64(x), float64(y))
+	op.ColorScale.ScaleWithColor(c)
+	screen.DrawImage(s.tint, &op)
+}
+
+// markColors are the colors of the glow and the links for the selection and each kind of link.
+var markColors = map[string]color.RGBA{
+	viewer.MarkSelected:        selectionColor,
+	viewer.MarkHover:           hoverColor,
+	string(inspect.LinkOn):     {90, 220, 110, 255},
+	string(inspect.LinkOff):    {240, 80, 70, 255},
+	string(inspect.LinkToggle): {255, 150, 40, 255},
+	string(inspect.LinkHook):   {220, 110, 255, 255},
+	string(inspect.LinkSet):    {100, 180, 255, 255},
+	string(inspect.LinkCell):   {120, 240, 230, 255},
+	string(inspect.LinkShoot):  {255, 90, 160, 255},
+	string(inspect.LinkRoll):   {210, 170, 110, 255},
+	string(inspect.LinkTravel): {160, 140, 255, 255},
+}
+
+// drawGlow outlines the selection and what its links act on or come from with a glow.
+func (s *shell) drawGlow(screen *ebiten.Image, links []viewer.SelectionLink) {
+	v := s.v
+	vm := v.Marks(links)
+	if len(vm) == 0 {
+		return
+	}
+	marks := make([]render.Mark, len(vm))
+	for i, m := range vm {
+		marks[i] = render.Mark{Cmd: m.Cmd, Color: markColors[m.Kind]}
+	}
+	s.glow.Draw(screen, s.view, marks, v.Origin, v.BufferSize(), v.Scale, float64(v.Ticks)/float64(ebiten.TPS()))
+}
+
+// drawLinks draws the selection's links as arrows from the feature acting to what it acts on,
+// dashed for a link through a hook a set_hook would point at the procedure. What each does is
+// labeled at its far end from the selection, the labels of a cell stacked. A cell acted on has
+// its ground outlined, and a direction shot or rolled in is an arrow from it.
+func (s *shell) drawLinks(screen *ebiten.Image, links []viewer.SelectionLink) {
+	v := s.v
+	type pair struct{ a, b content.Cell }
+	seen := map[pair]int{}
+	type line struct {
+		text string
+		c    color.RGBA
+	}
+	labels := map[content.Cell][]line{}
+	var order []content.Cell
+	for _, lk := range links {
+		end := lk.To
+		if !lk.Out {
+			end = lk.FromCell
+		}
+		if end != *v.Selected {
+			text := lk.Text()
+			if !slices.ContainsFunc(labels[end], func(l line) bool { return l.text == text }) {
+				if labels[end] == nil {
+					order = append(order, end)
+				}
+				labels[end] = append(labels[end], line{text, markColors[string(lk.Kind)]})
+			}
+		}
+		c := markColors[string(lk.Kind)]
+		if lk.Feature == "" && lk.Thing == "" {
+			s.diamond(screen, lk.To, c)
+		}
+		to := v.CellPoint(lk.To)
+		if lk.Direction >= 0 && lk.Direction < len(sim.Dirs) {
+			d := sim.Dirs[lk.Direction]
+			ahead := v.CellPoint(content.Cell{lk.To[0] + 2*d[0], lk.To[1] + 2*d[1]})
+			arrow(screen, to, to.Add(ahead.Sub(to).Div(2)), c, false)
+		}
+		if lk.FromCell == lk.To {
+			continue
+		}
+		key := pair{lk.FromCell, lk.To}
+		if key.b[0] < key.a[0] || key.b[0] == key.a[0] && key.b[1] < key.a[1] {
+			key.a, key.b = key.b, key.a
+		}
+		n := seen[key]
+		seen[key]++
+		from := v.CellPoint(lk.FromCell)
+		// Links between the same two cells lie side by side.
+		dx, dy := float64(to.X-from.X), float64(to.Y-from.Y)
+		length := math.Hypot(dx, dy)
+		off := image.Pt(int(math.Round(-dy/length*float64(6*n))), int(math.Round(dx/length*float64(6*n))))
+		arrow(screen, from.Add(off), to.Add(off), c, lk.Potential)
+	}
+	for _, cell := range order {
+		lines := labels[cell]
+		at := v.CellPoint(cell)
+		w := 0
+		for _, l := range lines {
+			w = max(w, utf8.RuneCountInString(l.text)*viewer.CharWidth+10)
+		}
+		x, y := at.X-w/2, at.Y-8-len(lines)*viewer.LineHeight
+		vector.FillRect(screen, float32(x), float32(y), float32(w), float32(len(lines)*viewer.LineHeight), panelColor, false)
+		for i, l := range lines {
+			ly := y + i*viewer.LineHeight
+			vector.FillRect(screen, float32(x), float32(ly), 4, float32(viewer.LineHeight), l.c, false)
+			ebitenutil.DebugPrintAt(screen, l.text, x+7, ly)
 		}
 	}
-	text(v.PanelRect(), v.PanelLines())
-	if r := v.LogRect(); !r.Empty() {
-		text(r, v.LogLines())
+}
+
+// arrow draws a line from a to b with a head at b, dashed if asked.
+func arrow(screen *ebiten.Image, a, b image.Point, c color.RGBA, dashed bool) {
+	ax, ay, bx, by := float64(a.X), float64(a.Y), float64(b.X), float64(b.Y)
+	dx, dy := bx-ax, by-ay
+	length := math.Hypot(dx, dy)
+	if length < 1 {
+		return
+	}
+	ux, uy := dx/length, dy/length
+	line := func(x0, y0, x1, y1 float64) {
+		vector.StrokeLine(screen, float32(x0), float32(y0), float32(x1), float32(y1), 2, c, true)
+	}
+	if dashed {
+		for t := 0.0; t < length; t += 12 {
+			e := min(t+7, length)
+			line(ax+ux*t, ay+uy*t, ax+ux*e, ay+uy*e)
+		}
+	} else {
+		line(ax, ay, bx, by)
+	}
+	const head = 10
+	for _, side := range []float64{-1, 1} {
+		// The head's sides, 25 degrees off the line.
+		cs, sn := math.Cos(25*math.Pi/180), side*math.Sin(25*math.Pi/180)
+		hx, hy := -(ux*cs-uy*sn)*head, -(uy*cs+ux*sn)*head
+		line(bx, by, bx+hx, by+hy)
 	}
 }
 
@@ -1215,12 +1401,6 @@ func (s *shell) diamond(screen *ebiten.Image, c content.Cell, clr color.Color) {
 		a, b := s.v.ScreenPoint(d[i]), s.v.ScreenPoint(d[(i+1)%len(d)])
 		vector.StrokeLine(screen, float32(a.X), float32(a.Y), float32(b.X), float32(b.Y), 2, clr, true)
 	}
-}
-
-// outline strokes view rectangle r on the screen.
-func (s *shell) outline(screen *ebiten.Image, r image.Rectangle, c color.Color) {
-	lo, hi := s.v.ScreenPoint(r.Min), s.v.ScreenPoint(r.Max)
-	vector.StrokeRect(screen, float32(lo.X), float32(lo.Y), float32(hi.X-lo.X), float32(hi.Y-lo.Y), 2, c, false)
 }
 
 func saveScreenshot(screen *ebiten.Image, path string) error {

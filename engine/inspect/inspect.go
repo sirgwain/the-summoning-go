@@ -71,14 +71,37 @@ func Hooks(f *sim.Feature) []string {
 
 var hookNames = []string{content.HookTurnOn, content.HookTurnOff, content.HookPress, content.HookRelease, content.HookInsert, content.HookComplete}
 
+// Line is a line of a description, with the kind of link it describes, if any (a procedure's
+// action, or where a feature sends things), and the item it names, if any.
+type Line struct {
+	Text string
+	Kind LinkKind
+	Item string
+}
+
+// Texts returns the lines' texts.
+func Texts(lines []Line) []string {
+	out := make([]string, len(lines))
+	for i, l := range lines {
+		out[i] = l.Text
+	}
+	return out
+}
+
 // Cell describes cell c of level l: its floor and wall, its feature, its objects and the things
 // standing in it.
-func Cell(p *content.Pack, l *sim.Level, c content.Cell) []string {
+func Cell(p *content.Pack, l *sim.Level, c content.Cell) []string { return Texts(CellLines(p, l, c)) }
+
+// CellLines is Cell with each line's kind of link.
+func CellLines(p *content.Pack, l *sim.Level, c content.Cell) []Line {
 	if !l.InBounds(c) {
-		return []string{fmt.Sprintf("Cell (%d, %d): outside the level", c[0], c[1])}
+		return []Line{{Text: fmt.Sprintf("Cell (%d, %d): outside the level", c[0], c[1])}}
 	}
-	lines := []string{fmt.Sprintf("Cell (%d, %d)", c[0], c[1])}
-	add := func(format string, args ...any) { lines = append(lines, "  "+fmt.Sprintf(format, args...)) }
+	lines := []Line{{Text: fmt.Sprintf("Cell (%d, %d)", c[0], c[1])}}
+	addItem := func(item, format string, args ...any) {
+		lines = append(lines, Line{Text: "  " + fmt.Sprintf(format, args...), Item: item})
+	}
+	add := func(format string, args ...any) { addItem("", format, args...) }
 
 	if ft := l.FloorType(c); ft != nil {
 		add("floor: type %d, variant %d%s", l.Floor[c[0]][c[1]], ft.Variant, floorEffects(ft))
@@ -96,13 +119,13 @@ func Cell(p *content.Pack, l *sim.Level, c content.Cell) []string {
 		lines = append(lines, feature(p, l, f)...)
 	}
 	if objs := l.Objects[c]; len(objs) > 0 {
-		lines = append(lines, fmt.Sprintf("Objects (%d), top last:", len(objs)))
+		lines = append(lines, Line{Text: fmt.Sprintf("Objects (%d), top last:", len(objs))})
 		for _, o := range objs {
-			add("%s", object(p, o))
+			addItem(o.Item, "%s", object(p, o))
 		}
 	}
 	for _, t := range l.ThingsAt(c) {
-		lines = append(lines, fmt.Sprintf("Thing %s (%s, %s), %d hit points", t.ID, t.Template.ID, t.Template.Kind, t.HitPoints))
+		lines = append(lines, Line{Text: fmt.Sprintf("Thing %s (%s, %s), %d hit points", t.ID, t.Template.ID, t.Template.Kind, t.HitPoints)})
 	}
 	return lines
 }
@@ -158,9 +181,14 @@ func object(p *content.Pack, o *sim.Object) string {
 }
 
 // feature describes a feature and the procedures its hooks run.
-func feature(p *content.Pack, l *sim.Level, f *sim.Feature) []string {
-	lines := []string{fmt.Sprintf("Feature %s (%s)", f.ID, f.Kind)}
-	add := func(format string, args ...any) { lines = append(lines, "  "+fmt.Sprintf(format, args...)) }
+func feature(p *content.Pack, l *sim.Level, f *sim.Feature) []Line {
+	lines := []Line{{Text: fmt.Sprintf("Feature %s (%s)", f.ID, f.Kind)}}
+	addLine := func(kind LinkKind, item, format string, args ...any) {
+		lines = append(lines, Line{Text: "  " + fmt.Sprintf(format, args...), Kind: kind, Item: item})
+	}
+	addKind := func(kind LinkKind, format string, args ...any) { addLine(kind, "", format, args...) }
+	addItem := func(item, format string, args ...any) { addLine("", item, format, args...) }
+	add := func(format string, args ...any) { addLine("", "", format, args...) }
 	armed := func() string {
 		if f.Armed {
 			return "armed"
@@ -171,7 +199,7 @@ func feature(p *content.Pack, l *sim.Level, f *sim.Feature) []string {
 	case content.FeatureDoor:
 		add("%s, stage %d of 4", f.State, f.Stage)
 		if f.SealedBy != "" {
-			add("sealed: opens to %s", ItemName(p, f.SealedBy))
+			addItem(f.SealedBy, "sealed: opens to %s", ItemName(p, f.SealedBy))
 		}
 		if f.OpenedBySpell {
 			add("a spell opens it")
@@ -181,21 +209,21 @@ func feature(p *content.Pack, l *sim.Level, f *sim.Feature) []string {
 	case content.FeaturePlate:
 		add("%s, %s, weight %d of %d", onOff(f.Down, "down", "up"), armed(), f.Counter, f.Threshold)
 	case content.FeatureSlot:
-		add("takes %s, %s", ItemName(p, f.Accepts), armed())
+		addItem(f.Accepts, "takes %s, %s", ItemName(p, f.Accepts), armed())
 	case content.FeatureTeleporter:
-		add("%s; next to (%d, %d), then (%d, %d)", onOff(f.Armed, "armed", "disarmed"),
+		addKind(LinkTravel, "%s; next to (%d, %d), then (%d, %d)", onOff(f.Armed, "armed", "disarmed"),
 			f.Destinations[f.Next][0], f.Destinations[f.Next][1], f.Destinations[1-f.Next][0], f.Destinations[1-f.Next][1])
 		if f.Turn != 0 || f.FlyOver {
 			add("turns things in flight %d eighths; things in flight pass over: %v", f.Turn, f.FlyOver)
 		}
 	case content.FeatureExit, content.FeaturePit, content.FeatureTrapdoor:
-		add("to %s (%d, %d)", f.To.Level, f.To.Cell[0], f.To.Cell[1])
+		addKind(LinkTravel, "to %s (%d, %d)", f.To.Level, f.To.Cell[0], f.To.Cell[1])
 		if f.Kind == content.FeatureTrapdoor {
 			add("%s", onOff(f.Open, "open", "closed"))
 		}
 	case content.FeatureSocket:
 		for i, it := range f.Places {
-			add("%s: %s", ItemName(p, it), onOff(slices.Contains(f.Set, i), "set", "empty"))
+			addItem(it, "%s: %s", ItemName(p, it), onOff(slices.Contains(f.Set, i), "set", "empty"))
 		}
 	case content.FeatureMouth:
 		add("says %q", Text(p, f.Message))
@@ -211,7 +239,7 @@ func feature(p *content.Pack, l *sim.Level, f *sim.Feature) []string {
 		n++
 		add("[%d] %s runs %s:", n, h, *hp)
 		for _, a := range l.Def.Procedures[*hp] {
-			add("      %s", Action(p, a))
+			addLine(ActionKind(a), ActionItem(a), "      %s", Action(p, a))
 		}
 	}
 	return lines
@@ -222,6 +250,20 @@ func onOff(b bool, yes, no string) string {
 		return yes
 	}
 	return no
+}
+
+// ActionItem returns the item action a names: the one it makes, shoots or has a slot take;
+// empty for none.
+func ActionItem(a content.Action) string {
+	switch {
+	case a.SetAccepts != nil:
+		return a.SetAccepts.Item
+	case a.ShootItem != nil:
+		return a.ShootItem.Item
+	case a.Create != nil:
+		return a.Create.Item
+	}
+	return ""
 }
 
 // Action describes an action in words.
@@ -265,11 +307,17 @@ func Action(p *content.Pack, a content.Action) string {
 }
 
 // Thing describes thing t.
-func Thing(p *content.Pack, t *sim.Thing) []string {
+func Thing(p *content.Pack, t *sim.Thing) []string { return Texts(ThingLines(p, t)) }
+
+// ThingLines is Thing with the item each line names.
+func ThingLines(p *content.Pack, t *sim.Thing) []Line {
 	tm := t.Template
 	c := t.Cell()
-	lines := []string{fmt.Sprintf("Thing %s (%s, %s)", t.ID, tm.ID, tm.Kind)}
-	add := func(format string, args ...any) { lines = append(lines, "  "+fmt.Sprintf(format, args...)) }
+	lines := []Line{{Text: fmt.Sprintf("Thing %s (%s, %s)", t.ID, tm.ID, tm.Kind)}}
+	addItem := func(item, format string, args ...any) {
+		lines = append(lines, Line{Text: "  " + fmt.Sprintf(format, args...), Item: item})
+	}
+	add := func(format string, args ...any) { addItem("", format, args...) }
 	add("at (%d, %d) in cell (%d, %d), facing %d", t.U, t.V, c[0], c[1], t.Facing)
 	if tm.HitPoints != (content.Dice{}) || t.HitPoints != 0 {
 		add("hit points %d (rolled %s)", t.HitPoints, tm.HitPoints)
@@ -286,7 +334,7 @@ func Thing(p *content.Pack, t *sim.Thing) []string {
 		add("stats: %s", strings.Join(stats, ", "))
 	}
 	for _, o := range t.Items {
-		add("carries %s", object(p, o))
+		addItem(o.Item, "carries %s", object(p, o))
 	}
 	if r := t.Rolling; r != nil {
 		add("rolling in direction %d%s", r.Direction, onOff(r.Shuttle, ", shuttling", ""))

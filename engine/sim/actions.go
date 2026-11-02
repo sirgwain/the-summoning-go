@@ -161,6 +161,16 @@ func (w *World) apply(cmd input.Command) {
 			return
 		}
 		w.switchFeature(l, f, c.Mode, 0)
+	case input.Weigh:
+		if f := l.byCell[c.Cell]; f == nil || f.Kind != content.FeaturePlate {
+			refuse(c.Cell, "no plate")
+			return
+		}
+		w.weigh(l, c.Cell, c.Weight, 0)
+	case input.Reset:
+		if !w.resetFeature(l, c.Feature, c.Unweigh) {
+			refuse(content.Cell{}, "no feature "+c.Feature)
+		}
 	case input.Run:
 		w.run(l, c.Procedure, 0)
 	case input.FollowExit:

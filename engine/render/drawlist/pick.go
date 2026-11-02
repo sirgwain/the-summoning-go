@@ -18,7 +18,7 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 		s.Visible, s.Taken = l.Visible, l.Taken()
 	}
 	for _, f := range l.Features {
-		s.Features = append(s.Features, Feature{Cell: f.Cell, Kind: f.Kind, Look: f.Look, State: f.LookState(), Set: f.Set})
+		s.Features = append(s.Features, Feature{ID: f.ID, Cell: f.Cell, Kind: f.Kind, Look: f.Look, State: f.LookState(), Set: f.Set})
 	}
 	cells := make([]content.Cell, 0, len(l.Objects))
 	for c := range l.Objects {

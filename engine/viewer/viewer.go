@@ -61,15 +61,12 @@ type Viewer struct {
 	// Labels are the damage shown over things, rebuilt with Cmds.
 	Labels []drawlist.Label
 
-	// Hover is the cell under the cursor. Selected is the cell selected and Thing the thing in
-	// it, if one was clicked.
+	// Hover is the cell under the cursor and HoverThing the thing drawn there, if any: what a
+	// click selects. Selected is the cell selected and Thing the thing in it, if one was clicked.
 	Hover, Selected *content.Cell
+	HoverThing      string
 	Thing           string
-	// Items and Things are the items to drop and templates to place; Item and Template the ones
-	// chosen.
-	Items, Things  []string
-	Item, Template int
-	Paused         bool
+	Paused          bool
 	// Events are the latest lines of the event log.
 	Events []string
 
@@ -136,6 +133,11 @@ type Viewer struct {
 	deadFor int
 	// magnified is whether the world magnified floor objects at the last rebuild.
 	magnified bool
+	// weights is the weight the tools put on plates, by level and plate.
+	weights map[[2]string]int
+	// arrival is where an exit followed by the tools leads, centered on once the world has
+	// followed it.
+	arrival *content.Destination
 	// walked is the screen direction the keys last walked, zero for none; walkWaiting is a
 	// straight direction held without walking yet, for walkWait updates (walkNow).
 	walked, walkWaiting [2]int
@@ -151,7 +153,7 @@ func New(p *content.Pack, seed uint64, level string, scale int, magnify bool, sc
 	}
 	v := &Viewer{
 		Pack: p, World: w, Scale: max(1, min(scale, MaxScale)), Magnify: magnify, Screen: screen,
-		Levels: sortedIDs(p.Levels), Items: sortedIDs(p.Items), Things: sortedIDs(p.Things),
+		Levels:    sortedIDs(p.Levels),
 		Flipbooks: sortedIDs(p.Flipbooks), SeeAll: true, Seed: seed,
 	}
 	if level != "" && level != w.Current().ID {
@@ -420,6 +422,12 @@ func (v *Viewer) updateWorld(cmds []input.Command) []sim.Event {
 	if len(events) > 0 || len(v.Labels) > 0 || v.World.Magnified() != v.magnified {
 		v.rebuild()
 	}
+	if a := v.arrival; a != nil {
+		if v.Shown == a.Level {
+			v.CenterOn(a.Cell)
+		}
+		v.arrival = nil
+	}
 	if v.Play {
 		v.follow()
 	}
@@ -481,10 +489,12 @@ func (v *Viewer) mouse(in Input) []input.Command {
 	onInv := inv != nil && cursor.In(inv.Rect)
 	onBar := bar != nil && cursor.In(bar.Rect) || onInv
 	if cursor.In(image.Rectangle{Max: v.Screen}) && !cursor.In(v.PanelRect()) && !onBar {
-		c := drawlist.CellAt(v.ViewPoint(cursor))
+		pt := v.ViewPoint(cursor)
+		c := drawlist.CellAt(pt)
 		v.Hover = &c
+		v.HoverThing, _, _ = drawlist.ThingAt(v.Pack, v.Cmds, pt)
 	} else {
-		v.Hover = nil
+		v.Hover, v.HoverThing = nil, ""
 	}
 
 	if in.Left.Pressed || in.Right.Pressed {
@@ -587,32 +597,39 @@ func cycle(in Input, i, n int) int {
 
 // keys turns the tool keys into commands on the selection.
 func (v *Viewer) keys(in Input) []input.Command {
-	switch {
-	case in.pressed(KeySpace):
+	if in.pressed(KeySpace) {
 		v.Paused = !v.Paused
-	case in.pressed("I"):
-		v.Item = cycle(in, v.Item, len(v.Items))
-	case in.pressed("C"):
-		v.Template = cycle(in, v.Template, len(v.Things))
 	}
 	if v.Selected == nil {
 		return nil
 	}
 	c := *v.Selected
 	f := v.World.Current().FeatureAt(c)
+	use := in.pressed("U") || in.pressed(KeyEnter)
 	switch {
-	case in.pressed("U"):
+	case use && f != nil && f.Kind == content.FeaturePlate:
+		return v.pressPlate(f)
+	case use && f != nil && f.Kind == content.FeatureSlot && f.Accepts != "":
+		// A slot takes the item it accepts, as though it were put in.
+		return []input.Command{input.Drop{Cell: c, Item: f.Accepts}}
+	case use:
 		return []input.Command{input.Use{Cell: c}}
+	case in.pressed("R") && f != nil:
+		// The weight the tools put on a plate goes with the reset.
+		key := [2]string{v.Shown, f.ID}
+		w := v.weights[key]
+		delete(v.weights, key)
+		return []input.Command{input.Reset{Feature: f.ID, Unweigh: w}}
 	case in.pressed("T") && f != nil:
 		return []input.Command{input.Switch{Feature: f.ID, Mode: input.SwitchToggle}}
 	case in.pressed("E") && f != nil:
+		if f.To != nil {
+			to := *f.To
+			v.arrival = &to
+		}
 		return []input.Command{input.FollowExit{Feature: f.ID}}
-	case in.pressed("O") && len(v.Items) > 0:
-		return []input.Command{input.Drop{Cell: c, Item: v.Items[v.Item]}}
 	case in.pressed("X"):
 		return []input.Command{input.Remove{Cell: c}}
-	case in.pressed("P") && len(v.Things) > 0:
-		return []input.Command{input.Place{Cell: c, Thing: v.Things[v.Template]}}
 	}
 	if f != nil {
 		hooks := inspect.Hooks(f)
@@ -623,6 +640,27 @@ func (v *Viewer) keys(in Input) []input.Command {
 		}
 	}
 	return nil
+}
+
+// pressPlate presses plate f with the weight it lacks to go down, or, when the tools pressed it,
+// takes that weight off again, leaving what lies or stands on it. A plate that what is on it
+// already holds down stays down.
+func (v *Viewer) pressPlate(f *sim.Feature) []input.Command {
+	key := [2]string{v.Shown, f.ID}
+	if w := v.weights[key]; w > 0 {
+		delete(v.weights, key)
+		return []input.Command{input.Weigh{Cell: f.Cell, Weight: -w}}
+	}
+	w := f.Threshold - f.Counter
+	if w <= 0 {
+		v.notice(fmt.Sprintf("%s already bears %d of %d", f.ID, f.Counter, f.Threshold))
+		return nil
+	}
+	if v.weights == nil {
+		v.weights = map[[2]string]int{}
+	}
+	v.weights[key] = w
+	return []input.Command{input.Weigh{Cell: f.Cell, Weight: w}}
 }
 
 // functionKeys are the function keys the viewer reads, F1 on.
@@ -830,7 +868,12 @@ func (v *Viewer) LogLines() []string {
 }
 
 // PanelLines are the inspector panel's lines, clipped to its width.
-func (v *Viewer) PanelLines() []string {
+func (v *Viewer) PanelLines() []string { return inspect.Texts(v.Panel()) }
+
+// Panel is the inspector panel's lines, clipped to its width, with the kind of link each
+// describes, if any: the selected feature's actions and destinations, and what acts on the
+// selection.
+func (v *Viewer) Panel() []inspect.Line {
 	l := v.World.Current()
 	status := fmt.Sprintf("%s (%d/%d)  step %d  scale %d", l.ID, v.levelIndex()+1, len(v.Levels), v.World.Step(), v.Scale)
 	if v.Paused {
@@ -840,6 +883,22 @@ func (v *Viewer) PanelLines() []string {
 		status += "  PLAYING"
 	}
 	lines := []string{status}
+	kinds := map[int]inspect.LinkKind{}
+	items := map[int]string{}
+	cell := func(cl []inspect.Line) {
+		for _, x := range cl {
+			kinds[len(lines)], items[len(lines)] = x.Kind, x.Item
+			lines = append(lines, x.Text)
+		}
+	}
+	panel := func() []inspect.Line {
+		n := v.panelWidth()/CharWidth - 1
+		out := make([]inspect.Line, len(lines))
+		for i, s := range lines {
+			out[i] = inspect.Line{Text: Clip(s, n), Kind: kinds[i], Item: items[i]}
+		}
+		return out
+	}
 	if p := v.World.Player(); v.Play && p != nil {
 		lines = append(lines, inspect.Player(v.Pack, p)...)
 		lines = append(lines, "", "WASD/arrows walk (two: diagonal), Home PgUp End PgDn",
@@ -857,46 +916,45 @@ func (v *Viewer) PanelLines() []string {
 			v.flipbookLine())
 		if v.Selected != nil {
 			lines = append(lines, "")
-			lines = append(lines, inspect.Cell(v.Pack, l, *v.Selected)...)
+			cell(inspect.CellLines(v.Pack, l, *v.Selected))
 		}
-		n := v.panelWidth()/CharWidth - 1
-		for i, s := range lines {
-			lines[i] = Clip(s, n)
-		}
-		return lines
+		return panel()
 	}
 	if v.Hover != nil {
 		lines = append(lines, fmt.Sprintf("under the mouse: (%d, %d)", v.Hover[0], v.Hover[1]))
-	}
-	if len(v.Items) > 0 {
-		lines = append(lines, "object (I): "+inspect.ItemName(v.Pack, v.Items[v.Item])+" ["+v.Items[v.Item]+"]")
-	}
-	if len(v.Things) > 0 {
-		lines = append(lines, "thing (C):  "+v.Things[v.Template])
 	}
 	lines = append(lines, "")
 	switch {
 	case v.Selected == nil:
 		lines = append(lines, "Click a cell or a thing to inspect it.")
 	default:
-		lines = append(lines, inspect.Cell(v.Pack, l, *v.Selected)...)
+		cell(inspect.CellLines(v.Pack, l, *v.Selected))
 		if t := l.Thing(v.Thing); t != nil {
 			lines = append(lines, "")
-			lines = append(lines, inspect.Thing(v.Pack, t)...)
+			cell(inspect.ThingLines(v.Pack, t))
+		}
+		first := true
+		for _, lk := range v.Links() {
+			if lk.Out {
+				continue
+			}
+			if first {
+				lines = append(lines, "", "Acted on by:")
+				first = false
+			}
+			kinds[len(lines)], items[len(lines)] = lk.Kind, lk.Item
+			lines = append(lines, fmt.Sprintf("  %s %s", lk.From, lk.Text()))
 		}
 	}
 	lines = append(lines, "",
-		"U use  T toggle  1-9 run hook  E follow exit",
-		"O drop object  X take object  P place thing",
+		"U/Enter use (plate: press/lift; slot: fill)",
+		"T toggle  R reset  1-9 run hook  E follow exit",
+		"X take object",
 		"Shift+click move thing  Space pause  N step",
 		"[ ] level  M magnify  Home recenter  V see all",
 		"F12 play  ~ hide the debug overlay",
 		v.flipbookLine())
-	n := v.panelWidth()/CharWidth - 1
-	for i, s := range lines {
-		lines[i] = Clip(s, n)
-	}
-	return lines
+	return panel()
 }
 
 // Clip shortens s to n characters, ending it with "..." when it is cut.
@@ -913,8 +971,6 @@ type Dump struct {
 	Shown    string              `json:"shown"`
 	Selected *content.Cell       `json:"selected,omitempty"`
 	Thing    string              `json:"thing,omitempty"`
-	Item     string              `json:"item,omitempty"`
-	Template string              `json:"template,omitempty"`
 	Paused   bool                `json:"paused,omitempty"`
 	Play     bool                `json:"play,omitempty"`
 	Scale    int                 `json:"scale"`
@@ -926,16 +982,9 @@ type Dump struct {
 
 // Dump returns the viewer's state and the world's.
 func (v *Viewer) Dump() *Dump {
-	d := &Dump{
+	return &Dump{
 		Tick: v.Ticks, Shown: v.Shown, Selected: v.Selected, Thing: v.Thing, Paused: v.Paused, Play: v.Play,
 		Scale: v.Scale, Origin: [2]int{v.Origin.X, v.Origin.Y}, Events: v.Events, Labels: v.Labels,
 		World: inspect.State(v.World),
 	}
-	if len(v.Items) > 0 {
-		d.Item = v.Items[v.Item]
-	}
-	if len(v.Things) > 0 {
-		d.Template = v.Things[v.Template]
-	}
-	return d
 }

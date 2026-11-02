@@ -48,6 +48,20 @@ type Switch struct {
 	Mode    string
 }
 
+// Weigh adds weight (negative to take it off) to the plate on a cell, as an object of that weight
+// put down or taken would, without one.
+type Weigh struct {
+	Cell   content.Cell
+	Weight int
+}
+
+// Reset puts a feature of the current level back as the level starts it, running nothing. A
+// plate keeps the weight on it, less Unweigh: weight put on it by Weigh.
+type Reset struct {
+	Feature string
+	Unweigh int
+}
+
 // Run runs a procedure of the current level.
 type Run struct{ Procedure string }
 
@@ -124,6 +138,8 @@ func (Remove) command()     {}
 func (Place) command()      {}
 func (Move) command()       {}
 func (Switch) command()     {}
+func (Weigh) command()      {}
+func (Reset) command()      {}
 func (Run) command()        {}
 func (FollowExit) command() {}
 func (GoTo) command()       {}

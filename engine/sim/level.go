@@ -197,15 +197,7 @@ func newLevel(w *World, def *content.Level) *Level {
 		byID:    map[string]*Feature{}, byCell: map[content.Cell]*Feature{},
 	}
 	for _, fd := range def.Features {
-		f := &Feature{Feature: *fd}
-		f.Destinations = slices.Clone(fd.Destinations)
-		f.Places, f.Set = slices.Clone(fd.Places), slices.Clone(fd.Set)
-		if f.Kind == content.FeatureDoor {
-			f.Stage = stageClosed
-			if f.State == content.DoorOpen || f.State == content.DoorClosing {
-				f.Stage = stageOpen
-			}
-		}
+		f := newFeature(fd)
 		l.Features = append(l.Features, f)
 		l.byID[f.ID] = f
 		l.byCell[f.Cell] = f
@@ -241,6 +233,20 @@ func newLevel(w *World, def *content.Level) *Level {
 		l.addWeight(o.Cell, obj.Weight(w.pack))
 	}
 	return l
+}
+
+// newFeature makes a feature as definition fd starts it.
+func newFeature(fd *content.Feature) *Feature {
+	f := &Feature{Feature: *fd}
+	f.Destinations = slices.Clone(fd.Destinations)
+	f.Places, f.Set = slices.Clone(fd.Places), slices.Clone(fd.Set)
+	if f.Kind == content.FeatureDoor {
+		f.Stage = stageClosed
+		if f.State == content.DoorOpen || f.State == content.DoorClosing {
+			f.Stage = stageOpen
+		}
+	}
+	return f
 }
 
 // newThing makes a thing of template tmpl, rolling its hit points.

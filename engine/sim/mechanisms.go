@@ -189,6 +189,25 @@ func (w *World) weigh(l *Level, c content.Cell, weight, depth int) {
 	}
 }
 
+// resetFeature puts feature id of level l back as the level's definition starts it: its state,
+// hooks and settings, running nothing. A plate keeps the weight on it, less unweigh, and is down
+// when that reaches its threshold. False when the level has no such feature.
+func (w *World) resetFeature(l *Level, id string, unweigh int) bool {
+	f := l.byID[id]
+	i := slices.IndexFunc(l.Def.Features, func(fd *content.Feature) bool { return fd.ID == id })
+	if f == nil || i < 0 {
+		return false
+	}
+	fresh := newFeature(l.Def.Features[i])
+	if f.Kind == content.FeaturePlate {
+		fresh.Counter = max(0, f.Counter-unweigh)
+		fresh.Down = fresh.Counter >= fresh.Threshold
+	}
+	*f = *fresh
+	w.featureChanged(l, f)
+	return true
+}
+
 // use uses what is on cell c: pulls a lever or hears a mouth.
 func (w *World) use(l *Level, c content.Cell) {
 	f := l.byCell[c]

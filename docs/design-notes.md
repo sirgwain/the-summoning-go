@@ -238,10 +238,19 @@ box opens it as the pack where it lies; resting the pointer on one lists what it
     in saves, filtering a restored log the same way (`TestConversationLog`); L or the hotbar's Log box opens a window of the people talked
     with, their conversations newest first, and a search that jumps to the line
     (`TestConversationLogWindow`). Saves imported from the game start with an empty log.
+  - Done: the viewer's link overlay over the pack's own links (`inspect.Links`, `TestLinks`,
+    `TestSelectionLinksAndMarks`). Selecting a cell shows what its feature's hooks do, what a
+    set_hook would make them do (dashed), where a teleporter sends things and where an exit, pit
+    or trapdoor leads on the level, as arrows labeled at their far end; what acts on the
+    selection shows the same way and is listed in the panel (but for where things are sent,
+    shown only from the feature that sends them). The panel colors the actions it lists as their
+    arrows. The selection and the features and
+    things its links reach glow in the link's color (`render.Glow`). Left: destinations on other
+    levels, and following a link off the screen.
   - The full map switching to any visited level, and hovering a teleporter or exit to see where
     it took the player, or a lever or plate to see what it changed, from what the player has
-    observed (recorded by the world, kept in saves). Built first as the viewer's link overlay
-    over the pack's own links, then in the editor and the game's map.
+    observed (recorded by the world, kept in saves), in the editor and the game's map, from the
+    viewer's link overlay.
 
 ### 10. Modding
 

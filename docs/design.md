@@ -332,8 +332,10 @@ cast later). Keys, mouse and gamepad bind to commands in a user configuration. R
 commands. A walk is asked for each update the walk is held, and taken at the player's next update.
 
 **Debug commands** act on the world directly, without a player: use the lever at a cell, drop or
-remove an object on a cell, place an entity on a cell (running the cell's enter and leave effects),
-switch a cell's feature on, off or over, run a procedure, follow an exit, put the player on a cell.
+remove an object on a cell, put weight on a plate or take it off without an object, place an
+entity on a cell (running the cell's enter and leave effects),
+switch a cell's feature on, off or over, reset a feature to how the level starts it (a plate
+keeping the weight on it), run a procedure, follow an exit, put the player on a cell.
 They go through the same
 command path as the player's, so the viewer can test a level's mechanisms before the player exists
 and the editor's play-test can use them later. A game build can leave them unbound.

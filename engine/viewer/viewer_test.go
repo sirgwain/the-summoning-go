@@ -89,23 +89,12 @@ func TestClickSelectsThingAndShiftClickMovesIt(t *testing.T) {
 	}
 }
 
-func TestDropChosenItemInSlot(t *testing.T) {
-	// Items are in id order; the key is fourth.
-	v := run(t, `[
-		{"at": 0, "select": [7, 15], "keys": ["I"]},
-		{"at": 1, "keys": ["I"]},
-		{"at": 2, "keys": ["I"]},
-		{"at": 3, "keys": ["O"]}]`)
-	if d := v.Dump(); d.Item != devpack.ItemKey {
-		t.Fatalf("item %q", d.Item)
-	}
+func TestUseFillsASlot(t *testing.T) {
+	v := newViewer(t)
+	v.Select(devpack.SlotC)
+	pressKey(v, "U")
 	if f := feature(t, v, "door.c"); f.State != content.DoorOpening {
 		t.Errorf("door %+v", f)
-	}
-	// Shift steps back.
-	v = run(t, `[{"at": 0, "keys": ["I"], "hold": ["Shift"]}]`)
-	if v.Item != len(v.Items)-1 {
-		t.Errorf("item %d of %d", v.Item, len(v.Items))
 	}
 }
 
@@ -683,5 +672,205 @@ func TestPauseMessage(t *testing.T) {
 	}
 	if v.World.Step() != step {
 		t.Error("the key that resumed also acted")
+	}
+}
+
+func TestSelectionLinksAndMarks(t *testing.T) {
+	v := newViewer(t)
+	v.Select(devpack.LeverA)
+	links := v.Links()
+	if len(links) != 2 || !links[0].Out || links[0].Feature != "door.a" || links[0].Kind != inspect.LinkOn ||
+		links[1].Feature != "door.a" || links[1].Kind != inspect.LinkOff {
+		t.Fatalf("lever.a's links: %+v", links)
+	}
+	kinds := map[string]string{}
+	for _, m := range v.Marks(links) {
+		c := v.Cmds[m.Cmd]
+		kinds[c.Feature] += m.Kind + " "
+	}
+	if kinds["lever.a"] != "selected " || kinds["door.a"] != "on off " {
+		t.Errorf("marks by feature: %q", kinds)
+	}
+
+	// The door is acted on by the lever.
+	v.Select(devpack.DoorA)
+	links = v.Links()
+	if len(links) != 2 || links[0].Out || links[0].From != "lever.a" {
+		t.Errorf("door.a's links: %+v", links)
+	}
+	v.HideDebug = true
+	if v.Links() != nil || v.Marks(links) != nil {
+		t.Error("links or marks with the debug overlay hidden")
+	}
+}
+
+func TestHoverMarks(t *testing.T) {
+	v := newViewer(t)
+	// The pointer over the lever's cell marks the lever, for a click selects it.
+	v.Update(Input{Cursor: v.CellPoint(devpack.LeverA)})
+	if v.Hover == nil || *v.Hover != devpack.LeverA {
+		t.Fatalf("hover %v, want %v", v.Hover, devpack.LeverA)
+	}
+	marks := v.Marks(nil)
+	if len(marks) == 0 {
+		t.Fatal("no marks for the hovered lever")
+	}
+	for _, m := range marks {
+		if m.Kind != MarkHover || v.Cmds[m.Cmd].Feature != "lever.a" {
+			t.Errorf("mark %+v of %+v", m, v.Cmds[m.Cmd])
+		}
+	}
+	// Selected too, its selection's mark comes after the hover's, so it wins.
+	v.Select(devpack.LeverA)
+	marks = v.Marks(v.Links())
+	if last := marks[len(marks)-1]; last.Kind != MarkSelected {
+		t.Errorf("last mark %+v, want the selection's", last)
+	}
+}
+
+func TestEnterUses(t *testing.T) {
+	v := newViewer(t)
+	v.Select(devpack.LeverA)
+	pressKey(v, KeyEnter)
+	if f := v.World.Current().Feature("lever.a"); !f.On {
+		t.Error("Enter left the selected lever off")
+	}
+	// Enter presses a plate as U does.
+	v.Select(devpack.PlateB)
+	pressKey(v, KeyEnter)
+	if !v.World.Current().Feature("plate.b").Down {
+		t.Error("Enter did not press the plate")
+	}
+}
+
+func TestHoverThingMarks(t *testing.T) {
+	v := newViewer(t)
+	// Find a screen point on an opaque pixel of a thing's sprite.
+	for _, c := range v.Cmds {
+		if c.Thing == "" {
+			continue
+		}
+		size := v.Pack.Sprites[c.Sprite].FrameSize
+		for y := 0; y < size[1]; y++ {
+			for x := 0; x < size[0]; x++ {
+				pt := image.Pt(c.X+x, c.Y+y)
+				if id, _, ok := drawlist.ThingAt(v.Pack, v.Cmds, pt); !ok || id != c.Thing {
+					continue
+				}
+				v.CenterOn(drawlist.CellAt(pt))
+				v.Update(Input{Cursor: v.ScreenPoint(pt)})
+				if v.HoverThing != c.Thing {
+					t.Fatalf("hovering %s's pixel: hover thing %q", c.Thing, v.HoverThing)
+				}
+				for _, m := range v.Marks(nil) {
+					if m.Kind != MarkHover || v.Cmds[m.Cmd].Thing != c.Thing {
+						t.Errorf("mark %+v of %+v", m, v.Cmds[m.Cmd])
+					}
+				}
+				return
+			}
+		}
+	}
+	t.Skip("no thing drawn on the dev pack's start level")
+}
+
+func TestTravelLinksOnlyFromTheTeleporter(t *testing.T) {
+	v := newViewer(t)
+	tp := v.World.Current().Feature("teleporter")
+	v.Select(tp.Cell)
+	travel := 0
+	for _, lk := range v.Links() {
+		if lk.Kind == inspect.LinkTravel && lk.Out {
+			travel++
+		}
+	}
+	if travel != 2 {
+		t.Errorf("the teleporter shows %d destinations, want 2", travel)
+	}
+	v.Select(tp.Destinations[0])
+	for _, lk := range v.Links() {
+		if lk.Kind == inspect.LinkTravel {
+			t.Errorf("the destination shows %+v", lk)
+		}
+	}
+}
+
+func TestUsePressesAndLiftsAPlate(t *testing.T) {
+	v := newViewer(t)
+	plate := v.World.Current().Feature("plate.b")
+	door := func() string { return v.World.Current().Feature("door.b").State }
+	v.Select(devpack.PlateB)
+	pressKey(v, "U")
+	if !plate.Down || plate.Counter != plate.Threshold {
+		t.Fatalf("pressed: down %v, weight %d of %d", plate.Down, plate.Counter, plate.Threshold)
+	}
+	if s := door(); s != content.DoorOpening && s != content.DoorOpen {
+		t.Errorf("door.b %s with the plate down", s)
+	}
+	pressKey(v, "U")
+	if plate.Down || plate.Counter != 0 {
+		t.Errorf("lifted: down %v, weight %d", plate.Down, plate.Counter)
+	}
+
+	// With something on it, lifting leaves that weight, and a plate it holds down stays down.
+	v.World.Update([]input.Command{input.Weigh{Cell: devpack.PlateB, Weight: 30}})
+	pressKey(v, "U")
+	pressKey(v, "U")
+	if plate.Counter != 30 || plate.Down {
+		t.Errorf("lifted with 30 on it: down %v, weight %d", plate.Down, plate.Counter)
+	}
+	v.World.Update([]input.Command{input.Weigh{Cell: devpack.PlateB, Weight: plate.Threshold}})
+	pressKey(v, "U")
+	if !plate.Down || plate.Counter != 30+plate.Threshold {
+		t.Errorf("held down: down %v, weight %d", plate.Down, plate.Counter)
+	}
+}
+
+func TestResetFeature(t *testing.T) {
+	v := newViewer(t)
+	v.Select(devpack.LeverA)
+	pressKey(v, "U")
+	if !feature(t, v, "lever.a").On {
+		t.Fatal("the lever did not turn on")
+	}
+	pressKey(v, "R")
+	if feature(t, v, "lever.a").On {
+		t.Error("the reset lever is still on")
+	}
+	// The door the lever opened is reset on its own, running nothing.
+	v.Select(devpack.DoorA)
+	pressKey(v, "R")
+	if d := feature(t, v, "door.a"); d.State != content.DoorClosed || d.Stage != 0 {
+		t.Errorf("reset door %s, stage %d", d.State, d.Stage)
+	}
+
+	// A plate the tools pressed loses that weight with the reset, without running its release.
+	v.Select(devpack.PlateB)
+	pressKey(v, "U")
+	pressKey(v, "R")
+	if p := feature(t, v, "plate.b"); p.Down || p.Counter != 0 {
+		t.Errorf("reset plate: down %v, weight %d", p.Down, p.Counter)
+	}
+	if s := feature(t, v, "door.b").State; s != content.DoorOpening && s != content.DoorOpen {
+		t.Errorf("the reset ran the plate's release: door.b %s", s)
+	}
+	pressKey(v, "U")
+	if !feature(t, v, "plate.b").Down {
+		t.Error("U after the reset did not press the plate")
+	}
+}
+
+func TestFollowExitCentersOnTheEntrance(t *testing.T) {
+	v := newViewer(t)
+	exit := v.World.Current().Feature("exit.d")
+	v.Select(exit.Cell)
+	pressKey(v, "E")
+	if v.Shown != exit.To.Level {
+		t.Fatalf("shown %s, want %s", v.Shown, exit.To.Level)
+	}
+	want := v.Origin
+	v.CenterOn(exit.To.Cell)
+	if v.Origin != want {
+		t.Errorf("origin %v, centered on the entrance %v", want, v.Origin)
 	}
 }
