@@ -30,8 +30,10 @@ type State struct {
 	// Shared are the shared charges of the items that have them, by item.
 	Shared  map[string]int     `json:"shared,omitempty"`
 	Records map[string]*Record `json:"records,omitempty"`
-	Player  *PlayerState       `json:"player,omitempty"`
-	Levels  []*LevelState      `json:"levels"`
+	// Log is the conversation log.
+	Log    []*Logged     `json:"log,omitempty"`
+	Player *PlayerState  `json:"player,omitempty"`
+	Levels []*LevelState `json:"levels"`
 }
 
 // PlayerState is the player with its template's id and what it keeps to itself.
@@ -103,7 +105,7 @@ func (w *World) State() (*State, error) {
 		return nil, err
 	}
 	s := &State{Format: StateFormat, Pack: w.pack.Manifest.ID, Version: w.pack.Manifest.Version,
-		Step: w.step, Current: w.current, Status: w.status, RNG: rng, Counters: w.counters, Shared: maps.Clone(w.shared), Records: w.records}
+		Step: w.step, Current: w.current, Status: w.status, RNG: rng, Counters: w.counters, Shared: maps.Clone(w.shared), Records: w.records, Log: w.log}
 	if p := w.player; p != nil {
 		s.Player = &PlayerState{Player: *p, Template: p.Template.ID, Want: p.want, Next: p.next, Vision: p.vision,
 			StatusTicks: p.statusTicks, PoseLeft: p.poseLeft}
@@ -163,6 +165,7 @@ func Restore(p *content.Pack, s *State) (*World, error) {
 	if w.counters == nil {
 		w.counters = map[string]int{}
 	}
+	w.log = w.filterLog(s.Log)
 	for _, id := range sortedKeys(p.Items) {
 		if p.Items[id].Random {
 			w.randomItems = append(w.randomItems, id)

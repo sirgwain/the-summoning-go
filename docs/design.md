@@ -301,11 +301,11 @@ The file formats are in [pack.md](pack.md).
 - Conversations with keyword entry and a list of known keywords.
 - **Conversation log.** Every conversation is remembered: whom it was with (the speaker's
   portrait and name), on which level and when in play time, and each line said and question asked
-  in order, with `@` and keywords as shown. A window, opened on a key and from the hotbar, lists
-  the people talked with by portrait and name; choosing one shows its conversations, newest
-  first, and a search field finds text across all of them, jumping to the line. The log is world
-  state, kept in saves (its spec goes in `docs/spec/saves.md` and `dialogue.md`, Engine model,
-  when built); the transcript file stays as the game's printing option.
+  in order, with `@` and keywords as shown. A window, opened with L and from the hotbar's Log box,
+  lists the people talked with by portrait and name; choosing one shows its conversations, newest
+  first, and a search field finds text across all of them, jumping to the line. The world waits
+  while it is open. The log is world state, kept in saves (`docs/spec/dialogue.md`, Engine
+  model); the transcript file stays as the game's printing option.
 - **Magnify floor objects**, a game setting: objects lying on the floor draw with their larger
   inventory image instead of their small floor image, so they are easier to see and to click.
   An item template carries both images (`docs/spec/items.md`). Presentation only.

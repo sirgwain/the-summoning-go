@@ -48,11 +48,14 @@ type World struct {
 	rules combat.Rules
 	// talk is the open conversation, nil when none is; records are what the world keeps about
 	// thing templates; counters the story's counters, by name (absent: 0); shared the shared
-	// charges of the items that have them, by item.
+	// charges of the items that have them, by item; log the conversation log, and heard what
+	// each template has said in it, by template.
 	talk     *Talk
 	records  map[string]*Record
 	counters map[string]int
 	shared   map[string]int
+	log      []*Logged
+	heard    map[string]map[string]bool
 	// opening is the thing template whose conversation a new game starts on its first update.
 	opening *content.Thing
 	// ended is how play ended, nil while it goes on.

@@ -80,6 +80,15 @@ type Viewer struct {
 	Entered    string
 	// InventoryOpen shows the inventory panel; MapOpen the full level map.
 	InventoryOpen, MapOpen bool
+	// LogOpen shows the conversation log (convlog.go) and LogTyped is the search typed in it;
+	// logChosen is the template whose conversations it shows, logSelected the match highlighted,
+	// logScroll how far its pane is scrolled and logFocus the line a match chose.
+	LogOpen     bool
+	LogTyped    string
+	logChosen   string
+	logSelected int
+	logScroll   int
+	logFocus    *[2]int
 	// SaveDir is where saves go, empty for none; Notice is the message line, shown above the
 	// hotbar until the update NoticeUntil: the game's messages and the viewer's own.
 	SaveDir     string
@@ -303,6 +312,11 @@ func (v *Viewer) Update(in Input) {
 			in = in.without(KeyEscape)
 		}
 		v.Reading = nil
+	}
+	// The conversation log holds the world while it is open.
+	if v.LogOpen {
+		v.logInput(in)
+		return
 	}
 	if cmds, ok := v.modal(in); ok {
 		v.updateWorld(cmds)
@@ -618,6 +632,7 @@ const functionKeys = 8
 //   - I or Tab opens and closes the inventory panel, as clicking the portrait does.
 //   - Esc closes the inventory panel; with it closed, Esc or O opens the options menu.
 //   - F5 saves to the quick save and F8 loads it; F9 cycles the sound; M shows the level map.
+//   - L opens the conversation log, as the hotbar's Log box does.
 func (v *Viewer) playKeys(in Input) []input.Command {
 	if in.held(KeyControl) {
 		return nil
@@ -667,6 +682,8 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 		v.ToggleInventory()
 	case in.pressed("M"):
 		cmds = append(cmds, input.ShowMap{})
+	case in.pressed("L"):
+		v.OpenLog()
 	case in.pressed(KeyEscape) && v.InventoryOpen:
 		v.InventoryOpen = false
 	case in.pressed("O", KeyEscape):

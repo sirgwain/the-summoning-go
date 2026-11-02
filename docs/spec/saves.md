@@ -161,6 +161,7 @@ The importer makes the engine state a save describes by starting from a new worl
 - The current level is the one the world block holds.
 - Interaction variable `n` becomes counter `var.n` when not 0, variable 99 included.
 - An NPC record `n` the pack has as `thing.npc.n` gets a record when its behavior has bit 0001h (talked to) or 0002h (dead), or when its portrait (byte 1) differs from NPC's.
+- The conversation log (dialogue.md, Engine model) starts empty: the game keeps none.
 - Objects bound for another level go onto the floor of their cell on that level, which is loaded if the save does not hold it.
 
 **The player.**

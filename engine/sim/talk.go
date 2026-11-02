@@ -73,6 +73,103 @@ type Talk struct {
 	use   func()
 	// ending is how play ends when the conversation does, for the ending power.
 	ending *Ended
+	// logged is the conversation's place in the log, nil for the menu's; inLog is true once it
+	// has gone into the log, with its first entry. question is the question asked last, which
+	// goes into the log only when something new follows it.
+	logged   *Logged
+	inLog    bool
+	question *LogEntry
+}
+
+// Log entry kinds.
+const (
+	LogLine     = "line"
+	LogQuestion = "question"
+	LogTeach    = "teach"
+)
+
+// LogEntry is what a conversation of the log said: a line (Text a text key, Portrait the one
+// beside it, empty for the player's), a question (Text the word as typed) or a gesture taught
+// (Icons).
+type LogEntry struct {
+	Kind     string `json:"kind"`
+	Text     string `json:"text,omitempty"`
+	Portrait string `json:"portrait,omitempty"`
+	Icons    string `json:"icons,omitempty"`
+}
+
+// Logged is a conversation of the conversation log (docs/spec/dialogue.md, Engine model): whose
+// it was, the speaker's portrait when it began, the level and step it began on, and what was
+// said.
+type Logged struct {
+	Template string     `json:"template"`
+	Portrait string     `json:"portrait,omitempty"`
+	Level    string     `json:"level"`
+	Step     int64      `json:"step"`
+	Entries  []LogEntry `json:"entries"`
+}
+
+// Log returns the conversation log, in the order the conversations began.
+func (w *World) Log() []*Logged { return w.log }
+
+// logEntry adds e to the open conversation's log, by the rule of appendLog, putting the
+// conversation in the log with its first entry.
+func (w *World) logEntry(e LogEntry) {
+	t := w.talk
+	if t == nil || t.logged == nil {
+		return
+	}
+	if w.appendLog(t.logged, &t.question, e) && !t.inLog {
+		t.inLog = true
+		w.log = append(w.log, t.logged)
+	}
+}
+
+// appendLog adds entry e to conversation c, and reports whether it did. A line or a gesture
+// taught goes in only when c's template has not said or taught it before; a question waits in
+// *question and goes in before the next entry that does.
+func (w *World) appendLog(c *Logged, question **LogEntry, e LogEntry) bool {
+	if e.Kind == LogQuestion {
+		*question = &e
+		return false
+	}
+	if w.heard == nil {
+		w.heard = map[string]map[string]bool{}
+	}
+	heard := w.heard[c.Template]
+	if heard == nil {
+		heard = map[string]bool{}
+		w.heard[c.Template] = heard
+	}
+	key := e.Kind + "\x00" + e.Text + "\x00" + e.Icons
+	if heard[key] {
+		return false
+	}
+	heard[key] = true
+	if *question != nil {
+		c.Entries = append(c.Entries, **question)
+		*question = nil
+	}
+	c.Entries = append(c.Entries, e)
+	return true
+}
+
+// filterLog returns log with what each template said before taken out (appendLog), for a log
+// restored from a save.
+func (w *World) filterLog(log []*Logged) []*Logged {
+	var out []*Logged
+	for _, old := range log {
+		c := *old
+		c.Entries = nil
+		var question *LogEntry
+		for _, e := range old.Entries {
+			w.appendLog(&c, &question, e)
+		}
+		if len(c.Entries) > 0 {
+			out = append(out, &c)
+		}
+	}
+	return out
 }
 
 // pass is a pass running: the keyword it asks ("" for the greeting), the clause whose actions
@@ -233,6 +330,9 @@ func (w *World) startTalk(tmpl *content.Thing, speaker *Thing) *Talk {
 		}
 	}
 	t := &Talk{Def: def, Template: tmpl, Speaker: speaker, Portrait: portrait, talked: rec.Talked}
+	if tmpl.ID != w.pack.Manifest.Menu {
+		t.logged = &Logged{Template: tmpl.ID, Portrait: portrait, Level: w.current, Step: w.step}
+	}
 	w.talk = t
 	w.emit(Event{Kind: EventTalk, Level: w.current, Thing: speakerID(speaker), Item: def.ID, Detail: "started"})
 	t.pass = &pass{}
@@ -286,6 +386,7 @@ func (w *World) ask(word string) {
 		return
 	}
 	t.Transcript = append(t.Transcript, "Q: "+word)
+	w.logEntry(LogEntry{Kind: LogQuestion, Text: word})
 	w.transcribe(word, TranscriptQuestion)
 	t.pass = &pass{keyword: k.ID}
 	w.runTalk()
@@ -434,6 +535,12 @@ func (w *World) say(l Line) {
 	if l.Text != "" {
 		t.Transcript = append(t.Transcript, l.Text)
 		w.transcribe(l.Text, TranscriptLine)
+	}
+	switch {
+	case l.Kind == LineSay && l.Text != "":
+		w.logEntry(LogEntry{Kind: LogLine, Text: l.Text, Portrait: l.Portrait})
+	case l.Kind == LineTeach:
+		w.logEntry(LogEntry{Kind: LogTeach, Icons: l.Icons})
 	}
 	w.emit(Event{Kind: EventTalk, Level: w.current, Text: l.Text, Detail: l.Kind})
 }

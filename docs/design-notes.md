@@ -231,9 +231,12 @@ box opens it as the pack where it lies; resting the pointer on one lists what it
   - The spellbook as a scrollable list by school with a Memorize button per spell. The panel
     already lists the spellbook and memorizes on a click; scrolling, the buttons, grouping and the
     schools' limits are left.
-  - A conversation log: every conversation remembered (who, with portrait and name; where; when;
-    each line and question), a window listing the people talked with, and search across it all.
-    New world state, kept in saves.
+  - Done: the conversation log. The world logs what each speaker says once, by the
+    conversation it was first said in (who, the portrait, the level, the step, and each new line
+    and gesture taught, with the question that brought it), leaves out the menu's, and keeps it
+    in saves, filtering a restored log the same way (`TestConversationLog`); L or the hotbar's Log box opens a window of the people talked
+    with, their conversations newest first, and a search that jumps to the line
+    (`TestConversationLogWindow`). Saves imported from the game start with an empty log.
   - The full map switching to any visited level, and hovering a teleporter or exit to see where
     it took the player, or a lever or plate to see what it changed, from what the player has
     observed (recorded by the world, kept in saves). Built first as the viewer's link overlay

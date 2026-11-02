@@ -78,9 +78,10 @@ type Hotbar struct {
 	Slots   []SlotBox
 	Actions []ActionButton
 	// Spells are the schools' boxes, each showing its selected spell; Gesture shows the gesture
-	// playing, and opens the spell panel.
+	// playing, and opens the spell panel. Log opens the conversation log.
 	Spells  [content.Schools]SpellBox
 	Gesture GestureBox
+	Log     PanelButton
 }
 
 // SpellBox is a school's box on the hotbar: its selected spell and how often it is memorized.
@@ -105,7 +106,7 @@ type GestureBox struct {
 // hotbarSize is the hotbar's size in hotbar pixels.
 func hotbarSize() image.Point {
 	w := portraitSize + gap + gaugeCount*(gaugeWidth+gap) + SlotSize + actionBoxes*SlotSize + gap + ShelfColumns*SlotSize +
-		gap + 2*SlotSize + gap + gestureSize
+		gap + 2*SlotSize + gap + gestureSize + gap + SlotSize
 	return image.Pt(w, ShelfRows*SlotSize)
 }
 
@@ -159,6 +160,8 @@ func (v *Viewer) Hotbar() *Hotbar {
 	}
 	x += 2*SlotSize + gap
 	h.Gesture.Rect = image.Rect(x, 0, x+gestureSize, gestureSize)
+	x += gestureSize + gap
+	h.Log = PanelButton{Rect: image.Rect(x, 0, x+SlotSize, SlotSize), Name: "log", Label: "Log"}
 	if c, ok := p.Magic.Icon(v.Pack); ok && v.Pack.Magic != nil && int(c-'A') < len(v.Pack.Magic.Icons) {
 		h.Gesture.Icon, h.Gesture.Has = v.Pack.Magic.Icons[c-'A'], true
 	} else if m := v.Pack.Magic; m != nil && m.Panel != nil {
@@ -242,6 +245,10 @@ func (h *Hotbar) click(v *Viewer, pt image.Point, right bool) []input.Command {
 	}
 	if at.In(h.Gesture.Rect) {
 		v.OpenSpells()
+		return nil
+	}
+	if at.In(h.Log.Rect) {
+		v.OpenLog()
 		return nil
 	}
 	for _, a := range h.Actions {
