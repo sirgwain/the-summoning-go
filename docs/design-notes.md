@@ -189,7 +189,7 @@ box opens it as the pack where it lies; resting the pointer on one lists what it
 - Records 23h and 2Bh get speed 16 when a conversation turns them hostile (creatures.md,
   Hostility); not done.
 - Interaction variables the game reads itself beyond 14, 19, 32 and 97: 96 (quiet combat), 98
-  (sight), 34 (the opening conversation on a new game) wait for their milestones.
+  (sight) wait for their milestones, as does 34, set when play goes on after ending G.
 - Gateway's level 30 and the conversations that return from it are imported but not played
   through on the imported game; nor is any quest that a conversation drives across levels.
 - Powers are still numbers the engine knows (items.md, Powers); casting and talking powers
@@ -201,15 +201,18 @@ box opens it as the pack where it lies; resting the pointer on one lists what it
 
 - View effects, sparkles and arrival styles, specified in scenes.md. Done: the importer renders
   the 16 effects and 6 sparkles into flipbooks (`flipbooks/`, pack.md), and `summoning flipbook`
-  plays them in a window. Left: the presentation plays `effect` events in a framed box with the
-  world paused, and changing level shows the new view by its style (scroll, rise, descend, teleport,
-  ripple). The simulation does not yet emit effects for pits, exit markers, a caster's death or
-  a death blow; it names the socket's and Mending's by word (`socket_complete`, `joined`) rather
-  than as effects 8 and 9; `seal_broken` should be a sparkle and `ripple` an arrival style.
-  Healing and cures play no sparkle yet (scenes.md, Sparkles).
+  plays them in a window. The simulation names every effect and sparkle by flipbook (`effect` and
+  `sparkle` events; exits', sockets' and sealed doors' fields, spells' actions, and
+  `effects.json`'s cues for pits, casters, death blows and powers), and holds what follows an
+  effect to its next update. The view plays them with the world paused, placed by scenes.md, and
+  its tools play any flipbook (B, K). The dev pack draws a flipbook for each cue and wires one
+  to the hall's exit D, socket and sealed door, the Heal spell and the sage's word on fireballs
+  (`TestEffectsPlay`, `TestPitEffectInViewer`). Left: changing level shows the new view by its style
+  (scroll, rise, descend, teleport, ripple); `rippled` is a thing event until then. What waits
+  for an effect is not saved, so a save taken while one plays loses it.
 - The intro, the new character's story and the end scenes, whose captions are in the game's
   program: the plan for their spec is [scenes-plan.md](scenes-plan.md). Ending G's changes to
-  the world and its save.
+  the world and its save, and going on from that save with variable 34 set (dialogue.md).
 - Audio's last phase ([audio-plan.md](audio-plan.md)): the view effects' sounds and tracks, the
   new game's door, and the front end's and endings' tracks 1–7, with the scenes.
 - Play *The Summoning* from start to end on the imported pack.

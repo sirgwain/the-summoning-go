@@ -99,6 +99,9 @@ func (w *World) hurtThing(l *Level, t *Thing, d int, k combat.Kind) int {
 // corpse or removes it (docs/spec/creatures.md, Death).
 func (w *World) creatureDies(l *Level, t *Thing) {
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "died"})
+	if t.Template.Has(content.BehaviorStationary) {
+		w.playEffect(l, w.pack.Effect(content.EffectCasterDies), t.Cell(), t.ID)
+	}
 	w.record(t.Template.ID).Dead = true
 	t.Hostile, t.Poisoned, t.Pose = false, false, ""
 	if w.player != nil {
@@ -266,6 +269,7 @@ func (w *World) creatureStrikes(l *Level, t *Thing) {
 	t.Pose = PoseAttack
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "strikes"})
 	if t.Template.Has(content.BehaviorDeathBlow) && !p.Status.DeathBlowWard {
+		w.playerEffect(w.pack.Effect(content.EffectDeathBlow))
 		w.killPlayer(t.ID)
 		return
 	}

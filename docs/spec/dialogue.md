@@ -27,7 +27,7 @@ A conversation keeps an **offered list** of at most six keywords, shown as butto
 | 19 | The result of power 51h's conversation: the object is used only if it is nonzero |
 | 27 | WarMonger's level (combat.md) |
 | 32 | The chosen ending (scenes.md) |
-| 34 | Set to 1 for a new game, which starts the opening conversation (7Dh) on arrival |
+| 34 | Set to 1 when play goes on after ending G, from the game it saved (scenes.md, Endings); conversation 7Dh then starts on arrival. A new game leaves it 0 |
 | 96 | Nonzero hides combat messages |
 | 97 | Cleared after every conversation |
 | 98 | Sight: read when drawing objects (scenes.md) |
@@ -128,3 +128,4 @@ Conversation text is shown word by word in the portrait window. `@` is replaced 
 ## Unknowns
 
 - The full list of interaction variables the game itself reads, by number.
+

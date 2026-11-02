@@ -223,6 +223,7 @@ func (im *importer) spells() error {
 			sp.Practice, sp.Needs = 20, &content.SpellNeeds{Holding: halves}
 			effects = []content.Action{
 				{Join: &content.Join{Items: halves, Into: item(templateStaff)}},
+				{Effect: str(effectID(viewMending))},
 				{SetCounter: &content.SetCounter{Counter: varID(varEnding), Value: 1}},
 			}
 			if conv, err := im.creature(npcMending); err == nil {
@@ -257,13 +258,13 @@ func (im *importer) spells() error {
 			effects = []content.Action{{Transmute: &content.Transmute{Holder: item(templateEmptyBottle), Table: table, Otherwise: item(templateJera)}}}
 		case 31:
 			sp.Practice, sp.Needs = 3, &content.SpellNeeds{Poisoned: true}
-			effects = []content.Action{{CurePoison: true}}
+			effects = []content.Action{{CurePoison: true}, {Sparkle: str(sparkleID("cure"))}}
 		case 32:
 			sp.Needs = &content.SpellNeeds{Fatigued: true}
-			effects = []content.Action{{Restore: true}}
+			effects = []content.Action{{Restore: true}, {Sparkle: str(sparkleID("restore"))}}
 		case 33:
 			sp.Practice, sp.Needs = 5, &content.SpellNeeds{Hurt: true}
-			effects = []content.Action{{Heal: &content.Dice{Bonus: 3000}}}
+			effects = []content.Action{{Heal: &content.Dice{Bonus: 3000}}, {Sparkle: str(sparkleID("heal"))}}
 		}
 		if effects == nil || missing != "" {
 			im.report.addf("spell %d: what it does could not be imported (%s); left out", n, missing)

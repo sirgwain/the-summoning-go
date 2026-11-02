@@ -43,8 +43,10 @@ func TestWriteLoad(t *testing.T) {
 
 // TestHallSolves works the hall's chain of puzzles with debug commands: the gems open the
 // socket's wall, the sphere behind it unseals door E, and exit D leads to the cellar.
-func TestHallSolves(t *testing.T) {
-	w, err := sim.New(Build(), 1)
+func TestHallSolves(t *testing.T) { forPacks(t, testHallSolves) }
+
+func testHallSolves(t *testing.T, build func() *content.Pack) {
+	w, err := sim.New(build(), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,6 +57,10 @@ func TestHallSolves(t *testing.T) {
 	}
 	do(input.Drop{Cell: Socket, Item: ItemRedGem})
 	do(input.Drop{Cell: Socket, Item: ItemBlueGem})
+	if !w.Waiting() || !l.Blocked(SocketWall) {
+		t.Fatal("the socket's wall opened with its effect, not after it")
+	}
+	do()
 	if l.Blocked(SocketWall) {
 		t.Fatal("the full socket did not open its wall")
 	}
@@ -75,8 +81,10 @@ func TestHallSolves(t *testing.T) {
 	}
 }
 
-func TestHallDoors(t *testing.T) {
-	w, err := sim.New(Build(), 1)
+func TestHallDoors(t *testing.T) { forPacks(t, testHallDoors) }
+
+func testHallDoors(t *testing.T, build func() *content.Pack) {
+	w, err := sim.New(build(), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,8 +207,10 @@ func (p player) to(cells ...content.Cell) {
 // commands: the lever opens closet A, two rocks hold plate B down, the key from the sack opens
 // slot C, the gems from closets B and C fill the socket, lever D in the nook it opens opens door
 // D, the sphere from the nook thrown at door E opens it, and exit D leads to the cellar.
-func TestHallPlays(t *testing.T) {
-	w, err := sim.New(Build(), 1)
+func TestHallPlays(t *testing.T) { forPacks(t, testHallPlays) }
+
+func testHallPlays(t *testing.T, build func() *content.Pack) {
+	w, err := sim.New(build(), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,6 +262,7 @@ func TestHallPlays(t *testing.T) {
 	p.do(input.PutDown{})
 	p.do(input.Swap{Slot: 0})
 	p.do(input.PutDown{})
+	p.do() // the wall opens after the socket's effect
 	if l.Blocked(SocketWall) {
 		t.Fatal("the gems did not open the socket's wall")
 	}
@@ -283,8 +294,10 @@ func TestHallPlays(t *testing.T) {
 
 // TestCellarFight fights the cellar's brute with the sword, wearing the mail: the brute chases
 // the player, the player strikes back until it is a corpse, and it drops its key.
-func TestCellarFight(t *testing.T) {
-	w, err := sim.New(Build(), 1)
+func TestCellarFight(t *testing.T) { forPacks(t, testCellarFight) }
+
+func testCellarFight(t *testing.T, build func() *content.Pack) {
+	w, err := sim.New(build(), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,10 +347,12 @@ func TestCellarFight(t *testing.T) {
 // TestEnterUsesKey stands the player on keyhole C with the key it takes: Enter puts the key in
 // from a shelf, or from the sack in the left hand. As an object hole the slot is left a mystery,
 // and a disarmed keyhole keeps the key where it was.
-func TestEnterUsesKey(t *testing.T) {
+func TestEnterUsesKey(t *testing.T) { forPacks(t, testEnterUsesKey) }
+
+func testEnterUsesKey(t *testing.T, build func() *content.Pack) {
 	setup := func(t *testing.T, keyhole, armed bool) (*sim.World, *sim.Level) {
 		t.Helper()
-		w, err := sim.New(Build(), 1)
+		w, err := sim.New(build(), 1)
 		if err != nil {
 			t.Fatal(err)
 		}

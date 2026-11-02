@@ -1,0 +1,82 @@
+{
+  "id": "flipbook.dev.caster",
+  "sprite": "sprite.flipbook.dev.caster",
+  "framed": true,
+  "steps": [
+    {
+      "frame": 0,
+      "ms": 110,
+      "sounds": [
+        "sfx.blip"
+      ]
+    },
+    {
+      "frame": 1,
+      "ms": 110
+    },
+    {
+      "frame": 2,
+      "ms": 110
+    },
+    {
+      "frame": 3,
+      "ms": 110
+    },
+    {
+      "frame": 4,
+      "ms": 110
+    },
+    {
+      "frame": 5,
+      "ms": 110
+    },
+    {
+      "frame": 6,
+      "ms": 110
+    },
+    {
+      "frame": 7,
+      "ms": 110
+    },
+    {
+      "frame": 8,
+      "ms": 110,
+      "cancel": true
+    },
+    {
+      "frame": 9,
+      "ms": 110,
+      "cancel": true
+    },
+    {
+      "frame": 10,
+      "ms": 110,
+      "cancel": true
+    },
+    {
+      "frame": 11,
+      "ms": 110,
+      "cancel": true
+    },
+    {
+      "frame": 12,
+      "ms": 110,
+      "cancel": true
+    },
+    {
+      "frame": 13,
+      "ms": 110,
+      "cancel": true
+    },
+    {
+      "frame": 14,
+      "ms": 110,
+      "cancel": true
+    },
+    {
+      "frame": 15,
+      "ms": 110,
+      "cancel": true
+    }
+  ]
+}

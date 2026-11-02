@@ -469,7 +469,7 @@ func (lb *levelBuilder) teleporter(c content.Cell, plates int) (*content.Feature
 
 // socket makes the gem socket, whose completion opens the wall before it (rules.md, Gem socket).
 func (lb *levelBuilder) socket(c content.Cell) (*content.Feature, error) {
-	f := &content.Feature{Kind: content.FeatureSocket}
+	f := &content.Feature{Kind: content.FeatureSocket, Effect: effectID(viewSocket)}
 	for g := range gemCount {
 		id, ok := lb.im.item(templateFirstGem+g, lb.what(c, "socket"))
 		if !ok {
@@ -580,6 +580,7 @@ func (lb *levelBuilder) door(c content.Cell, state byte) error {
 			return nil
 		}
 		f.SealedBy = id
+		f.Sparkle = sparkleID(fmt.Sprintf("seal.%d", stage))
 	case stage != 0:
 		lb.report(c, "door starting at stage %d; placed closed", stage)
 	}
@@ -632,6 +633,7 @@ func (lb *levelBuilder) exit(c content.Cell, p *Placement) error {
 		}
 		f.Look, err = lb.im.exitLook(lb.im.terrain(int(lb.l.Header.ExitWallBank)), t)
 	case p.Type == PlaceExit && p.Extra[0] == exitMarker:
+		f.Effect = effectID(viewClimbThrough)
 		f.Look, err = lb.im.look("look.exit_marker", content.LayerStand, map[string][]lookArt{
 			content.FeatureExit: {{exitMarkerResource, 0, standingAt}},
 		})

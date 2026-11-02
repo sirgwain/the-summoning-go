@@ -39,6 +39,8 @@ type Pack struct {
 	Sounds map[string]*Sound
 	// Cues is audio/cues.json, or nil when the pack has none.
 	Cues *Cues
+	// Effects is effects.json, or nil when the pack has none.
+	Effects *EffectCues
 }
 
 // NewPack returns an empty pack with the given manifest.

@@ -99,6 +99,13 @@ type Viewer struct {
 	Front *Frontend
 	Quit  bool
 	Seed  uint64
+	// Showing is the view effect or sparkle playing, nil when none is; shows are the effect and
+	// sparkle events waiting their turn (showing.go). Flipbooks are the pack's flipbooks and
+	// Flipbook the one the tools play.
+	Showing   *Showing
+	shows     []sim.Event
+	Flipbooks []string
+	Flipbook  int
 
 	// press is where the mouse button went down; drag where the view was last dragged from.
 	press, drag *image.Point
@@ -121,7 +128,7 @@ func New(p *content.Pack, seed uint64, level string, scale int, magnify bool, sc
 	v := &Viewer{
 		Pack: p, World: w, Scale: max(1, min(scale, MaxScale)), Magnify: magnify, Screen: screen,
 		Levels: sortedIDs(p.Levels), Items: sortedIDs(p.Items), Things: sortedIDs(p.Things),
-		SeeAll: true, Seed: seed,
+		Flipbooks: sortedIDs(p.Flipbooks), SeeAll: true, Seed: seed,
 	}
 	if level != "" && level != w.Current().ID {
 		w.Update([]input.Command{input.GoTo{Level: level}})
@@ -262,6 +269,10 @@ func (v *Viewer) Update(in Input) {
 		v.frontUpdate(in)
 		return
 	}
+	if v.Holding() {
+		v.updateShowing(in)
+		return
+	}
 	acted := in.anyPressed() || in.Left.Released || in.Right.Released
 	if v.Said != nil && (v.Ticks > v.Said.Until || acted) {
 		v.Said = nil
@@ -292,6 +303,11 @@ func (v *Viewer) Update(in Input) {
 	case in.pressed("V"):
 		v.SeeAll = !v.SeeAll
 		v.rebuild()
+	case in.pressed("B"):
+		v.Flipbook = cycle(in, v.Flipbook, len(v.Flipbooks))
+	case in.pressed("K") && len(v.Flipbooks) > 0:
+		v.PlayFlipbook(v.Flipbooks[v.Flipbook])
+		return
 	}
 	if v.Play {
 		cmds = append(cmds, v.playKeys(in)...)
@@ -339,6 +355,7 @@ func (v *Viewer) modal(in Input) ([]input.Command, bool) {
 // updateWorld runs the world's update with cmds and brings the view up to date.
 func (v *Viewer) updateWorld(cmds []input.Command) []sim.Event {
 	events := v.World.Update(cmds)
+	v.queueShows(events)
 	v.log(events)
 	v.hear(events)
 	v.sound(events)
@@ -743,7 +760,8 @@ func (v *Viewer) PanelLines() []string {
 			"swap with the hand; right click: hand to a shelf",
 			"I/Tab or click the portrait: inventory",
 			"H recenter  P pause  N step  M magnify",
-			"V see all  F12 tools  ~ debug")
+			"V see all  F12 tools  ~ debug",
+			v.flipbookLine())
 		if v.Selected != nil {
 			lines = append(lines, "")
 			lines = append(lines, inspect.Cell(v.Pack, l, *v.Selected)...)
@@ -779,7 +797,8 @@ func (v *Viewer) PanelLines() []string {
 		"O drop object  X take object  P place thing",
 		"Shift+click move thing  Space pause  N step",
 		"[ ] level  M magnify  Home recenter  V see all",
-		"F12 play  ~ hide the debug overlay")
+		"F12 play  ~ hide the debug overlay",
+		v.flipbookLine())
 	n := v.panelWidth()/CharWidth - 1
 	for i, s := range lines {
 		lines[i] = Clip(s, n)

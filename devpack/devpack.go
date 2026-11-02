@@ -36,6 +36,7 @@ func Build() *content.Pack {
 	creation(p)
 	menu(p)
 	sounds(p)
+	effects(p)
 	return p
 }
 

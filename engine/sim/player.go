@@ -638,16 +638,25 @@ func (w *World) takeFeature(f *Feature, d int) {
 		w.fallPlayer(f, d)
 		return
 	}
-	w.travel(f.To)
+	w.goThrough(f.Effect, f.To)
 }
 
 // fallPlayer drops the player through pit or trapdoor f, hurting it 4d5 unless it steps down
-// carefully, along directions 1–3.
+// carefully, along directions 1–3. Stepping down plays the climb, falling the fall.
 func (w *World) fallPlayer(f *Feature, d int) {
+	cue := content.EffectClimbDown
 	if d < 1 || d > 3 {
+		cue = content.EffectFall
 		w.hurtPlayer(w.roll(content.Dice{Count: 4, Sides: 5}), combat.Physical, "falling")
 	}
-	w.travel(f.To)
+	w.goThrough(w.pack.Effect(cue), f.To)
+}
+
+// goThrough plays view effect id at the player, then takes the player to a destination once it
+// ends.
+func (w *World) goThrough(id string, to *content.Destination) {
+	w.playerEffect(id)
+	w.afterEffect(func() { w.travel(to) })
 }
 
 // movePlayerBy moves the player by (du, dv) and runs what its new cell does.
@@ -683,7 +692,7 @@ func (w *World) playerEntered(l *Level, c content.Cell, depth int) {
 	switch {
 	case f == nil:
 	case f.Kind == content.FeatureExit && f.To != nil:
-		w.travel(f.To)
+		w.goThrough(f.Effect, f.To)
 	case f.Kind == content.FeatureTeleporter && f.Armed:
 		w.teleportPlayer(l, f, depth)
 	case (f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor && f.Open) && !w.player.Status.Levitating:

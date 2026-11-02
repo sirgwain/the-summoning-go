@@ -1,0 +1,11 @@
+{
+  "id": "effects",
+  "cues": {
+    "caster_dies": "flipbook.dev.caster",
+    "climb_down": "flipbook.dev.climb_down",
+    "cure": "flipbook.dev.sparkle.cure",
+    "death_blow": "flipbook.dev.death_blow",
+    "fall": "flipbook.dev.fall",
+    "heal": "flipbook.dev.sparkle.heal"
+  }
+}

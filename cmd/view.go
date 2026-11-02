@@ -122,6 +122,11 @@ hooks' procedures, E follows its exit, O drops the chosen object on it and X tak
 object; I and Shift+I choose the object. P places the chosen thing, C and Shift+C choose it, and
 Shift+click moves the selected thing to the clicked cell. Space pauses, N steps while paused.
 
+B and Shift+B choose one of the pack's flipbooks and K plays it, in play too: a framed one as a
+view effect, placed by the selected thing, else the selected cell, else the player; any other as
+a sparkle. The world waits while it plays; Escape or a right click cuts it short where it allows.
+The world's own effects and sparkles play the same way.
+
 --script runs a script of input, screenshots and state dumps (docs/design.md, Testing) in place
 of live input, and exits when it ends. Its files are written under --out.`,
 		Args: cobra.MaximumNArgs(1),
@@ -391,6 +396,7 @@ func (s *shell) Draw(screen *ebiten.Image) {
 	s.drawSaid(screen)
 	s.drawMinimap(screen)
 	s.drawTalk(screen)
+	s.drawShowing(screen)
 	s.drawReading(screen)
 	s.drawTools(screen)
 	s.drawNotice(screen)
@@ -948,6 +954,36 @@ func (s *shell) drawNotice(screen *ebiten.Image) {
 	x, y := (v.Screen.X-w)/2, viewer.Margin
 	vector.FillRect(screen, float32(x), float32(y), float32(w), float32(viewer.LineHeight+4), panelColor, false)
 	ebitenutil.DebugPrintAt(screen, v.Notice, x+4, y+2)
+}
+
+// drawShowing draws the view effect or sparkle playing at its place in the view, a view
+// effect's box with its border.
+func (s *shell) drawShowing(screen *ebiten.Image) {
+	v := s.v
+	sh := v.Showing
+	if sh == nil {
+		return
+	}
+	size := sh.Size(v.Pack)
+	if size == (image.Point{}) {
+		return
+	}
+	at := v.ScreenPoint(sh.At)
+	if sh.Framed {
+		bw := float32(flipbookBorder * v.Scale)
+		x, y := float32(at.X), float32(at.Y)
+		w, h := float32(size.X*v.Scale), float32(size.Y*v.Scale)
+		// The border only: the box's transparent pixels show the view.
+		vector.FillRect(screen, x-bw, y-bw, w+2*bw, bw, flipbookFrame, false)
+		vector.FillRect(screen, x-bw, y+h, w+2*bw, bw, flipbookFrame, false)
+		vector.FillRect(screen, x-bw, y, bw, h, flipbookFrame, false)
+		vector.FillRect(screen, x+w, y, bw, h, flipbookFrame, false)
+	}
+	art := s.artImage(size)
+	if err := s.sprites.DrawImage(art, sh.Frame(), 0, 0, false); err != nil && s.err == nil {
+		s.err = err
+	}
+	s.presenter.PresentAt(screen, art, v.Scale, at)
 }
 
 // drawReading draws the picture of a scroll being read in a small window centered above the

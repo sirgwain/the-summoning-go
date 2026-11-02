@@ -640,7 +640,7 @@ func TestImportCreation(t *testing.T) {
 	if c == nil {
 		t.Fatal("no creation record")
 	}
-	if len(c.Portraits) != 2 || len(c.Methods) != 3 || len(c.WeaponClasses) != 4 || len(c.Schools) != 4 || c.Counter != "var.34" {
+	if len(c.Portraits) != 2 || len(c.Methods) != 3 || len(c.WeaponClasses) != 4 || len(c.Schools) != 4 || c.Counter != "" || c.Opening != "" {
 		t.Errorf("creation %+v", *c)
 	}
 	if len(c.Premade) != 1 {

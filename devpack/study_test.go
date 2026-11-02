@@ -4,6 +4,7 @@ import (
 	"image"
 	"testing"
 
+	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
 
@@ -14,17 +15,20 @@ import (
 // casts by clicking Wizardry's box on the hotbar. Watch it with
 //
 //	summoning view packs/dev --level level.study --script devpack/scripts/study.json --out /tmp/study
-func TestStudy(t *testing.T) {
+func TestStudy(t *testing.T) { forPacks(t, testStudy) }
+
+func testStudy(t *testing.T, build func() *content.Pack) {
 	script, err := viewer.LoadScript("scripts/study.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	v, err := viewer.New(Build(), 1, Study, 2, false, image.Pt(1280, 800))
+	v, err := viewer.New(build(), 1, Study, 2, false, image.Pt(1280, 800))
 	if err != nil {
 		t.Fatal(err)
 	}
 	r := viewer.NewRunner(script, t.TempDir())
 	var sawTalk, sawPanel, sawBolt bool
+	bolt := v.Pack.Spells[SpellFireball].Effects[0].Missile.Sprite
 	for !r.Done() {
 		in, err := r.Before(v)
 		if err != nil {
@@ -37,7 +41,7 @@ func TestStudy(t *testing.T) {
 		sawTalk = sawTalk || v.Talk() != nil
 		sawPanel = sawPanel || v.SpellPanel() != nil
 		for _, c := range v.Cmds {
-			sawBolt = sawBolt || c.Sprite == spriteBolt
+			sawBolt = sawBolt || c.Sprite == bolt
 		}
 	}
 	if !sawBolt {

@@ -94,3 +94,48 @@ func TestCuesVerify(t *testing.T) {
 		}
 	}
 }
+
+func TestEffectCues(t *testing.T) {
+	flipbook := func(p *Pack) {
+		p.Flipbooks["flipbook.fall"] = &Flipbook{ID: "flipbook.fall", Sprite: "sprite.tiles", Framed: true,
+			Steps: []FlipbookStep{{Frame: 0, MS: 100, Cancel: true}}}
+	}
+	p := testPack()
+	flipbook(p)
+	p.Effects = &EffectCues{ID: "effects", Cues: map[string]string{EffectFall: "flipbook.fall"}}
+	p.Levels["level.00"].Features[1].Effect = "flipbook.fall"
+	if err := p.Verify(); err != nil {
+		t.Fatal(err)
+	}
+	if p.Effect(EffectFall) != "flipbook.fall" || p.Effect(EffectDeathBlow) != "" {
+		t.Errorf("cues: fall %q, death blow %q", p.Effect(EffectFall), p.Effect(EffectDeathBlow))
+	}
+	dir := t.TempDir()
+	if err := Write(p, dir); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load(os.DirFS(dir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got.Effects, p.Effects) || got.Levels["level.00"].Features[1].Effect != "flipbook.fall" {
+		t.Errorf("effects %+v, want %+v", got.Effects, p.Effects)
+	}
+
+	for name, tc := range map[string]struct {
+		edit func(p *Pack)
+		want string
+	}{
+		"unknown cue":     {func(p *Pack) { p.Effects = &EffectCues{Cues: map[string]string{"bell": "flipbook.fall"}} }, "unknown effect cue"},
+		"cue's flipbook":  {func(p *Pack) { p.Effects = &EffectCues{Cues: map[string]string{EffectFall: "flipbook.none"}} }, "not found"},
+		"feature effect":  {func(p *Pack) { p.Levels["level.00"].Features[1].Effect = "flipbook.none" }, "not found"},
+		"feature sparkle": {func(p *Pack) { p.Levels["level.00"].Features[1].Sparkle = "flipbook.none" }, "not found"},
+	} {
+		p := testPack()
+		flipbook(p)
+		tc.edit(p)
+		if err := p.Verify(); err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: error %v, want %q", name, err, tc.want)
+		}
+	}
+}

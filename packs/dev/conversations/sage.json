@@ -76,6 +76,9 @@
       "do": [
         {
           "say": "talk.sage.fireball"
+        },
+        {
+          "effect": "flipbook.dev.talk"
         }
       ]
     },

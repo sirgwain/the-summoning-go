@@ -500,7 +500,7 @@ func (w *World) talkAction(a content.Action) {
 		if t.Speaker != nil {
 			cell = t.Speaker.Cell()
 		}
-		w.emit(Event{Kind: EventEffect, Level: l.ID, Cell: cell, Thing: speakerID(t.Speaker), Detail: *a.Effect})
+		w.playEffect(l, *a.Effect, cell, speakerID(t.Speaker))
 	case a.Travel != nil:
 		d := *a.Travel
 		t.after = &d

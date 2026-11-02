@@ -366,16 +366,19 @@ func (w *World) startPower(power, sign int) bool {
 		}
 	case 0x15:
 		p.Poisoned, p.Confusion = false, 0
+		w.playerSparkle(w.pack.Effect(content.SparkleCure))
 	case 0x1C:
 		p.addTimed(TimedFireShield, shieldTicks)
 	case 0x27:
 		p.addTimed(TimedLightningShield, shieldTicks)
 	case 0x1D:
 		w.heal(w.roll(content.Dice{Count: 6, Sides: 6}))
+		w.playerSparkle(w.pack.Effect(content.SparkleHeal))
 	case 0x28:
 		w.heal(w.roll(content.Dice{Count: 5, Sides: 10}))
 	case 0x45:
 		w.heal(3000)
+		w.playerSparkle(w.pack.Effect(content.SparkleHeal))
 	case 0x46:
 		w.heal(w.roll(content.Dice{Count: 20, Sides: 4}))
 	case 0x20:

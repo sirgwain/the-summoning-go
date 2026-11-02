@@ -359,7 +359,7 @@ func TestSocket(t *testing.T) {
 		t.Error("an object stayed on the socket")
 	}
 	ev = do(w, input.Drop{Cell: cell{0, 4}, Item: "item.gem1"})
-	if socket.LookState() != "full" || !has(ev, EventEffect, effectSocket) || !has(ev, EventMap, "") ||
+	if socket.LookState() != "full" || !has(ev, EventFeature, "full") || !has(ev, EventMap, "") ||
 		w.Current().Wall[0][3] != content.NoFrame || w.Current().Blocked(cell{0, 3}) {
 		t.Errorf("both gems: %v", ev)
 	}
@@ -390,7 +390,7 @@ func TestSealedDoor(t *testing.T) {
 		t.Fatal("the wrong object opened a sealed door")
 	}
 	ev := do(w, input.Drop{Cell: cell{1, 1}, Item: "item.sphere"})
-	if sealed.State != content.DoorOpen || sealed.SealedBy != "" || !has(ev, EventEffect, effectSeal) {
+	if sealed.State != content.DoorOpen || sealed.SealedBy != "" || !has(ev, EventSound, soundUnseal) {
 		t.Errorf("sphere: %v", ev)
 	}
 }

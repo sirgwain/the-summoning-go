@@ -173,10 +173,15 @@ type Feature struct {
 	Cell Cell   `json:"cell"`
 	Look string `json:"look,omitempty"`
 
-	// Door.
+	// Door. Sparkle is the flipbook a sealed door plays as it opens.
 	State         string `json:"state,omitempty"`
 	SealedBy      string `json:"sealed_by,omitempty"`
 	OpenedBySpell bool   `json:"opened_by_spell,omitempty"`
+	Sparkle       string `json:"sparkle,omitempty"`
+
+	// Effect is the view effect (a flipbook) an exit plays as the player goes through it, the
+	// level change waiting for it, or a socket plays when its last place is filled.
+	Effect string `json:"effect,omitempty"`
 
 	// Lever, plate, slot, teleporter.
 	On        bool `json:"on,omitempty"`
@@ -350,6 +355,8 @@ type Action struct {
 	CurePoison     bool          `json:"cure_poison,omitempty"`
 	Restore        bool          `json:"restore,omitempty"`
 	Heal           *Dice         `json:"heal,omitempty"`
+	// Sparkle plays a sparkle (a flipbook) at the player.
+	Sparkle *string `json:"sparkle,omitempty"`
 	// Converse starts the conversation of a thing template once the spell is done.
 	Converse *string `json:"converse,omitempty"`
 	// RemoveAll removes the creatures of a thing template from the current level; Experience
@@ -358,28 +365,29 @@ type Action struct {
 	Experience *int    `json:"experience,omitempty"`
 
 	// Conversation actions, run in a conversation.
-	Say           *string      `json:"say,omitempty"`
-	SayAs         *SayAs       `json:"say_as,omitempty"`
-	Offer         *string      `json:"offer,omitempty"`
-	ForgetOffers  bool         `json:"forget_offers,omitempty"`
-	Take          *string      `json:"take,omitempty"`
-	Give          *Object      `json:"give,omitempty"`
-	SetCounter    *SetCounter  `json:"set_counter,omitempty"`
-	AddCounter    *string      `json:"add_counter,omitempty"`
-	End           bool         `json:"end,omitempty"`
-	RemoveSpeaker bool         `json:"remove_speaker,omitempty"`
-	Hostile       bool         `json:"hostile,omitempty"`
-	SetFrame      *int         `json:"set_frame,omitempty"`
-	HealFully     bool         `json:"heal_fully,omitempty"`
-	Run           *string      `json:"run,omitempty"`
-	Teach         *string      `json:"teach,omitempty"`
-	SetPortrait   *string      `json:"set_portrait,omitempty"`
-	Effect        *string      `json:"effect,omitempty"`
-	Travel        *Destination `json:"travel,omitempty"`
-	Return        bool         `json:"return,omitempty"`
-	Jump          *int         `json:"jump,omitempty"`
-	Ending        bool         `json:"ending,omitempty"`
-	Menu          *string      `json:"menu,omitempty"`
+	Say           *string     `json:"say,omitempty"`
+	SayAs         *SayAs      `json:"say_as,omitempty"`
+	Offer         *string     `json:"offer,omitempty"`
+	ForgetOffers  bool        `json:"forget_offers,omitempty"`
+	Take          *string     `json:"take,omitempty"`
+	Give          *Object     `json:"give,omitempty"`
+	SetCounter    *SetCounter `json:"set_counter,omitempty"`
+	AddCounter    *string     `json:"add_counter,omitempty"`
+	End           bool        `json:"end,omitempty"`
+	RemoveSpeaker bool        `json:"remove_speaker,omitempty"`
+	Hostile       bool        `json:"hostile,omitempty"`
+	SetFrame      *int        `json:"set_frame,omitempty"`
+	HealFully     bool        `json:"heal_fully,omitempty"`
+	Run           *string     `json:"run,omitempty"`
+	Teach         *string     `json:"teach,omitempty"`
+	SetPortrait   *string     `json:"set_portrait,omitempty"`
+	// Effect plays a view effect (a flipbook) at the speaker; in a spell's effects, at the player.
+	Effect *string      `json:"effect,omitempty"`
+	Travel *Destination `json:"travel,omitempty"`
+	Return bool         `json:"return,omitempty"`
+	Jump   *int         `json:"jump,omitempty"`
+	Ending bool         `json:"ending,omitempty"`
+	Menu   *string      `json:"menu,omitempty"`
 	// Transcript prints the transcript's heading: TranscriptHeading or TranscriptContinued.
 	Transcript *string `json:"transcript,omitempty"`
 }

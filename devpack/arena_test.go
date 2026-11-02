@@ -4,6 +4,7 @@ import (
 	"image"
 	"testing"
 
+	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
@@ -16,17 +17,25 @@ import (
 // goblin lying as a corpse at the end. Watch it with
 //
 //	summoning view packs/dev --level level.arena --script devpack/scripts/arena.json --out /tmp/arena
-func TestArenaFight(t *testing.T) {
+func TestArenaFight(t *testing.T) { forPacks(t, testArenaFight) }
+
+func testArenaFight(t *testing.T, build func() *content.Pack) {
 	script, err := viewer.LoadScript("scripts/arena.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	v, err := viewer.New(Build(), 1, Arena, 2, false, image.Pt(1280, 800))
+	v, err := viewer.New(build(), 1, Arena, 2, false, image.Pt(1280, 800))
 	if err != nil {
 		t.Fatal(err)
 	}
 	r := viewer.NewRunner(script, t.TempDir())
 	var swordDrawn, goblinShown, playerShown bool
+	held := v.Pack.Items[ItemSword].Held.Right
+	dead, ok := v.Pack.Animation(v.Pack.Things[ThingGoblin], "dead")
+	if !ok {
+		t.Fatal("the goblin has no dead animation")
+	}
+	corpseFrame := dead.Frames[len(dead.Frames)-1]
 	for !r.Done() {
 		in, err := r.Before(v)
 		if err != nil {
@@ -37,7 +46,7 @@ func TestArenaFight(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, c := range v.Cmds {
-			if c.Thing == sim.PlayerID && (c.Sprite == spriteSwordFront || c.Sprite == spriteSwordBehind) {
+			if c.Thing == sim.PlayerID && (c.Sprite == held.Front || c.Sprite == held.Behind) {
 				swordDrawn = true
 			}
 		}
@@ -83,7 +92,7 @@ func TestArenaFight(t *testing.T) {
 	}
 	corpse := false
 	for _, c := range v.Cmds {
-		if c.Thing == "goblin" && c.Frame == figureCorpse {
+		if c.Thing == "goblin" && c.Frame == corpseFrame {
 			corpse = true
 		}
 	}

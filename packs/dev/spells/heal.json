@@ -15,6 +15,9 @@
   "effects": [
     {
       "heal": "3000"
+    },
+    {
+      "sparkle": "flipbook.dev.sparkle.heal"
     }
   ]
 }

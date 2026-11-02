@@ -84,6 +84,7 @@ func (p *Pack) Verify() error {
 		v.sound(p.Sounds[id])
 	}
 	v.cues()
+	v.effectCues()
 	for _, id := range sortedKeys(p.Spells) {
 		v.spell(p.Spells[id])
 	}
@@ -564,6 +565,8 @@ func (lv *levelVerifier) feature(f *Feature) {
 		}
 	}
 
+	lv.flipbookRef(lv.owner()+" "+what+" sparkle", f.Sparkle)
+	lv.flipbookRef(lv.owner()+" "+what+" effect", f.Effect)
 	switch f.Kind {
 	case FeatureDoor:
 		switch f.State {

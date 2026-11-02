@@ -57,6 +57,10 @@ type World struct {
 	opening *content.Thing
 	// ended is how play ended, nil while it goes on.
 	ended *Ended
+	// effectPlayed is set when a view effect played this update; after is what waits for it,
+	// run at the start of the next (effects.go).
+	effectPlayed bool
+	after        []func()
 }
 
 var summoningRules combat.Rules = summoning.Rules{}
@@ -102,6 +106,7 @@ func (w *World) Update(cmds []input.Command) []Event {
 	if w.ended != nil {
 		return nil
 	}
+	w.runAfter()
 	if w.music != "" {
 		w.startMusic(w.music)
 		w.music = ""
@@ -219,8 +224,12 @@ const (
 	EventMessage = "message"
 	// EventSound plays a sound: Detail names an engine cue, or Item gives a sound id.
 	EventSound = "sound"
-	// EventEffect starts a view effect: Detail names it.
+	// EventEffect plays a view effect: Detail is its flipbook, placed by Thing (the player, a
+	// conversation's speaker, a dying caster), or by Cell when the thing is gone or there is
+	// none. The presentation holds the world while it plays.
 	EventEffect = "effect"
+	// EventSparkle plays a sparkle: Detail is its flipbook, placed by Thing, or by Feature at Cell.
+	EventSparkle = "sparkle"
 	// EventFeature reports a feature's state changed.
 	EventFeature = "feature"
 	// EventProcedure reports a procedure ran.

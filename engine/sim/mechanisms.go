@@ -19,8 +19,6 @@ const (
 	soundUnseal   = content.CueUnseal
 	soundLever    = content.CueLever
 	soundTeleport = content.CueTeleport
-	effectSocket  = "socket_complete"
-	effectSeal    = "seal_broken"
 )
 
 // doorStepTicks is how often a moving door steps (docs/spec/rules.md, Unknowns).
@@ -264,10 +262,7 @@ func (w *World) drop(l *Level, c content.Cell, o *Object, by, depth int) bool {
 			w.emit(Event{Kind: EventSound, Level: l.ID, Cell: c, Detail: soundTeleport})
 			return w.drop(l, to, o, byWorld, depth+1)
 		case f.Kind == content.FeatureDoor && f.SealedBy != "" && o.Item == f.SealedBy:
-			f.SealedBy, f.Stage, f.State = "", stageOpen, content.DoorOpen
-			w.emit(Event{Kind: EventEffect, Level: l.ID, Cell: c, Feature: f.ID, Detail: effectSeal})
-			w.emit(Event{Kind: EventSound, Level: l.ID, Cell: c, Detail: soundUnseal})
-			w.featureChanged(l, f)
+			w.unseal(l, f)
 		}
 	}
 	l.Objects[c] = append(l.Objects[c], o)
@@ -304,8 +299,8 @@ func (w *World) setGem(l *Level, f *Feature, o *Object, depth int) {
 	slices.Sort(f.Set)
 	w.featureChanged(l, f)
 	if len(f.Set) == len(f.Places) {
-		w.emit(Event{Kind: EventEffect, Level: l.ID, Cell: f.Cell, Feature: f.ID, Detail: effectSocket})
-		w.run(l, f.OnComplete, depth+1)
+		w.playEffect(l, f.Effect, f.Cell, w.playerRef())
+		w.afterEffect(func() { w.run(l, f.OnComplete, depth+1) })
 	}
 }
 

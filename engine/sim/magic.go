@@ -305,7 +305,7 @@ func (w *World) castSpell(c caster, sp *content.Spell, power int) {
 		w.practice(SkillSchool+sp.School, 1+sp.Practice)
 	}
 	for _, e := range sp.Effects {
-		w.spellEffect(l, c, sp, e, power)
+		w.afterEffect(func() { w.spellEffect(l, c, sp, e, power) })
 	}
 }
 
@@ -440,7 +440,7 @@ func (w *World) spellEffect(l *Level, c caster, sp *content.Spell, e content.Act
 		if f := w.mark(*e.TeleportToMark); f != nil {
 			w.weigh(l, at, -p.weight(), 0)
 			w.place(f.Cell, false)
-			w.emit(Event{Kind: EventEffect, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "ripple"})
+			w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "rippled"})
 		}
 	case e.Dispel != nil:
 		for _, f := range w.spellsNear(l, *e.Dispel) {
@@ -457,7 +457,7 @@ func (w *World) spellEffect(l *Level, c caster, sp *content.Spell, e content.Act
 			o := w.newObject(e.Join.Into)
 			p.Slots[SlotRightHand] = o
 			w.putOn(o)
-			w.emit(Event{Kind: EventEffect, Level: l.ID, Cell: at, Thing: PlayerID, Item: e.Join.Into, Detail: "joined"})
+			w.emit(Event{Kind: EventThing, Level: l.ID, Cell: at, Thing: PlayerID, Item: e.Join.Into, Detail: "joined"})
 		}
 	case e.Freeze != nil:
 		w.message(l, at, content.MsgFrozen, "")
@@ -479,6 +479,10 @@ func (w *World) spellEffect(l *Level, c caster, sp *content.Spell, e content.Act
 		p.Attributes[AttrEndurance] += n
 	case e.Heal != nil:
 		w.heal(w.roll(*e.Heal))
+	case e.Effect != nil:
+		w.playerEffect(*e.Effect)
+	case e.Sparkle != nil:
+		w.playerSparkle(*e.Sparkle)
 	case e.SetCounter != nil:
 		w.setCounter(e.SetCounter.Counter, e.SetCounter.Value)
 	case e.Converse != nil:

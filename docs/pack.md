@@ -524,7 +524,7 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
   "body_armor": ["item.leather_trews", "…"],
   "premade": [{ "name": "Kordan", "portrait": "portrait.3", "weapon_class": 0, "school": 1,
                 "attributes": { "strength": 18, "…": 0 } }],
-  "counter": "var.34", "opening": "thing.npc.125", "scene": "scene.door",
+  "scene": "scene.door",
   "ending": { "scene": "scene.ending", "counter": "var.32", "conversation": "thing.npc.121",
               "choices": [{ "name": "F", "holding": "item.chesschantra_skull", "value": 4 }] }
 }
@@ -536,7 +536,8 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
   skill they start at level 1, and the objects they add, by inventory slot. `icons` are the gesture
   icons a school starts knowing.
 - `inventory` is what every character starts with; one of `body_armor` goes on the body.
-- A new game sets `counter` to 1, plays `scene`, and starts `opening`'s conversation on arrival.
+- A new game sets `counter` to 1, plays `scene`, and starts `opening`'s conversation on arrival;
+  each is optional. The Summoning's import sets neither `counter` nor `opening`.
 - The ending power takes the first of `ending.choices` whose `holding` item is in a hand, sets
   `ending.counter` to its `value`, runs `ending.conversation`'s conversation, and then ends play
   with the choice's `scene`; the conversations' `ending` action ends play with `ending.scene`.
@@ -582,6 +583,21 @@ view effects as `flipbook.effect.<n>` and the sparkles as `flipbook.sparkle.<kin
   ends the flipbook at once.
 - As a step starts, `music_fade` fades out the music track playing, or `music_stop` stops it at once.
   Then `music` starts a track and `sounds` start effects.
+
+A flipbook plays as a **view effect** (framed, in a box placed by a creature, `effect` events) or
+a **sparkle** (unframed, over an area, `sparkle` events); the world waits while either plays.
+Levels, spells and conversations name the flipbooks they play (Features, Procedures). What the
+engine plays on its own it names by cue, and `effects.json` gives each cue's flipbook:
+
+```json
+{ "id": "effects", "cues": { "fall": "flipbook.effect.2", "heal": "flipbook.sparkle.heal" } }
+```
+
+The cues: `climb_down` (the player stepping down into a pit or open trapdoor, along directions
+1–3), `fall` (falling into one any other way), `caster_dies` (a `stationary` creature dying, by it),
+`death_blow` (a death blow landing, by the player, before the player dies), and the sparkles of the
+powers that show one, `cure` (power 15h) and `heal` (powers 1Dh and 45h). A cue the pack leaves out
+plays nothing, and a level change it would have held happens at once.
 
 ## Keywords
 
@@ -741,20 +757,24 @@ runs nothing.
 
 | Kind | Fields | Hooks | Look states |
 | --- | --- | --- | --- |
-| `door` | `state` (`closed`, `open`, `opening`, `closing`), `sealed_by` (an item), `opened_by_spell` | | `closed`, `1` .. `n`, `open`, `sealed` |
+| `door` | `state` (`closed`, `open`, `opening`, `closing`), `sealed_by` (an item), `opened_by_spell`, `sparkle` (a flipbook) | | `closed`, `1` .. `n`, `open`, `sealed` |
 | `lever` | `on`, `armed` | `on_turn_on`, `on_turn_off` | `off`, `on` |
 | `plate` | `down`, `armed`, `threshold` | `on_press`, `on_release` | `up`, `down` |
 | `slot` | `accepts` (an item), `armed`, `keyhole` | `on_insert` | `slot` |
 | `teleporter` | `armed`, `destinations` (two cells), `next` 0 or 1, `turn` (eighths of a turn for things in flight), `fly_over` | | `armed`, `disarmed` |
-| `exit` | `to` (a level and a cell) | | `exit` |
+| `exit` | `to` (a level and a cell), `effect` (a flipbook) | | `exit` |
 | `pit` | `to` | | `pit` |
 | `trapdoor` | `open`, `to` | | `open`, `closed` |
-| `socket` | `places` (the item each place takes), `set` (the indexes of the places filled) | `on_complete` | `empty`, `full`, `set.0` .. `set.n` |
+| `socket` | `places` (the item each place takes), `set` (the indexes of the places filled), `effect` (a flipbook) | `on_complete` | `empty`, `full`, `set.0` .. `set.n` |
 | `mouth` | `message` | | `mouth` |
 | `mark` | `rune` (a name) | | `mark` |
 
 - A door's look has the stages it moves through between `closed` and `open`, numbered from 1. A
-  sealed door shows `sealed` and opens only to its `sealed_by` item landing on it.
+  sealed door shows `sealed` and opens only to its `sealed_by` item landing on it, playing its
+  `sparkle` by the door.
+- An exit's `effect` is the view effect the player plays going through it; a socket's plays, by
+  the player, when its last place is filled. What follows waits for the effect: the level change,
+  or the `on_complete` hook.
 - An `exit` on a wall cell is in the wall's face, drawn with a `wall` layer look and taken by
   walking into the face. An `exit` on a floor cell is a marker, taken by walking onto it. A `mouth`
   stands on a floor cell, drawn up against the wall behind it.
@@ -804,6 +824,7 @@ Spells' effects use these actions too, with the cast's power:
 | `{ "transmute": { "holder", "table", "otherwise" } }` | Fill the `holder` item in a hand from the other hand's object: by `table`, using it up, or else `otherwise`, valued at the power |
 | `{ "cure_poison": true }`, `{ "restore": true }`, `{ "heal": dice }` | Cure poison; recover `power` fatigue; heal |
 | `{ "set_counter": { "counter", "value" } }`, `{ "converse": thing }` | Set a counter; start the conversation of a thing template |
+| `{ "effect": flipbook }`, `{ "sparkle": flipbook }` | Play a view effect by the player, the spell's effects after it waiting until it ends; play a sparkle by the player |
 
 Conversations use these:
 

@@ -12,7 +12,8 @@ var (
 	levelOps = opSet("on", "off", "toggle", "set_hook", "set_threshold", "set_accepts", "set_message",
 		"roll", "stop", "shoot_item", "shoot_spell", "create", "set_floor", "set_wall")
 	spellOps = opSet("missile", "fire_item", "timed", "conjure", "portal", "teleport_to_mark", "dispel",
-		"join", "freeze", "shape_change", "transmute", "cure_poison", "restore", "heal", "converse", "set_counter")
+		"join", "freeze", "shape_change", "transmute", "cure_poison", "restore", "heal", "converse", "set_counter",
+		"effect", "sparkle")
 	talkOps = opSet("say", "say_as", "offer", "forget_offers", "take", "give", "set_counter",
 		"add_counter", "end", "remove_speaker", "hostile", "set_frame", "heal_fully", "run", "teach",
 		"set_portrait", "effect", "travel", "return", "jump", "ending", "menu", "transcript")
@@ -193,6 +194,10 @@ func (v *verifier) spellEffect(owner string, a Action) {
 		for _, it := range append(a.Join.Items, a.Join.Into) {
 			v.item(owner, it)
 		}
+	case a.Effect != nil:
+		v.flipbookRef(owner, *a.Effect)
+	case a.Sparkle != nil:
+		v.flipbookRef(owner, *a.Sparkle)
 	case a.Converse != nil:
 		if t := v.thingRef(owner, *a.Converse); t != nil && t.Conversation == "" {
 			v.fail("%s: thing %s holds no conversation", owner, t.ID)
@@ -322,6 +327,8 @@ func (v *verifier) talkAction(owner string, a Action, clauses int) {
 		}
 	case a.SetPortrait != nil:
 		portrait(*a.SetPortrait)
+	case a.Effect != nil:
+		v.flipbookRef(owner, *a.Effect)
 	case a.Travel != nil:
 		v.destination(owner, *a.Travel)
 	case a.Teach != nil:

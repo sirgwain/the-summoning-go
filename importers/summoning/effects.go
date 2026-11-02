@@ -2,6 +2,8 @@ package summoning
 
 import (
 	"fmt"
+
+	"github.com/sirgwain/the-summoning-go/engine/content"
 )
 
 // The view effects, each played by the rules of scenes.md, View effects, into a flipbook.
@@ -14,6 +16,67 @@ var effectBoxes = [16][2]int{
 
 // effectID is the id of view effect n's flipbook; the conversations' effect actions name it.
 func effectID(n int) string { return fmt.Sprintf("flipbook.effect.%d", n) }
+
+// The view effects the importer names (scenes.md, What plays them).
+const (
+	viewClimbDown    = 0
+	viewClimbThrough = 1
+	viewFall         = 2
+	viewCasterDies   = 5
+	viewSocket       = 8
+	viewMending      = 9
+	viewDeathBlow    = 12
+)
+
+// effectCues are the flipbooks the engine's effect cues play.
+var effectCues = map[string]string{
+	content.EffectClimbDown: effectID(viewClimbDown), content.EffectFall: effectID(viewFall),
+	content.EffectCasterDies: effectID(viewCasterDies), content.EffectDeathBlow: effectID(viewDeathBlow),
+	content.SparkleCure: sparkleID("cure"), content.SparkleHeal: sparkleID("heal"),
+}
+
+// linkFlipbooks writes the effect cues and drops the references to flipbooks that could not be
+// rendered, so that what would play them plays nothing. Conversations naming effects 16 and up
+// lose them this way, as those effects do nothing.
+func (im *importer) linkFlipbooks() {
+	have := func(id string) bool { return im.pack.Flipbooks[id] != nil }
+	cues := map[string]string{}
+	for cue, id := range effectCues {
+		// A flipbook left out is reported as it is rendered.
+		if have(id) {
+			cues[cue] = id
+		}
+	}
+	im.pack.Effects = &content.EffectCues{ID: "effects", Cues: cues}
+	keep := func(as []content.Action) []content.Action {
+		out := as[:0]
+		for _, a := range as {
+			if a.Effect != nil && !have(*a.Effect) || a.Sparkle != nil && !have(*a.Sparkle) {
+				continue
+			}
+			out = append(out, a)
+		}
+		return out
+	}
+	for _, l := range im.pack.Levels {
+		for _, f := range l.Features {
+			if !have(f.Effect) {
+				f.Effect = ""
+			}
+			if !have(f.Sparkle) {
+				f.Sparkle = ""
+			}
+		}
+	}
+	for _, c := range im.pack.Conversations {
+		for i := range c.Clauses {
+			c.Clauses[i].Do = keep(c.Clauses[i].Do)
+		}
+	}
+	for _, s := range im.pack.Spells {
+		s.Effects = keep(s.Effects)
+	}
+}
 
 var effectPlays = [16]func(b *flipbook){
 	func(b *flipbook) { effectClimb(b, 0) }, func(b *flipbook) { effectClimb(b, 1) },

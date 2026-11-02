@@ -1,0 +1,7 @@
+{
+  "id": "sprite.flipbook.dev.sparkle.heal",
+  "frame_size": [48, 48],
+  "columns": 8,
+  "frames": 12,
+  "transparent": 255
+}

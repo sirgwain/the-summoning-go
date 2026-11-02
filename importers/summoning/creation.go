@@ -17,8 +17,6 @@ const (
 	templateBoots      = 0x24
 	templateQuiver     = 0x02
 	quiverArrows       = 4
-	npcOpening         = 0x7D
-	varNewGame         = 34
 	npcEnding          = 0x79
 	templateSkull      = 0xF7
 	templateNecklace   = 0x59
@@ -76,8 +74,8 @@ func (im *importer) creation(rows int, premades []Premade) {
 			{Name: "Spent", Points: []content.Dice{{Count: 28, Sides: 5}}, Max: 20},
 			{Name: "Rolled and spent", Roll: []content.Dice{{Count: 2, Sides: 5}}, Points: []content.Dice{{Count: 14, Sides: 5}}, Max: 20},
 		},
+		// A new game sets no counter and starts no conversation (dialogue.md, variable 34).
 		Inventory: slots([2]int{0, templateApple}, [2]int{1, templatePalimpsest}, [2]int{sim24, templateBoots}),
-		Counter:   varID(varNewGame),
 	}
 	for i := range rows {
 		if _, ok := im.pack.Portraits[portraitID(i)]; ok {
@@ -118,9 +116,6 @@ func (im *importer) creation(rows int, premades []Premade) {
 			p.Attributes[n] = pm.Attributes[a]
 		}
 		c.Premade = append(c.Premade, p)
-	}
-	if id, err := im.creature(npcOpening); err == nil && im.pack.Things[id].Conversation != "" {
-		c.Opening = id
 	}
 	if s := im.doorScene(); s != nil {
 		c.Scene = s.ID

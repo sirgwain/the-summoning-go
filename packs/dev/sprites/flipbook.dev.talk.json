@@ -1,0 +1,7 @@
+{
+  "id": "sprite.flipbook.dev.talk",
+  "frame_size": [64, 48],
+  "columns": 8,
+  "frames": 16,
+  "transparent": 255
+}

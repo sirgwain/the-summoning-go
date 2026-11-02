@@ -1,0 +1,57 @@
+{
+  "id": "flipbook.dev.sparkle.heal",
+  "sprite": "sprite.flipbook.dev.sparkle.heal",
+  "steps": [
+    {
+      "frame": 0,
+      "ms": 70,
+      "sounds": [
+        "sfx.blip"
+      ]
+    },
+    {
+      "frame": 1,
+      "ms": 70
+    },
+    {
+      "frame": 2,
+      "ms": 70
+    },
+    {
+      "frame": 3,
+      "ms": 70
+    },
+    {
+      "frame": 4,
+      "ms": 70
+    },
+    {
+      "frame": 5,
+      "ms": 70
+    },
+    {
+      "frame": 6,
+      "ms": 70
+    },
+    {
+      "frame": 7,
+      "ms": 70
+    },
+    {
+      "frame": 8,
+      "ms": 70
+    },
+    {
+      "frame": 9,
+      "ms": 70
+    },
+    {
+      "frame": 10,
+      "ms": 70
+    },
+    {
+      "frame": 11,
+      "ms": 70
+    }
+  ]
+}
