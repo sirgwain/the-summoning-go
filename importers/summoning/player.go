@@ -44,7 +44,8 @@ const (
 // facing, swing 0 the right hand, 1 the left, 2 both (combat.md, The player attacks).
 const playerSwingGroups = 3
 
-// headFrames are the first frame of the body look's frames for each group of eight.
+// headFrames are the first frame of the body look's frames for each group of eight (player.md,
+// Figure).
 var headFrames = [playerWalkGroups + playerSwingGroups]int{0, 8, 16, 24, 16, 8, 32, 40, 48}
 
 // player adds the player's template, its figure composed from the character animation banks:
@@ -119,6 +120,7 @@ func (im *importer) player() error {
 	}
 	im.pack.Manifest.Player = playerID
 	im.heldLooks(n)
+	im.figure(n)
 	return nil
 }
 

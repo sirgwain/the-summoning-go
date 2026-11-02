@@ -65,7 +65,40 @@ A walk step moves the player's speed (8 units) in the facing, or half that when 
 
 **View.** The view does not follow the player step by step. While the player stands within the middle of the view it stays put; a move that leaves the player outside it, horizontally or vertically, scrolls the view along that axis by as far as the player moved on screen. The engine takes the middle half of the view each way. A player outside the view altogether (arriving on a level, teleported) is centered.
 
-**Figure.** The importer composes the player's sprite from the character animation banks (INIT base `C`), for the figure out of water: for frame `f` of group `g = f / 8` and step `s = f mod 8`, bank `C` frame `f` at `(0, 13)`, bank `C + 1` frame `f` at `(0, 18)`, the body look bank `C + 25h` (unarmored) frame `h[g] + s` at `(0, 5)`, and the head look bank `C + 2` frame `s` at `(8, 0)`, each later one over the earlier, with `h` = 0, 8, 16, 24, 16, 8 for groups 0–5. The figure's top-left is the player's position, so its anchor is `(18, 19)`. Worn looks come with character drawing; the figure's colors do not animate (scenes.md, Palette animation), and its colors E0h–E3h are the portrait's (below).
+**Figure.** Out of water the player's figure is drawn in four layers from the character animation banks (INIT base `C`), each over the last, for frame `f` of group `g = f / 8` and step `s = f mod 8`:
+
+1. the **torso**, bank `C` frame `f` at `(0, 13)`, its colors shifted by the body look (below);
+2. the **legs**, bank `C + 1` frame `f` at `(0, 18)`, recolored by the feet look;
+3. the **body look** `B`, bank `C + B` frame `h[g] + s` at `(0, 5)`;
+4. the **head look** `H`, bank `C + H` frame `s` at `(8, 0)`;
+
+with `h` = 0, 8, 16, 24, 16, 8, 32, 40, 48, 56 for groups 0–9. The strike groups (6 and up) take the torso's and legs' frame `s` rather than `f`. The figure's top-left is the player's position, so its anchor is `(18, 19)`. The figure's colors do not animate (scenes.md, Palette animation), and its colors E0h–E3h are the portrait's (below).
+
+**Worn looks.** What is worn chooses the looks. Each worn object's look is byte 11's low seven bits (items.md) for categories 0–2:
+
+- **Head** (slot 20): the look of the object worn there, or 2 with none; a female player's is one more. The Chain Coif's look is 6, the Wizard's Hat's 18h.
+- **Body** (slot 26): the look of the object worn there, or with none 25h (26h for a female player). An object of look 0 leaves the body look as it was. The body look also shifts the torso's colors: its colors 3..12 become colors `k`..`k + 9`, where `k` is the shift below for body looks 18h..2Bh (3 leaves them as they are).
+
+| Body look | 18h | 19h | 1Ah | 1Bh | 1Ch | 1Dh | 1Eh | 1Fh | 20h | 21h | 22h | 23h | 24h | 25h | 26h | 27h | 28h | 29h | 2Ah | 2Bh |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Torso shift `k` | 80h | C6h | 06h | 03h | 03h | C6h | 03h | 25h | 80h | 00h | C6h | 60h | 03h | CEh | CEh | 80h | C6h | C6h | 80h | 00h |
+
+- **Feet** (slot 24): the look of the object worn there, or 8 with none, chooses a set of colors for the legs; set 0 leaves them as they are. Set `n` (1..8) draws the legs' color B1h + `i` in color `c[i]` of its row, for `i` = 0..9 except 8:
+
+| Set | c[0..9] |
+| --- | --- |
+| 1 | 00h 01h 02h 03h 04h 05h 06h 07h 08h 08h |
+| 2 | 00h 01h 02h 03h 04h CDh CFh D0h D2h D2h |
+| 3 | 01h 02h 03h 04h 05h 06h 07h 90h 92h 92h |
+| 4 | 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Ah |
+| 5 | 00h 01h 02h 03h 04h 05h 06h 07h 37h 37h |
+| 6 | E8h EAh 51h 52h 53h 54h 55h 56h 58h 58h |
+| 7 | E4h E6h 53h 54h 55h 56h 57h 58h 59h 59h |
+| 8 | CCh CDh CFh D0h D1h D2h D3h D5h D7h D7h |
+
+Leather Boots have look 0, so they leave the legs' own colors; bare feet take set 8.
+
+**Engine model.** The player template's `figure` names its layers bottom up, each with its own look: a sprite, and the sprite for a female player when it differs (pack.md). An item's `looks` give, by layer name, the look it puts on a layer while worn in a worn slot (not a hand). The player's figure is drawn as each layer's look: the worn object's, else the layer's own, the female sprite for a player whose portrait is female. Each layer sprite has a frame for every frame of the player's sprite and its own anchor, and is drawn between the held objects behind and in front. The importer makes the layers `torso`, `legs`, `body` and `head` from the banks above, one sprite for each torso shift, leg color set, body look and head look the items and the bare figure use, and gives each body armor (looks `body` and `torso`), headgear (`head`, with the female look one more) and footwear (`legs`) its looks. The player's own sprite stays the bare figure composed whole, for anything that draws the player without its layers. Water and a transformed or invisible figure are drawn as before.
 
 **Portrait.** The player has a portrait (formats.md, F), chosen in character creation. It is shown in the player's panel, flipped when its row says so, and it gives the figure's hair and skin: the figure's pixels in colors E0h–E3h are drawn in the portrait's four figure colors, in order. Changing sex swaps the portrait for the other-sex portrait its row names.
 
@@ -149,6 +182,10 @@ Every 109 ticks:
 ## Every move
 
 On each of the player's updates: the hands' delays count down (items.md), spell gestures play (spells.md), and regeneration, mana regeneration and poison roll their chances.
+
+## Napping
+
+Napping is the engine's own addition, to wait for magic points without leaving the game running: holding N runs the whole world 32 times as fast. A press of N starts a nap unless the magic points are full ("Your magic points are full.") or a living creature is near the player (within the distance power 12h reaches, items.md; "A creature is near."). The nap goes on while N is held, and stops when N is released, the magic points become full, a creature comes near, the player is hurt, a message is shown or a conversation starts, or another key or a click is taken. While it runs, the top of the screen shows "Waiting: " with the magic points and the time played (hours, minutes and seconds of world time). After a stop, N starts a nap again only once released and pressed again.
 
 ## Starting a new game
 

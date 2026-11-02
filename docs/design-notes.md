@@ -1,6 +1,6 @@
 # Design notes: progress and what remains
 
-Status: 2026-10-31. Where the milestones of [design.md](design.md#milestones) stand, and the work each
+Status: 2026-11-01. Where the milestones of [design.md](design.md#milestones) stand, and the work each
 has left or handed on. Choices that may need revisiting are in
 [design-questions.md](design-questions.md); what the game's behavior leaves open is in each spec's
 **Unknowns**. Update this file as work lands: move an item to the milestone that does it, and drop
@@ -59,8 +59,7 @@ it once done.
    the pack of a bag in the left hand, the details of the object under the pointer or on it
    (weight in half kilograms, damage, armor, two hands), and the attributes with their maxima,
    points, armor, level title, experience and the skills with their icons and ratings. The
-   hotbar's hands have three action boxes each, the object's picture under the action's icon,
-   the third throwing. The importer writes `inventory.json` and each item's `doll` look and
+   hotbar's hands have three action boxes each, the action's icon alone, the third throwing. The importer writes `inventory.json` and each item's `doll` look and
    action icons; the Ctrl stand-in keys are gone. Scripts keep the cursor where they last tapped,
    so the pointer's object shows in their screenshots. Tested by `TestInventoryPanel` and
    `TestHandActionBoxes`.
@@ -92,8 +91,22 @@ it once done.
 templates and things by id and the random source's state, so a restored world runs on exactly as
 the saved one would (`TestStateRoundTrip`). `engine/save` writes it gzipped as JSON with the save's
 name and time, and warns when it loads on another pack or version. In play, F5 saves to the quick
-save, F9 loads it, and changing level writes the autosave; saves go under the user's config
+save, F8 loads it, and changing level writes the autosave; saves go under the user's config
 directory per pack (`--saves` to choose). A conversation in progress cannot be saved.
+`--load` starts play or the viewer from a save file, or a bare name in the saves directory.
+
+**Done (the original's saves).** `import-save` reads the game's save files (spec/saves.md) with its
+data files and the imported pack, and writes engine saves: a new world with each visited level
+loaded, then the save laid over it (the player, inventory, magic, counters, NPC records,
+terrain, feature states, creatures, boulders, traps, floor objects). What the engine has no place
+for is reported (`TestReadSave`, `TestImportSave`).
+
+**Done (audio, most of it).** The importer renders the game's songs through `internal/opl2` to
+WAV with loop sidecars; `engine/audio` mixes music and effects in layers with the game's fades,
+and `speaker` plays them (`TestLayers`, `TestFades`). Combat, object, missile and gesture effects,
+footsteps, the new game's track, the theme of NPC record 0Dh's creature and the fades on level
+change, restore and leaving play are in; F9 cycles music and effects, effects only and silence.
+Checked by ear against the game. What is left is in [audio-plan.md](audio-plan.md) phase 6.
 
 **Done (the level map).** Levels have names (TEXT 129h + level) and a map setting; levels 13h and
 21h–23h refuse the map with a message or conversation 7Dh. M shows the full map (the seen cells
@@ -131,7 +144,17 @@ conversation goes on (`TestDiskMenu`). Saves are named files under the save dire
 **Done (smaller rules).** Changing sex (power 14h) takes the portrait's other-sex portrait. The
 transcript: while variable 99 is set, conversation lines and questions, and the headings of
 action 1Ch, go to `transcript.txt` beside the saves, wrapped at 80 columns with keywords
-underlined (`TestTranscriptFile`). A debug command sets a counter (`input.SetCounter`).
+underlined (`TestTranscriptFile`). A debug command sets a counter (`input.SetCounter`). The map
+shows the game's kinds (plates, rune marks, gem sockets, trapdoors besides walls, doors, exits,
+mouths, teleporters and pits) with a legend. Holding N naps: the world runs 32 times as fast
+until something needs the player. Play starts with the debug overlay hidden (`--debug` shows it).
+
+**Done (Fight and Inventory leftovers).** The player's figure wears what it wears: torso, legs,
+body and head looks chosen by the worn slots and the portrait's sex, drawn frame for frame. The
+Sack shows how full it is, in its boxes and on the doll (items' `fill`). Hand delays count in
+points of three player updates; the swing pose holds two updates; action and spell boxes
+recharge clockwise. A click near the figure puts down or picks up. A right click on a container's
+box opens it as the pack where it lies; resting the pointer on one lists what it holds.
 
 ## Left from Walk
 
@@ -145,9 +168,6 @@ underlined (`TestTranscriptFile`). A debug command sets a counter (`input.SetCou
 
 ### 5. Fight, left
 
-- Worn looks on the figure in the view (head and body armor), with character drawing; the
-  player's figure and held layers draw with the palette's own colors, unanimated, and the
-  portrait's figure colors.
 - Damage numbers are drawn with the debug font until the UI has its own (Remaster UI).
 - Animations that run on time (a sprite's `ms`) are not played; things show their idle frame or
   step by moves, and animated creatures by `animate`.
@@ -156,9 +176,8 @@ underlined (`TestTranscriptFile`). A debug command sets a counter (`input.SetCou
 
 - Clicking the figure itself: the game picks a worn slot by the region clicked (items.md, The
   inventory panel); the engine's panel has a box for each slot beside the figure instead.
-- A bag in the left hand shows on the figure by how full it is (worn images 2Fh on), and the
-  chest has a look of its own; neither is imported. Which hand objects count as the armor drawn
-  last is a guess (those with an armor bonus).
+- The chest has a look of its own on the figure; it is not imported. Which hand objects count as
+  the armor drawn last is a guess (those with an armor bonus).
 - The game draws an attribute below or above its maximum in another color, and an armor gauge;
   the panel writes the maximum after it and the armor class as a number.
 
@@ -180,11 +199,19 @@ underlined (`TestTranscriptFile`). A debug command sets a counter (`input.SetCou
 
 ### 8. Game
 
-- View effects (`effect.n` events; effect 6's level change does happen) and the arrival styles
-  when changing level (scroll, fall, fall-through, teleport, ripple).
-- The intro and the end scenes, whose captions are in the game's program; ending G's changes
-  to the world and its save.
-- Audio (music and effects with loop points): the plan is [audio-plan.md](audio-plan.md).
+- View effects, sparkles and arrival styles, specified in scenes.md. Done: the importer renders
+  the 16 effects and 6 sparkles into flipbooks (`flipbooks/`, pack.md), and `summoning flipbook`
+  plays them in a window. Left: the presentation plays `effect` events in a framed box with the
+  world paused, and changing level shows the new view by its style (scroll, rise, descend, teleport,
+  ripple). The simulation does not yet emit effects for pits, exit markers, a caster's death or
+  a death blow; it names the socket's and Mending's by word (`socket_complete`, `joined`) rather
+  than as effects 8 and 9; `seal_broken` should be a sparkle and `ripple` an arrival style.
+  Healing and cures play no sparkle yet (scenes.md, Sparkles).
+- The intro, the new character's story and the end scenes, whose captions are in the game's
+  program: the plan for their spec is [scenes-plan.md](scenes-plan.md). Ending G's changes to
+  the world and its save.
+- Audio's last phase ([audio-plan.md](audio-plan.md)): the view effects' sounds and tracks, the
+  new game's door, and the front end's and endings' tracks 1–7, with the scenes.
 - Play *The Summoning* from start to end on the imported pack.
 
 ### 9. Remaster UI

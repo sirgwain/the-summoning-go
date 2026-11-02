@@ -117,6 +117,7 @@ func (w *World) raiseSkill(i, n int, quiet bool) {
 // exertion and fatigue (docs/spec/player.md, Status tick).
 func (w *World) statusTickPlayer() {
 	p, l := w.player, w.Current()
+	w.runDownTimed()
 	for i := range p.Boosts {
 		b := &p.Boosts[i]
 		if b.Ticks > 0 {
@@ -252,6 +253,9 @@ func (w *World) mark(r string) *Feature {
 	}
 	return nil
 }
+
+// CreatureNear reports whether a living creature is near the player, as near as power 12h reaches.
+func (w *World) CreatureNear() bool { return w.player != nil && len(w.creaturesNear()) > 0 }
 
 // creaturesNear returns the living creatures near the player.
 func (w *World) creaturesNear() []*Thing {
@@ -411,8 +415,8 @@ func (w *World) startPower(power, sign int) bool {
 }
 
 // useObject uses the object in hand by a use or use-up action: its power starts unless it
-// refuses, or it casts its spell or starts its conversation; then a used-up object, or one out of
-// charges, becomes its spent object (docs/spec/items.md, Using objects).
+// refuses, or it casts its spell or starts its conversation; then a use takes a charge, and a
+// use up leaves its spent object (docs/spec/items.md, Using up).
 func (w *World) useObject(hand int, o *Object, a content.ItemAction) {
 	it := w.pack.Items[o.Item]
 	switch {
@@ -450,21 +454,59 @@ func (w *World) useObject(hand int, o *Object, a content.ItemAction) {
 	w.usedUp(hand, o, it, a)
 }
 
-// usedUp takes a use from object o in hand: one charge for a use action, else all of it; an
-// object used up becomes its spent object.
+// lastingPower reports whether power lasts while worn (docs/spec/items.md, Powers).
+func lastingPower(power int) bool {
+	switch power {
+	case powerSpeed2Lasting, 0x0F, 0x16, 0x17, 0x47, 0x4C:
+		return true
+	}
+	return power >= 0x30 && power <= 0x41
+}
+
+// runDownTimed counts down the timed objects in worn slots: those whose power starts worn and
+// lasts. Each loses one from its value, or its item's shared charges, as a 16-bit number; one
+// reaching 0 comes off, is announced and is gone (docs/spec/items.md, Timed objects).
+func (w *World) runDownTimed() {
+	p := w.player
+	for slot := Shelves; slot < SlotCount; slot++ {
+		o := p.Slots[slot]
+		if o == nil {
+			continue
+		}
+		it := w.pack.Items[o.Item]
+		if it == nil || !it.PowerWorn || !lastingPower(it.Power) {
+			continue
+		}
+		left := 0
+		if it.SharedCharges {
+			w.shared[o.Item] = (w.shared[o.Item] - 1) & 0xFFFF
+			left = w.shared[o.Item]
+		} else {
+			o.Value = (o.Value - 1) & 0xFFFF
+			left = o.Value
+		}
+		if left != 0 {
+			continue
+		}
+		p.Slots[slot] = nil
+		w.takeOff(o)
+		w.message(w.Current(), p.Cell(), content.MsgVanishes, o.Item)
+		w.emit(Event{Kind: EventObject, Level: w.current, Cell: p.Cell(), Item: o.Item, Detail: "used"})
+	}
+}
+
+// usedUp takes a use from object o in hand: one charge for a use action, leaving the object in
+// the hand even at none; else all of it, leaving its spent object or an empty hand.
 func (w *World) usedUp(hand int, o *Object, it *content.Item, a content.ItemAction) {
 	slot := SlotRightHand + hand
 	if w.player.Slots[slot] != o {
 		return
 	}
 	if a.Kind == content.ActionUse {
-		if o.Value--; o.Value > 0 {
-			return
-		}
+		w.useOne(o)
+		return
 	}
-	if a.Kind == content.ActionUseUp {
-		w.sound(w.player.Cell(), a.Sound)
-	}
+	w.sound(w.player.Cell(), a.Sound)
 	w.player.Slots[slot] = nil
 	w.takeOff(o)
 	if it.Spent != "" {

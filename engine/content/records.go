@@ -16,10 +16,13 @@ type Item struct {
 	Icon  Image `json:"icon"`
 	Floor Image `json:"floor"`
 	// Armor is what the item adds worn. Durability is a weapon's or armor's starting value;
-	// Charges anything else's.
-	Armor      int `json:"armor,omitempty"`
-	Durability int `json:"durability,omitempty"`
-	Charges    int `json:"charges,omitempty"`
+	// Charges anything else's. SharedCharges makes the charges one count for the whole item,
+	// kept by the world and refilled whenever an object of the item is made; such an item may
+	// have durability besides.
+	Armor         int  `json:"armor,omitempty"`
+	Durability    int  `json:"durability,omitempty"`
+	Charges       int  `json:"charges,omitempty"`
+	SharedCharges bool `json:"shared_charges,omitempty"`
 	// Wear is the worn slot the item goes in, one of the Wear constants.
 	Wear string `json:"wear,omitempty"`
 	// WeaponClass is a weapon's class, nil for anything else.
@@ -46,6 +49,10 @@ type Item struct {
 	Picture *Image `json:"picture,omitempty"`
 	// Doll is how it shows on the inventory's figure when worn.
 	Doll *DollImage `json:"doll,omitempty"`
+	// Looks are the looks it puts on the player's figure layers while worn, by layer name.
+	Looks map[string]FigureLook `json:"looks,omitempty"`
+	// Fill gives a container a look for how full it is.
+	Fill *Fill `json:"fill,omitempty"`
 	// Poisons makes its blows poison; Grows and Levels make it a counted weapon; OnBreak runs
 	// when it breaks; Flying is its look in flight.
 	Poisons bool     `json:"poisons,omitempty"`
@@ -53,6 +60,43 @@ type Item struct {
 	Levels  *Levels  `json:"levels,omitempty"`
 	OnBreak []Action `json:"on_break,omitempty"`
 	Flying  *Flying  `json:"flying,omitempty"`
+}
+
+// Fill is how a container looks as it fills: step k, for k from 1, is shown while it holds more
+// than (k−1)·Per objects; empty, it shows its own icon and worn look.
+type Fill struct {
+	Per int `json:"per"`
+	// Icons and Dolls are steps 1, 2, …'s icons and worn looks.
+	Icons []Image     `json:"icons"`
+	Dolls []DollImage `json:"dolls,omitempty"`
+}
+
+// step returns the fill step of n contents, 0 for none, at most last.
+func (f *Fill) step(n, last int) int {
+	if n <= 0 || f.Per <= 0 || last <= 0 {
+		return 0
+	}
+	return min((n+f.Per-1)/f.Per, last)
+}
+
+// IconFor returns the item's icon holding n objects (docs/spec/items.md, Templates).
+func (i *Item) IconFor(n int) Image {
+	if f := i.Fill; f != nil {
+		if k := f.step(n, len(f.Icons)); k > 0 {
+			return f.Icons[k-1]
+		}
+	}
+	return i.Icon
+}
+
+// DollFor returns the item's worn look holding n objects, nil for none.
+func (i *Item) DollFor(n int) *DollImage {
+	if i.Fill != nil {
+		if k := i.Fill.step(n, len(i.Fill.Dolls)); k > 0 {
+			return &i.Fill.Dolls[k-1]
+		}
+	}
+	return i.Doll
 }
 
 // Held is how an item looks in each of the player's hands.
@@ -128,6 +172,9 @@ type ItemAction struct {
 	Icon *Image `json:"icon,omitempty"`
 	// Sound is the sound a use-up action makes when it uses its object up.
 	Sound string `json:"sound,omitempty"`
+	// Swings makes a use or use-up action also show the swing pose, without a blow: of both
+	// hands for a weapon, else of its hand.
+	Swings bool `json:"swings,omitempty"`
 }
 
 // Attack reports whether the action strikes.
@@ -241,8 +288,31 @@ type Thing struct {
 	Inventory []InventoryObject `json:"inventory,omitempty"`
 	// Portrait is a player's portrait, which also gives its figure's colors.
 	Portrait string `json:"portrait,omitempty"`
+	// Figure draws a player in layers, bottom up, in place of its sprite.
+	Figure []FigureLayer `json:"figure,omitempty"`
 	// Animations are the thing's own; a name it does not have comes from its sprite.
 	Animations map[string]Animation `json:"animations,omitempty"`
+}
+
+// FigureLayer is a layer of a player's figure: its name, which items' looks name, and its own look.
+type FigureLayer struct {
+	Name string `json:"name"`
+	FigureLook
+}
+
+// FigureLook is a sprite drawn as a layer of a player's figure, frame for frame with the player's
+// sprite, and the sprite for a female player when it differs.
+type FigureLook struct {
+	Sprite string `json:"sprite"`
+	Female string `json:"female,omitempty"`
+}
+
+// For returns the look's sprite for a player, female or not.
+func (l FigureLook) For(female bool) string {
+	if female && l.Female != "" {
+		return l.Female
+	}
+	return l.Sprite
 }
 
 // Animation returns the animation the thing shows under name, falling back as docs/pack.md
@@ -328,6 +398,7 @@ const (
 	MsgCreatureHits          = "creature_hits"
 	MsgCreatureMiss          = "creature_misses"
 	MsgWeaponBreaks          = "weapon_breaks"
+	MsgVanishes              = "vanishes"
 	MsgSkillUp               = "skill_up"
 	MsgLevelUp               = "level_up"
 	MsgFullHealth            = "full_health"
@@ -394,7 +465,7 @@ const (
 var messageKeys = map[string]bool{
 	MsgLeverStuck: true, MsgSlotWrongItem: true, MsgSlotStuck: true, MsgNoDropHere: true, MsgNoRoom: true,
 	MsgNotACreature: true, MsgCannotHurt: true, MsgMiss: true, MsgHit: true, MsgCreatureHits: true,
-	MsgCreatureMiss: true, MsgWeaponBreaks: true, MsgSkillUp: true, MsgLevelUp: true,
+	MsgCreatureMiss: true, MsgWeaponBreaks: true, MsgVanishes: true, MsgSkillUp: true, MsgLevelUp: true,
 	MsgFullHealth:            true,
 	MsgFullMagic:             true,
 	MsgNotPoisoned:           true,

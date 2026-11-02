@@ -11,9 +11,12 @@ import (
 // Templates the rules name (items.md, rules.md).
 const (
 	templateRandom         = 0x00
+	templateSack           = 0x04
 	templateBagOfLightness = 0x05
-	templateFirstGem       = 0xC0
-	categoryRandom         = 6
+	// sackFillPer is how many objects in the Sack make each step of its fill pictures.
+	sackFillPer      = 3
+	templateFirstGem = 0xC0
+	categoryRandom   = 6
 )
 
 // sealingSpheres are the templates that open sealed door stages 5, 6 and 7 (rules.md, Doors).
@@ -40,6 +43,7 @@ var engineMessages = map[string]struct {
 	content.MsgCreatureHits:  {0x7D, []string{"score", "damage"}},
 	content.MsgCreatureMiss:  {0x7E, []string{"score"}},
 	content.MsgWeaponBreaks:  {0x8A, []string{"item"}},
+	content.MsgVanishes:      {0x32, []string{"item"}},
 	content.MsgSkillUp:       {0x44, []string{"skill"}},
 	content.MsgLevelUp:       {0xA5, nil},
 
@@ -142,17 +146,16 @@ func (im *importer) text(strs []string) {
 	im.pack.Messages = m
 }
 
-// items adds an item for every OBJECTS template, named after its name.
-func (im *importer) items() error {
-	o := im.objects
+// itemIDs returns the id of every OBJECTS template's item, named after its name in strings, TEXT
+// by message id (items.md, Import).
+func itemIDs(o *Objects, strings map[string]string) ([]string, error) {
 	used := map[string]int{}
-	im.itemIDs = make([]string, len(o.Templates))
+	ids := make([]string, len(o.Templates))
 	for i := range o.Templates {
-		tm := &o.Templates[i]
-		name := msgID(o.NameBase + tm.NameIndex())
-		s, ok := im.strings[name]
+		name := msgID(o.NameBase + o.Templates[i].NameIndex())
+		s, ok := strings[name]
 		if !ok {
-			return fmt.Errorf("object template %02Xh: no name text %s", i, name)
+			return nil, fmt.Errorf("object template %02Xh: no name text %s", i, name)
 		}
 		id := "item." + slug(s)
 		if id == "item." {
@@ -161,7 +164,22 @@ func (im *importer) items() error {
 		if used[id]++; used[id] > 1 {
 			id = fmt.Sprintf("%s.%d", id, used[id])
 		}
-		im.itemIDs[i] = id
+		ids[i] = id
+	}
+	return ids, nil
+}
+
+// items adds an item for every OBJECTS template, named after its name.
+func (im *importer) items() error {
+	o := im.objects
+	var err error
+	if im.itemIDs, err = itemIDs(o, im.strings); err != nil {
+		return err
+	}
+	for i := range o.Templates {
+		tm := &o.Templates[i]
+		name := msgID(o.NameBase + tm.NameIndex())
+		id := im.itemIDs[i]
 
 		icon, err := im.image(int(im.init.Bases.SmallObject) + tm.Image())
 		if err != nil {
@@ -177,6 +195,16 @@ func (im *importer) items() error {
 		}
 		if tm.Container() {
 			it.Container = &content.Container{Capacity: tm.Capacity(), Largest: tm.Largest(), Weightless: i == templateBagOfLightness}
+		}
+		if i == templateSack && tm.Container() {
+			it.Fill = &content.Fill{Per: sackFillPer}
+			for k := 1; k <= (tm.Capacity()+sackFillPer-1)/sackFillPer; k++ {
+				fi, err := im.image(int(im.init.Bases.SmallObject) + tm.Image() + k)
+				if err != nil {
+					return fmt.Errorf("sack fill icon %d: %w", k, err)
+				}
+				it.Fill.Icons = append(it.Fill.Icons, fi)
+			}
 		}
 		if tag, ok := categoryTags[tm.Category()]; ok {
 			it.Tags = append(it.Tags, tag)
@@ -211,7 +239,9 @@ const (
 	categoryFirstWeapon = 9
 	categoryLastWeapon  = 12
 	unwearingValue      = 30000
-	bodyArmorValue      = 7500
+	// delayUpdates is the player updates in each point of a hand's delay.
+	delayUpdates   = 3
+	bodyArmorValue = 7500
 )
 
 // wearByCategory are the worn slots of categories 0–5; the rest go in a hand (items.md,
@@ -253,11 +283,16 @@ func (im *importer) fighting(i int, tm *ObjectTemplate, it *content.Item) {
 	default:
 		it.Charges = tm.Charges()
 	}
+	// Templates 72h–7Bh keep their charges as one shared count (items.md, Object values).
+	if i >= firstSharedTemplate && i < firstSharedTemplate+shareCount {
+		it.Charges, it.SharedCharges = tm.Charges(), true
+	}
 	for a := range 2 {
 		icon := tm.ActionIcon(a)
-		act := content.ItemAction{Damage: dice(tm.DamageCode(a)), Delay: (tm.DelayCode()>>4)&0x0F + 3}
+		// A delay's points are three player updates each (items.md, Hands and actions).
+		act := content.ItemAction{Damage: dice(tm.DamageCode(a)), Delay: delayUpdates * ((tm.DelayCode()>>4)&0x0F + 3)}
 		if a == 1 {
-			act.Delay = tm.DelayCode()&0x0F + 3
+			act.Delay = delayUpdates * (tm.DelayCode()&0x0F + 3)
 		}
 		switch {
 		case icon >= 100 && icon < 255:
@@ -279,6 +314,8 @@ func (im *importer) fighting(i int, tm *ObjectTemplate, it *content.Item) {
 			im.useUpTracks[it.ID][len(it.Actions)] = useUpTrack[icon]
 		case icon >= 11 && icon <= 20:
 			act.Kind = content.ActionUse
+			// Icon 11h also swings the object, without a blow (items.md, Using objects).
+			act.Swings = icon == iconUseAndSwing
 		default:
 			continue
 		}
@@ -292,6 +329,9 @@ func (im *importer) fighting(i int, tm *ObjectTemplate, it *content.Item) {
 	}
 }
 
+// iconUseAndSwing is the use action that also shows the swing pose.
+const iconUseAndSwing = 0x11
+
 // thrownLooks are the templates with a look of their own in flight, which roll their second
 // action's damage there; true for those that roll it only when fired (items.md, Throwing).
 var thrownLooks = map[int]bool{0x67: false, 0x68: false, 0x75: false, 0x6D: false, 0x97: true, 0x98: true, 0x99: true}
@@ -303,8 +343,9 @@ const (
 	categoryBottle      = 8
 )
 
-// spentAndBroken sets what each item becomes used up, and what bottles break into, once every
-// item has its id.
+// spentAndBroken sets what each item leaves when used up, and what bottles break into, once
+// every item has its id. Only an object used up with a quantity leaves anything (items.md, Using
+// up).
 func (im *importer) spentAndBroken() {
 	for i := range im.objects.Templates {
 		tm := &im.objects.Templates[i]
@@ -312,12 +353,12 @@ func (im *importer) spentAndBroken() {
 		if tm.Category() == categoryBottle {
 			it.BreaksInto = im.itemIDs[templateBrokenGlass]
 		}
-		used := false
+		usedUp := false
 		for _, a := range it.Actions {
-			used = used || a.Kind == content.ActionUse || a.Kind == content.ActionUseUp
+			usedUp = usedUp || a.Kind == content.ActionUseUp
 		}
 		switch {
-		case !used:
+		case !usedUp || it.Charges == 0:
 		case tm.Category() == categoryBottle:
 			it.Spent = im.itemIDs[templateEmptyBottle]
 		case i+1 < len(im.itemIDs):

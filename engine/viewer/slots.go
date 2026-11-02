@@ -63,6 +63,24 @@ func (v *Viewer) rightClick(onPlayer bool) []input.Command {
 	return nil
 }
 
+// openClick is a right click on a slot's box with an empty pointer: a container there opens as
+// the pack, shown on the inventory panel, which opens too; clicked again it closes. It reports
+// false when the click is not one.
+func (v *Viewer) openClick(slot int) ([]input.Command, bool) {
+	p := v.World.Player()
+	if p.Hand != nil || slot < 0 || slot >= sim.SlotCount {
+		return nil, false
+	}
+	o := p.Slots[slot]
+	if o == nil || v.Pack.Items[o.Item] == nil || v.Pack.Items[o.Item].Container == nil {
+		return nil, false
+	}
+	if s, open := p.OpenSlot(v.Pack); !open || s != slot {
+		v.InventoryOpen = true
+	}
+	return []input.Command{input.Open{Slot: slot}}, true
+}
+
 // firstEmptyShelf returns the player's first empty shelf, or −1.
 func firstEmptyShelf(p *sim.Player) int {
 	for i := range sim.Shelves {
@@ -73,16 +91,37 @@ func firstEmptyShelf(p *sim.Player) int {
 	return -1
 }
 
-// onPlayer reports whether view pixel pt is on the player: its figure, or its cell's ground.
+// Where a click counts as on the player (docs/spec/items.md, The mouse): within reachDistance view
+// pixels, across plus down, of the point reachAt from its sprite's top-left.
+var reachAt = image.Pt(8, 2)
+
+const reachDistance = 32
+
+// onPlayer reports whether view pixel pt is on the player: near its figure (as the game reaches
+// it), on its figure, or on its cell's ground.
 func (v *Viewer) onPlayer(pt image.Point) bool {
 	p := v.World.Player()
 	if p == nil {
 		return false
 	}
+	if b := v.Pack.Sprites[p.Template.Sprite]; b != nil {
+		anchor, _ := b.AnchorOf(0)
+		d := pt.Sub(drawlist.RefPoint(p.U, p.V).Sub(image.Pt(anchor[0], anchor[1])).Add(reachAt))
+		if abs(d.X)+abs(d.Y) < reachDistance {
+			return true
+		}
+	}
 	if id, _, ok := drawlist.ThingAt(v.Pack, v.Cmds, pt); ok && id == sim.PlayerID {
 		return true
 	}
 	return drawlist.CellAt(pt) == p.Cell()
+}
+
+func abs(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
 }
 
 // HandImage returns the image of the object on the pointer, if any.
@@ -95,7 +134,7 @@ func (v *Viewer) HandImage() (content.Image, bool) {
 	if it == nil {
 		return content.Image{}, false
 	}
-	return it.Icon, true
+	return it.IconFor(len(p.Hand.Contents)), true
 }
 
 // FixedColors returns the colors fixed draw commands (the player's figure and what it holds) are

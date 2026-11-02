@@ -26,6 +26,8 @@ OBJECTS holds 254 templates of 15 bytes. An object is an instance of a template 
 
 **The Bag of Lightness** is template 05h.
 
+**The Sack** (template 04h) shows how full it is: with `n` objects inside, its small image and its worn image are image `i + (n + 2) / 3` (integer division; `i + 0` when empty) instead of `i`. Its nine places give four pictures.
+
 ## Object values
 
 A new object's value:
@@ -35,7 +37,16 @@ A new object's value:
 - Body armor: 7500.
 - Anything else: the template's charges.
 
-Templates 72h–7Bh share one count per template across all their objects. Template 81h always has 1.
+Templates 72h–7Bh also have one **shared count** per template, held by the game rather than by any object: creating an object of one of these templates sets its count to the template's charges, so every object of the template draws on the same charges and a new one refills them. Most of them are weapons, which keep their durability as their value besides.
+
+An object's **quantity** is the first that applies:
+
+- Templates 72h–7Bh: the template's shared count.
+- Template 81h: always 1.
+- Containers, weapons and body armor: none.
+- Anything else: its value.
+
+**Engine model.** An item with `shared_charges` keeps its charges as one count for the whole item, which the world holds and saves; making an object of the item sets the count to the item's `charges`. The importer gives it to templates 72h–7Bh, with their charges, and their durability when they are weapons. A weapon or body armor otherwise has no `charges`, so its use actions are never available.
 
 ## Armor
 
@@ -74,7 +85,13 @@ Objects given by the game (conversations, powers) go into the first empty shelf,
 - Clicking the player's figure with an object on the pointer puts it down on the player's cell (put down), so an object meant for a keyhole, a socket or a plate goes in by standing on it and clicking the player.
 - Clicking a slot (a shelf, a hand, a worn slot, a pack slot) swaps the pointer's object with the slot's.
 
+A click counts as on the player's figure for these, rather than walking, anywhere within 32 view pixels of the point 8 right and 2 down from the top-left of the player's sprite, measured from the pointer's hot spot as `|dx| + |dy| < 32`. The engine also counts the figure's own pixels and its cell's ground.
+
 With the right button, an object on the pointer goes to the first empty shelf; with an empty pointer, clicking the player's figure takes the top object underfoot straight to the first empty shelf. With no empty shelf the right button does nothing.
+
+## Opening containers
+
+In the game the pack is always the bag in the left hand: to look into a bag or chest, the player holds it there. The engine also lets the player open a container where it lies. **Engine model.** The player has an open slot, none at first. Opening a fixed slot (0–27) holding a container makes that container the pack: the pack slots are its contents, as for the bag in the left hand. Opening the open slot again closes it. While the open slot holds no container (the container was taken out of it), and while none is open, the pack is the bag in the left hand as in the game. The mouse opens and closes: a right click on a box holding a container, with nothing on the pointer, on the hotbar or the inventory panel, opens it (showing the inventory panel, which shows the pack) or closes it. Other right clicks are as The mouse says. The open container's box is marked.
 
 ## The inventory panel
 
@@ -88,7 +105,7 @@ The game shows the inventory in panels below the view.
 
 Weights are in half kilograms: a weight `w` shows as `w / 2` kg, with ".5" for an odd `w`.
 
-**Engine model.** The pack's inventory record gives the doll's picture, the quiver slot's look, the empty hands' pictures, the strike and throw icons, the skills' icons and ratings, the level titles and the panel's labels; an item gives its worn look (`doll`, an image and where it goes on the doll) and each action its icon. The engine's panel shows the doll with the worn looks and a box for each worn slot beside it, the pack's slots, the character's attributes, skills, hit and magic points, armor, level and experience, and the details of the object under the pointer or on it. Its boxes work as the hotbar's do (The mouse). The hotbar's hands show three action boxes each, the third throwing.
+**Engine model.** The pack's inventory record gives the doll's picture, the quiver slot's look, the empty hands' pictures, the strike and throw icons, the skills' icons and ratings, the level titles and the panel's labels; an item gives its worn look (`doll`, an image and where it goes on the doll) and each action its icon. The engine's panel shows the doll with the worn looks and a box for each worn slot beside it, the pack's slots, the character's attributes, skills, hit and magic points, armor, level and experience, and the details of the object under the pointer or on it. Its boxes work as the hotbar's do (The mouse). The pointer resting on a box of either names its object beside the pointer; for a container (a bag, a chest) the names of what it holds follow, a line each in the order they were put in, repeats counted (`Arrow x4`), or "Empty". The hotbar's hands show three action boxes each, the third throwing; a box shows the action's icon alone, without the object's picture under it, since the hand's own box beside it shows the object.
 
 **Engine model.** The player has a hand and slots numbered as above. Commands:
 
@@ -118,7 +135,7 @@ Each hand shows the actions of the object it holds (bare hands can strike). An a
 | 9, 10 | Use the object up |
 | 11–20 | Use one charge |
 
-Using an action makes the hand wait its delay before the next action; each player update counts the delays down. A weapon swing is an attack (combat.md). An action that needs a quantity is unavailable when none is left.
+Using an action makes the hand wait its delay before the next action; each player update counts the delays down. A weapon swing is an attack (combat.md). An action of icon 11–99 needs a quantity (Object values) and is unavailable when the object has none.
 
 **Engine model.** An item has up to two **actions**, each a kind, damage dice and a delay:
 
@@ -130,7 +147,7 @@ Using an action makes the hand wait its delay before the next action; each playe
 | `use_up` | 9, 10 | Uses the object up for its power |
 | `use` | 11–20 | Uses a charge for its power |
 
-The **delay** of action 0 is `(byte 8 >> 4) + 3` player updates, of action 1 `(byte 8 & 0Fh) + 3`; an item flagged two-handed (category 80h) delays both hands. A hand waits its delay before acting again, counted down on each of the player's updates. An attack adds `weight / 8` exertion (player.md). An empty hand strikes with bare hands, 2d2 damage and a delay of 2. Icon FFh is no action.
+The **delay** of action 0 is `(byte 8 >> 4) + 3` points, of action 1 `(byte 8 & 0Fh) + 3`; an item flagged two-handed (category 80h) delays both hands. Each point is three player updates: a hand waits `3 × delay` of the player's updates before acting again, counted down by one on each. An attack adds `weight / 8` exertion (player.md). An empty hand strikes with bare hands, 2d2 damage and a delay of 2 points (6 updates). A pack's action delays are in player updates, so the importer gives `3 × ((byte 8 >> 4) + 3)` and `3 × ((byte 8 & 0Fh) + 3)`. Icon FFh is no action.
 
 **Wearing.** An item's category gives the worn slot it goes in: 0 head, 1 body, 2 feet, 3 arms, 4 quiver, 5 neck; categories 6–12 go in a hand. The engine model calls this its `wear` slot. Weapons (40h) have a weapon class, `category − 9` for categories 9–12. Putting an item on, by swapping it into its own worn slot, adds its armor and starts its power; a worn slot refuses anything whose `wear` is not that slot. The quiver slot also takes arrows into a worn quiver.
 
@@ -140,7 +157,9 @@ The **delay** of action 0 is `(byte 8 >> 4) + 3` player updates, of action 1 `(b
 
 **Flying looks.** An item's `flying` is its thrown look: a sprite with a frame for each direction, and with `fired_only` only when fired.
 
-**Using up.** When the last use of an object goes, it becomes a spent object: bottles (category 8) become an Empty Bottle (template 7); other objects become the next template.
+**Using up.** An object used up (icons 9, 10) leaves a spent object in its hand when it has a quantity: bottles (category 8) leave an Empty Bottle (template 7), other objects the next template. An object with no quantity, such as a rune, leaves the hand empty. A charged object (icons 11–20) is never replaced: at no charges it stays where it is, its actions unavailable.
+
+**Engine model.** An item's `spent` is the item it leaves when used up. The importer gives it to items with a `use_up` action and nonzero `charges`; the others have none.
 
 ## Powers
 
@@ -208,13 +227,15 @@ An object's power starts when it is worn (if it lasts while worn) or used. Some 
 
 Taking off a lasting object undoes its effect (interval, status, attribute).
 
-Timed objects in worn slots count down their value each status tick and end when it runs out.
+**Timed objects.** An object in a worn slot (20–27, the hands included) whose use handler has 80h and whose power lasts while worn is timed. Each status tick (player.md) its value, or its template's shared count for 72h–7Bh, drops by 1 as a 16-bit number: a value of 0 becomes 65535 and so lasts that many ticks more. On reaching 0 the object comes off, ending its power and armor; message 32h shows with its name; it flashes in its slot and is destroyed. Body armor counts down the same value that wear takes down, so a timed cloak lasts at most 7500 ticks.
+
+**Engine model.** The engine counts timed objects down on each status tick before attribute boosts, and announces one that runs out with the engine message `vanishes` (32h, `{item}` its name).
 
 ## Using objects
 
-An action of kind use up (icons 9, 10) or use (11–20) starts the object's power, whatever 80h says. A power that refuses (below) leaves the object as it was. Use up then replaces the object with its spent object; use takes one charge from its value, and at 0 it becomes its spent object the same way. Neither strikes, except icon 11h, which also strikes with the object.
+An action of kind use up (icons 9, 10) or use (11–20) starts the object's power, whatever 80h says. A power that refuses (below) leaves the object as it was. Use up then replaces the object with its spent object, if any (Using up); use takes one from its quantity, and the object stays in the hand at 0. An object with no quantity loses nothing. Neither strikes. Icon 11h also swings the object, without a blow: the swing pose (combat.md, The player attacks) of both hands for a weapon (40h), else of its hand, whether or not the power starts.
 
-**Engine model.** An item's `power` is its number and `power_worn` the 80h flag; `spent` is the item it becomes. The engine runs the powers in the table that need only the player: hit and magic points, cures, skills and attributes, statuses and timed effects, speed, and teleporting to a rune mark (a `mark` feature whose rune is `1`, `2` or `3` for 21h, 22h, 23h). A power that casts a spell is the item's `casts`: the spell and its power (none for the spell's own roll), with powers 19h and 5Ch taking the item's action-1 damage dice; using the object casts it at once, with no gesture, cost or memorization, and the cast practices the school as any cast by the player does. A power that starts a conversation is the item's `conversation`, a thing template whose conversation it holds; with `use_result` (power 51h) the object is used only when the conversation leaves the pack's result counter nonzero, and otherwise never. Power 22h shows the level map and is never used up; power 5Eh chooses the ending (scenes.md, Endings), refused with `no_ending` (8Eh).
+**Engine model.** An item's `power` is its number and `power_worn` the 80h flag; `spent` is the item it leaves when used up. The engine runs the powers in the table that need only the player: hit and magic points, cures, skills and attributes, statuses and timed effects, speed, and teleporting to a rune mark (a `mark` feature whose rune is `1`, `2` or `3` for 21h, 22h, 23h). A power that casts a spell is the item's `casts`: the spell and its power (none for the spell's own roll), with powers 19h and 5Ch taking the item's action-1 damage dice; using the object casts it at once, with no gesture, cost or memorization, and the cast practices the school as any cast by the player does. A power that starts a conversation is the item's `conversation`, a thing template whose conversation it holds; with `use_result` (power 51h) the object is used only when the conversation leaves the pack's result counter nonzero, and otherwise never. Power 22h shows the level map and is never used up; power 5Eh chooses the ending (scenes.md, Endings), refused with `no_ending` (8Eh).
 
 A scroll's `teaches` are the icons reading it teaches, and its `picture` the image shown when it is read. Each refusal is an engine message: `full_health` (3Eh), `full_magic` (42h), `not_poisoned` (40h), `not_poisoned_or_confused` (41h), `not_fatigued` (3Fh), `no_destination` (43h), `no_creatures` (88h), `already_have` (21h); others shown: `healed` (4Ah, `{damage}` the amount), `protected` (3Ch), `boost_extended` (33h), `poisoned` (59h), `slowed` (60h), `lost_weapon_skills` (64h), `lost_magic_skills` (67h).
 
@@ -239,7 +260,7 @@ They roll their action-1 damage, or 1 when a flagged one is thrown rather than f
 
 Throwing is not possible in water of depth 3 or more.
 
-**Engine model.** The player throws the object in a hand (that hand then waits 5 updates) or, with a `fire` action, the first arrow of the quiver worn in slot 25 (message 48h `no_quiver` without one, 49h `no_arrows` when it is empty; 96h `no_room_to_shoot` when something stands a step ahead). Throwing practices weapon class 3 by 1; firing does too, and shows the both-hands strike pose. In deep water of depth 3 or more throwing gives 70h (`cannot_throw`) and other actions 73h (`cannot_act`). A thing in flight (entities.md) carries the object; how far it flies and its damage are as above, the damage from the item's `missile` (its dice, and whether only firing rolls them). A landing bottle becomes the item's `breaks_into`.
+**Engine model.** The player throws the object in a hand (that hand then waits a delay of 5 points, 15 updates) or, with a `fire` action, the first arrow of the quiver worn in slot 25 (message 48h `no_quiver` without one, 49h `no_arrows` when it is empty; 96h `no_room_to_shoot` when something stands a step ahead). Throwing practices weapon class 3 by 1; firing does too, and shows the both-hands strike pose. In deep water of depth 3 or more throwing gives 70h (`cannot_throw`) and other actions 73h (`cannot_act`). A thing in flight (entities.md) carries the object; how far it flies and its damage are as above, the damage from the item's `missile` (its dice, and whether only firing rolls them). A landing bottle becomes the item's `breaks_into`.
 
 Arrows taken up go into a worn quiver when it has room; putting arrows on (in slot 25) with a quiver worn adds them to it.
 
@@ -259,12 +280,13 @@ Each template becomes an item:
 - **Tags** by category: 1 `body_armor`, 4 `quiver`, 7 `arrows`, 8 `bottle`; `weapon` with the 40h flag, `two_handed` with 80h.
 - **Random**: a template that may be picked for a random object (above).
 - **Icon** and **floor** images: frame 0 of the small and tiny images.
+- **Fill**, for the Sack: `per` 3 and, for each step from 1 to `(capacity + 2) / 3`, the small image and the worn look of image `i + step`. An object of an item with a fill shows step `(n + per − 1) / per` (at most the last) of its `n` contents in its boxes and on the doll, and its own icon and worn look when empty.
 
 Template 0 in a level becomes a random object rather than the item itself.
 
 ## Unknowns
 
 - Whether the game also magnifies floor objects on its own, for example while the player has timed sight (player.md) or by interaction variable 98 (dialogue.md).
-- The worn-look flags in byte 11 and the image tables for the figure in the view; specified with character drawing.
-- Which hand objects count as armor drawn last on the doll; the engine draws those with an armor bonus last. The pictures of a bag in the left hand, which show how full it is (worn images 2Fh on by a third of its contents), are not imported.
+- The figure in water, and the figure frame shifts in INIT.
+- Which hand objects count as armor drawn last on the doll; the engine draws those with an armor bonus last.
 - Category 6, and the hand delay formula beyond what is given.

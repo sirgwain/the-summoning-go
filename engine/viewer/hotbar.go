@@ -1,6 +1,7 @@
 package viewer
 
 import (
+	"fmt"
 	"image"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
@@ -52,12 +53,14 @@ type Gauge struct {
 type ActionButton struct {
 	Rect         image.Rectangle
 	Hand, Action int
-	// Label names the action; Ready is false while the hand waits its delay.
+	// Label names the action; Ready is false while the hand waits its delay, and Wait is how
+	// much of the delay is still to run, from 1 just after acting to 0.
 	Label string
 	Ready bool
-	// Picture is the object's image (or the bare hand's) and Icon the action's over it, when
-	// the pack has them.
-	Picture, Icon *content.Image
+	Wait  float64
+	// Icon is the action's icon, when the pack has one; the hand's box beside the actions shows
+	// the object.
+	Icon *content.Image
 }
 
 // Hotbar is the hotbar laid out on the screen.
@@ -84,10 +87,12 @@ type Hotbar struct {
 type SpellBox struct {
 	Rect   image.Rectangle
 	School int
-	// Icon is the selected spell's icon, if Has; Count its memorizations.
+	// Icon is the selected spell's icon, if Has; Count its memorizations. Wait is how much of
+	// the gesture playing is still to run before another spell can be cast, 0 with none.
 	Icon  content.Image
 	Has   bool
 	Count int
+	Wait  float64
 }
 
 // GestureBox shows the icon of the gesture playing, or the empty panel.
@@ -145,7 +150,7 @@ func (v *Viewer) Hotbar() *Hotbar {
 	x += ShelfColumns*SlotSize + gap
 	for s := range content.Schools {
 		bx, by := x+(s/2)*SlotSize, (s%2)*SlotSize
-		b := SpellBox{Rect: image.Rect(bx, by, bx+SlotSize, by+SlotSize), School: s}
+		b := SpellBox{Rect: image.Rect(bx, by, bx+SlotSize, by+SlotSize), School: s, Wait: v.World.GestureWait()}
 		if sp := v.Pack.Spells[p.Magic.Selected[s]]; sp != nil && sp.Icon != nil {
 			b.Icon, b.Has, b.Count = *sp.Icon, true, p.Magic.Memorized[sp.ID]
 		}
@@ -171,14 +176,10 @@ func (v *Viewer) actionButtons(p *sim.Player, hand int) []ActionButton {
 	if inv == nil {
 		inv = &content.Inventory{}
 	}
-	ready := p.Delays[hand] == 0 && !p.Dead
+	ready, wait := p.Delays[hand] == 0 && !p.Dead, v.World.HandWait(hand)
 	o := p.Slots[sim.SlotRightHand+hand]
 	if o == nil {
-		b := ActionButton{Hand: hand, Action: 0, Label: "strike", Ready: ready, Icon: inv.StrikeIcon}
-		if hand < len(inv.BareHands) {
-			b.Picture = &inv.BareHands[hand]
-		}
-		return []ActionButton{b}
+		return []ActionButton{{Hand: hand, Action: 0, Label: "strike", Ready: ready, Wait: wait, Icon: inv.StrikeIcon}}
 	}
 	it := v.Pack.Items[o.Item]
 	if it == nil {
@@ -186,13 +187,14 @@ func (v *Viewer) actionButtons(p *sim.Player, hand int) []ActionButton {
 	}
 	var out []ActionButton
 	for a, act := range it.Actions[:min(len(it.Actions), 2)] {
-		out = append(out, ActionButton{Hand: hand, Action: a, Ready: ready, Icon: act.Icon, Picture: &it.Icon,
+		// A use action with no charges left is unavailable (items.md, Using up).
+		out = append(out, ActionButton{Hand: hand, Action: a, Ready: ready && (act.Kind != content.ActionUse || v.World.Quantity(o) > 0), Wait: wait, Icon: act.Icon,
 			Label: map[string]string{
 				content.ActionAttack: "strike", content.ActionAttackBoth: "swing", content.ActionFire: "fire",
 				content.ActionUseUp: "use", content.ActionUse: "use",
 			}[act.Kind]})
 	}
-	return append(out, ActionButton{Hand: hand, Action: ThrowAction, Label: "throw", Ready: ready, Icon: inv.ThrowIcon, Picture: &it.Icon})
+	return append(out, ActionButton{Hand: hand, Action: ThrowAction, Label: "throw", Ready: ready, Wait: wait, Icon: inv.ThrowIcon})
 }
 
 // Screen returns the screen rectangle of hotbar rectangle r.
@@ -222,6 +224,11 @@ func (h *Hotbar) click(v *Viewer, pt image.Point, right bool) []input.Command {
 				return []input.Command{input.NextSpell{School: b.School}}
 			}
 		}
+		if b, ok := slotAt(h.Slots, h.at(pt)); ok {
+			if cmds, ok := v.openClick(b.Slot); ok {
+				return cmds
+			}
+		}
 		return v.rightClick(false)
 	}
 	at := h.at(pt)
@@ -248,36 +255,52 @@ func (h *Hotbar) click(v *Viewer, pt image.Point, right bool) []input.Command {
 	return nil
 }
 
-// HoverText names what is under the cursor on the hotbar: an object in a slot.
-func (v *Viewer) HoverText(cursor image.Point) string {
-	if ip := v.Inventory(); ip != nil && cursor.In(ip.Rect) {
-		if b, ok := slotAt(ip.Slots, ip.at(cursor)); ok {
-			if o := v.World.Player().Slot(v.Pack, b.Slot); o != nil {
-				return inspect.ItemName(v.Pack, o.Item)
-			}
-		}
-		return ""
+// HoverLines describe what is under the cursor on the hotbar or the inventory panel: the name of
+// an object in a box, and for a container what it holds (docs/spec/items.md, The inventory panel).
+func (v *Viewer) HoverLines(cursor image.Point) []string {
+	if o := v.objectUnder(v.Inventory(), cursor); o != nil {
+		return v.objectLines(o)
 	}
 	h := v.Hotbar()
 	if h == nil || !cursor.In(h.Rect) {
-		return ""
+		return nil
 	}
 	for _, s := range h.Spells {
 		if h.at(cursor).In(s.Rect) {
 			if sp := v.Pack.Spells[v.World.Player().Magic.Selected[s.School]]; sp != nil {
-				return inspect.Text(v.Pack, sp.Name)
+				return []string{inspect.Text(v.Pack, sp.Name)}
 			}
-			return ""
 		}
 	}
-	b, ok := slotAt(h.Slots, h.at(cursor))
-	if !ok {
-		return ""
+	return nil
+}
+
+// objectLines are object o's name and, for a container, its contents by name, repeats counted,
+// or "Empty".
+func (v *Viewer) objectLines(o *sim.Object) []string {
+	lines := []string{inspect.ItemName(v.Pack, o.Item)}
+	if it := v.Pack.Items[o.Item]; it == nil || it.Container == nil {
+		return lines
 	}
-	if o := v.World.Player().Slot(v.Pack, b.Slot); o != nil {
-		return inspect.ItemName(v.Pack, o.Item)
+	if len(o.Contents) == 0 {
+		return append(lines, "  Empty")
 	}
-	return ""
+	var names []string
+	count := map[string]int{}
+	for _, c := range o.Contents {
+		n := inspect.ItemName(v.Pack, c.Item)
+		if count[n] == 0 {
+			names = append(names, n)
+		}
+		count[n]++
+	}
+	for _, n := range names {
+		if count[n] > 1 {
+			n = fmt.Sprintf("%s x%d", n, count[n])
+		}
+		lines = append(lines, "  "+n)
+	}
+	return lines
 }
 
 // SlotImage returns the icon of the object in slot, if any.
@@ -286,5 +309,5 @@ func (v *Viewer) SlotImage(slot int) (content.Image, bool) {
 	if o == nil || v.Pack.Items[o.Item] == nil {
 		return content.Image{}, false
 	}
-	return v.Pack.Items[o.Item].Icon, true
+	return v.Pack.Items[o.Item].IconFor(len(o.Contents)), true
 }

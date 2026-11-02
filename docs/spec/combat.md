@@ -18,7 +18,7 @@ A damage code byte `c` means `(c >> 4) + 1` dice of `(c & 0Fh) + 1` sides. Code 
 
 ## The player attacks
 
-The player swings the object in a hand with one of its attack actions (items.md), striking whatever stands one step ahead. The player's swing pose shows frame `30h + 8 × swing + direction` for two updates. Only living creatures can be struck (message 5Ah otherwise); animated objects refuse with message 5Dh.
+The player swings the object in a hand with one of its attack actions (items.md), striking whatever stands one step ahead. The player's swing pose shows frame `30h + 8 × swing + direction`, where swing is 0 for the right hand, 1 for the left and 2 for both hands (an action that swings with both, and firing a bow). It holds through the player's next two updates, which do not walk, and the third turns the player back to standing. Only living creatures can be struck (message 5Ah otherwise); animated objects refuse with message 5Dh.
 
 **Behind.** The player strikes from behind when the creature's four-way direction equals the player's direction halved.
 
@@ -83,7 +83,7 @@ For damage `d` of kind `k`:
 2. Status "resist quarter": `d − d/4`. Status "resist forty": `d − 4d/10`.
 3. At least 1.
 4. Fire (1) under a fire shield, or lightning (2) under a lightning shield: 1.
-5. Non-physical damage (any kind but 0, arrows included) while the player has the "charges" status is absorbed by the charges of the object in the right hand whose power is 23h, else the left hand's: each charge used absorbs 1, until the damage or the charges run out, and message 3Ah shows how many it absorbed. Hit points then drop without the damage shown.
+5. Non-physical damage (any kind but 0, arrows included) while the player has the "charges" status is absorbed by the quantity (items.md, Object values) of the object in the right hand whose power is 23h, else the left hand's: each one used absorbs 1, until the damage or the quantity runs out, the object staying in the hand, and message 3Ah shows how many it absorbed. Hit points then drop without the damage shown.
 6. With body armor and armor class above 0: the armor wears by `min(d, AC)`, then `d − AC`, at least 1.
 7. Hit points drop by `d`. The amount shows over the player for 6 updates (at most 99).
 8. At 0 hit points or less with death protection: the protection is used up and hit points and magic points are restored to full.

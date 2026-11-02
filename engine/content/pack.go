@@ -33,6 +33,7 @@ type Pack struct {
 	Inventory     *Inventory
 	Creation      *Creation
 	Scenes        map[string]*Scene
+	Flipbooks     map[string]*Flipbook
 	Conversations map[string]*Conversation
 	// Sounds are the music tracks and sound effects.
 	Sounds map[string]*Sound
@@ -56,6 +57,7 @@ func NewPack(m Manifest) *Pack {
 		Levels:    map[string]*Level{},
 		Spells:    map[string]*Spell{},
 		Scenes:    map[string]*Scene{},
+		Flipbooks: map[string]*Flipbook{},
 
 		Conversations: map[string]*Conversation{},
 		Sounds:        map[string]*Sound{},

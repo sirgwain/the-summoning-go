@@ -72,6 +72,9 @@ type Player struct {
 	// Hand is the object held on the pointer; Slots the inventory's fixed slots.
 	Hand  *Object
 	Slots [SlotCount]*Object
+	// Opened is one more than the fixed slot whose container is open as the pack, 0 for none:
+	// then the bag in the left hand is the pack.
+	Opened int
 	// Moves counts the moves made, for the walk animation; Idle the updates since the last.
 	Moves, Idle int
 	// StepCount counts walk steps for the footsteps, 0..5.
@@ -94,7 +97,7 @@ type Player struct {
 	// Shown is the damage shown over the player, until the step ShownUntil.
 	Shown      int
 	ShownUntil int64
-	// Pose is an action's pose ("attack", "attack.left", "attack.both"), shown poseLeft updates.
+	// Pose is a swing pose ("attack", "attack.left", "attack.both"), held poseLeft more updates.
 	Pose     string
 	poseLeft int
 	// bowRelease is the step after a bow shot was fired, 0 for none: the bow sounds at the
@@ -113,7 +116,12 @@ type Player struct {
 
 	// want is the direction a walk was asked for since the last update, or −1.
 	want int
-	next int64
+	// last and next are the steps of the player's last update and its next.
+	last, next int64
+	// delays and gesture are the hands' delays and the gesture playing as they began, for
+	// HandWait and GestureWait.
+	delays  [2]wait
+	gesture wait
 	// vision is the cell visibility is computed from.
 	vision content.Cell
 	// statusTicks counts status ticks, for what comes every fourth one.
@@ -142,13 +150,47 @@ func (p *Player) baseWeight() int {
 	return playerWeight
 }
 
-// Pack returns the container in the left hand, whose contents are the pack slots, or nil.
+// Pack returns the container whose contents are the pack slots, or nil: the one opened while it
+// is still in its slot, else the one in the left hand (docs/spec/items.md, Opening containers).
 func (p *Player) Pack(pk *content.Pack) *Object {
-	o := p.Slots[SlotLeftHand]
-	if o == nil || pk.Items[o.Item] == nil || pk.Items[o.Item].Container == nil {
-		return nil
+	if s, ok := p.OpenSlot(pk); ok {
+		return p.Slots[s]
 	}
-	return o
+	if o := p.Slots[SlotLeftHand]; isContainer(pk, o) {
+		return o
+	}
+	return nil
+}
+
+// OpenSlot returns the fixed slot of the container opened as the pack, and false when none is
+// open or it has left its slot.
+func (p *Player) OpenSlot(pk *content.Pack) (int, bool) {
+	s := p.Opened - 1
+	if s < 0 || s >= SlotCount || !isContainer(pk, p.Slots[s]) {
+		return 0, false
+	}
+	return s, true
+}
+
+func isContainer(pk *content.Pack, o *Object) bool {
+	return o != nil && pk.Items[o.Item] != nil && pk.Items[o.Item].Container != nil
+}
+
+// open opens the container in fixed slot i as the pack, or closes it when it is open
+// (docs/spec/items.md, Opening containers).
+func (w *World) open(i int) {
+	p, l := w.player, w.Current()
+	if s, ok := p.OpenSlot(w.pack); ok && s == i {
+		p.Opened = 0
+		w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "closed"})
+		return
+	}
+	if i < 0 || i >= SlotCount || !isContainer(w.pack, p.Slots[i]) {
+		w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: p.Cell(), Detail: "nothing to open there"})
+		return
+	}
+	p.Opened = i + 1
+	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "opened"})
 }
 
 // Slot returns the object in slot i, pack slots included, or nil.
@@ -284,7 +326,7 @@ func (w *World) hurtPlayer(n int, k combat.Kind, by string) {
 // The player's update).
 func (w *World) updatePlayer() {
 	p := w.player
-	p.next = w.step + w.PlayerInterval()
+	p.last, p.next = w.step, w.step+w.PlayerInterval()
 	if p.Dead {
 		return
 	}
@@ -297,8 +339,12 @@ func (w *World) updatePlayer() {
 			w.cue(p.Cell(), content.CueBow)
 		}
 	}
-	if p.poseLeft > 0 {
-		if p.poseLeft--; p.poseLeft == 0 {
+	// A swing pose holds through poseUpdates updates, which do not walk; the next stands.
+	posing := p.Pose != ""
+	if posing {
+		if p.poseLeft > 0 {
+			p.poseLeft--
+		} else {
 			p.Pose, p.StepCount = "", 1
 			w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "stands"})
 		}
@@ -318,6 +364,9 @@ func (w *World) updatePlayer() {
 		}
 		p.Confusion--
 	}
+	if posing {
+		return
+	}
 	if d < 0 || p.Dead {
 		if p.Idle < idleUpdates {
 			if p.Idle++; p.Idle == idleUpdates {
@@ -332,6 +381,38 @@ func (w *World) updatePlayer() {
 	if !w.walk(d) && turned {
 		w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "turned"})
 	}
+}
+
+// wornLookSlots are the slots whose objects' looks the figure shows: the worn slots but the hands.
+var wornLookSlots = []int{SlotHead, SlotArms, SlotFeet, SlotQuiver, SlotBody, SlotNeck}
+
+// FigureLooks returns the sprites of the player's figure layers, bottom up: each layer's look from
+// what is worn, else its own, for the player's sex (docs/spec/player.md, Worn looks). It is nil
+// when the template draws no layers.
+func (p *Player) FigureLooks(pk *content.Pack) []string {
+	layers := p.Template.Figure
+	if len(layers) == 0 {
+		return nil
+	}
+	female := false
+	if pt := pk.Portraits[p.Portrait]; pt != nil {
+		female = pt.Female
+	}
+	out := make([]string, len(layers))
+	for i, l := range layers {
+		look := l.FigureLook
+		for _, s := range wornLookSlots {
+			if o := p.Slots[s]; o != nil {
+				if it := pk.Items[o.Item]; it != nil {
+					if lk, ok := it.Looks[l.Name]; ok {
+						look = lk
+					}
+				}
+			}
+		}
+		out[i] = look.For(female)
+	}
+	return out
 }
 
 // Carried returns the weight the player carries: the hand and every slot, with their contents
@@ -763,7 +844,7 @@ func (w *World) swap(i int) {
 	case i >= SlotPack:
 		bag := p.Pack(w.pack)
 		if bag == nil {
-			refuse("no bag in the left hand")
+			refuse("no container open")
 			return
 		}
 		box := w.pack.Items[bag.Item].Container

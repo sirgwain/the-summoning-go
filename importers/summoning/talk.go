@@ -391,7 +391,7 @@ func (im *importer) talkActions(w []int16) ([]content.Action, error) {
 			}
 			a.Transcript = &name
 		case 0x1D:
-			a.Effect = str(fmt.Sprintf("effect.%d", args[0]))
+			a.Effect = str(effectID(int(args[0])))
 			if args[0] == effectLeaves && im.levelExists(effectTo.Level) {
 				d := effectTo
 				out = append(out, a, content.Action{Travel: &d})

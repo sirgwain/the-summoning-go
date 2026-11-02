@@ -124,13 +124,14 @@ func importFixture() *Source {
 	resources[24] = rawBank(4, 1, 1, 0, plus(90))
 	resources[25] = rawBank(6, 2, 2, 0, plus(110))
 	resources[26] = rawBank(10, 1, 1, 0, plus(120))
-	// The player's figure: the body (character animation base 16), the legs (17), the body look
-	// (16 + 25h) and the head look (18, the wall bank, standing in for one).
+	// The player's figure: the body (character animation base 16), the legs (17), the body looks
+	// (16 + 25h and 26h) and the head looks (18, the wall bank, and 19 standing in for them).
 	// Portraits 0 and 1 (people base 13): strips of frames, a row each.
 	resources[14] = rawBank(3, 1, 1, 0, plus(14))
 	resources[16] = rawBank(48, 2, 1, 0, plus(130))
 	resources[17] = rawBank(48, 1, 1, 0, plus(180))
 	resources[16+bodyLook] = rawBank(56, 1, 1, 0, plus(150))
+	resources[16+bareBodyFemale] = rawBank(56, 1, 1, 0, plus(150))
 	for n := range firstEffect + 0x18 {
 		resources[fixtureMusic+n] = songRecord(0x00, 0xC0, 0x00, 0x00, 0x90, byte(0x30+n), 0x60, 0x30, 0x80, 0x30, 0x00, 0x00, 0xFC)
 	}
@@ -190,10 +191,11 @@ func TestImport(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The fixture has six item templates, none of the starting inventory's or creation's, no spell
-	// art and no door pictures, so its spells and scenes are left out.
+	// art, no door pictures and no view effect or sparkle art, so its spells, scenes and flipbooks
+	// are left out.
 	for _, line := range report.Lines() {
 		ok := false
-		for _, prefix := range []string{"starting inventory:", "spell ", "gesture icons:", "magic wall:", "gateway:", "portrait ", "pointers:", "inventory:", "worn image ", "character creation:", "door picture ", "the door scene:", "the ending scene:"} {
+		for _, prefix := range []string{"starting inventory:", "spell ", "gesture icons:", "magic wall:", "gateway:", "portrait ", "pointers:", "inventory:", "worn image ", "character creation:", "door picture ", "the door scene:", "the ending scene:", "view effect ", "sparkle "} {
 			ok = ok || strings.HasPrefix(line, prefix)
 		}
 		if !ok {
@@ -571,9 +573,17 @@ func TestImportFighting(t *testing.T) {
 	it := &content.Item{}
 	(&importer{}).fighting(0, &tm, it)
 	want := []content.ItemAction{
-		{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 6}, Delay: 5, Skill: 2},
-		{Kind: content.ActionUseUp, Delay: 4},
+		{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 6}, Delay: 15, Skill: 2},
+		{Kind: content.ActionUseUp, Delay: 12},
 	}
+	if !reflect.DeepEqual(it.Actions, want) {
+		t.Errorf("actions %+v, want %+v", it.Actions, want)
+	}
+	// Icon 11h uses the object and swings it.
+	tm[5] = 0x11
+	it = &content.Item{}
+	(&importer{}).fighting(0, &tm, it)
+	want[1] = content.ItemAction{Kind: content.ActionUse, Delay: 12, Swings: true}
 	if !reflect.DeepEqual(it.Actions, want) {
 		t.Errorf("actions %+v, want %+v", it.Actions, want)
 	}
@@ -643,5 +653,52 @@ func TestImportCreation(t *testing.T) {
 	}
 	if err := p.Verify(); err != nil {
 		t.Error(err)
+	}
+}
+
+// TestSpentObjects checks what used-up objects leave (items.md, Using up): the next template for
+// an object with a quantity, an Empty Bottle for a bottle, and nothing for an object with no
+// quantity or one that uses charges.
+func TestSpentObjects(t *testing.T) {
+	im := &importer{objects: &Objects{Templates: make([]ObjectTemplate, 14)}, pack: &content.Pack{Items: map[string]*content.Item{}}}
+	for i := range im.objects.Templates {
+		id := fmt.Sprintf("item.%d", i)
+		im.itemIDs = append(im.itemIDs, id)
+		im.pack.Items[id] = &content.Item{ID: id}
+	}
+	useUp := []content.ItemAction{{Kind: content.ActionUseUp}}
+	set := func(i, charges int, actions []content.ItemAction) {
+		im.pack.Items[im.itemIDs[i]].Charges, im.pack.Items[im.itemIDs[i]].Actions = charges, actions
+	}
+	set(1, 1, useUp)                                           // an apple: leaves its core
+	set(2, 0, useUp)                                           // a rune: leaves nothing
+	set(3, 5, []content.ItemAction{{Kind: content.ActionUse}}) // a wand: never replaced
+	set(4, 1, useUp)                                           // a potion
+	im.objects.Templates[4][13] = categoryBottle
+	im.spentAndBroken()
+	for i, want := range map[int]string{1: "item.2", 2: "", 3: "", 4: "item.7", 5: ""} {
+		if got := im.pack.Items[im.itemIDs[i]].Spent; got != want {
+			t.Errorf("template %d spent %q, want %q", i, got, want)
+		}
+	}
+	if got := im.pack.Items["item.4"].BreaksInto; got != "item.12" {
+		t.Errorf("the potion breaks into %q", got)
+	}
+}
+
+// TestSharedChargesImport gives templates 72h–7Bh their charges as a shared count, weapons
+// keeping their durability, and other weapons no charges.
+func TestSharedChargesImport(t *testing.T) {
+	var tm ObjectTemplate
+	tm[2], tm[4], tm[5], tm[9], tm[13] = 10, 140, 0x11, 5, 0x40|9
+	it := &content.Item{}
+	(&importer{}).fighting(firstSharedTemplate+1, &tm, it)
+	if !it.SharedCharges || it.Charges != 5 || it.Durability != 6000 {
+		t.Errorf("a shared weapon: %+v", it)
+	}
+	it = &content.Item{}
+	(&importer{}).fighting(firstSharedTemplate-1, &tm, it)
+	if it.SharedCharges || it.Charges != 0 || it.Durability != 6000 {
+		t.Errorf("a weapon: %+v", it)
 	}
 }

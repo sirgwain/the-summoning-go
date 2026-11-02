@@ -190,7 +190,7 @@ func (w *World) apply(cmd input.Command) {
 		if err := w.enter(c.Level); err != nil {
 			refuse(content.Cell{}, err.Error())
 		}
-	case input.Walk, input.PickUp, input.PutDown, input.Swap, input.Activate, input.PlacePlayer, input.Strike, input.PutOn, input.Throw,
+	case input.Walk, input.PickUp, input.PutDown, input.Swap, input.Open, input.Activate, input.PlacePlayer, input.Strike, input.PutOn, input.Throw,
 		input.Learn, input.Memorize, input.Cast, input.NextSpell, input.Read, input.Talk, input.ShowMap, input.Menu:
 		w.playerCommand(c)
 	}
@@ -214,6 +214,8 @@ func (w *World) playerCommand(cmd input.Command) {
 		w.putDown()
 	case input.Swap:
 		w.swap(c.Slot)
+	case input.Open:
+		w.open(c.Slot)
 	case input.Activate:
 		w.activate()
 	case input.Strike:

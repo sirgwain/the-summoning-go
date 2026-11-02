@@ -27,10 +27,12 @@ const (
 	detailLines = 5
 )
 
-// wornLeft and wornRight are the worn slots in the boxes left and right of the figure, top down.
+// wornLeft and wornRight are the worn slots in the boxes left and right of the figure, top down:
+// the armor on the left, and on the right the quiver, the amulet and the hands, in the hotbar's
+// order (right hand above left).
 var (
-	wornLeft  = []int{sim.SlotHead, sim.SlotNeck, sim.SlotArms, sim.SlotRightHand}
-	wornRight = []int{sim.SlotQuiver, sim.SlotBody, sim.SlotLeftHand, sim.SlotFeet}
+	wornLeft  = []int{sim.SlotHead, sim.SlotBody, sim.SlotArms, sim.SlotFeet}
+	wornRight = []int{sim.SlotQuiver, sim.SlotNeck, sim.SlotRightHand, sim.SlotLeftHand}
 )
 
 // DollPart is an image drawn on the figure, mirrored for the right hand.
@@ -132,7 +134,8 @@ func (v *Viewer) Inventory() *InventoryPanel {
 	corner := image.Pt((v.Screen.X-size.X*ip.Scale)/2, bottom-size.Y*ip.Scale)
 	ip.Rect = image.Rectangle{corner, corner.Add(size.Mul(ip.Scale))}
 	// The details last: they describe the box under the pointer, which needs the panel placed.
-	for i, s := range v.details(ip) {
+	o := v.described(ip)
+	for i, s := range v.details(o) {
 		if i < detailLines {
 			ip.Lines = append(ip.Lines, TextLine{At: detailsAt.Add(image.Pt(0, i*LineHeight)), Text: s})
 		}
@@ -171,7 +174,7 @@ func (v *Viewer) dollParts(p *sim.Player, inv *content.Inventory) []DollPart {
 		if it == nil || (slot == sim.SlotRightHand || slot == sim.SlotLeftHand) && (it.Armor > 0) != armor {
 			return
 		}
-		look := it.Doll
+		look := it.DollFor(len(o.Contents))
 		if slot == sim.SlotQuiver && inv.QuiverSlot != nil {
 			look = inv.QuiverSlot
 		}
@@ -215,14 +218,19 @@ func weight(halves int) string {
 	return fmt.Sprintf("%d.0 kg.", halves/2)
 }
 
-// details are the lines describing the object under the pointer on a panel, or else on the
-// pointer; with neither, the character: its name, title and load.
-func (v *Viewer) details(ip *InventoryPanel) []string {
-	p := v.World.Player()
-	o := v.objectUnder(ip, v.Cursor)
-	if o == nil {
-		o = p.Hand
+// described returns the object the panel describes: the one under the pointer on a panel, or
+// else the one on the pointer; nil for neither.
+func (v *Viewer) described(ip *InventoryPanel) *sim.Object {
+	if o := v.objectUnder(ip, v.Cursor); o != nil {
+		return o
 	}
+	return v.World.Player().Hand
+}
+
+// details are the lines describing object o, the one the panel describes; with none, the
+// character: its name, title and load.
+func (v *Viewer) details(o *sim.Object) []string {
+	p := v.World.Player()
 	if o == nil {
 		return []string{v.playerName(), v.levelTitle(p.Level), v.label(content.LabelWeight, "Weight: ") + weight(p.Carried(v.Pack))}
 	}
@@ -335,10 +343,15 @@ func (v *Viewer) objectUnder(ip *InventoryPanel, pt image.Point) *sim.Object {
 // inventoryClick is a click on the inventory panel at screen point pt: a box swaps with the hand
 // (with Shift, reads its object); the right button sends the hand to a shelf.
 func (v *Viewer) inventoryClick(ip *InventoryPanel, pt image.Point, right, shift bool) []input.Command {
+	b, ok := slotAt(ip.Slots, ip.at(pt))
 	if right {
+		if ok {
+			if cmds, opened := v.openClick(b.Slot); opened {
+				return cmds
+			}
+		}
 		return v.rightClick(false)
 	}
-	b, ok := slotAt(ip.Slots, ip.at(pt))
 	if !ok {
 		return nil
 	}

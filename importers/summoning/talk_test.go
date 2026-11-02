@@ -82,7 +82,7 @@ func TestConversation(t *testing.T) {
 			{Give: &content.Object{Item: "item.c", Contents: []content.Object{{Item: "item.a"}, {Item: "item.b"}}}},
 			{SayAs: &content.SayAs{Portrait: "portrait.5", Text: "msg.13"}}}},
 		{If: content.Condition{Dead: "thing.npc.7"}, Do: []content.Action{
-			{Teach: str("AB")}, {Teach: str("D")}, {Effect: str("effect.6")}, {End: true}}},
+			{Teach: str("AB")}, {Teach: str("D")}, {Effect: str("flipbook.effect.6")}, {End: true}}},
 	}}
 	if !reflect.DeepEqual(c, want) {
 		t.Errorf("got  %+v\nwant %+v", c, want)

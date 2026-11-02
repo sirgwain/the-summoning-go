@@ -237,6 +237,7 @@ func (w *World) cast(school int) {
 		delete(m.Memorized, id)
 	}
 	m.Gesture = &Gesture{Spell: id}
+	p.gesture = w.begin(len(sp.Gesture) + 1)
 	w.emit(Event{Kind: EventMagic, Level: l.ID, Cell: p.Cell(), Item: id, Detail: "casting"})
 }
 

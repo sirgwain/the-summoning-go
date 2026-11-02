@@ -30,6 +30,7 @@
     "skill_up": "msg.skill_up",
     "slot_stuck": "msg.slot_stuck",
     "slot_wrong_item": "msg.wrong_item",
+    "vanishes": "msg.vanishes",
     "wall_failed": "msg.wall_failed",
     "weapon_breaks": "msg.breaks"
   }

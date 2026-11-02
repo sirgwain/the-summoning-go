@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirgwain/the-summoning-go/devpack"
 	"github.com/sirgwain/the-summoning-go/engine/input"
+	"github.com/sirgwain/the-summoning-go/engine/render/drawlist"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
 
@@ -84,7 +85,7 @@ func TestHandActionBoxes(t *testing.T) {
 	if len(right) != 3 || right[0].Icon == nil || right[1].Icon == nil || right[2].Action != ThrowAction || right[2].Icon == nil {
 		t.Fatalf("the right hand's boxes %+v", right)
 	}
-	if left := v.Hotbar().Actions[len(v.Hotbar().Actions)-1]; left.Hand != 1 || left.Label != "strike" || left.Picture == nil {
+	if left := v.Hotbar().Actions[len(v.Hotbar().Actions)-1]; left.Hand != 1 || left.Label != "strike" {
 		t.Errorf("the empty left hand's box %+v", left)
 	}
 	if err := NewRunner(mustScript(t, `[{"at": `+itoa(v.Ticks)+`, "action": [0, 2]}]`), t.TempDir()).Run(v); err != nil {
@@ -100,3 +101,95 @@ func hasLine(ip *InventoryPanel, text string) bool {
 }
 
 func itoa(n int64) string { return strconv.FormatInt(n, 10) }
+
+// TestClickNearPlayer puts down and picks up with a click near the figure, off its pixels and its
+// cell's ground, as the game's reach allows; a click past the reach walks instead.
+func TestClickNearPlayer(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	p := v.World.Player()
+	b := v.Pack.Sprites[p.Template.Sprite]
+	anchor, _ := b.AnchorOf(0)
+	at := drawlist.RefPoint(p.U, p.V).Sub(image.Pt(anchor[0], anchor[1])).Add(reachAt)
+	// Left of the reach point by most of the reach, and far off the player's cell.
+	near := at.Add(image.Pt(-(reachDistance - 2), 0))
+	if drawlist.CellAt(near) == p.Cell() {
+		t.Fatalf("the near point %v is on the player's cell", near)
+	}
+	if id, _, ok := drawlist.ThingAt(v.Pack, v.Cmds, near); ok && id == sim.PlayerID {
+		t.Fatalf("the near point %v is on the figure", near)
+	}
+	p.Hand = &sim.Object{Item: devpack.ItemKey}
+	tapAt(v, v.ScreenPoint(near))
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: v.ScreenPoint(near)})
+	if p.Hand != nil || len(v.World.Current().Objects[p.Cell()]) == 0 {
+		t.Fatalf("a click near the player did not put the key down: hand %+v", p.Hand)
+	}
+	tapAt(v, v.ScreenPoint(near))
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: v.ScreenPoint(near)})
+	if p.Hand == nil || p.Hand.Item != devpack.ItemKey {
+		t.Fatalf("a click near the player did not pick the key up: hand %+v", p.Hand)
+	}
+	if far := at.Add(image.Pt(-reachDistance-40, 0)); v.onPlayer(far) {
+		t.Errorf("a click at %v, past the reach, counts as on the player", far)
+	}
+}
+
+// TestHoverContainer rests the pointer on a shelf holding a sack: the name, then what it holds,
+// repeats counted; an empty sack says so, and a plain object shows its name alone.
+func TestHoverContainer(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	p := v.World.Player()
+	p.Slots[5] = &sim.Object{Item: devpack.ItemSack, Contents: []*sim.Object{
+		{Item: devpack.ItemKey}, {Item: devpack.ItemMail}, {Item: devpack.ItemKey}}}
+	r, ok := v.Hotbar().SlotRect(5)
+	if !ok {
+		t.Fatal("no shelf 5")
+	}
+	at := r.Min.Add(r.Max).Div(2)
+	key, mail, sack := v.objectLines(&sim.Object{Item: devpack.ItemKey})[0], v.objectLines(&sim.Object{Item: devpack.ItemMail})[0],
+		v.objectLines(&sim.Object{Item: devpack.ItemSack})[0]
+	if got, want := v.HoverLines(at), []string{sack, "  " + key + " x2", "  " + mail}; !slices.Equal(got, want) {
+		t.Errorf("hover %q, want %q", got, want)
+	}
+	p.Slots[5].Contents = nil
+	if got := v.HoverLines(at); !slices.Equal(got, []string{sack, "  Empty"}) {
+		t.Errorf("empty sack hover %q", got)
+	}
+	p.Slots[5] = &sim.Object{Item: devpack.ItemKey}
+	if got := v.HoverLines(at); !slices.Equal(got, []string{key}) {
+		t.Errorf("key hover %q", got)
+	}
+}
+
+// TestRightClickOpens right-clicks a sack on a shelf with nothing on the pointer: it opens as the
+// pack, the inventory panel opens with its boxes, and a click on the first takes its key; a
+// second right click closes it.
+func TestRightClickOpens(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	p := v.World.Player()
+	sack := &sim.Object{Item: devpack.ItemSack, Contents: []*sim.Object{{Item: devpack.ItemKey}}}
+	p.Slots[5] = sack
+	r, _ := v.Hotbar().SlotRect(5)
+	at := r.Min.Add(r.Max).Div(2)
+	rightAt := func(pt image.Point) {
+		v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: pt, Right: Button{Pressed: true, Released: true}})
+	}
+	rightAt(at)
+	if p.Pack(v.Pack) != sack || !v.InventoryOpen {
+		t.Fatalf("right click: pack %+v, panel open %v", p.Pack(v.Pack), v.InventoryOpen)
+	}
+	pr, ok := v.Inventory().SlotRect(sim.SlotPack)
+	if !ok {
+		t.Fatal("no pack boxes for the opened sack")
+	}
+	tapAt(v, pr.Min.Add(pr.Max).Div(2))
+	if p.Hand == nil || p.Hand.Item != devpack.ItemKey || len(sack.Contents) != 0 {
+		t.Fatalf("took %+v from the opened sack", p.Hand)
+	}
+	p.Hand = nil
+	r, _ = v.Hotbar().SlotRect(5)
+	rightAt(r.Min.Add(r.Max).Div(2))
+	if p.Pack(v.Pack) != nil {
+		t.Errorf("a second right click left %+v open", p.Pack(v.Pack))
+	}
+}

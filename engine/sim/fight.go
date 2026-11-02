@@ -15,10 +15,11 @@ const (
 	restDir = 4
 	// maxShown is the most damage shown over the hurt.
 	maxShown = 99
-	// poseUpdates is how many updates a strike's pose shows.
+	// poseUpdates is how many of the player's updates a swing pose holds through; the next
+	// turns the player back to standing.
 	poseUpdates = 2
-	// bareHandsDelay is an empty hand's delay.
-	bareHandsDelay = 2
+	// bareHandsDelay is an empty hand's delay, in player updates.
+	bareHandsDelay = 6
 	// poisonChance is the 1 in n chance each update that poison hurts.
 	poisonChance = 40
 	// unwearing is the durability that never wears.
@@ -321,7 +322,7 @@ func (w *World) strike(hand, action int) {
 			refuse("bare hands have one action")
 			return
 		}
-		p.Delays[hand] = bareHandsDelay
+		w.setDelay(hand, bareHandsDelay)
 		w.exert(1)
 		w.swing(hand, nil, content.ItemAction{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 2}})
 		return
@@ -351,24 +352,46 @@ func (w *World) strike(hand, action int) {
 			w.message(l, p.Cell(), content.MsgCannotAct, "")
 			return
 		}
-		p.Delays[hand] = a.Delay
+		w.delay(hand, it, a)
 		w.exert(o.Weight(w.pack) / 8)
 		w.fire()
 		return
 	default:
-		p.Delays[hand] = a.Delay
+		if a.Kind == content.ActionUse && w.Quantity(o) <= 0 {
+			refuse("the " + o.Item + " has no charges left")
+			return
+		}
+		w.delay(hand, it, a)
 		w.useObject(hand, o, a)
+		if a.Swings {
+			if hasTag(it, "weapon") {
+				hand = 2
+			}
+			w.pose(hand)
+		}
 		return
 	}
-	p.Delays[hand] = a.Delay
+	w.delay(hand, it, a)
 	w.exert(o.Weight(w.pack) / 8)
-	if hasTag(it, "two_handed") {
-		p.Delays[1-hand] = max(p.Delays[1-hand], a.Delay)
-	}
 	if a.Kind == content.ActionAttackBoth {
 		hand = 2
 	}
 	w.swing(hand, o, a)
+}
+
+// delay makes hand wait action a's delay, and the other hand too for a two-handed item
+// (docs/spec/items.md, Hands and actions).
+func (w *World) delay(hand int, it *content.Item, a content.ItemAction) {
+	w.setDelay(hand, a.Delay)
+	if hasTag(it, "two_handed") {
+		w.setDelay(1-hand, a.Delay)
+	}
+}
+
+// pose shows the player's swing pose of hand (2 for both) (docs/spec/combat.md, The player
+// attacks).
+func (w *World) pose(hand int) {
+	w.player.Pose, w.player.poseLeft = []string{"attack", "attack.left", "attack.both"}[hand], poseUpdates
 }
 
 func hasTag(it *content.Item, tag string) bool {
@@ -384,7 +407,7 @@ func hasTag(it *content.Item, tag string) bool {
 // the first creature one step ahead (docs/spec/combat.md, The player attacks).
 func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 	p, l := w.player, w.Current()
-	p.Pose, p.poseLeft = []string{"attack", "attack.left", "attack.both"}[hand], poseUpdates
+	w.pose(hand)
 	speed := p.Template.Speed
 	if speed == 0 {
 		speed = 8

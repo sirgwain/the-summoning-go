@@ -19,7 +19,7 @@
     {
       "kind": "attack",
       "damage": "2d6",
-      "delay": 4,
+      "delay": 12,
       "skill": 1,
       "icon": {
         "sprite": "sprite.action_icons",
@@ -29,7 +29,7 @@
     {
       "kind": "attack",
       "damage": "1d10",
-      "delay": 3,
+      "delay": 9,
       "skill": 2,
       "icon": {
         "sprite": "sprite.action_icons",

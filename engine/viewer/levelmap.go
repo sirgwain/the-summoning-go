@@ -10,7 +10,7 @@ import (
 // are, and where the player stands. The full map opens with M while playing and closes on the
 // next key or click; the minimap shows in a corner unless the level refuses the map.
 
-// Map cell kinds.
+// Map cell kinds: what the game's map tells apart, and floor and water.
 const (
 	MapFloor = iota
 	MapWall
@@ -20,7 +20,19 @@ const (
 	MapHole
 	MapTeleporter
 	MapMouth
+	MapPlate
+	MapMark
+	MapTrapdoor
+	MapSocket
+	MapKinds
 )
+
+// MapKindNames name the kinds in the map's legend.
+var MapKindNames = [MapKinds]string{
+	MapFloor: "Floor", MapWall: "Wall", MapDoor: "Door", MapExit: "Exit", MapWater: "Water",
+	MapHole: "Pit", MapTeleporter: "Teleporter", MapMouth: "Mouth", MapPlate: "Plate",
+	MapMark: "Rune", MapTrapdoor: "Trapdoor", MapSocket: "Socket",
+}
 
 // MapCell is a seen cell of the level map.
 type MapCell struct {
@@ -35,6 +47,8 @@ type LevelMap struct {
 	Cells []MapCell
 	// Player is the player's cell.
 	Player content.Cell
+	// Legend are the kinds the map shows, in kind order.
+	Legend []int
 }
 
 // Map returns the current level's map as the player has seen it, or nil without a player.
@@ -45,6 +59,7 @@ func (v *Viewer) Map() *LevelMap {
 	}
 	l := v.World.Current()
 	m := &LevelMap{Size: l.Def.Size, Player: p.Cell()}
+	var shown [MapKinds]bool
 	if l.Def.Name != "" {
 		m.Name = inspect.Text(v.Pack, l.Def.Name)
 	}
@@ -65,8 +80,16 @@ func (v *Viewer) Map() *LevelMap {
 				kind = MapMouth
 			case f != nil && f.Kind == content.FeatureTeleporter && f.Armed:
 				kind = MapTeleporter
-			case f != nil && (f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor):
+			case f != nil && (f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor && f.Open):
 				kind = MapHole
+			case f != nil && f.Kind == content.FeatureTrapdoor:
+				kind = MapTrapdoor
+			case f != nil && f.Kind == content.FeaturePlate:
+				kind = MapPlate
+			case f != nil && f.Kind == content.FeatureMark:
+				kind = MapMark
+			case f != nil && f.Kind == content.FeatureSocket:
+				kind = MapSocket
 			case l.Wall[x][y] != content.NoFrame:
 				kind = MapWall
 			case ft == nil:
@@ -75,6 +98,12 @@ func (v *Viewer) Map() *LevelMap {
 				kind = MapWater
 			}
 			m.Cells = append(m.Cells, MapCell{Cell: c, Kind: kind})
+			shown[kind] = true
+		}
+	}
+	for k, ok := range shown {
+		if ok {
+			m.Legend = append(m.Legend, k)
 		}
 	}
 	return m

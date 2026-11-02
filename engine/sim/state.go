@@ -2,6 +2,7 @@ package sim
 
 import (
 	"fmt"
+	"maps"
 	"math/rand/v2"
 	"slices"
 
@@ -23,12 +24,14 @@ type State struct {
 	Step    int64  `json:"step"`
 	Current string `json:"current"`
 	// Status is the step of the next status tick; RNG the random source's state.
-	Status   int64              `json:"status"`
-	RNG      []byte             `json:"rng"`
-	Counters map[string]int     `json:"counters,omitempty"`
-	Records  map[string]*Record `json:"records,omitempty"`
-	Player   *PlayerState       `json:"player,omitempty"`
-	Levels   []*LevelState      `json:"levels"`
+	Status   int64          `json:"status"`
+	RNG      []byte         `json:"rng"`
+	Counters map[string]int `json:"counters,omitempty"`
+	// Shared are the shared charges of the items that have them, by item.
+	Shared  map[string]int     `json:"shared,omitempty"`
+	Records map[string]*Record `json:"records,omitempty"`
+	Player  *PlayerState       `json:"player,omitempty"`
+	Levels  []*LevelState      `json:"levels"`
 }
 
 // PlayerState is the player with its template's id and what it keeps to itself.
@@ -100,7 +103,7 @@ func (w *World) State() (*State, error) {
 		return nil, err
 	}
 	s := &State{Format: StateFormat, Pack: w.pack.Manifest.ID, Version: w.pack.Manifest.Version,
-		Step: w.step, Current: w.current, Status: w.status, RNG: rng, Counters: w.counters, Records: w.records}
+		Step: w.step, Current: w.current, Status: w.status, RNG: rng, Counters: w.counters, Shared: maps.Clone(w.shared), Records: w.records}
 	if p := w.player; p != nil {
 		s.Player = &PlayerState{Player: *p, Template: p.Template.ID, Want: p.want, Next: p.next, Vision: p.vision,
 			StatusTicks: p.statusTicks, PoseLeft: p.poseLeft}
@@ -150,7 +153,10 @@ func Restore(p *content.Pack, s *State) (*World, error) {
 		return nil, fmt.Errorf("random source: %w", err)
 	}
 	w := &World{pack: p, src: src, rng: rand.New(src), levels: map[string]*Level{}, rules: rulesFor(p),
-		step: s.Step, current: s.Current, status: s.Status, records: s.Records, counters: s.Counters}
+		step: s.Step, current: s.Current, status: s.Status, records: s.Records, counters: s.Counters, shared: s.Shared}
+	if w.shared == nil {
+		w.shared = map[string]int{}
+	}
 	if w.records == nil {
 		w.records = map[string]*Record{}
 	}

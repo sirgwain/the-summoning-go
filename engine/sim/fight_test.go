@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/sirgwain/the-summoning-go/devpack"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 )
@@ -318,8 +319,10 @@ func TestUsingObjects(t *testing.T) {
 		p.Items["item.bottle"] = &content.Item{ID: "item.bottle", Weight: 1, Size: 1}
 		p.Items["item.potion"] = &content.Item{ID: "item.potion", Weight: 2, Size: 1, Power: 0x28, Spent: "item.bottle",
 			Actions: []content.ItemAction{{Kind: content.ActionUseUp, Delay: 3}}}
-		p.Items["item.wand"] = &content.Item{ID: "item.wand", Weight: 1, Size: 1, Power: 0x0F, Charges: 2, Spent: "item.bottle",
+		p.Items["item.wand"] = &content.Item{ID: "item.wand", Weight: 1, Size: 1, Power: 0x0F, Charges: 2,
 			Actions: []content.ItemAction{{Kind: content.ActionUse, Delay: 3}}}
+		p.Items["item.rune"] = &content.Item{ID: "item.rune", Weight: 1, Size: 1, Power: 0x28,
+			Actions: []content.ItemAction{{Kind: content.ActionUseUp, Delay: 3}}}
 	},
 		"####",
 		"#@.#",
@@ -340,8 +343,17 @@ func TestUsingObjects(t *testing.T) {
 		t.Errorf("the wand: levitating %v, charges %d", p.Status.Levitating, p.Slots[SlotLeftHand].Value)
 	}
 	strike(w, 1, 0)
-	if p.Slots[SlotLeftHand].Item != "item.bottle" {
-		t.Errorf("the wand out of charges is %v", p.Slots[SlotLeftHand].Item)
+	if o := p.Slots[SlotLeftHand]; o == nil || o.Item != "item.wand" || o.Value != 0 {
+		t.Fatalf("the wand out of charges: %+v", o)
+	}
+	if ev := strike(w, 1, 0); !has(ev, EventRefused, "") || p.Slots[SlotLeftHand].Value != 0 {
+		t.Errorf("a wand with no charges was used: %v", ev)
+	}
+	p.HitPoints = 5
+	p.Slots[SlotRightHand] = w.newObject("item.rune")
+	strike(w, 0, 0)
+	if p.HitPoints <= 5 || p.Slots[SlotRightHand] != nil {
+		t.Errorf("a used-up object with no spent object: %d hit points, hand %v", p.HitPoints, p.Slots[SlotRightHand])
 	}
 }
 
@@ -404,5 +416,221 @@ func TestSkillRiseFanfares(t *testing.T) {
 	w.practice(SkillWeapon, p.Skills[SkillWeapon].Threshold)
 	if got := cues(); !slices.Equal(got, []string{content.CueWeaponSkillUp, content.CueLevelUp}) {
 		t.Errorf("a weapon skill rising to a level: %v", got)
+	}
+}
+
+// playerUpdate runs the world through the player's next update, asking for cmds first.
+func playerUpdate(w *World, cmds ...input.Command) {
+	p := w.Player()
+	next := p.next
+	w.Update(cmds)
+	for p.next == next {
+		w.Update(nil)
+	}
+}
+
+func TestSwingPoseHolds(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) { p.Things["thing.player"].IntervalMS = 275 },
+		"######",
+		"#@...#",
+		"######")
+	p := w.Player()
+	p.Facing = 2
+	playerUpdate(w)
+	w.Update([]input.Command{input.Strike{Hand: 1}})
+	if p.Pose != "attack.left" {
+		t.Fatalf("the left hand's swing shows pose %q", p.Pose)
+	}
+	u, v := p.U, p.V
+	for i := range poseUpdates {
+		playerUpdate(w, input.Walk{Direction: 2})
+		if p.Pose != "attack.left" || p.U != u || p.V != v {
+			t.Fatalf("update %d of the pose: pose %q, moved %d,%d", i+1, p.Pose, p.U-u, p.V-v)
+		}
+	}
+	playerUpdate(w)
+	if p.Pose != "" {
+		t.Errorf("the pose still shows after %d updates", poseUpdates+1)
+	}
+	playerUpdate(w, input.Walk{Direction: 2})
+	if p.U == u && p.V == v {
+		t.Error("the player does not walk after the pose")
+	}
+}
+
+func TestUseSwings(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) {
+		class := 0
+		p.Items["item.staff"] = &content.Item{ID: "item.staff", Weight: 8, Size: 3, Wear: content.WearHand, WeaponClass: &class,
+			Tags: []string{"weapon", "two_handed"}, Power: 0x28, Charges: 5,
+			Actions: []content.ItemAction{{Kind: content.ActionUse, Delay: 9, Swings: true}}}
+	},
+		"#####",
+		"#@G.#",
+		"#####")
+	g := w.Current().Thing("guard")
+	p := w.Player()
+	p.Facing = 2
+	besideGuard(w)
+	p.Slots[SlotLeftHand] = w.newObject("item.staff")
+	hp := g.HitPoints
+	ev := w.Update([]input.Command{input.Strike{Hand: 1}})
+	if p.Pose != "attack.both" {
+		t.Errorf("using the staff shows pose %q", p.Pose)
+	}
+	if g.HitPoints != hp || has(ev, EventMessage, content.MsgHit) || has(ev, EventMessage, content.MsgMiss) {
+		t.Errorf("using the staff struck a blow: %v", ev)
+	}
+	if p.Delays[0] != p.Delays[1] || p.Delays[1] < 8 {
+		t.Errorf("a two-handed use delays the hands %v", p.Delays)
+	}
+}
+
+func TestHandWait(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) { p.Things["thing.player"].IntervalMS = 275 },
+		"#####",
+		"#@..#",
+		"#####")
+	p := w.Player()
+	playerUpdate(w)
+	w.Update(nil)
+	if got := w.HandWait(0); got != 0 {
+		t.Fatalf("a ready hand waits %v", got)
+	}
+	w.Update([]input.Command{input.Strike{}})
+	if got := w.HandWait(0); got < 0.9 {
+		t.Fatalf("just after striking the hand waits %v, want nearly 1", got)
+	}
+	if got := w.HandWait(1); got != 0 {
+		t.Errorf("the other hand waits %v", got)
+	}
+	last := 1.0
+	for p.Delays[0] > 0 {
+		w.Update(nil)
+		got := w.HandWait(0)
+		if got > last || got < 0 {
+			t.Fatalf("the wait went from %v to %v", last, got)
+		}
+		last = got
+	}
+	if last != 0 {
+		t.Errorf("a ready hand waits %v", last)
+	}
+}
+
+func TestGestureWait(t *testing.T) {
+	w := studyWorld(t, devpack.StudyStart, 2)
+	do(w, input.Learn{Gesture: "DJ"})
+	if got := w.GestureWait(); got != 0 {
+		t.Fatalf("with no gesture playing the wait is %v", got)
+	}
+	do(w, input.Cast{School: 0})
+	if got := w.GestureWait(); got < 0.9 {
+		t.Fatalf("as the gesture starts the wait is %v, want nearly 1", got)
+	}
+	last := 1.0
+	until(w, 2000, func() bool {
+		got := w.GestureWait()
+		if got > last {
+			t.Fatalf("the wait went from %v to %v", last, got)
+		}
+		last = got
+		return w.Player().Magic.Gesture == nil
+	})
+	if got := w.GestureWait(); got != 0 {
+		t.Errorf("after the cast the wait is %v", got)
+	}
+}
+
+// TestSharedCharges uses objects whose item shares one count of charges: using one drains the
+// other, making a new one refills it, the count is saved, and a weapon with no charges of its own
+// cannot be used.
+func TestSharedCharges(t *testing.T) {
+	class := 0
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Items["item.sword"] = &content.Item{ID: "item.sword", Weight: 4, Size: 1, Power: 0x0F, Durability: 1000,
+			Charges: 2, SharedCharges: true, WeaponClass: &class, Tags: []string{"weapon"},
+			Actions: []content.ItemAction{{Kind: content.ActionUse, Delay: 3}}}
+		p.Items["item.staff"] = &content.Item{ID: "item.staff", Weight: 4, Size: 1, Power: 0x0F, Durability: 1000,
+			WeaponClass: &class, Tags: []string{"weapon"}, Actions: []content.ItemAction{{Kind: content.ActionUse, Delay: 3}}}
+	},
+		"####",
+		"#@.#",
+		"####")
+	p := w.Player()
+	p.Slots[SlotRightHand], p.Slots[SlotLeftHand] = w.newObject("item.sword"), w.newObject("item.sword")
+	strike(w, 0, 0)
+	strike(w, 1, 0)
+	if w.Quantity(p.Slots[SlotRightHand]) != 0 || p.Slots[SlotRightHand].Value != 1000 {
+		t.Fatalf("two uses left %d charges, durability %d", w.Quantity(p.Slots[SlotRightHand]), p.Slots[SlotRightHand].Value)
+	}
+	if ev := strike(w, 0, 0); !has(ev, EventRefused, "") {
+		t.Errorf("a sword with no shared charges was used: %v", ev)
+	}
+	st, err := w.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.newObject("item.sword")
+	if w.Quantity(p.Slots[SlotLeftHand]) != 2 {
+		t.Errorf("a new sword did not refill the charges: %d", w.Quantity(p.Slots[SlotLeftHand]))
+	}
+	if st.Shared["item.sword"] != 0 {
+		t.Errorf("saved shared %v", st.Shared)
+	}
+	p.Slots[SlotRightHand] = w.newObject("item.staff")
+	if ev := strike(w, 0, 0); !has(ev, EventRefused, "") || w.Quantity(p.Slots[SlotRightHand]) != 0 {
+		t.Errorf("a weapon without charges was used: %v", ev)
+	}
+}
+
+// TestTimedObjects runs down worn objects whose power lasts while worn: one runs out after its
+// value's status ticks, coming off and vanishing; a value of 0 lasts 65535 ticks; objects of a
+// shared count each take one from it; an object whose power does not last is not timed.
+func TestTimedObjects(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Items["item.bracers"] = &content.Item{ID: "item.bracers", Weight: 1, Size: 1, Wear: content.WearArms,
+			Power: 0x17, PowerWorn: true, Charges: 2}
+		p.Items["item.boots"] = &content.Item{ID: "item.boots", Weight: 1, Size: 1, Wear: content.WearFeet,
+			Power: powerSpeed2Lasting, PowerWorn: true}
+		p.Items["item.buckler"] = &content.Item{ID: "item.buckler", Weight: 1, Size: 1, Power: powerSpeed2Lasting,
+			PowerWorn: true, Durability: 1000, Charges: 5, SharedCharges: true}
+		p.Items["item.ring"] = &content.Item{ID: "item.ring", Weight: 1, Size: 1, Wear: content.WearNeck,
+			Power: powerSpeed2, PowerWorn: true, Charges: 1}
+	},
+		"####",
+		"#@.#",
+		"####")
+	p := w.Player()
+	p.Slots[SlotFeet] = nil
+	wear := func(slot int, item string) *Object {
+		o := w.newObject(item)
+		p.Slots[slot] = o
+		w.putOn(o)
+		return o
+	}
+	wear(SlotArms, "item.bracers")
+	boots := wear(SlotFeet, "item.boots")
+	wear(SlotRightHand, "item.buckler")
+	buckler := wear(SlotLeftHand, "item.buckler")
+	ring := wear(SlotNeck, "item.ring")
+	if !p.Status.Regenerating {
+		t.Fatal("the bracers do not regenerate")
+	}
+	w.statusTickPlayer()
+	if p.Slots[SlotArms] == nil || w.Quantity(buckler) != 3 || buckler.Value != 1000 || ring.Value != 1 {
+		t.Fatalf("one tick: bracers %v, shared %d, buckler %d, ring %d", p.Slots[SlotArms], w.Quantity(buckler), buckler.Value, ring.Value)
+	}
+	w.events = nil
+	w.statusTickPlayer()
+	if p.Slots[SlotArms] != nil || p.Status.Regenerating || !has(w.events, EventMessage, content.MsgVanishes) {
+		t.Errorf("two ticks: bracers %v, regenerating %v, events %v", p.Slots[SlotArms], p.Status.Regenerating, w.events)
+	}
+	if boots.Value != 65534 {
+		t.Errorf("boots of value 0 have %d after two ticks", boots.Value)
+	}
+	w.statusTickPlayer()
+	if p.Slots[SlotRightHand] != nil || p.Slots[SlotLeftHand] == nil {
+		t.Errorf("the shared count ran out: right %v, left %v", p.Slots[SlotRightHand], p.Slots[SlotLeftHand])
 	}
 }

@@ -6,10 +6,12 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -20,6 +22,7 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/render"
 	"github.com/sirgwain/the-summoning-go/engine/render/drawlist"
+	"github.com/sirgwain/the-summoning-go/engine/save"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 	"github.com/spf13/cobra"
@@ -32,7 +35,7 @@ func init() {
 // newViewCmd returns the view command, or with play the play command, which opens the same
 // window driving the player.
 func newViewCmd(play bool) *cobra.Command {
-	var level, screenshot, script, out, saves string
+	var level, screenshot, script, out, saves, load string
 	var scale, shotTicks int
 	var magnify, menu, mute bool
 	var at, sel []int
@@ -58,9 +61,13 @@ its second action, X throws what it holds; Q, Shift+Q and Z do the same with the
 takes the top object of the player's cell to the first empty shelf, G puts down what is in hand,
 Enter pulls the lever underfoot or puts the key a keyhole underfoot takes into it, E or C talks to
 the nearest creature that talks (or hears the nearest mouth), H recenters the view, P pauses.
-F5 saves the game and F9 loads it again; F8 cycles music and effects, effects only, and silence; changing level saves it too (the autosave). O opens the
+Holding N naps: the world runs 32 times as fast, to get magic points back, until N is released,
+the magic points are full, a creature comes near, the player is hurt, a message or conversation
+starts, or another key or a click comes; it will not start with full magic points or a creature
+near.
+F5 saves the game and F8 loads it again; F9 cycles music and effects, effects only, and silence; changing level saves it too (the autosave). O opens the
 disk menu: save under a name, restore, delete or rename a save, leave for the main menu, or quit. M shows the
-level's map (a key or click closes it); the minimap in the top-left corner shows it small. Some
+level's map, with a legend (a key or click closes it); the minimap in the top-left corner shows it small. Some
 levels refuse the map.
 
 F1-F4 (or 1-4) cast the selected spell of Wizardry, Sorcery, Enchantment and Healing; with Shift
@@ -86,14 +93,18 @@ mouth (a skull), the pointer becomes a speech bubble: a click talks to the creat
 mouth's message beside it. Taking a scroll onto the pointer reads it.
 
 I or Tab, or clicking the portrait, opens the inventory panel (Escape closes it): the figure
-showing what it wears, with a box for each worn slot (head, neck, arms, right hand on the left;
-quiver, body, left hand, feet on the right), the pack of a bag held in the left hand, the details
+showing what it wears, with a box for each worn slot (head, body, arms, feet on the left;
+quiver, neck, right hand, left hand on the right), the pack (an opened container, or a bag held in the left hand), the details
 of the object under the pointer or on it, and the character's attributes, points, armor, level,
 experience and skills. Its boxes work as the hotbar's: a click swaps a box with the pointer.
+A right click on a bag or chest (on the hotbar or the panel, with nothing on the pointer) opens
+it as the pack, where its contents can be taken and put; a second right click closes it, and
+the bag in the left hand is the pack again. Resting the pointer on a box names its object, and
+for a container lists what it holds.
 
 V shows the whole level, F12 switches to the viewer's tools (see summoning view --help),
-clicking a cell inspects it, ~ hides or shows the debug overlay: the text, and the outlines of
-the selection and the cell under the mouse.
+clicking a cell inspects it, ~ shows or hides the debug overlay (hidden at first; --debug shows
+it): the text, and the outlines of the selection and the cell under the mouse.
 `
 	}
 	viewCmd := &cobra.Command{
@@ -154,13 +165,18 @@ of live input, and exits when it ends. Its files are written under --out.`,
 				return err
 			}
 			v.SaveDir = saves
+			v.HideDebug = play && !debugEnabled
 			if !mute && script == "" && screenshot == "" {
 				v.Audio = audio.New(speaker.New(), pack)
 			}
 			if v.SaveDir == "" && script == "" {
-				if dir, err := os.UserConfigDir(); err == nil {
-					v.SaveDir = filepath.Join(dir, "summoning", "saves", pack.Manifest.ID)
+				v.SaveDir = save.DefaultDir(pack.Manifest.ID)
+			}
+			if load != "" {
+				if err := v.LoadFile(savePath(load, v.SaveDir)); err != nil {
+					return err
 				}
+				menu = false
 			}
 			if play {
 				if v.World.Player() == nil {
@@ -204,6 +220,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 	viewCmd.Flags().Uint64Var(&seed, "seed", 1, "seed for the simulation's random choices")
 	viewCmd.Flags().StringVar(&script, "script", "", "run this script instead of live input, then exit")
 	viewCmd.Flags().StringVar(&out, "out", ".", "directory for a script's screenshots and dumps")
+	viewCmd.Flags().StringVar(&load, "load", "", "start from the saved game in this file, looked for in the saves directory when not found as given")
 	viewCmd.Flags().StringVar(&saves, "saves", "", "directory for saved games (default: the user's config directory; none while a script runs)")
 	if play {
 		viewCmd.Flags().BoolVar(&menu, "menu", true, "start at the main menu when the pack has character creation (not while a script runs)")
@@ -226,6 +243,8 @@ var (
 	slotColor      = color.RGBA{40, 36, 32, 230}
 	slotEdgeColor  = color.RGBA{150, 130, 100, 255}
 	handEdgeColor  = color.RGBA{220, 190, 120, 255}
+	// openEdgeColor marks the box of the container open as the pack.
+	openEdgeColor  = color.RGBA{90, 220, 120, 255}
 	actionColor    = color.RGBA{70, 50, 30, 230}
 	waitColor      = color.RGBA{40, 40, 40, 230}
 	gaugeColors    = [...]color.RGBA{{200, 30, 30, 255}, {40, 90, 220, 255}, {200, 160, 40, 255}}
@@ -434,6 +453,37 @@ func (s *shell) artImage(size image.Point) *ebiten.Image {
 	return img
 }
 
+// actionWait is how much of an action box shows its wait: its hand's delay still to run, or all
+// of it when the box cannot act for another reason.
+func actionWait(a viewer.ActionButton) float64 {
+	if !a.Ready && a.Wait == 0 {
+		return 1
+	}
+	return a.Wait
+}
+
+// fillWait shades the part of box r a wait still has to run, left of it (0..1): a sector from
+// twelve o'clock round to where the wait has reached, so the box clears clockwise as it runs out.
+func fillWait(dst *ebiten.Image, r image.Rectangle, left float64, c color.Color) {
+	switch {
+	case left <= 0 || r.Empty():
+		return
+	case left >= 1:
+		vector.FillRect(dst, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), c, false)
+		return
+	}
+	cx, cy := float32(r.Min.X)+float32(r.Dx())/2, float32(r.Min.Y)+float32(r.Dy())/2
+	// The sector reaches past the corners; the box clips it.
+	radius := float32(math.Hypot(float64(r.Dx()), float64(r.Dy())))/2 + 1
+	var p vector.Path
+	p.MoveTo(cx, cy)
+	p.Arc(cx, cy, radius, float32(-math.Pi/2+2*math.Pi*(1-left)), float32(3*math.Pi/2), vector.Clockwise)
+	p.Close()
+	op := &vector.DrawPathOptions{AntiAlias: true}
+	op.ColorScale.ScaleWithColor(c)
+	vector.FillPath(dst.SubImage(r).(*ebiten.Image), &p, nil, op)
+}
+
 // drawHotbar draws the hotbar: boxes, gauges and action buttons at native resolution, then the
 // portrait and the objects' icons through the palette at the hotbar's scale.
 func (s *shell) drawHotbar(screen *ebiten.Image) {
@@ -470,22 +520,23 @@ func (s *shell) drawHotbar(screen *ebiten.Image) {
 		if b.Slot >= sim.Shelves {
 			edge = handEdgeColor
 		}
+		if s, ok := v.World.Player().OpenSlot(v.Pack); ok && s == b.Slot {
+			edge = openEdgeColor
+		}
 		stroke(r, edge)
 	}
 	for _, b := range h.Spells {
 		r := h.Screen(b.Rect).Inset(1)
 		fill(r, slotColor)
+		fillWait(screen, r, b.Wait, waitColor)
 		stroke(r, spellEdgeColor)
 	}
 	fill(h.Screen(h.Gesture.Rect).Inset(1), slotColor)
 	stroke(h.Screen(h.Gesture.Rect).Inset(1), spellEdgeColor)
 	for _, a := range h.Actions {
 		r := h.Screen(a.Rect).Inset(1)
-		c := actionColor
-		if !a.Ready {
-			c = waitColor
-		}
-		fill(r, c)
+		fill(r, actionColor)
+		fillWait(screen, r, actionWait(a), waitColor)
 		stroke(r, slotEdgeColor)
 		if a.Icon == nil {
 			ebitenutil.DebugPrintAt(screen, a.Label, r.Min.X+(r.Dx()-len(a.Label)*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
@@ -518,11 +569,8 @@ func (s *shell) drawHotbar(screen *ebiten.Image) {
 			centered(b.Icon, b.Rect)
 		}
 	}
-	// An action box shows the object's picture with the action's icon over it.
+	// An action box shows the action's icon alone; the hand's box shows the object.
 	for _, a := range h.Actions {
-		if a.Picture != nil {
-			centered(*a.Picture, a.Rect)
-		}
 		if a.Icon != nil {
 			centered(*a.Icon, a.Rect)
 		}
@@ -532,11 +580,10 @@ func (s *shell) drawHotbar(screen *ebiten.Image) {
 	}
 	s.presenter.PresentAt(screen, art, h.Scale, h.Rect.Min)
 	for _, a := range h.Actions {
-		if !a.Ready {
-			fill(h.Screen(a.Rect).Inset(1), waitShade)
-		}
+		fillWait(screen, h.Screen(a.Rect).Inset(1), actionWait(a), waitShade)
 	}
 	for _, b := range h.Spells {
+		fillWait(screen, h.Screen(b.Rect).Inset(1), b.Wait, waitShade)
 		if b.Count > 1 {
 			r := h.Screen(b.Rect)
 			ebitenutil.DebugPrintAt(screen, fmt.Sprint(min(b.Count, 9)), r.Max.X-viewer.CharWidth-2, r.Max.Y-viewer.LineHeight)
@@ -569,6 +616,9 @@ func (s *shell) drawInventory(screen *ebiten.Image) {
 		edge := slotEdgeColor
 		if b.Slot >= sim.Shelves && b.Slot < sim.SlotPack {
 			edge = handEdgeColor
+		}
+		if s, ok := v.World.Player().OpenSlot(v.Pack); ok && s == b.Slot {
+			edge = openEdgeColor
 		}
 		vector.StrokeRect(win, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx()-1), float32(r.Dy()-1), 1, edge, false)
 	}
@@ -790,7 +840,12 @@ var mapColors = map[int]color.RGBA{
 	viewer.MapFloor: {120, 110, 95, 255}, viewer.MapWall: {55, 50, 48, 255}, viewer.MapDoor: {150, 100, 50, 255},
 	viewer.MapExit: {80, 200, 90, 255}, viewer.MapWater: {50, 90, 190, 255}, viewer.MapHole: {15, 15, 15, 255},
 	viewer.MapTeleporter: {170, 80, 200, 255}, viewer.MapMouth: {220, 220, 220, 255},
+	viewer.MapPlate: {220, 190, 60, 255}, viewer.MapMark: {60, 200, 210, 255},
+	viewer.MapTrapdoor: {120, 75, 40, 255}, viewer.MapSocket: {230, 110, 40, 255},
 }
+
+// mapPlayerColor is the player's cell on the level map.
+var mapPlayerColor = color.RGBA{230, 40, 40, 255}
 
 // drawLevelMap draws map m's cells as diamonds of half-width s around the middle of r, rows and
 // columns turned as the view turns them, and the player's cell in red.
@@ -823,7 +878,7 @@ func drawLevelMap(screen *ebiten.Image, m *viewer.LevelMap, r image.Rectangle, s
 	player := &vector.Path{}
 	diamond(player, m.Player)
 	op := &vector.DrawPathOptions{}
-	op.ColorScale.ScaleWithColor(color.RGBA{230, 40, 40, 255})
+	op.ColorScale.ScaleWithColor(mapPlayerColor)
 	vector.FillPath(screen, player, nil, op)
 }
 
@@ -852,7 +907,8 @@ func (s *shell) drawFullMap(screen *ebiten.Image) {
 		return
 	}
 	screen.Fill(color.RGBA{8, 8, 12, 255})
-	r := image.Rect(0, 3*viewer.LineHeight, v.Screen.X, v.Screen.Y-viewer.Margin)
+	legendW := s.drawMapLegend(screen, m)
+	r := image.Rect(legendW, 3*viewer.LineHeight, v.Screen.X, v.Screen.Y-viewer.Margin)
 	cell := min(float32(r.Dx())/float32(m.Size[0]+m.Size[1]), 2*float32(r.Dy())/float32(m.Size[0]+m.Size[1]))
 	drawLevelMap(screen, m, r, cell)
 	name := m.Name
@@ -860,6 +916,26 @@ func (s *shell) drawFullMap(screen *ebiten.Image) {
 		name = v.World.Current().ID
 	}
 	ebitenutil.DebugPrintAt(screen, name, (v.Screen.X-len(name)*viewer.CharWidth)/2, viewer.LineHeight)
+}
+
+// drawMapLegend draws the full map's legend down its left side, a swatch and a name for the
+// player and for each kind the map shows, and returns the width it takes.
+func (s *shell) drawMapLegend(screen *ebiten.Image, m *viewer.LevelMap) int {
+	const swatch = 10
+	x, y := viewer.Margin, 3*viewer.LineHeight
+	width := 0
+	line := func(c color.Color, name string) {
+		vector.FillRect(screen, float32(x), float32(y+(viewer.LineHeight-swatch)/2), swatch, swatch, c, false)
+		vector.StrokeRect(screen, float32(x), float32(y+(viewer.LineHeight-swatch)/2), swatch, swatch, 1, slotEdgeColor, false)
+		ebitenutil.DebugPrintAt(screen, name, x+swatch+viewer.CharWidth, y)
+		width = max(width, swatch+viewer.CharWidth*(1+len(name)))
+		y += viewer.LineHeight + 4
+	}
+	line(mapPlayerColor, "You")
+	for _, k := range m.Legend {
+		line(mapColors[k], viewer.MapKindNames[k])
+	}
+	return x + width + viewer.Margin
 }
 
 // drawNotice draws the viewer's notice at the top middle of the screen while it lasts.
@@ -907,11 +983,21 @@ func (s *shell) drawReading(screen *ebiten.Image) {
 func (s *shell) drawPointer(screen *ebiten.Image) {
 	v := s.v
 	cursor := v.Cursor
-	if text := v.HoverText(cursor); text != "" {
-		w := len(text)*viewer.CharWidth + 4
-		at := cursor.Add(image.Pt(12, -viewer.LineHeight-4))
-		vector.FillRect(screen, float32(at.X), float32(at.Y), float32(w), float32(viewer.LineHeight), panelColor, false)
-		ebitenutil.DebugPrintAt(screen, text, at.X+2, at.Y)
+	if lines := v.HoverLines(cursor); len(lines) > 0 {
+		w := 0
+		for _, l := range lines {
+			w = max(w, utf8.RuneCountInString(l))
+		}
+		w = w*viewer.CharWidth + 4
+		h := len(lines) * viewer.LineHeight
+		// Above the pointer, kept on the screen.
+		at := cursor.Add(image.Pt(12, -h-4))
+		at.X = min(at.X, v.Screen.X-w)
+		at.Y = max(at.Y, 0)
+		vector.FillRect(screen, float32(at.X), float32(at.Y), float32(w), float32(h), panelColor, false)
+		for i, l := range lines {
+			ebitenutil.DebugPrintAt(screen, l, at.X+2, at.Y+i*viewer.LineHeight)
+		}
 	}
 	img, centered, ok := v.Pointer()
 	ok = ok && cursor.In(image.Rectangle{Max: v.Screen})
@@ -993,4 +1079,21 @@ func saveScreenshot(screen *ebiten.Image, path string) error {
 func (s *shell) Layout(outsideWidth, outsideHeight int) (int, int) {
 	s.v.Screen = image.Pt(outsideWidth, outsideHeight)
 	return outsideWidth, outsideHeight
+}
+
+// savePath returns path when a file is there, or else the file of that name in the saves
+// directory dir when one is there, so --load takes a bare save name like quick.sav.
+func savePath(path, dir string) string {
+	if fileExists(path) || dir == "" || filepath.IsAbs(path) {
+		return path
+	}
+	if alt := filepath.Join(dir, path); fileExists(alt) {
+		return alt
+	}
+	return path
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

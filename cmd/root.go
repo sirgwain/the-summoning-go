@@ -41,6 +41,6 @@ func Execute() {
 }
 
 func init() {
-	// all commands have debug mode
-	rootCmd.PersistentFlags().BoolVar(&debugEnabled, "debug", false, "enable debug logging")
+	// all commands have debug mode; play starts with its debug overlay shown
+	rootCmd.PersistentFlags().BoolVar(&debugEnabled, "debug", false, "enable debug output (play: start with the debug overlay shown)")
 }

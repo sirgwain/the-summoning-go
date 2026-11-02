@@ -111,6 +111,9 @@ type Thing struct {
 	Phase int
 	// Held are the items in the player's hands, right then left, drawn with its frame.
 	Held [2]string
+	// Looks, if set, are sprites drawn in layers, bottom up, frame for frame in place of the
+	// thing's own (a player's figure layers).
+	Looks []string
 	// Shown is damage shown over the thing, 0 for none.
 	Shown int
 	// Frame, if set, is the frame drawn in place of any animation; Sprite, if set, the sprite
@@ -459,7 +462,26 @@ func heldCmds(p *content.Pack, t Thing, cmd Cmd) []Cmd {
 			*layer.into = append(*layer.into, Cmd{Sprite: layer.sprite, Frame: cmd.Frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: cmd.Fixed})
 		}
 	}
-	return append(append(behind, cmd), front...)
+	return append(append(behind, lookCmds(p, t, cmd)...), front...)
+}
+
+// lookCmds draws thing t's frame cmd as its look layers, bottom up, or as cmd itself without
+// any. A layer without the frame is left out.
+func lookCmds(p *content.Pack, t Thing, cmd Cmd) []Cmd {
+	if len(t.Looks) == 0 {
+		return []Cmd{cmd}
+	}
+	var out []Cmd
+	for _, sid := range t.Looks {
+		sprite, ok := p.Sprites[sid]
+		if !ok || cmd.Frame >= sprite.Frames {
+			continue
+		}
+		anchor, _ := sprite.AnchorOf(cmd.Frame)
+		at := RefPoint(t.U, t.V).Sub(image.Pt(anchor[0], anchor[1]))
+		out = append(out, Cmd{Sprite: sid, Frame: cmd.Frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: cmd.Fixed})
+	}
+	return out
 }
 
 // Labels returns the damage shown over scene s's things, where it shows.

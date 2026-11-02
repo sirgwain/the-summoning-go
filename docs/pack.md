@@ -233,12 +233,12 @@ text to UTF-8.
 ```
 
 The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slot_stuck`,
-`weapon_breaks` and `filled`, `{item}` stands for the item's name; in `not_memorized` and
+`weapon_breaks`, `vanishes` and `filled`, `{item}` stands for the item's name; in `not_memorized` and
 `only_spell`, `{school}` for the school's name; in `killed`, `{name}` for the creature's; in
 `absorbed`, `{damage}` for the damage absorbed; in `miss`, `hit`, `creature_hits` and
 `creature_misses`, `{score}` and `{damage}` stand for the numbers. The keys: `lever_stuck`,
 `slot_wrong_item`, `slot_stuck`, `no_drop_here`, `no_room`, `not_a_creature`, `cannot_hurt`,
-`miss`, `hit`, `creature_hits`, `creature_misses`, `weapon_breaks`, `skill_up`, `level_up`,
+`miss`, `hit`, `creature_hits`, `creature_misses`, `weapon_breaks`, `vanishes`, `skill_up`, `level_up`,
 `full_health`, `full_magic`, `not_poisoned`, `not_poisoned_or_confused`, `not_fatigued`,
 `no_destination`, `no_creatures`, `already_have`, `healed` (`{damage}` the amount), `protected`,
 `boost_extended`, `poisoned`, `slowed`, `lost_weapon_skills`, `lost_magic_skills`, `no_quiver`,
@@ -273,15 +273,19 @@ leaves out shows nothing. Later milestones add keys.
 - `container` is present only for containers: it takes up to `capacity` objects of size at most
   `largest`. With `weightless`, its contents add no weight.
 - `armor` is the armor it adds worn. `durability` is a weapon's or armor's starting value, which
-  wear takes down; `charges` the starting value of anything else.
+  wear takes down; `charges` the starting value of anything else. With `shared_charges` the
+  charges are one count for the whole item, kept by the world, which every object of it draws on
+  and which making an object of it refills; such an item may have durability besides.
 - `wear` is the worn slot it goes in: `head`, `body`, `feet`, `arms`, `quiver`, `neck`, or `hand`.
   `weapon_class` (0–3) is a weapon's class, whose skill it practices.
 - `actions` are up to two things the item does in hand: `{ "kind", "damage", "delay", "skill" }`.
   `kind` is `attack`, `attack_both`, `fire`, `use_up` or `use`; `damage` dice; `delay` the player
   updates the hand then waits; `skill` the class skill an attack needs (`docs/spec/items.md`);
-  `sound` the sound a `use_up` action makes when it uses its object up.
+  `sound` the sound a `use_up` action makes when it uses its object up; `swings` makes a `use` or
+  `use_up` action also show the swing pose, of both hands for a `weapon`, without a blow.
 - `power` is the number of the power the item starts when used (`docs/spec/items.md`, Powers), and
-  with `power_worn` also when worn. `spent` is the item a used-up object becomes.
+  with `power_worn` also when worn. `spent` is the item a used-up object leaves
+  in its hand; without one the hand is left empty. A charged object is never replaced.
 - `casts` makes using the item cast a spell: `{ "spell": "spell.fireball", "power": "1d6" }`, the
   power optional (the spell's own roll without it), with `message` an engine message shown as it
   casts. `conversation` makes using it start the
@@ -297,6 +301,11 @@ leaves out shows nothing. Later milestones add keys.
   `{ "right": { "behind": sprite, "front": sprite }, "left": { … } }`. Each sprite has a frame for
   every frame of the player's sprite, drawn with it (an empty frame for none), and its own anchor
   at the player's ground point.
+- `fill` gives a container a look for how full it is: `{ "per", "icons", "dolls" }`, step `k`
+  (from 1) shown while it holds more than `(k − 1) × per` objects, its own icon and doll empty.
+- `looks` are the looks the item puts on the player's figure layers while worn (not in a hand),
+  by layer name: `{ "body": { "sprite", "female" }, … }`, `female` the sprite for a female player
+  when it differs.
 - `missile` is how the item hurts in flight: `{ "damage": dice, "fired_only": bool }`; without it a
   thrown object does `weight / 10 + 1`. `breaks_into` is the item a landing bottle becomes, and
   `on_break` actions run when it breaks (`set_counter`, `converse`, `remove_all`, `experience`).
@@ -363,6 +372,9 @@ leaves out shows nothing. Later milestones add keys.
   `player`'s attributes `strength`, `agility`, `endurance`, `accuracy`, `talent` and `power`,
   from which its speed is worked out (`docs/spec/player.md`, Speed), and its starting
   `interval_bonus` in ticks; a player without attributes walks at its base interval.
+- `figure` (players) draws the player in layers, bottom up, in place of its sprite:
+  `[{ "name", "sprite", "female" }]`. Each layer shows the look a worn item's `looks` give it, or
+  its own; each sprite has a frame for every frame of the player's sprite and its own anchor.
 - `portrait` (players) is the player's portrait, which also gives its figure's colors. `icons`
   (players) are the gesture icons it starts knowing.
 - `conversation` (creatures) is the conversation held with it, and `talk_portrait` the portrait
@@ -547,6 +559,29 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
 A `picture` draws over what is there (`clear` first to start afresh); `part` draws the background
 and the two halves moved `8 × spread` pixels outward, spread going from `from` to `to`; `caption`
 shows a text at the bottom, over `banner` if given; `fade` fades to a color. `ms` holds the step.
+
+## Flipbooks
+
+`flipbooks/<name>.json`: an animation rendered ahead of time, played as a list of steps over
+whatever is behind it (`docs/spec/scenes.md`, View effects and Sparkles). The importer writes the
+view effects as `flipbook.effect.<n>` and the sparkles as `flipbook.sparkle.<kind>`.
+
+```json
+{ "id": "flipbook.effect.2", "sprite": "sprite.flipbook.effect.2", "framed": true, "steps": [
+  { "frame": 0, "ms": 275, "cancel": true, "sounds": ["sfx.21"] },
+  { "frame": 1, "ms": 275, "cancel": true },
+  { "frame": 0, "ms": 17, "music": "music.15" },
+  { "frame": 2, "ms": 989, "music_fade": true }
+] }
+```
+
+- `sprite` holds the frames, all of the flipbook's size. The size is the sprite's frame size.
+  Transparent pixels show what is behind: the view, for a view effect.
+- `framed` draws a border around the flipbook.
+- Each step shows `frame` for `ms`. With `cancel`, Esc or the right mouse button during the step
+  ends the flipbook at once.
+- As a step starts, `music_fade` fades out the music track playing, or `music_stop` stops it at once.
+  Then `music` starts a track and `sounds` start effects.
 
 ## Keywords
 
@@ -786,7 +821,7 @@ Conversations use these:
 | `{ "run": procedure }` | Run a procedure of the current level |
 | `{ "teach": icons }` | Show gesture icons and teach them |
 | `{ "set_portrait": portrait }` | Change the conversation's portrait, and the template's |
-| `{ "effect": name }` | Play a view effect |
+| `{ "effect": flipbook }` | Play a view effect: a flipbook, in a framed box placed by the speaker |
 | `{ "travel": { "level", "cell" } }`, `{ "return": true }` | After the conversation, go to a level and cell, or back to where the player was when a portal took it |
 | `{ "jump": clause }` | Go on evaluating from a clause |
 | `{ "ending": true }`, `{ "menu": name }`, `{ "transcript": name }` | Play the ending; open the game's menu (`quit`, `save`, `restore`, `delete`, `rename`, `leave`); print the transcript (scenes and saves) |

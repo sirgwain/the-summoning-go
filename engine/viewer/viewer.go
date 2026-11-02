@@ -84,6 +84,10 @@ type Viewer struct {
 	SaveDir     string
 	Notice      string
 	NoticeUntil int64
+	// Napping is whether N runs the world fast (nap.go); napHeldOff whether N, not released since
+	// the last nap or refusal, may not start another yet.
+	Napping    bool
+	napHeldOff bool
 	// Audio plays the world's sounds; nil plays none.
 	Audio *audio.Mixer
 	// Said is a mouth's message showing beside it, nil when none is.
@@ -296,6 +300,9 @@ func (v *Viewer) Update(in Input) {
 		cmds = append(cmds, v.keys(in)...)
 	}
 
+	if v.nap(in, cmds) {
+		return
+	}
 	// Paused, the tools still send their commands; play stops altogether. N steps either.
 	if v.Paused && (v.Play || len(cmds) == 0) && !in.pressed("N") {
 		return
@@ -330,7 +337,7 @@ func (v *Viewer) modal(in Input) ([]input.Command, bool) {
 }
 
 // updateWorld runs the world's update with cmds and brings the view up to date.
-func (v *Viewer) updateWorld(cmds []input.Command) {
+func (v *Viewer) updateWorld(cmds []input.Command) []sim.Event {
 	events := v.World.Update(cmds)
 	v.log(events)
 	v.hear(events)
@@ -362,6 +369,7 @@ func (v *Viewer) updateWorld(cmds []input.Command) {
 			v.Thing = ""
 		}
 	}
+	return events
 }
 
 func (v *Viewer) levelIndex() int {
@@ -565,7 +573,7 @@ const functionKeys = 8
 //   - F takes from the floor, G puts down, Enter pulls the lever underfoot or uses a key on the
 //     keyhole underfoot, E talks, H recenters the view, P pauses.
 //   - I or Tab opens and closes the inventory panel, as clicking the portrait does.
-//   - F5 saves to the quick save and F9 loads it; M shows the level map.
+//   - F5 saves to the quick save and F8 loads it; F9 cycles the sound; M shows the level map.
 func (v *Viewer) playKeys(in Input) []input.Command {
 	if in.held(KeyControl) {
 		return nil
@@ -619,9 +627,9 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 		cmds = append(cmds, input.Menu{})
 	case in.pressed(KeyF5):
 		v.SaveGame(QuickSave)
-	case in.pressed(KeyF9):
+	case in.pressed(KeyF8):
 		v.LoadGame(QuickSave)
-	case in.pressed(KeyF8) && v.Audio != nil:
+	case in.pressed(KeyF9) && v.Audio != nil:
 		v.cycleMusic()
 	case in.pressed(KeyEscape) && v.InventoryOpen:
 		v.InventoryOpen = false

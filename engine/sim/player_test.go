@@ -541,3 +541,78 @@ func TestPlayerSpeed(t *testing.T) {
 		t.Errorf("with a bonus of −2: %d steps, want %d", got, steps(2))
 	}
 }
+
+// TestFigureLooks draws each figure layer as its own look until an item worn in a worn slot (not
+// a hand) gives it another, with the female sprite for a female portrait.
+func TestFigureLooks(t *testing.T) {
+	pk := walkPack("@.")
+	pk.Things["thing.player"].Figure = []content.FigureLayer{
+		{Name: "body", FigureLook: content.FigureLook{Sprite: "bare", Female: "bare.f"}},
+		{Name: "head", FigureLook: content.FigureLook{Sprite: "hair"}},
+	}
+	pk.Items["item.mail"] = &content.Item{ID: "item.mail", Wear: content.WearBody,
+		Looks: map[string]content.FigureLook{"body": {Sprite: "mail"}}}
+	pk.Items["item.helm"] = &content.Item{ID: "item.helm", Wear: content.WearHead,
+		Looks: map[string]content.FigureLook{"head": {Sprite: "helm", Female: "helm.f"}}}
+	pk.Portraits["portrait.f"] = &content.Portrait{ID: "portrait.f", Female: true}
+	w, err := New(pk, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := w.Player()
+	check := func(want ...string) {
+		t.Helper()
+		got := p.FigureLooks(pk)
+		if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+			t.Errorf("looks %v, want %v", got, want)
+		}
+	}
+	check("bare", "hair")
+	p.Slots[SlotBody] = &Object{Item: "item.mail"}
+	p.Slots[SlotRightHand] = &Object{Item: "item.helm"} // a hand shows no worn look
+	check("mail", "hair")
+	p.Slots[SlotHead] = p.Slots[SlotRightHand]
+	p.Portrait = "portrait.f"
+	check("mail", "helm.f")
+	p.Slots[SlotBody] = nil
+	check("bare.f", "helm.f")
+}
+
+// TestOpenContainer opens a bag on a shelf as the pack: its contents are the pack slots, and a
+// swap takes from it; opened again it closes, and the bag in the left hand is the pack again, as
+// it is once the opened bag leaves its slot.
+func TestOpenContainer(t *testing.T) {
+	w := walkWorld(t, "@.")
+	pk := w.Pack()
+	p := w.Player()
+	shelfBag := &Object{Item: "item.bag", Contents: []*Object{{Item: "item.key"}}}
+	handBag := &Object{Item: "item.bag"}
+	p.Slots[3], p.Slots[SlotLeftHand] = shelfBag, handBag
+	if p.Pack(pk) != handBag {
+		t.Fatal("the pack is not the bag in the left hand at first")
+	}
+	w.Update([]input.Command{input.Open{Slot: 3}})
+	if p.Pack(pk) != shelfBag || p.Slot(pk, SlotPack) == nil {
+		t.Fatalf("opened: pack %+v", p.Pack(pk))
+	}
+	w.Update([]input.Command{input.Swap{Slot: SlotPack}})
+	if p.Hand == nil || p.Hand.Item != "item.key" || len(shelfBag.Contents) != 0 {
+		t.Fatalf("took %+v; bag holds %d", p.Hand, len(shelfBag.Contents))
+	}
+	w.Update([]input.Command{input.Swap{Slot: SlotPack}})
+	if p.Hand != nil || len(shelfBag.Contents) != 1 {
+		t.Fatalf("put back: hand %+v, bag holds %d", p.Hand, len(shelfBag.Contents))
+	}
+	w.Update([]input.Command{input.Open{Slot: 3}})
+	if p.Pack(pk) != handBag {
+		t.Error("opened again, the shelf bag did not close")
+	}
+	w.Update([]input.Command{input.Open{Slot: 3}, input.Swap{Slot: 3}})
+	if p.Hand != shelfBag || p.Pack(pk) != handBag {
+		t.Errorf("taken from its slot, the opened bag is still the pack: %+v", p.Pack(pk))
+	}
+	w.Update([]input.Command{input.Open{Slot: 4}})
+	if p.Pack(pk) != handBag {
+		t.Error("opening an empty shelf changed the pack")
+	}
+}

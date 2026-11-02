@@ -3,6 +3,7 @@ package drawlist
 import (
 	"image"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
@@ -232,6 +233,32 @@ func TestPlayerFixedColors(t *testing.T) {
 	}
 	if drawn["guard"] == 0 || fixed["guard"] != 0 {
 		t.Errorf("%d of the guard's %d commands are fixed, want none", fixed["guard"], drawn["guard"])
+	}
+}
+
+// TestFigureLayers draws a thing with looks as its layers, bottom up, in place of its own
+// sprite, between the held layers behind and in front.
+func TestFigureLayers(t *testing.T) {
+	p, l := testPack()
+	p.Things["hero"] = &content.Thing{ID: "hero", Kind: content.ThingPlayer, Sprite: "npc"}
+	p.Items["sword"] = &content.Item{ID: "sword", Held: &content.Held{Right: &content.HeldLayers{Behind: "npc", Front: "npc"}}}
+	legs := *p.Sprites["npc"]
+	legs.ID = "legs"
+	p.Sprites["legs"] = &legs
+	s := LevelScene(p, l)
+	s.Things = append(s.Things, Thing{ID: "hero", Template: "hero", U: 32, V: 32, Held: [2]string{"sword"},
+		Looks: []string{"legs", "missing", "legs"}})
+	var sprites []string
+	for _, c := range Build(p, s, Options{}) {
+		if c.Thing == "hero" {
+			if !c.Fixed {
+				t.Errorf("a figure layer %s is not fixed", c.Sprite)
+			}
+			sprites = append(sprites, c.Sprite)
+		}
+	}
+	if want := []string{"npc", "legs", "legs", "npc"}; !slices.Equal(sprites, want) {
+		t.Errorf("the hero draws %v, want %v", sprites, want)
 	}
 }
 

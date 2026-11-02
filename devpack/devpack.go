@@ -187,6 +187,7 @@ func text(p *content.Pack) {
 		"msg.struck":      "It hits you (rolled {score}) for {damage}.",
 		"msg.missed":      "It misses you (rolled {score}).",
 		"msg.breaks":      "Your {item} breaks.",
+		"msg.vanishes":    "Your {item} vanishes.",
 		"msg.skill_up":    "You are better at {skill}.",
 		"msg.level_up":    "You have gained a level.",
 		"msg.music_all":   "Music and sound effects on.",
@@ -204,7 +205,7 @@ func text(p *content.Pack) {
 		content.MsgSlotStuck: "msg.slot_stuck", content.MsgNoDropHere: "msg.no_drop",
 		content.MsgNoRoom: "msg.no_room", content.MsgNotACreature: "msg.nothing_hit", content.MsgCannotHurt: "msg.not_hurt",
 		content.MsgMiss: "msg.miss", content.MsgHit: "msg.hit", content.MsgCreatureHits: "msg.struck",
-		content.MsgCreatureMiss: "msg.missed", content.MsgWeaponBreaks: "msg.breaks", content.MsgSkillUp: "msg.skill_up",
+		content.MsgCreatureMiss: "msg.missed", content.MsgWeaponBreaks: "msg.breaks", content.MsgVanishes: "msg.vanishes", content.MsgSkillUp: "msg.skill_up",
 		content.MsgLevelUp: "msg.level_up", content.MsgMusicAll: "msg.music_all", content.MsgMusicEffects: "msg.music_fx",
 		content.MsgMusicSilent: "msg.music_off",
 	}}
@@ -277,13 +278,13 @@ func records(p *content.Pack) {
 	p.Items[ItemSword].WeaponClass, p.Items[ItemSword].Wear, p.Items[ItemSword].Durability = &sword, content.WearHand, 2500
 	p.Items[ItemSword].Held = &content.Held{Right: &content.HeldLayers{Behind: spriteSwordBehind, Front: spriteSwordFront}}
 	p.Items[ItemSword].Actions = []content.ItemAction{
-		{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 6}, Delay: 4, Skill: 1},
-		{Kind: content.ActionAttack, Damage: content.Dice{Count: 1, Sides: 10}, Delay: 3, Skill: 2},
+		{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 6}, Delay: 12, Skill: 1},
+		{Kind: content.ActionAttack, Damage: content.Dice{Count: 1, Sides: 10}, Delay: 9, Skill: 2},
 	}
 	p.Items[ItemBoots].Wear, p.Items[ItemBoots].Armor, p.Items[ItemBoots].Power = content.WearFeet, 1, 0x0A
 	p.Items[ItemBoots].PowerWorn = true
 	p.Items[ItemPotion].Power = 0x28
-	p.Items[ItemPotion].Actions = []content.ItemAction{{Kind: content.ActionUseUp, Delay: 3}}
+	p.Items[ItemPotion].Actions = []content.ItemAction{{Kind: content.ActionUseUp, Delay: 9}}
 	p.Items[ItemMail].Wear, p.Items[ItemMail].Armor, p.Items[ItemMail].Durability = content.WearBody, 4, 7500
 	p.Items[ItemMail].Tags = []string{"body_armor"}
 	p.Things[ThingGuard] = &content.Thing{ID: ThingGuard, Kind: content.ThingCreature, Sprite: "sprite.guard",
