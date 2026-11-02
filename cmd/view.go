@@ -377,6 +377,10 @@ func (s *shell) Update() error {
 func (s *shell) Draw(screen *ebiten.Image) {
 	v := s.v
 	if v.Front != nil {
+		// The frontend's screens use the system's pointer, which play hides for its own.
+		if ebiten.CursorMode() != ebiten.CursorModeVisible {
+			ebiten.SetCursorMode(ebiten.CursorModeVisible)
+		}
 		s.drawFront(screen)
 		s.takeShots(screen)
 		return

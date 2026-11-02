@@ -367,21 +367,35 @@ func (f *Frontend) Update(in Input) {
 	if in.Left.Released {
 		for i, b := range f.Buttons {
 			if in.Cursor.In(b.Rect) {
-				f.Choice, pick = i, b.Name
+				// A save clicked again while chosen is saved over.
+				if f.Screen == ScreenSave && i == f.Choice && strings.HasPrefix(b.Name, "save.") && f.typed == b.Label {
+					pick = "ok"
+				} else {
+					f.Choice, pick = i, b.Name
+				}
 			}
 		}
 	}
 	n := len(f.Buttons)
 	switch {
 	case n == 0:
-	case in.pressed(KeyArrowDown):
-		f.Choice = (f.Choice + 1) % n
-	case in.pressed(KeyArrowUp):
-		f.Choice = (f.Choice + n - 1) % n
-	case in.pressed(KeyEnter):
-		if f.Screen == ScreenName || f.typing() {
-			pick = "ok"
+	case in.pressed(KeyArrowDown), in.pressed(KeyArrowUp):
+		if in.pressed(KeyArrowDown) {
+			f.Choice = (f.Choice + 1) % n
 		} else {
+			f.Choice = (f.Choice + n - 1) % n
+		}
+		// Moving onto a save to replace takes its name.
+		if b := f.Buttons[f.Choice]; f.Screen == ScreenSave && strings.HasPrefix(b.Name, "save.") {
+			pick = b.Name
+		}
+	case in.pressed(KeyEnter):
+		switch {
+		case (f.Screen == ScreenName || f.typing()) && f.Buttons[f.Choice].Name == "back":
+			pick = "back"
+		case f.Screen == ScreenName || f.typing():
+			pick = "ok"
+		default:
 			pick = f.Buttons[f.Choice].Name
 		}
 	case in.pressed(KeyEscape):

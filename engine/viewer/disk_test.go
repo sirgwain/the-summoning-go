@@ -146,3 +146,46 @@ func TestRTogglesSpellPanel(t *testing.T) {
 		t.Error("R did not close the spell panel")
 	}
 }
+
+// TestSaveOverExisting replaces a save from the save screen: Up or Down onto a save takes its
+// name and Enter saves it, and a save clicked a second time is saved over.
+func TestSaveOverExisting(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	v.SaveDir = t.TempDir()
+	askMenu(t, v, "save")
+	typeText(v, "Old")
+	pressKey(v, KeyEnter)
+
+	askMenu(t, v, "save")
+	pressKey(v, KeyArrowDown)
+	pressKey(v, KeyArrowUp)
+	if v.Front.Buttons[v.Front.Choice].Name != "save.0" || v.Front.typed != "Old" {
+		t.Fatalf("arrows: choice %d, typed %q", v.Front.Choice, v.Front.typed)
+	}
+	pressKey(v, KeyEnter)
+	if v.Front != nil || v.Notice != "Saved" {
+		t.Fatalf("Enter on a save: front %+v, notice %q", v.Front, v.Notice)
+	}
+
+	askMenu(t, v, "save")
+	v.Notice = ""
+	pressKey(v, KeyArrowUp)
+	pressKey(v, KeyEnter)
+	if v.Front != nil || v.Notice == "Saved" {
+		t.Fatalf("Enter on Cancel: front %+v, notice %q", v.Front, v.Notice)
+	}
+
+	askMenu(t, v, "save")
+	clickButton(t, v, "save.0")
+	if v.Front == nil || v.Front.typed != "Old" {
+		t.Fatalf("one click: front %+v", v.Front)
+	}
+	v.Notice = ""
+	clickButton(t, v, "save.0")
+	if v.Front != nil || v.Notice != "Saved" {
+		t.Fatalf("second click: front %+v, notice %q", v.Front, v.Notice)
+	}
+	if got := v.SaveNames(); len(got) != 1 || got[0] != "Old" {
+		t.Fatalf("saves %v", got)
+	}
+}
