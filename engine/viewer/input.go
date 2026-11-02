@@ -113,6 +113,19 @@ func (in Input) anyPressed() bool {
 	return false
 }
 
+// without returns the input with key k neither held nor pressed.
+func (in Input) without(k Key) Input {
+	held, pressed := make(map[Key]bool, len(in.Held)), make(map[Key]bool, len(in.Pressed))
+	for key, down := range in.Held {
+		held[key] = down && key != k
+	}
+	for key, down := range in.Pressed {
+		pressed[key] = down && key != k
+	}
+	in.Held, in.Pressed = held, pressed
+	return in
+}
+
 func (in Input) pressed(keys ...Key) bool {
 	for _, k := range keys {
 		if in.Pressed[k] {

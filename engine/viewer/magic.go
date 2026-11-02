@@ -162,10 +162,10 @@ func (v *Viewer) learnEntered() []input.Command {
 }
 
 // spellKeys are the keys while the spell panel is open: A–L enter icons, Backspace takes the last
-// off, Enter learns, Escape or F10 closes.
+// off, Enter learns, Escape, F10 or R closes.
 func (v *Viewer) spellKeys(in Input) []input.Command {
 	switch {
-	case in.pressed(KeyEscape, KeyF10):
+	case in.pressed(KeyEscape, KeyF10, "R"):
 		v.SpellsOpen = false
 		return nil
 	case in.pressed(KeyBackspace):
@@ -220,7 +220,7 @@ func (v *Viewer) spellClick(sp *SpellPanel, pt image.Point, right bool) []input.
 }
 
 // castKeys are the play keys that cast: F1–F4 or 1–4 cast a school's spell, with Shift select its
-// next; F10 opens the spell panel.
+// next; F10 or R opens the spell panel.
 func (v *Viewer) castKeys(in Input) []input.Command {
 	var cmds []input.Command
 	for s := range content.Schools {
@@ -232,7 +232,7 @@ func (v *Viewer) castKeys(in Input) []input.Command {
 			}
 		}
 	}
-	if in.pressed(KeyF10) {
+	if in.pressed(KeyF10, "R") {
 		v.OpenSpells()
 	}
 	return cmds

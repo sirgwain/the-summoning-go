@@ -298,6 +298,8 @@ The file formats are in [pack.md](pack.md).
   full-screen map on a key. Both show only the cells the player has seen. A level can refuse the
   map (`docs/spec/world.md`): the minimap then hides, and opening the map shows the level's message
   or starts its conversation instead.
+- Esc closes the topmost window over the view (a conversation, the map, the spell panel, a scroll's
+  picture, the inventory), one per press; with none open it opens the options menu, as O does.
 - The UI only sends commands; it never changes game state directly.
 
 ## Input

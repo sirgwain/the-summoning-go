@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/sirgwain/the-summoning-go/devpack"
+	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
@@ -93,5 +94,55 @@ func TestDiskMenu(t *testing.T) {
 	clickButton(t, v, "yes")
 	if v.Front == nil || v.Front.Screen != ScreenMenu {
 		t.Fatalf("leaving: %+v", v.Front)
+	}
+}
+
+// TestEscapeClosesThenOpensMenu: Esc closes the window over the view, one a press, and with none
+// open brings up the options menu, as O does.
+func TestEscapeClosesThenOpensMenu(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	idle := func() {
+		for i := 0; i < 20 && v.World.Talk() == nil; i++ {
+			v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}})
+		}
+	}
+	v.OpenSpells()
+	pressKey(v, KeyEscape)
+	if v.SpellsOpen || v.World.Talk() != nil {
+		t.Fatalf("Esc over the spell panel: open %v, talk %v", v.SpellsOpen, v.World.Talk() != nil)
+	}
+	v.ToggleInventory()
+	pressKey(v, KeyEscape)
+	idle()
+	if v.InventoryOpen || v.World.Talk() != nil {
+		t.Fatalf("Esc over the inventory: open %v, talk %v", v.InventoryOpen, v.World.Talk() != nil)
+	}
+	v.Reading = &content.Image{}
+	pressKey(v, KeyEscape)
+	idle()
+	if v.Reading != nil || v.World.Talk() != nil {
+		t.Fatalf("Esc over a scroll: reading %v, talk %v", v.Reading != nil, v.World.Talk() != nil)
+	}
+	pressKey(v, KeyEscape)
+	idle()
+	if v.World.Talk() == nil {
+		t.Fatal("Esc did not open the options menu")
+	}
+	pressKey(v, KeyEscape)
+	if v.World.Talk() != nil {
+		t.Error("Esc did not leave the options menu")
+	}
+}
+
+// TestRTogglesSpellPanel: R opens the spell panel and closes it again, as F10 does.
+func TestRTogglesSpellPanel(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	pressKey(v, "R")
+	if !v.SpellsOpen {
+		t.Fatal("R did not open the spell panel")
+	}
+	pressKey(v, "R")
+	if v.SpellsOpen {
+		t.Error("R did not close the spell panel")
 	}
 }

@@ -278,6 +278,10 @@ func (v *Viewer) Update(in Input) {
 		v.Said = nil
 	}
 	if acted {
+		// Esc that puts a scroll's picture away is used up, so it does not open the menu too.
+		if v.Reading != nil && in.pressed(KeyEscape) {
+			in = in.without(KeyEscape)
+		}
 		v.Reading = nil
 	}
 	if cmds, ok := v.modal(in); ok {
@@ -590,6 +594,7 @@ const functionKeys = 8
 //   - F takes from the floor, G puts down, Enter pulls the lever underfoot or uses a key on the
 //     keyhole underfoot, E talks, H recenters the view, P pauses.
 //   - I or Tab opens and closes the inventory panel, as clicking the portrait does.
+//   - Esc closes the inventory panel; with it closed, Esc or O opens the options menu.
 //   - F5 saves to the quick save and F8 loads it; F9 cycles the sound; M shows the level map.
 func (v *Viewer) playKeys(in Input) []input.Command {
 	if in.held(KeyControl) {
@@ -640,7 +645,9 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 		v.ToggleInventory()
 	case in.pressed("M"):
 		cmds = append(cmds, input.ShowMap{})
-	case in.pressed("O"):
+	case in.pressed(KeyEscape) && v.InventoryOpen:
+		v.InventoryOpen = false
+	case in.pressed("O", KeyEscape):
 		cmds = append(cmds, input.Menu{})
 	case in.pressed(KeyF5):
 		v.SaveGame(QuickSave)
@@ -648,8 +655,6 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 		v.LoadGame(QuickSave)
 	case in.pressed(KeyF9) && v.Audio != nil:
 		v.cycleMusic()
-	case in.pressed(KeyEscape) && v.InventoryOpen:
-		v.InventoryOpen = false
 	case in.pressed("H"):
 		v.Recenter()
 	case in.pressed("P"):
@@ -754,11 +759,12 @@ func (v *Viewer) PanelLines() []string {
 			"Space right hand (Shift: 2nd)  X throw right",
 			"Q left hand (Shift: 2nd)  Z throw left",
 			"F take  G put down  Enter lever/key  E/C talk",
-			"F1-F4 cast (Shift: next spell)  F10 spells",
+			"F1-F4 cast (Shift: next spell)  F10/R spells",
 			"Shift+click read",
 			"Click the player: take / put down; click a slot:",
 			"swap with the hand; right click: hand to a shelf",
 			"I/Tab or click the portrait: inventory",
+			"Esc close / options  O options",
 			"H recenter  P pause  N step  M magnify",
 			"V see all  F12 tools  ~ debug",
 			v.flipbookLine())

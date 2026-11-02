@@ -1,6 +1,6 @@
 # Dialogue
 
-Conversations are scripts in INTERACT. A conversation is held with an NPC record: its script is byte 0 of the record (creatures.md) and its portrait byte 1. Some objects speak too, through powers that start a conversation with a given record (items.md), and so do some events of the game (a broken Decanter, Mending, the opening). Record 0's script is the disk menu (save, restore, delete, rename), opened with the O key.
+Conversations are scripts in INTERACT. A conversation is held with an NPC record: its script is byte 0 of the record (creatures.md) and its portrait byte 1. Some objects speak too, through powers that start a conversation with a given record (items.md), and so do some events of the game (a broken Decanter, Mending, the opening). Record 0's script is the disk menu (save, restore, delete, rename), opened with the O key. The engine also opens it with Esc when nothing is open over the view: Esc first closes what is (a conversation, the full map, the spell panel, a scroll's picture, the inventory panel), one press each, and opens the menu only from the plain view.
 
 ## Talking
 
