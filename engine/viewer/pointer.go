@@ -98,17 +98,24 @@ func (v *Viewer) Pointer() (img content.Image, centered, ok bool) {
 func (v *Viewer) hear(events []sim.Event) {
 	l := v.World.Current()
 	for _, e := range events {
-		if e.Kind != sim.EventMessage || e.Feature == "" || e.Level != l.ID {
+		if e.Kind != sim.EventMessage || !v.isMouth(e) {
 			continue
 		}
 		f := l.Feature(e.Feature)
-		if f == nil || f.Kind != content.FeatureMouth {
-			continue
-		}
 		at := drawlist.TileBox(f.Cell).Add(image.Pt(16, 0))
 		if tl, ok := v.mouthTopLeft(f); ok {
 			at = tl.Add(image.Pt(16, 0))
 		}
 		v.Said = &Said{Text: v.lineText(e.Text), At: at, Until: v.Ticks + saidUpdates}
 	}
+}
+
+// isMouth reports whether message event e is a mouth's of the current level, shown beside it.
+func (v *Viewer) isMouth(e sim.Event) bool {
+	l := v.World.Current()
+	if e.Feature == "" || e.Level != l.ID {
+		return false
+	}
+	f := l.Feature(e.Feature)
+	return f != nil && f.Kind == content.FeatureMouth
 }

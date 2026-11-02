@@ -36,6 +36,11 @@ func TestHotbarLayout(t *testing.T) {
 	if s9.Min.Y != s0.Min.Y || s9.Min.X-s0.Min.X != 9*SlotSize*h.Scale || s10.Min.X != s0.Min.X || s10.Min.Y != s0.Max.Y {
 		t.Errorf("shelves 0 %v, 9 %v, 10 %v", s0, s9, s10)
 	}
+	// The schools two by two, row by row: Sorcery right of Wizardry, Enchantment under it.
+	if sp := h.Spells; sp[1].Rect.Min.Y != sp[0].Rect.Min.Y || sp[1].Rect.Min.X <= sp[0].Rect.Min.X ||
+		sp[2].Rect.Min.X != sp[0].Rect.Min.X || sp[2].Rect.Min.Y <= sp[0].Rect.Min.Y || sp[3].Rect.Min != image.Pt(sp[1].Rect.Min.X, sp[2].Rect.Min.Y) {
+		t.Errorf("school boxes %v %v %v %v", sp[0].Rect, sp[1].Rect, sp[2].Rect, sp[3].Rect)
+	}
 	// Bare hands strike.
 	if len(h.Actions) != 2 || h.Actions[0].Label != "strike" || !h.Actions[0].Ready {
 		t.Errorf("actions %+v", h.Actions)
@@ -129,4 +134,20 @@ func mustScript(t *testing.T, s string) Script {
 		t.Fatal(err)
 	}
 	return sc
+}
+
+// TestRightClickDrinks right-clicks a potion on a shelf with nothing on the pointer: the player
+// drinks it where it lies.
+func TestRightClickDrinks(t *testing.T) {
+	v := newViewer(t)
+	v.SetPlay(true)
+	p := v.World.Player()
+	p.HitPoints = 1
+	p.Slots[4] = &sim.Object{Item: devpack.ItemPotion}
+	if err := NewRunner(mustScript(t, `[{"at": 0, "slot": 4, "right": true}]`), t.TempDir()).Run(v); err != nil {
+		t.Fatal(err)
+	}
+	if p.Slots[4] != nil && p.Slots[4].Item == devpack.ItemPotion || p.HitPoints <= 1 || p.Hand != nil {
+		t.Errorf("right-clicking the potion: shelf %+v, %d hit points, hand %+v", p.Slots[4], p.HitPoints, p.Hand)
+	}
 }

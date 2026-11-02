@@ -417,10 +417,10 @@ func (w *World) startPower(power, sign int) bool {
 	return true
 }
 
-// useObject uses the object in hand by a use or use-up action: its power starts unless it
+// useObject uses object o, in a hand, on a shelf or in the pack, by a use or use-up action: its power starts unless it
 // refuses, or it casts its spell or starts its conversation; then a use takes a charge, and a
 // use up leaves its spent object (docs/spec/items.md, Using up).
-func (w *World) useObject(hand int, o *Object, a content.ItemAction) {
+func (w *World) useObject(o *Object, a content.ItemAction) {
 	it := w.pack.Items[o.Item]
 	switch {
 	case it.Casts != nil:
@@ -447,14 +447,14 @@ func (w *World) useObject(hand int, o *Object, a content.ItemAction) {
 		}
 		t.use = func() {
 			if c := w.pack.Manifest.Counters; c != nil && w.counters[c.UseResult] != 0 {
-				w.usedUp(hand, o, it, a)
+				w.usedUp(o, it, a)
 			}
 		}
 		return
 	case it.Power == 0 || !w.usable(it.Power) || !w.startPower(it.Power, 1):
 		return
 	}
-	w.usedUp(hand, o, it, a)
+	w.usedUp(o, it, a)
 }
 
 // lastingPower reports whether power lasts while worn (docs/spec/items.md, Powers).
@@ -498,26 +498,60 @@ func (w *World) runDownTimed() {
 	}
 }
 
-// usedUp takes a use from object o in hand: one charge for a use action, leaving the object in
-// the hand even at none; else all of it, leaving its spent object or an empty hand.
-func (w *World) usedUp(hand int, o *Object, it *content.Item, a content.ItemAction) {
-	slot := SlotRightHand + hand
-	if w.player.Slots[slot] != o {
+// usedUp uses o up after action a, wherever the player keeps it: a charged object loses a charge
+// and stays; another leaves its place to its spent object, or empty (docs/spec/items.md, Using
+// up). An object the player no longer keeps is left alone.
+func (w *World) usedUp(o *Object, it *content.Item, a content.ItemAction) {
+	p := w.player
+	slot := p.slotOf(w.pack, o)
+	if slot < 0 {
 		return
 	}
 	if a.Kind == content.ActionUse {
 		w.useOne(o)
 		return
 	}
-	w.sound(w.player.Cell(), a.Sound)
-	w.player.Slots[slot] = nil
-	w.takeOff(o)
+	w.sound(p.Cell(), a.Sound)
+	var spent *Object
 	if it.Spent != "" {
-		spent := w.newObject(it.Spent)
-		w.player.Slots[slot] = spent
-		w.putOn(spent)
+		spent = w.newObject(it.Spent)
 	}
-	w.emit(Event{Kind: EventObject, Level: w.current, Cell: w.player.Cell(), Item: o.Item, Detail: "used"})
+	switch {
+	case slot >= SlotPack:
+		bag := p.Pack(w.pack)
+		i := slot - SlotPack
+		if spent != nil {
+			bag.Contents[i] = spent
+		} else {
+			bag.Contents = append(bag.Contents[:i], bag.Contents[i+1:]...)
+		}
+	case slot < Shelves:
+		p.Slots[slot] = spent
+	default:
+		p.Slots[slot] = spent
+		w.takeOff(o)
+		if spent != nil {
+			w.putOn(spent)
+		}
+	}
+	w.emit(Event{Kind: EventObject, Level: w.current, Cell: p.Cell(), Item: o.Item, Detail: "used"})
+}
+
+// slotOf returns the slot holding o, a fixed slot or a pack slot, or −1.
+func (p *Player) slotOf(pk *content.Pack, o *Object) int {
+	for i, s := range p.Slots {
+		if s == o {
+			return i
+		}
+	}
+	if bag := p.Pack(pk); bag != nil {
+		for i, c := range bag.Contents {
+			if c == o {
+				return SlotPack + i
+			}
+		}
+	}
+	return -1
 }
 
 // changeSex changes the player's sex, and its portrait to its portrait's other-sex one.
@@ -527,4 +561,14 @@ func (w *World) changeSex() {
 	if pt := w.pack.Portraits[p.Portrait]; pt != nil && pt.Other != "" {
 		p.Portrait = pt.Other
 	}
+}
+
+// Magnified reports whether objects on the floor are drawn magnified: while the player's timed
+// sight lasts or the pack's magnify counter is set (docs/spec/items.md, Floor).
+func (w *World) Magnified() bool {
+	if p := w.player; p != nil && p.Timed[TimedSight] > 0 {
+		return true
+	}
+	c := w.pack.Manifest.Counters
+	return c != nil && c.Magnify != "" && w.counters[c.Magnify] != 0
 }

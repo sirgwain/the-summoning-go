@@ -196,6 +196,10 @@ func text(p *content.Pack) {
 		"msg.music_off":   "Sound off.",
 		"msg.mouth":       "Welcome to the hall of *mechanisms.",
 		"msg.mouth.after": "The *socket is complete.",
+		"msg.taken":       "{item}",
+		"msg.nothing":     "Nothing to take.",
+		"msg.quiver":      "{item} put in your quiver.",
+		"msg.paused":      "Paused; press a key.",
 	}
 	for _, it := range itemArt {
 		s["item."+it.name+".name"] = itemNames[it.name]
@@ -208,7 +212,8 @@ func text(p *content.Pack) {
 		content.MsgMiss: "msg.miss", content.MsgHit: "msg.hit", content.MsgCreatureHits: "msg.struck",
 		content.MsgCreatureMiss: "msg.missed", content.MsgWeaponBreaks: "msg.breaks", content.MsgVanishes: "msg.vanishes", content.MsgSkillUp: "msg.skill_up",
 		content.MsgLevelUp: "msg.level_up", content.MsgMusicAll: "msg.music_all", content.MsgMusicEffects: "msg.music_fx",
-		content.MsgMusicSilent: "msg.music_off",
+		content.MsgMusicSilent: "msg.music_off", content.MsgTaken: "msg.taken", content.MsgNothingToTake: "msg.nothing",
+		content.MsgIntoQuiver: "msg.quiver", content.MsgPaused: "msg.paused",
 	}}
 }
 

@@ -203,6 +203,46 @@ func TestSlideAlongDiagonalWall(t *testing.T) {
 	}
 }
 
+// TestWallOutOfSight takes a diagonal wall whose neighbor cannot be seen as the shape its pairs
+// say while it cannot be seen: it no longer slides the player, and the level keeps its shape.
+func TestWallOutOfSight(t *testing.T) {
+	w := walkWorld(t,
+		"#####",
+		"#..##",
+		"#.@\\#",
+		"#..##",
+		"#####")
+	l := w.Current()
+	w.pack.Walls["walls"].Shapes[wallBottom].Unseen = [][2]int{{2, wallBlock}}
+	walk(w, 2, 2)
+	if l.Shape(cell{2, 3}) != wallBlock || l.Wall[2][3] != wallBottom {
+		t.Fatalf("shape %d, own %d", l.Shape(cell{2, 3}), l.Wall[2][3])
+	}
+	if l.Shape(cell{1, 3}) != wallBlock || len(l.Taken()) != 1 {
+		t.Errorf("taken %v", l.Taken())
+	}
+	st, err := w.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Levels[0].Grids[1][2][3] != wallBottom {
+		t.Error("the save holds the shape taken")
+	}
+	r, err := Restore(w.pack, st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := r.Current().Shape(cell{2, 3}); got != wallBlock {
+		t.Errorf("restored: shape %d", got)
+	}
+	p := w.Player()
+	u := p.U
+	walk(w, 2, 1)
+	if p.U != u {
+		t.Errorf("slid along a wall taken as a block: u %d from %d", p.U, u)
+	}
+}
+
 func TestPushTrap(t *testing.T) {
 	w := walkWorld(t,
 		"########",
@@ -301,7 +341,9 @@ func TestPickUpSwapAndPutDown(t *testing.T) {
 	walk(w, 2, 4)
 	// The take key puts the first rock on a shelf; taking into the hand puts the second there.
 	l.Objects[cell{1, 2}] = append(l.Objects[cell{1, 2}], &Object{Item: "item.rock"})
-	w.Update([]input.Command{input.PickUp{}})
+	if ev := w.Update([]input.Command{input.PickUp{}}); !has(ev, EventMessage, content.MsgTaken) {
+		t.Errorf("taking the rock named nothing: %v", ev)
+	}
 	if p.Hand != nil || p.Slots[0] == nil {
 		t.Fatalf("the take key: hand %v, shelf %v", p.Hand, p.Slots[0])
 	}
@@ -327,6 +369,10 @@ func TestPickUpSwapAndPutDown(t *testing.T) {
 	}
 	if ev := w.Update([]input.Command{input.PickUp{}}); !has(ev, EventMessage, content.MsgNoRoom) || len(l.Objects[cell{1, 2}]) != 1 {
 		t.Errorf("picking up with no room: %v", ev)
+	}
+	l.Objects[cell{1, 2}] = nil
+	if ev := w.Update([]input.Command{input.PickUp{}}); !has(ev, EventMessage, content.MsgNothingToTake) {
+		t.Errorf("picking up nothing: %v", ev)
 	}
 }
 

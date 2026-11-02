@@ -314,7 +314,7 @@ func TestViewFollowsPlayer(t *testing.T) {
 	if v.Origin != start {
 		t.Fatalf("the view moved from %v to %v while the player walked in its middle", start, v.Origin)
 	}
-	walk("D", 30)
+	walk("D", 40)
 	p := v.World.Player()
 	rel := drawlist.RefPoint(p.U, p.V).Sub(v.Origin)
 	if v.Origin == start {
@@ -408,8 +408,33 @@ func TestTalkWaitsForAKey(t *testing.T) {
 	if tk.Line != nil {
 		t.Errorf("Space did not go on: %+v", tk.Line)
 	}
-	if tv := v.Talk(); tv == nil || len(tv.Buttons) != 2 || tv.Buttons[0].Label != "name" {
-		t.Errorf("the offered keywords: %+v", tv)
+	tv := v.Talk()
+	if tv == nil || len(tv.Buttons) != 2 || tv.Buttons[0].Label != "name" {
+		t.Fatalf("the offered keywords: %+v", tv)
+	}
+	// The first keyword is highlighted; Down moves to the second, then the field, and no further.
+	if tv.Selected != 0 {
+		t.Errorf("highlighted %d at first", tv.Selected)
+	}
+	for _, want := range []int{1, 2, 2} {
+		v.Update(snapshot(KeyArrowDown))
+		if got := v.Talk().Selected; got != want {
+			t.Errorf("after Down: highlighted %d, want %d", got, want)
+		}
+	}
+	// Typing highlights the field; Up then Enter asks the second keyword, not the typed word.
+	v.Update(snapshot(KeyArrowUp, KeyArrowUp))
+	in := snapshot()
+	in.Chars = []rune("zz")
+	v.Update(in)
+	if v.Talk().Selected != 2 || v.Typed != "zz" {
+		t.Fatalf("typing: highlighted %d, typed %q", v.Talk().Selected, v.Typed)
+	}
+	v.Update(snapshot(KeyArrowUp))
+	second := tv.Buttons[1].Label
+	v.Update(snapshot(KeyEnter))
+	if !strings.Contains(strings.ToLower(strings.Join(tk.Transcript, "|")), "q: "+strings.ToLower(second)) {
+		t.Errorf("Enter did not ask %q: %v", second, tk.Transcript)
 	}
 }
 
@@ -574,5 +599,89 @@ func TestLevelMap(t *testing.T) {
 	press("M")
 	if v.MapOpen || !slices.ContainsFunc(v.Events, func(s string) bool { return strings.Contains(s, "confuses") }) {
 		t.Errorf("the cellar's refusal: open %v, events %v", v.MapOpen, v.Events)
+	}
+}
+
+// TestMessageLine shows what the player takes on the message line, just above the hotbar.
+func TestMessageLine(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	v.World.Update([]input.Command{input.Drop{Cell: devpack.StudyStart, Item: devpack.ItemRock}})
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{"F": true}, Cursor: image.Pt(-1, -1)})
+	if v.Notice != "Rock" {
+		t.Errorf("taking the rock: notice %q", v.Notice)
+	}
+	r, bar := v.NoticeRect(), v.Hotbar().Rect
+	if r.Max.Y != bar.Min.Y-Margin || r.Min.X+r.Max.X != v.Screen.X {
+		t.Errorf("message line at %v, hotbar at %v", r, bar)
+	}
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{"F": true}, Cursor: image.Pt(-1, -1)})
+	if v.Notice != "Nothing to take." {
+		t.Errorf("taking nothing: notice %q", v.Notice)
+	}
+}
+
+// TestDiagonalGrace walks a pair of keys pressed and let go a moment apart only along their
+// diagonal, and a single key held on straight after a moment.
+func TestDiagonalGrace(t *testing.T) {
+	v := newViewer(t)
+	v.SetPlay(true)
+	walks := func(held ...Key) []int {
+		in := Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}}
+		for _, k := range held {
+			in.Held[k] = true
+		}
+		var dirs []int
+		for _, c := range v.playKeys(in) {
+			if w, ok := c.(input.Walk); ok {
+				dirs = append(dirs, w.Direction)
+			}
+		}
+		return dirs
+	}
+	up, upRight := screenDirection(0, -1), screenDirection(1, -1)
+	// W a moment before D: nothing, then the diagonal.
+	if got := walks("W"); got != nil {
+		t.Errorf("W alone at first walked %v", got)
+	}
+	if got := walks("W", "D"); !slices.Equal(got, []int{upRight}) {
+		t.Errorf("W and D: %v", got)
+	}
+	// D let go a moment before W: no straight step.
+	for range walkGrace - 1 {
+		if got := walks("W"); got != nil {
+			t.Fatalf("W left over from the diagonal walked %v", got)
+		}
+	}
+	// W held on walks straight up, and keeps walking.
+	for range 3 {
+		if got := walks("W"); !slices.Equal(got, []int{up}) {
+			t.Fatalf("W held on: %v", got)
+		}
+	}
+	// Turning from one straight direction to another walks at once.
+	if got := walks("D"); !slices.Equal(got, []int{screenDirection(1, 0)}) {
+		t.Errorf("turning to D: %v", got)
+	}
+	walks()
+}
+
+// TestPauseMessage pauses play with P, showing the pause message until the next key, which only
+// resumes.
+func TestPauseMessage(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	v.Update(Input{Held: map[Key]bool{"P": true}, Pressed: map[Key]bool{"P": true}, Cursor: image.Pt(-1, -1)})
+	step := v.World.Step()
+	for range 300 {
+		v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: image.Pt(-1, -1)})
+	}
+	if !v.Paused || v.World.Step() != step || v.Notice != "Paused; press a key." || v.Ticks > v.NoticeUntil {
+		t.Fatalf("paused %v, steps %d, notice %q until %d", v.Paused, v.World.Step()-step, v.Notice, v.NoticeUntil)
+	}
+	v.Update(Input{Held: map[Key]bool{"F": true}, Pressed: map[Key]bool{"F": true}, Cursor: image.Pt(-1, -1)})
+	if v.Paused || v.Ticks <= v.NoticeUntil-1 && v.Notice != "" && v.Ticks < v.NoticeUntil {
+		t.Errorf("a key did not resume: paused %v, notice %q", v.Paused, v.Notice)
+	}
+	if v.World.Step() != step {
+		t.Error("the key that resumed also acted")
 	}
 }

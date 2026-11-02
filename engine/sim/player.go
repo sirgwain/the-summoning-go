@@ -582,7 +582,7 @@ func (w *World) slideOff(l *Level, du, dv int) (int, int) {
 	if set == nil {
 		return 0, 0
 	}
-	shape := set.Shape(l.Wall[c[0]][c[1]])
+	shape := set.Shape(l.Shape(c))
 	if shape == nil {
 		return 0, 0
 	}
@@ -757,14 +757,15 @@ func (w *World) statusTick() {
 }
 
 // pickUp takes the top object of the player's cell: onto the pointer when toHand and the hand is
-// empty, else an arrow into a worn quiver with room and anything else to the first empty shelf
-// (docs/spec/items.md, Engine model).
+// empty, else an arrow into a worn quiver with room and anything else to the first empty shelf,
+// with its message (docs/spec/items.md, Engine model).
 func (w *World) pickUp(toHand bool) {
 	p, l := w.player, w.Current()
 	c := p.Cell()
 	objs := l.Objects[c]
 	if len(objs) == 0 {
 		w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: c, Detail: "nothing to pick up"})
+		w.message(l, c, content.MsgNothingToTake, "")
 		return
 	}
 	o := objs[len(objs)-1]
@@ -772,6 +773,7 @@ func (w *World) pickUp(toHand bool) {
 	if !toHand && w.intoQuiver(o) {
 		w.takeFloorObject(l, c)
 		w.cue(c, content.CueTake)
+		w.message(l, c, content.MsgIntoQuiver, o.Item)
 		return
 	}
 	slot := -1
@@ -789,6 +791,7 @@ func (w *World) pickUp(toHand bool) {
 	}
 	w.takeFloorObject(l, c)
 	w.cue(c, content.CueTake)
+	w.message(l, c, content.MsgTaken, o.Item)
 	if slot < 0 {
 		p.Hand = o
 		w.read(input.SlotHand)

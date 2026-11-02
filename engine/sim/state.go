@@ -185,6 +185,10 @@ func Restore(p *content.Pack, s *State) (*World, error) {
 		if len(l.Floor) != def.Size[0] || len(l.Wall) != def.Size[0] {
 			return nil, fmt.Errorf("level %s: the saved grids do not fit its size", ls.ID)
 		}
+		if l.visible != nil && len(l.visible) != def.Size[0]*def.Size[1] {
+			return nil, fmt.Errorf("level %s: the saved visibility does not fit its size", ls.ID)
+		}
+		l.takeShapes(p.Walls[def.Walls])
 		for _, fs := range ls.Features {
 			f := fs.Feature
 			f.next = fs.Next

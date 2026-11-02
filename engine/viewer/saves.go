@@ -1,7 +1,11 @@
 package viewer
 
 import (
+	"image"
 	"path/filepath"
+	"strings"
+
+	"github.com/sirgwain/the-summoning-go/engine/inspect"
 
 	"github.com/sirgwain/the-summoning-go/engine/save"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
@@ -21,9 +25,44 @@ const (
 // savePath returns the path of save name.
 func (v *Viewer) savePath(name string) string { return filepath.Join(v.SaveDir, name+".sav") }
 
-// notice shows text at the top of the screen for a while.
+// notice shows text on the message line for a while.
 func (v *Viewer) notice(text string) {
 	v.Notice, v.NoticeUntil = text, v.Ticks+noticeUpdates
+}
+
+// announce shows the game's messages among events on the message line, those said in one update
+// together, leaving out what a mouth says (shown beside it).
+func (v *Viewer) announce(events []sim.Event) {
+	var lines []string
+	for _, e := range events {
+		if e.Kind != sim.EventMessage || v.isMouth(e) {
+			continue
+		}
+		if s := inspect.Message(v.Pack, e); s != "" {
+			lines = append(lines, strings.ReplaceAll(s, "@", v.playerName()))
+		}
+	}
+	if len(lines) > 0 {
+		v.notice(strings.Join(lines, " "))
+	}
+}
+
+// NoticeRect is where the message line is drawn: centered just above the hotbar and the panels
+// over it, as wide as its text.
+func (v *Viewer) NoticeRect() image.Rectangle {
+	w, h := len([]rune(v.Notice))*CharWidth+8, LineHeight+4
+	bottom := v.Screen.Y - Margin
+	if bar := v.Hotbar(); bar != nil {
+		bottom = bar.Rect.Min.Y - Margin
+	}
+	if sp := v.SpellPanel(); sp != nil {
+		bottom = min(bottom, sp.Rect.Min.Y-Margin)
+	}
+	if ip := v.Inventory(); ip != nil {
+		bottom = min(bottom, ip.Rect.Min.Y-Margin)
+	}
+	x := (v.Screen.X - w) / 2
+	return image.Rect(x, bottom-h, x+w, bottom)
 }
 
 // SaveGame writes the world to save name.

@@ -123,7 +123,7 @@ Spells 7, 8 and 27–29 do nothing.
 
 ## Spell panel
 
-The spell panel shows, for each school, its selected memorized spell's icon (RESOURCE 45h + school, frame = slot) and how many times it is memorized (at most 9 shown). Selecting cycles to the school's next memorized spell; with none other, message 46h (none memorized) or 47h names the school. The gesture panel shows the gesture icons as they play: RESOURCE 54, frame `icon + 1` (frame 0 is the empty panel).
+The spell panel shows the four schools in boxes two by two, row by row: Wizardry top left, Sorcery top right, Enchantment bottom left, Healing bottom right. Each box shows its school's selected memorized spell's icon (RESOURCE 45h + school, frame = slot) and how many times it is memorized (at most 9 shown). Selecting cycles to the school's next memorized spell; with none other, message 46h (none memorized) or 47h names the school. The gesture panel shows the gesture icons as they play: RESOURCE 54, frame `icon + 1` (frame 0 is the empty panel).
 
 ## Engine model
 

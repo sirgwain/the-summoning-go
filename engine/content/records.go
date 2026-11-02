@@ -391,6 +391,10 @@ const (
 	MsgSlotStuck             = "slot_stuck"
 	MsgNoDropHere            = "no_drop_here"
 	MsgNoRoom                = "no_room"
+	MsgNothingToTake         = "nothing_to_take"
+	MsgIntoQuiver            = "into_quiver"
+	MsgTaken                 = "taken"
+	MsgPaused                = "paused"
 	MsgNotACreature          = "not_a_creature"
 	MsgCannotHurt            = "cannot_hurt"
 	MsgMiss                  = "miss"
@@ -463,7 +467,7 @@ const (
 )
 
 var messageKeys = map[string]bool{
-	MsgLeverStuck: true, MsgSlotWrongItem: true, MsgSlotStuck: true, MsgNoDropHere: true, MsgNoRoom: true,
+	MsgLeverStuck: true, MsgSlotWrongItem: true, MsgSlotStuck: true, MsgNoDropHere: true, MsgNoRoom: true, MsgNothingToTake: true, MsgIntoQuiver: true, MsgTaken: true, MsgPaused: true,
 	MsgNotACreature: true, MsgCannotHurt: true, MsgMiss: true, MsgHit: true, MsgCreatureHits: true,
 	MsgCreatureMiss: true, MsgWeaponBreaks: true, MsgVanishes: true, MsgSkillUp: true, MsgLevelUp: true,
 	MsgFullHealth:            true,

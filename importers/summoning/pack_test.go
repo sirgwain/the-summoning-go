@@ -225,12 +225,16 @@ func TestImport(t *testing.T) {
 	if want := (content.Grid{{2, 2, 3, 2}, {3, 3, 3, 3}, {3, 3, 3, n}}); !reflect.DeepEqual(l.FloorHalves, want) {
 		t.Errorf("floor halves %v, want %v", l.FloorHalves, want)
 	}
-	// Wall (0, 2), shape 3, shows its upper half while (0, 1) is seen and its lower while (0, 3)
-	// is; the vertical door at (2, 1) checks as 11h, up (0) and down (4), and shows whole open.
+	// Shape 3 shows its upper half while (0, 1) is seen and its lower while (0, 3) is, and takes
+	// shape Eh with the cell above it unseen; walls take their sight from their shapes. The
+	// vertical door at (2, 1) checks as 11h, up (0) and down (4), and shows whole open.
+	if s := p.Walls[l.Walls].Shape(3); !reflect.DeepEqual(s.Sight, []int{6, 2}) || !reflect.DeepEqual(s.Unseen, [][2]int{{0, 0xE}, {4, 0xD}}) {
+		t.Errorf("shape 3: sight %v, unseen %v", s.Sight, s.Unseen)
+	}
 	for _, c := range []struct {
 		cell         content.Cell
 		upper, lower int
-	}{{content.Cell{0, 2}, 6, 2}, {content.Cell{2, 1}, 0, 4}, {content.Cell{1, 1}, n, n}} {
+	}{{content.Cell{0, 2}, n, n}, {content.Cell{2, 1}, 0, 4}, {content.Cell{1, 1}, n, n}} {
 		if u, lo := l.Sight(c.cell); u != c.upper || lo != c.lower {
 			t.Errorf("sight of %v: %d, %d, want %d, %d", c.cell, u, lo, c.upper, c.lower)
 		}
@@ -468,18 +472,16 @@ func TestImportReportsMissingFrames(t *testing.T) {
 }
 
 func TestWallChecksAs(t *testing.T) {
-	l := &Level{Rows: 2, Columns: 3, Terrain: []byte{
-		0x11, 0x05, 0x11,
-		0x1B, 0x10, 0x1B,
-	}}
 	// A closed horizontal door below wins over the vertical doors beside.
-	if got := wallChecksAs(l, 0, 1, 5); got != checkBelowDoor[5] {
+	if got := wallChecksAs(5, true, true, true); got != checkBelowDoor[5] {
 		t.Errorf("below a door: %d, want %d", got, checkBelowDoor[5])
 	}
-	l.Terrain[4] = 0x1B
 	// Vertical doors on both sides: left, then right of the result.
-	if got, want := wallChecksAs(l, 0, 1, 5), checkRightDoor[checkLeftDoor[5]]; got != want {
+	if got, want := wallChecksAs(5, false, true, true), checkRightDoor[checkLeftDoor[5]]; got != want {
 		t.Errorf("between doors: %d, want %d", got, want)
+	}
+	if got := wallChecksAs(5, false, false, false); got != 5 {
+		t.Errorf("no doors: %d, want 5", got)
 	}
 }
 

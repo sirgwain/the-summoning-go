@@ -84,7 +84,8 @@ with their action boxes (each hand's actions, then throwing), and the twenty she
 the player takes the top object underfoot onto the pointer, or puts the pointer's object down
 (stand on a keyhole and click the player to put a key in); clicking a hand or shelf swaps it with
 the pointer; clicking an action box acts with that hand. The right button puts the pointer's object on the first empty shelf, or takes the
-object underfoot straight there. Shift and a click reads an object (a shelf, a hand, or the
+object underfoot straight there; on a box with nothing on the pointer, it uses a potion or other
+usable object where it lies, with the right hand's delay. Shift and a click reads an object (a shelf, a hand, or the
 pointer's on the player): a scroll shows its picture and teaches its icons, as selecting it
 (taking it from a shelf onto the pointer) does. The four boxes after
 the shelves are the schools' selected spells: click to cast, right click for the next; the box at
@@ -257,7 +258,9 @@ var (
 	spellEdgeColor = color.RGBA{120, 140, 220, 255}
 	talkColor      = color.RGBA{16, 12, 10, 235}
 	keywordColor   = color.RGBA{230, 200, 90, 255}
-	waitShade      = color.RGBA{0, 0, 0, 140}
+	// talkSelectedColor fills the highlighted keyword button.
+	talkSelectedColor = color.RGBA{150, 105, 40, 245}
+	waitShade         = color.RGBA{0, 0, 0, 140}
 )
 
 // shell runs a viewer in a window: it reads Ebitengine's input into snapshots, or takes them
@@ -717,6 +720,12 @@ func (s *shell) drawSpellPanel(screen *ebiten.Image) {
 		}
 	}
 	s.presenter.PresentAt(screen, art, sp.Scale, sp.Rect.Min)
+	for _, b := range sp.Icons {
+		if b.Known {
+			r := sp.Screen(b.LetterRect)
+			ebitenutil.DebugPrintAt(screen, string(rune(b.Letter)), r.Min.X+(r.Dx()-viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+		}
+	}
 	for _, e := range sp.Book {
 		r := sp.Screen(e.Rect)
 		x := r.Min.X + r.Dy() + 2
@@ -769,13 +778,27 @@ func (s *shell) drawTalk(screen *ebiten.Image) {
 			vector.StrokeLine(win, float32(w.Rect.Min.X), float32(w.Rect.Max.Y)-0.5, float32(w.Rect.Max.X), float32(w.Rect.Max.Y)-0.5, 1, keywordColor, false)
 		}
 	}
-	for _, b := range tv.Buttons {
-		fill(b.Rect, actionColor)
-		vector.StrokeRect(win, float32(b.Rect.Min.X)+0.5, float32(b.Rect.Min.Y)+0.5, float32(b.Rect.Dx()-1), float32(b.Rect.Dy()-1), 1, slotEdgeColor, false)
+	// The highlighted button or field, what Enter takes, is lit and edged in the keyword color.
+	edge := func(r image.Rectangle, selected bool) {
+		c := slotEdgeColor
+		if selected {
+			c = keywordColor
+		}
+		vector.StrokeRect(win, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx()-1), float32(r.Dy()-1), 1, c, false)
+	}
+	for i, b := range tv.Buttons {
+		selected := !tv.Waiting && i == tv.Selected
+		bg := actionColor
+		if selected {
+			bg = talkSelectedColor
+		}
+		fill(b.Rect, bg)
+		edge(b.Rect, selected)
 		ebitenutil.DebugPrintAt(win, b.Label, b.Rect.Min.X+(b.Rect.Dx()-len(b.Label)*viewer.CharWidth)/2, b.Rect.Min.Y+2)
 	}
 	if !tv.Waiting {
 		fill(tv.Field, slotColor)
+		edge(tv.Field, tv.Selected == len(tv.Buttons))
 		cursor := ""
 		if v.Ticks/30%2 == 0 {
 			cursor = "_"
@@ -944,16 +967,15 @@ func (s *shell) drawMapLegend(screen *ebiten.Image, m *viewer.LevelMap) int {
 	return x + width + viewer.Margin
 }
 
-// drawNotice draws the viewer's notice at the top middle of the screen while it lasts.
+// drawNotice draws the viewer's message line above the hotbar while it lasts.
 func (s *shell) drawNotice(screen *ebiten.Image) {
 	v := s.v
 	if v.Notice == "" || v.Ticks > v.NoticeUntil {
 		return
 	}
-	w := len(v.Notice)*viewer.CharWidth + 8
-	x, y := (v.Screen.X-w)/2, viewer.Margin
-	vector.FillRect(screen, float32(x), float32(y), float32(w), float32(viewer.LineHeight+4), panelColor, false)
-	ebitenutil.DebugPrintAt(screen, v.Notice, x+4, y+2)
+	r := v.NoticeRect()
+	vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), panelColor, false)
+	ebitenutil.DebugPrintAt(screen, v.Notice, r.Min.X+4, r.Min.Y+2)
 }
 
 // drawShowing draws the view effect or sparkle playing at its place in the view, a view

@@ -131,19 +131,36 @@ func (v *Viewer) place(e sim.Event) *Showing {
 }
 
 // eventPoint is the view point an event is placed by: its thing's point while the thing is on
-// the level, else its cell's, or false for an event placed by nothing.
+// the level, else its cell's, or false for an event placed by nothing. A thing's point is the
+// game's entity position on screen, the top-left of its template's sprite box: its ground point
+// less the sprite's anchor (docs/spec/world.md, Projection; entities.md), whatever it holds.
 func (v *Viewer) eventPoint(e sim.Event) (image.Point, bool) {
 	if e.Thing == "" && e.Feature == "" {
 		return image.Point{}, false
 	}
 	if e.Thing == sim.PlayerID {
 		if p := v.World.Player(); p != nil {
-			return drawlist.RefPoint(p.U, p.V), true
+			return v.thingPoint(p.Template, p.U, p.V), true
 		}
 	} else if t := v.World.Current().Thing(e.Thing); e.Thing != "" && t != nil {
-		return drawlist.RefPoint(t.U, t.V), true
+		return v.thingPoint(t.Template, t.U, t.V), true
 	}
 	return cellCenter(e.Cell), true
+}
+
+// thingPoint returns the top-left of template tmpl's sprite box for a thing with ground point
+// (u, v).
+func (v *Viewer) thingPoint(tmpl *content.Thing, u, w int) image.Point {
+	pt := drawlist.RefPoint(u, w)
+	if tmpl == nil {
+		return pt
+	}
+	if sp := v.Pack.Sprites[tmpl.Sprite]; sp != nil {
+		if a, ok := sp.AnchorOf(0); ok {
+			pt = pt.Sub(image.Pt(a[0], a[1]))
+		}
+	}
+	return pt
 }
 
 // viewRect is the part of the view the screen shows, in view pixels, above the hotbar.

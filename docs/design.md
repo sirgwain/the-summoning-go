@@ -290,7 +290,22 @@ The file formats are in [pack.md](pack.md).
 - Collapsible character, inventory and spell panels; the world view takes the freed space.
 - Number keys for the hotbar's usable objects.
 - Spell gestures with the mouse, plus hotkeys and a spell list.
+- **Spellbook.** The spell panel keeps every spell the player has discovered by entering its
+  gesture (the player's spellbook, kept in saves), so a spell once found never has to be recalled
+  as keys or a gesture again. It shows as a scrollable list, by school, each row the spell's icon,
+  name, gesture, cost and how often it is memorized, with a Memorize button that memorizes it once
+  more, exactly as entering its gesture would (the school's limit and forgetting apply). The panel
+  already lists the spellbook and memorizes a spell when its entry is clicked; still to do are
+  scrolling once the list outgrows the panel, the per-row button, grouping by school and showing
+  each school's limit.
 - Conversations with keyword entry and a list of known keywords.
+- **Conversation log.** Every conversation is remembered: whom it was with (the speaker's
+  portrait and name), on which level and when in play time, and each line said and question asked
+  in order, with `@` and keywords as shown. A window, opened on a key and from the hotbar, lists
+  the people talked with by portrait and name; choosing one shows its conversations, newest
+  first, and a search field finds text across all of them, jumping to the line. The log is world
+  state, kept in saves (its spec goes in `docs/spec/saves.md` and `dialogue.md`, Engine model,
+  when built); the transcript file stays as the game's printing option.
 - **Magnify floor objects**, a game setting: objects lying on the floor draw with their larger
   inventory image instead of their small floor image, so they are easier to see and to click.
   An item template carries both images (`docs/spec/items.md`). Presentation only.
@@ -298,6 +313,15 @@ The file formats are in [pack.md](pack.md).
   full-screen map on a key. Both show only the cells the player has seen. A level can refuse the
   map (`docs/spec/world.md`): the minimap then hides, and opening the map shows the level's message
   or starts its conversation instead.
+- **Map of past levels and their links.** The full map can switch to any level the player has
+  visited, showing that level's seen cells (kept per level). It is interactive: hovering a
+  teleporter, exit, pit or trapdoor the player has used shows where it took them, a line or a
+  label to each destination they have travelled through it (one teleporter can have several);
+  hovering a lever, plate or slot whose effect the player has seen shows what it changed (the doors,
+  walls and floors that moved when it was used while in sight). Only what the player has
+  observed is shown: the world records each use's destination and each switch's seen effects,
+  and keeps them in saves. The tools show the same links without the observing (below), and are
+  built first.
 - Esc closes the topmost window over the view (a conversation, the map, the spell panel, a scroll's
   picture, the inventory), one per press; with none open it opens the options menu, as O does.
 - The UI only sends commands; it never changes game state directly.
@@ -379,6 +403,11 @@ writes the same pack format.
 - **Rules.** Build rules from the registry's events, conditions and actions, with references picked
   from the pack.
 - **Content.** Edit items, creatures, spells, dialogue and text as forms over the pack's JSON.
+- **Links.** Hovering a teleporter, exit, pit or trapdoor shows its destinations, across levels
+  too; hovering a lever, plate, slot or trigger shows the features its procedures change. In the
+  editor and the viewer's tools these come from the pack (every link, observed or not); the game's
+  map shows the same overlay limited to what the player has observed (UI). The viewer gets it
+  first, as the tools already list a feature's hooks and procedures.
 - **Play-test.** Start the simulation from the level being edited.
 - It runs `verify` continuously and shows broken references where they are.
 

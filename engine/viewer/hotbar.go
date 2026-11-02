@@ -149,7 +149,8 @@ func (v *Viewer) Hotbar() *Hotbar {
 	}
 	x += ShelfColumns*SlotSize + gap
 	for s := range content.Schools {
-		bx, by := x+(s/2)*SlotSize, (s%2)*SlotSize
+		// Two by two, row by row: Wizardry, Sorcery over Enchantment, Healing.
+		bx, by := x+(s%2)*SlotSize, (s/2)*SlotSize
 		b := SpellBox{Rect: image.Rect(bx, by, bx+SlotSize, by+SlotSize), School: s, Wait: v.World.GestureWait()}
 		if sp := v.Pack.Spells[p.Magic.Selected[s]]; sp != nil && sp.Icon != nil {
 			b.Icon, b.Has, b.Count = *sp.Icon, true, p.Magic.Memorized[sp.ID]
@@ -215,8 +216,9 @@ func (h *Hotbar) SlotRect(slot int) (image.Rectangle, bool) {
 	return image.Rectangle{}, false
 }
 
-// click is a click at screen point pt on the hotbar: a slot swaps with the hand, an action acts
-// (a right click on a slot does nothing more than on the view: the hand goes to a shelf).
+// click is a click at screen point pt on the hotbar: a slot swaps with the hand, an action acts.
+// A right click on a slot opens a container or uses a usable object there, else sends the hand
+// to a shelf.
 func (h *Hotbar) click(v *Viewer, pt image.Point, right bool) []input.Command {
 	if right {
 		for _, b := range h.Spells {
@@ -225,9 +227,7 @@ func (h *Hotbar) click(v *Viewer, pt image.Point, right bool) []input.Command {
 			}
 		}
 		if b, ok := slotAt(h.Slots, h.at(pt)); ok {
-			if cmds, ok := v.openClick(b.Slot); ok {
-				return cmds
-			}
+			return v.boxRightClick(b.Slot)
 		}
 		return v.rightClick(false)
 	}

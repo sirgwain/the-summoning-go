@@ -306,3 +306,67 @@ func TestFloorSight(t *testing.T) {
 		t.Errorf("open door: %v", got)
 	}
 }
+
+// TestDoorSight draws a wall's floor by the shape it checks as for the doors beside it closed
+// now: the wall beside a closed door blanks its upper half, and shows its floor whole once the
+// door opens.
+func TestDoorSight(t *testing.T) {
+	p, l := testPack()
+	n := content.NoFrame
+	shapes := p.Walls["w"].Shapes
+	shapes[2].Sight, shapes[3].Sight = []int{n, 4}, []int{4, 5}
+	l.Wall = content.Grid{{n, 3}, {n, n}}
+	l.Features = []*content.Feature{{ID: "door", Kind: content.FeatureDoor, Cell: content.Cell{0, 0}, State: content.DoorClosed}}
+	l.Overlays, l.Decorations, l.Props, l.Objects, l.Things = nil, nil, nil, nil, nil
+	l.DoorSight = []content.DoorSight{{Cell: content.Cell{0, 1}, Doors: []content.Cell{{0, 0}}, As: [][]int{{0, 1, 2, 3}, {0, 1, 2, 2}}}}
+	box := TileBox(content.Cell{0, 1})
+	wall := func(state string) []Cmd {
+		s := LevelScene(p, l)
+		s.Features[0].State = state
+		var out []Cmd
+		for _, c := range Build(p, s, Options{}) {
+			if c.X == box.X && (c.Y == box.Y || c.Y == box.Y+HalfHeight) && (c.Sprite == "floor" || c.Sprite == "") {
+				out = append(out, Cmd{Sprite: c.Sprite, Part: c.Part})
+			}
+		}
+		return out
+	}
+	if got, want := wall(content.DoorClosed), []Cmd{{Part: UpperHalf}, {Sprite: "floor", Part: LowerHalf}}; !reflect.DeepEqual(got, want) {
+		t.Errorf("beside a closed door: %v, want %v", got, want)
+	}
+	if got, want := wall(content.DoorOpen), []Cmd{{Sprite: "floor", Part: Whole}}; !reflect.DeepEqual(got, want) {
+		t.Errorf("beside an open door: %v, want %v", got, want)
+	}
+}
+
+// TestTakenShape draws a wall taken as another shape with that shape's frame, without its
+// decoration, and its floor halves by that shape's sight.
+func TestTakenShape(t *testing.T) {
+	p, l := testPack()
+	n := content.NoFrame
+	shapes := p.Walls["w"].Shapes
+	shapes[1].Sight, shapes[2].Sight = []int{4, 4}, []int{n, 4}
+	l.Overlays, l.Props, l.Objects, l.Things, l.Features = nil, nil, nil, nil, nil
+	s := LevelScene(p, l)
+	s.Visible = func(content.Cell) bool { return true }
+	s.Taken = map[content.Cell]int{{0, 1}: 2}
+	box := TileBox(content.Cell{0, 1})
+	var floor []Cmd
+	var wall, deco bool
+	for _, c := range Build(p, s, Options{}) {
+		switch {
+		case c.Sprite == "wall" && c.X == box.X:
+			wall = c.Frame == 2
+		case c.Sprite == "deco" && c.Frame == 4:
+			deco = true
+		case c.X == box.X && (c.Y == box.Y || c.Y == box.Y+HalfHeight) && (c.Sprite == "floor" || c.Sprite == ""):
+			floor = append(floor, Cmd{Sprite: c.Sprite, Part: c.Part})
+		}
+	}
+	if !wall || deco {
+		t.Errorf("wall drawn as shape 2: %v, decoration shown: %v", wall, deco)
+	}
+	if want := []Cmd{{Part: UpperHalf}, {Sprite: "floor", Part: LowerHalf}}; !reflect.DeepEqual(floor, want) {
+		t.Errorf("floor %v, want %v", floor, want)
+	}
+}

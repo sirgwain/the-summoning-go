@@ -49,6 +49,7 @@ const (
 	varUseResult         = 19
 	varEnding            = 32
 	varAfterConversation = 97
+	varMagnify           = 98
 	varTranscript        = 99
 )
 

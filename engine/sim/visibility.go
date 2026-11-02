@@ -35,7 +35,44 @@ func (w *World) see() {
 		p.vision = c
 	}
 	l.computeVisibility(p.vision)
+	l.takeShapes(w.pack.Walls[l.Def.Walls])
 }
+
+// takeShapes finds the shape each visible wall is taken as while walls beside it cannot be seen
+// (docs/spec/world.md, Walls out of sight). The level's own shapes stay as they are.
+func (l *Level) takeShapes(set *content.WallSet) {
+	clear(l.taken)
+	if set == nil || l.visible == nil {
+		return
+	}
+	for x := range l.Def.Size[0] {
+		for y := range l.Def.Size[1] {
+			c := content.Cell{x, y}
+			own := l.Wall[x][y]
+			if own == content.NoFrame || !l.visible[l.index(c)] {
+				continue
+			}
+			if s := set.Taken(own, c, Dirs, l.InBounds, l.Visible); s != own {
+				if l.taken == nil {
+					l.taken = map[content.Cell]int{}
+				}
+				l.taken[c] = s
+			}
+		}
+	}
+}
+
+// Shape returns the shape cell c's wall is taken as: its own, unless walls beside it cannot be
+// seen (docs/spec/world.md, Walls out of sight).
+func (l *Level) Shape(c content.Cell) int {
+	if s, ok := l.taken[c]; ok {
+		return s
+	}
+	return l.Wall[c[0]][c[1]]
+}
+
+// Taken returns the visible walls taken as another shape than their own, by cell.
+func (l *Level) Taken() map[content.Cell]int { return l.taken }
 
 // computeVisibility marks the cells visible from cell from: every open cell joined to it through
 // open cells, each step to any of the eight neighbors, and every blocked cell next to one of

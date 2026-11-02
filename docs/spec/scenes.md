@@ -185,7 +185,7 @@ Positions are (row, column). The other healing and curing powers (24h, 28h, 44h,
 - each star at phase 8–15 whose phase is below `7 + k`, with frame 1, 2, 3, 4, 3, 2, 1, 0 for phases 8–15. The stars are drawn in passes, first phases 8 and 15, then 9 and 14, 10 and 13, and 11 and 12;
 - then every star's phase goes up by 1, mod 16. In the last ten frames only stars already at phase 7 or above go up, so no new star starts and the rest finish.
 
-**Engine model.** The importer renders each row of the table into a flipbook as for the view effects, its frames transparent where no star is drawn. The presentation plays it over the view at the area's place with the world paused. A `sparkle` event names the flipbook and the thing (the player) or the feature and cell (a sealed door) it is placed by. Nothing waits for a sparkle in the simulation: the healing, curing and door opening are done when it starts.
+**Engine model.** The importer renders each row of the table into a flipbook as for the view effects, its frames transparent where no star is drawn. The presentation plays it over the view at the area's place with the world paused. A `sparkle` event names the flipbook and the thing (the player) or the feature and cell (a sealed door) it is placed by. The engine keeps a thing's ground point rather than the game's entity position, so it places by the top-left of the thing's sprite box, its ground point less its sprite's anchor (entities.md), which is the game's "point on screen" (world.md, Projection), whatever the thing holds; view effects placed by a creature the same way. Nothing waits for a sparkle in the simulation: the healing, curing and door opening are done when it starts.
 
 ## Level transitions
 
@@ -205,6 +205,10 @@ Within a level:
 ## The game screen
 
 The view sits in a frame of panels: the character's portrait and gauges, the hands, the spell panel, the message line. Panels are drawn over a stone texture made from the INIT texture shades. The engine draws its own panels (design.md); the original layout is reference only.
+
+The message line shows the game's messages: what the player takes, refusals, combat, spells. A new message replaces the last. In memorizing past the limit the game shows messages 68h and 69h together, as two lines of one sentence. The pause key stops the game with message 79h ("Pausing, press a key ...") on the line until the next key or click.
+
+**Engine model.** The presentation shows each message on one line centered just above the hotbar (and above a panel open over it) for three seconds; messages of the same update are joined on the line. A mouth's message is shown beside the mouth instead (dialogue.md). The presentation's own notices (saved, loaded, the sound setting) use the same line.
 
 ## The frontend
 

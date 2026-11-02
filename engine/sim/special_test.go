@@ -198,3 +198,55 @@ func TestQuietCombat(t *testing.T) {
 		}
 	}
 }
+
+// TestMagnified magnifies floor objects while the pack's magnify counter is set or the player's
+// timed sight lasts (docs/spec/items.md, Floor).
+func TestMagnified(t *testing.T) {
+	w, _ := besideTarget(t, 1000, func(p *content.Pack) { p.Manifest.Counters.Magnify = "var.magnify" })
+	if w.Magnified() {
+		t.Fatal("magnified at the start")
+	}
+	w.setCounter("var.magnify", 1)
+	if !w.Magnified() {
+		t.Error("not magnified with the counter set")
+	}
+	w.setCounter("var.magnify", 0)
+	w.Player().Timed[TimedSight] = 5
+	if !w.Magnified() {
+		t.Error("not magnified with timed sight")
+	}
+}
+
+// TestUseSlot drinks a potion where it lies, on a shelf and in the pack, with the right hand's
+// delay; the potion's place takes its spent object, or empties (docs/spec/items.md, Using from a
+// slot).
+func TestUseSlot(t *testing.T) {
+	w := studyWorld(t, devpack.StudyStart, 2, func(p *content.Pack) {
+		p.Items[devpack.ItemPotion].Spent = devpack.ItemRock
+	})
+	p := w.Player()
+	p.HitPoints = 1
+	p.Slots[3] = &Object{Item: devpack.ItemPotion}
+	w.Update([]input.Command{input.UseSlot{Slot: 3}})
+	if p.HitPoints <= 1 || p.Slots[3] == nil || p.Slots[3].Item != devpack.ItemRock || p.Delays[0] == 0 {
+		t.Fatalf("drinking from shelf 3: %d hit points, shelf %+v, delay %d", p.HitPoints, p.Slots[3], p.Delays[0])
+	}
+	// Not while the right hand is busy; a rock cannot be used.
+	p.HitPoints = 1
+	p.Slots[4] = &Object{Item: devpack.ItemPotion}
+	if ev := w.Update([]input.Command{input.UseSlot{Slot: 4}}); !has(ev, EventRefused, "the hand is not ready") || p.Slots[4] == nil {
+		t.Errorf("drinking with the hand busy: %v", ev)
+	}
+	p.Delays[0] = 0
+	if ev := w.Update([]input.Command{input.UseSlot{Slot: 3}}); !has(ev, EventRefused, "") {
+		t.Errorf("using a rock: %v", ev)
+	}
+	// From a bag in the left hand, with no spent object: the pack slot empties.
+	w.pack.Items[devpack.ItemPotion].Spent = ""
+	p.Delays[0] = 0
+	p.Slots[SlotLeftHand] = &Object{Item: devpack.ItemSack, Contents: []*Object{{Item: devpack.ItemKey}, {Item: devpack.ItemPotion}}}
+	w.Update([]input.Command{input.UseSlot{Slot: SlotPack + 1}})
+	if bag := p.Slots[SlotLeftHand]; p.HitPoints <= 1 || len(bag.Contents) != 1 || bag.Contents[0].Item != devpack.ItemKey {
+		t.Errorf("drinking from the pack: %d hit points, bag %+v", p.HitPoints, bag.Contents)
+	}
+}

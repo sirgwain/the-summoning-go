@@ -214,6 +214,40 @@ type WallShape struct {
 	Diagonal string `json:"diagonal,omitempty"`
 	// Face walls can carry a decoration or a wall feature.
 	Face bool `json:"face,omitempty"`
+	// Sight, if set, gives the directions of the neighbors whose sight shows the upper and lower
+	// halves of the floor under the wall, NoFrame for none.
+	Sight []int `json:"sight,omitempty"`
+	// Unseen are (direction, shape) pairs tried in order: at the first whose neighbor is inside
+	// the level and not visible, a visible wall is taken as that shape instead.
+	Unseen [][2]int `json:"unseen,omitempty"`
+}
+
+// Taken returns the shape a visible wall of shape s at cell c is taken as, visible reporting
+// which cells are visible and in whether a cell is inside the level (docs/spec/world.md, Walls
+// out of sight). dirs are the cell steps of the directions.
+func (w *WallSet) Taken(s int, c Cell, dirs [8][2]int, in, visible func(Cell) bool) int {
+	for range len(w.Shapes) + 1 {
+		shape := w.Shape(s)
+		if shape == nil {
+			return s
+		}
+		next := s
+		for _, u := range shape.Unseen {
+			if u[0] < 0 || u[0] >= len(dirs) {
+				continue
+			}
+			nb := Cell{c[0] + dirs[u[0]][0], c[1] + dirs[u[0]][1]}
+			if in(nb) && !visible(nb) {
+				next = u[1]
+				break
+			}
+		}
+		if next == s {
+			return s
+		}
+		s = next
+	}
+	return s
 }
 
 // Corners of a cell's diamond, on screen, that a diagonal wall fills.

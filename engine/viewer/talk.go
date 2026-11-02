@@ -56,6 +56,8 @@ type TalkView struct {
 	Buttons []PanelButton
 	Field   image.Rectangle
 	Typed   string
+	// Selected is the highlighted button, or len(Buttons) for the field: what Enter takes.
+	Selected int
 }
 
 // Talk returns the open conversation laid out, or nil.
@@ -116,6 +118,7 @@ func (v *Viewer) Talk() *TalkView {
 		y += LineHeight + 4 + talkPad
 		tv.Field = image.Rect(at.X+talkPad, y, at.X+talkPad+talkFieldWidth, y+LineHeight+4)
 		y = tv.Field.Max.Y + talkPad
+		tv.Selected = max(0, min(v.TalkSelected, len(tv.Buttons)))
 	}
 	// Centered in the view above the hotbar, as large as fits up to talkScale.
 	size := image.Pt(w, y)
@@ -188,17 +191,21 @@ func keywordOf(w Word) string {
 
 // talkInput turns input into conversation commands. While a line waits: Escape or a right click
 // leaves, a click on a marked word or its initial asks it next, and anything else goes on. While
-// waiting for a word: typing fills the field, Enter asks it (or the first button with nothing
-// typed), a button asks its keyword, Bye, "bye", Escape or a right click leaves.
+// waiting for a word, one button or the field is highlighted, the first button at first: Up and
+// Down (and Left and Right among the buttons) move the highlight, pointing at a button or the field highlights it, and typing fills the
+// field and highlights it. Enter takes the highlighted button's keyword (or Bye), or the typed
+// word with the field highlighted; clicking a button takes it. "Bye", Escape or a right click
+// leaves.
 func (v *Viewer) talkInput(in Input) []input.Command {
 	tv := v.Talk()
 	left := in.Left.Released
 	cursor := tv.at(in.Cursor)
 	if in.pressed(KeyEscape) || in.Right.Released {
-		v.Typed = ""
+		v.Typed, v.TalkSelected = "", 0
 		return []input.Command{input.Leave{}}
 	}
 	if tv.Waiting {
+		v.TalkSelected = 0
 		if left {
 			for _, w := range tv.Words {
 				if w.Keyword && cursor.In(w.Rect) {
@@ -220,11 +227,24 @@ func (v *Viewer) talkInput(in Input) []input.Command {
 		return nil
 	}
 	ask := func(b PanelButton) []input.Command {
-		v.Typed = ""
+		v.Typed, v.TalkSelected = "", 0
 		if b.Name == "bye" {
 			return []input.Command{input.Leave{}}
 		}
 		return []input.Command{input.Ask{Word: b.Label}}
+	}
+	field := len(tv.Buttons)
+	sel := tv.Selected
+	if in.Cursor != v.talkCursor {
+		v.talkCursor = in.Cursor
+		for i, b := range tv.Buttons {
+			if cursor.In(b.Rect) {
+				sel = i
+			}
+		}
+		if cursor.In(tv.Field) {
+			sel = field
+		}
 	}
 	if left {
 		for _, b := range tv.Buttons {
@@ -232,7 +252,14 @@ func (v *Viewer) talkInput(in Input) []input.Command {
 				return ask(b)
 			}
 		}
+		v.TalkSelected = sel
 		return nil
+	}
+	switch {
+	case in.pressed(KeyArrowUp) || in.pressed(KeyArrowLeft) && sel < field:
+		sel = max(0, sel-1)
+	case in.pressed(KeyArrowDown) || in.pressed(KeyArrowRight) && sel < field:
+		sel = min(field, sel+1)
 	}
 	if in.pressed(KeyBackspace) && v.Typed != "" {
 		r := []rune(v.Typed)
@@ -241,17 +268,24 @@ func (v *Viewer) talkInput(in Input) []input.Command {
 	for _, r := range in.Chars {
 		if unicode.IsPrint(r) && len([]rune(v.Typed)) < maxField {
 			v.Typed += string(r)
+			sel = field
 		}
 	}
+	v.TalkSelected = sel
 	if in.pressed(KeyEnter) {
+		if sel < field {
+			return ask(tv.Buttons[sel])
+		}
 		word := strings.TrimSpace(v.Typed)
 		v.Typed = ""
 		switch {
 		case word == "":
-			return ask(tv.Buttons[0])
+			return nil
 		case strings.EqualFold(word, "bye"):
+			v.TalkSelected = 0
 			return []input.Command{input.Leave{}}
 		}
+		v.TalkSelected = 0
 		return []input.Command{input.Ask{Word: word}}
 	}
 	return nil

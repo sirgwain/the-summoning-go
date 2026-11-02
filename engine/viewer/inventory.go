@@ -341,14 +341,13 @@ func (v *Viewer) objectUnder(ip *InventoryPanel, pt image.Point) *sim.Object {
 }
 
 // inventoryClick is a click on the inventory panel at screen point pt: a box swaps with the hand
-// (with Shift, reads its object); the right button sends the hand to a shelf.
+// (with Shift, reads its object); the right button opens a container or uses a usable object in
+// a box, or sends the hand to a shelf.
 func (v *Viewer) inventoryClick(ip *InventoryPanel, pt image.Point, right, shift bool) []input.Command {
 	b, ok := slotAt(ip.Slots, ip.at(pt))
 	if right {
 		if ok {
-			if cmds, opened := v.openClick(b.Slot); opened {
-				return cmds
-			}
+			return v.boxRightClick(b.Slot)
 		}
 		return v.rightClick(false)
 	}

@@ -29,6 +29,9 @@ type Level struct {
 	// visible and seen are the player's visibility, by cell index; nil while the player has not
 	// been on the level.
 	visible, seen []bool
+	// taken are the visible walls taken as another shape than their own (docs/spec/world.md,
+	// Walls out of sight).
+	taken map[content.Cell]int
 }
 
 // Feature is a feature's state: its definition's fields as they are now, plus what the

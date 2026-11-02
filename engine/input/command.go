@@ -102,8 +102,13 @@ func (Throw) command() {}
 // PutOn puts the hand's object on, in the worn slot or hand its item goes in.
 type PutOn struct{}
 
-func (Strike) command() {}
-func (PutOn) command()  {}
+// UseSlot uses the object in a slot (a fixed slot or a pack slot) by its first use or use-up
+// action, as the right hand would; in a hand, by that hand.
+type UseSlot struct{ Slot int }
+
+func (Strike) command()  {}
+func (PutOn) command()   {}
+func (UseSlot) command() {}
 
 func (Walk) command()        {}
 func (PickUp) command()      {}

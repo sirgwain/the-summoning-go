@@ -62,7 +62,7 @@ A record's file is named after its id without the kind prefix (`item.dagger` is
   "player": "thing.player",
   "rules": "summoning",
   "counters": { "after_conversation": "var.97", "use_result": "var.19", "transformed": "var.14",
-                "quiet_combat": "var.96", "transcript": "var.99" },
+                "quiet_combat": "var.96", "transcript": "var.99", "magnify": "var.98" },
   "menu": "thing.npc.0"
 }
 ```
@@ -75,7 +75,8 @@ itself uses (`docs/spec/dialogue.md`, Engine model): `after_conversation` is cle
 conversation ends, `use_result` decides whether an object whose conversation has `use_result` is
 used, `transformed` is set to 1 by a Shape Change into the look named by `transformed_look`,
 and cleared when it ends, and while `quiet_combat` is not 0 the combat messages are not shown.
-While `transcript` is not 0, what conversations say goes to the transcript. `menu` is the thing
+While `transcript` is not 0, what conversations say goes to the transcript. While `magnify` is not 0, objects on the floor are drawn magnified
+(`docs/spec/items.md`, Floor). `menu` is the thing
 template whose conversation the menu key opens. `start` may give a `music` track, which a new
 game starts.
 
@@ -175,8 +176,8 @@ caps already in it.
   "sprite": "sprite.walls.1056",
   "offset": [0, -8],
   "shapes": [
-    { "frame": 0, "diagonal": "bottom" },
-    { "frame": 1, "face": true },
+    { "frame": 0, "diagonal": "bottom", "sight": [7, 3], "unseen": [[2, 14], [4, 12]] },
+    { "frame": 1, "face": true, "sight": [0, 4], "unseen": [[2, 11], [6, 12]] },
     { "frame": 2, "diagonal": "left" },
     { "frame": 3, "face": true },
     null
@@ -192,6 +193,16 @@ caps already in it.
   into it, toward that corner, slides along it (`docs/spec/entities.md`, Moving).
 - `face` marks a straight wall whose face can carry a decoration or a wall feature (an exit, a
   mouth).
+- `sight` gives the directions of the two neighbors whose sight shows the upper and lower halves of
+  the floor under a wall of the shape, `-1` for none (`docs/spec/world.md`, Floor halves). A set
+  whose shapes have no `sight` leaves the halves under walls to the level's `upper_sight` and
+  `lower_sight`.
+- `unseen` lists `[direction, shape]` pairs, tried in order whenever visibility is computed: at the
+  first whose neighbor lies inside the level and is not visible, a visible wall of the shape is
+  taken as that shape instead, and the new shape's pairs are tried in turn (`docs/spec/world.md`,
+  Walls out of sight). The wall is drawn, slides the player and checks its floor halves as the
+  shape taken; it shows no decoration while that is not its own shape. The level's shapes never
+  change.
 - The shapes and their properties are the set's own. The engine reads the properties, never the
   shape numbers, so a set can have any number of shapes.
 
@@ -722,9 +733,19 @@ template), `full_health`, `carries_count` (`{ "item", "count" }`), `slot_empty` 
   neither. A half not drawn is blanked in a box set and left out in a diamond set. Without it,
   every floor is drawn whole. The importer computes it as if the whole level were visible
   (`docs/spec/world.md`, Floor halves). In play only visible cells are drawn at all.
-- `upper_sight` and `lower_sight` give, for the floor under a wall or a closed door, the direction
-  of the neighbor that must be visible for that half to show in play, `.` for none (the half shows
-  whenever `floor_halves` lets it). An open or moving door's floor shows whole.
+- `upper_sight` and `lower_sight` give, for the floor under a closed door (and under a wall, when
+  the wall set's shapes have no `sight`), the direction of the neighbor that must be visible for
+  that half to show in play, `.` for none (the half shows whenever `floor_halves` lets it). An open
+  or moving door's floor shows whole. Under a wall whose shape has `sight`, the engine works the
+  halves out in play from the shape the wall has taken: each half shows while its neighbor is
+  inside the level, has floor, is not listed in `no_sight`, and is visible.
+- `no_sight` lists the cells whose sight never shows the floor half of a wall beside them (hazard
+  tiles).
+- `door_sight` follows the doors for the walls beside them whose floor halves depend on whether
+  those doors are closed (`docs/spec/world.md`, Visibility): each entry has the wall's `cell`, its
+  `doors` (cells of door features) and `as`, one list per combination of those doors closed, giving
+  for each shape of the wall set the shape whose `sight` the wall checks by. `as[m]` applies while
+  door `i` is closed (fully, not sealed) exactly for the bits `i` set in `m`.
 - `overlays` are fixed floor art (hazard tiles), drawn after all floors and before anything
   standing. `decorations` are drawn on their cell's wall face right after it. `props` (not shown)
   are fixed art standing in a cell, drawn back to front with the walls. Offsets are from the cell.
@@ -912,7 +933,8 @@ The importer translates the original's encodings into the format above:
 - Procedure ops become actions on the feature or thing at the cell they name; op 10 becomes
   `set_threshold` or `set_accepts` by the feature there.
 - Wall shapes get their properties from `docs/spec/world.md` (diagonal shapes 0, 2, 4, 5; faces 1
-  and 3). Each level's floor types come from its floor variants and liquid kind.
+  and 3; `sight` from Floor halves; `unseen` from Walls out of sight). Hazard tiles become
+  `no_sight`. Each level's floor types come from its floor variants and liquid kind.
 - Item categories become tags. The original's message numbers become `messages.json` entries.
 - Each song is rendered through an OPL2 emulator (`docs/spec/audio.md`) to a mono 16-bit WAV at
   44100 Hz. Track `n` becomes `music.n` and sound effect `n` becomes `sfx.n`. A track the game

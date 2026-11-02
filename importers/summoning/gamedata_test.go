@@ -349,3 +349,51 @@ func TestGameViewEffects(t *testing.T) {
 		})
 	}
 }
+
+// TestGameDoorSight checks that the wall beside the vertical door at (44, 14) of level 1 follows
+// the door: with it closed its upper floor half has no check direction, and with it open the half
+// facing the doorway has one (world.md, Floor halves).
+func TestGameDoorSight(t *testing.T) {
+	p, _ := gamePack(t)
+	l := p.Levels["level.01"]
+	for _, ds := range l.DoorSight {
+		if ds.Cell != (content.Cell{44, 15}) {
+			continue
+		}
+		if len(ds.Doors) != 1 || ds.Doors[0] != (content.Cell{44, 14}) {
+			t.Fatalf("doors %v", ds.Doors)
+		}
+		set := p.Walls[l.Walls]
+		shape := l.Wall[44][15]
+		open, closed := set.Shape(ds.As[0][shape]).Sight, set.Shape(ds.As[1][shape]).Sight
+		if closed[0] != content.NoFrame || open[0] == content.NoFrame {
+			t.Errorf("open %v, closed %v", open, closed)
+		}
+		return
+	}
+	t.Error("no door sight for (44, 15)")
+}
+
+// TestGameWallsOutOfSight stands the player in the room south of the vertical door at (20, 31) of
+// level 1. The junctions on either side of the door join walls behind it that cannot be seen, so
+// they are taken as shapes that end there (world.md, Walls out of sight); the level keeps its own.
+func TestGameWallsOutOfSight(t *testing.T) {
+	p, _ := gamePack(t)
+	w, err := sim.New(p, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.Update([]input.Command{input.GoTo{Level: "level.01"}})
+	w.Update([]input.Command{input.PlacePlayer{Cell: content.Cell{26, 33}}})
+	w.Update(nil)
+	l := w.Current()
+	for _, c := range []struct {
+		cell      content.Cell
+		own, took int
+	}{{content.Cell{20, 30}, 5, 0xB}, {content.Cell{20, 33}, 9, 1}} {
+		if !l.Visible(c.cell) || l.Wall[c.cell[0]][c.cell[1]] != c.own || l.Shape(c.cell) != c.took {
+			t.Errorf("%v: visible %v, own %d, taken as %d; want %d as %d", c.cell, l.Visible(c.cell),
+				l.Wall[c.cell[0]][c.cell[1]], l.Shape(c.cell), c.own, c.took)
+		}
+	}
+}

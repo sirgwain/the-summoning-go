@@ -37,6 +37,9 @@ type Scene struct {
 	Visible func(content.Cell) bool
 	// Flights are objects in flight.
 	Flights []Flight
+	// Taken are the walls drawn as another shape than their own, by cell (docs/spec/world.md,
+	// Walls out of sight).
+	Taken map[content.Cell]int
 }
 
 // Flight is an object in flight over ground point (U, V), or with Sprite set a spell showing
@@ -54,16 +57,44 @@ const flightHeight = 16
 // sightDirs are the cells' steps in each direction (docs/pack.md, Conventions).
 var sightDirs = [8][2]int{{-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}}
 
-// halves returns which halves of cell c's floor the scene draws: the level's halves, and under a
-// wall or a closed door, only those whose sight neighbor is visible; an open or moving door's
-// floor whole (docs/spec/world.md, Visibility). doors are the door states by cell.
-func (s Scene) halves(c content.Cell, doors map[content.Cell]string) int {
+// halves returns which halves of cell c's floor the scene draws (docs/spec/world.md,
+// Visibility). An open or moving door's floor shows whole. Under a wall whose shape has sight,
+// each half shows while the neighbor in its check direction counts: the shape is the one the wall
+// is taken as, checking as the doors beside it closed now say (sights). Otherwise the level's
+// halves apply, and under a closed door only those whose sight neighbor is visible.
+func (s Scene) halves(c content.Cell, set *content.WallSet, doors map[content.Cell]string, sights map[content.Cell]*content.DoorSight, noSight map[content.Cell]bool) int {
 	l := s.Level
-	h := l.Halves(c)
 	state, door := doors[c]
 	if door && state != content.DoorClosed && state != "sealed" {
 		return content.HalvesBoth
 	}
+	if s.Wall[c[0]][c[1]] != content.NoFrame && set != nil {
+		shape := s.Shape(c)
+		if ds := sights[c]; ds != nil {
+			m := 0
+			for i, d := range ds.Doors {
+				if doors[d] == content.DoorClosed {
+					m |= 1 << i
+				}
+			}
+			if m < len(ds.As) && shape >= 0 && shape < len(ds.As[m]) {
+				shape = ds.As[m][shape]
+			}
+		}
+		if sh := set.Shape(shape); sh != nil && len(sh.Sight) == 2 {
+			h := 0
+			for i, bit := range []int{content.HalfUpper, content.HalfLower} {
+				if d := sh.Sight[i]; d >= 0 && d < len(sightDirs) {
+					nb := content.Cell{c[0] + sightDirs[d][0], c[1] + sightDirs[d][1]}
+					if l.InBounds(nb) && s.Floor[nb[0]][nb[1]] != content.NoFrame && !noSight[nb] && s.shows(nb) {
+						h |= bit
+					}
+				}
+			}
+			return h
+		}
+	}
+	h := l.Halves(c)
 	if s.Visible == nil || (!door || state != content.DoorClosed) && s.Wall[c[0]][c[1]] == content.NoFrame {
 		return h
 	}
@@ -78,6 +109,15 @@ func (s Scene) halves(c content.Cell, doors map[content.Cell]string) int {
 		}
 	}
 	return h
+}
+
+// Shape returns the shape cell c's wall is drawn as: the shape it is taken as, if Taken says,
+// else its own.
+func (s Scene) Shape(c content.Cell) int {
+	if t, ok := s.Taken[c]; ok {
+		return t
+	}
+	return s.Wall[c[0]][c[1]]
 }
 
 // shows reports whether the scene draws cell c.
@@ -207,6 +247,15 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 			doors[f.Cell] = f.State
 		}
 	}
+	sights := map[content.Cell]*content.DoorSight{}
+	for i := range l.DoorSight {
+		sights[l.DoorSight[i].Cell] = &l.DoorSight[i]
+	}
+	noSight := map[content.Cell]bool{}
+	for _, c := range l.NoSight {
+		noSight[c] = true
+	}
+	set := p.Walls[l.Walls]
 	for _, c := range cellsBackToFront(l.Size[0]+1, l.Size[1]+1) {
 		box := TileBox(c).Add(image.Pt(off[0], off[1]))
 		if !l.InBounds(c) || s.Floor[c[0]][c[1]] == content.NoFrame || !s.shows(c) {
@@ -215,7 +264,7 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 			}
 			continue
 		}
-		v, halves := l.FloorTypes[s.Floor[c[0]][c[1]]].Variant, s.halves(c, doors)
+		v, halves := l.FloorTypes[s.Floor[c[0]][c[1]]].Variant, s.halves(c, set, doors, sights, noSight)
 		if halves == content.HalvesBoth {
 			cmds = append(cmds, Cmd{Sprite: floors.Sprite, Frame: v, X: box.X, Y: box.Y})
 			continue
@@ -278,8 +327,8 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 		decorations[d.Cell] = append(decorations[d.Cell], d)
 	}
 	for _, c := range cellsBackToFront(l.Size[0], l.Size[1]) {
-		shape := s.Wall[c[0]][c[1]]
-		if shape == content.NoFrame || !s.shows(c) {
+		own := s.Wall[c[0]][c[1]]
+		if own == content.NoFrame || !s.shows(c) {
 			continue
 		}
 		box := TileBox(c)
@@ -287,10 +336,12 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 		if f, ok := wallLooks[c]; ok {
 			item.cmds = featureCmds(p, f)
 		} else {
-			set := p.Walls[l.Walls]
+			shape := s.Shape(c)
 			item.cmds = append(item.cmds, Cmd{Sprite: set.Sprite, Frame: set.Shape(shape).Frame, X: box.X + set.Offset[0], Y: box.Y + set.Offset[1]})
-			for _, d := range decorations[c] {
-				item.cmds = append(item.cmds, placed(d))
+			if shape == own {
+				for _, d := range decorations[c] {
+					item.cmds = append(item.cmds, placed(d))
+				}
 			}
 		}
 		items = append(items, item)

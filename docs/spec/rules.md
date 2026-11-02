@@ -53,7 +53,7 @@ A door record: its cell and a state byte.
 | 20h | Opened by the Kano spell |
 | 40h | Vertical |
 
-A closed door's cell is terrain 10h (11h vertical) and blocks movement and sight. An open door's is floor (1Bh). A moving door steps one stage per update toward open or closed, playing a sound between the ends, and changes the cell's terrain at the ends.
+A closed door's cell is terrain 10h (11h vertical) and blocks movement and sight. An open door's is floor (1Bh). A moving door steps one stage per update toward open or closed, playing a sound between the ends. Opening, its cell leaves terrain 10h/11h at the first step (16h, then floor 1Bh from stage 2); closing, it takes 10h/11h again once it is down to stage 2.
 
 - **Switch on** (open): a closed door starts opening; a door closing reverses.
 - **Switch off** (close): an open door starts closing; a door opening reverses.

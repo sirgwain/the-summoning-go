@@ -90,6 +90,7 @@ func (v *Viewer) frontUpdate(in Input) {
 func (v *Viewer) setWorld(w *sim.World) {
 	v.World = w
 	v.Shown, v.Said, v.Reading, v.Typed, v.SpellsOpen, v.InventoryOpen, v.MapOpen = "", nil, nil, "", false, false, false
+	v.TalkSelected = 0
 	v.deadFor = 0
 	v.rebuild()
 	v.Recenter()

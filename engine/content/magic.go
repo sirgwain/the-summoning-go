@@ -152,6 +152,8 @@ type Counters struct {
 	QuietCombat string `json:"quiet_combat,omitempty"`
 	// Transcript sends what conversations say to the transcript while it is not 0.
 	Transcript string `json:"transcript,omitempty"`
+	// Magnify draws objects on the floor magnified while it is not 0.
+	Magnify string `json:"magnify,omitempty"`
 }
 
 // Cast is a spell an item casts when used.

@@ -185,6 +185,7 @@ func Import(src *Source, opt Options) (*content.Pack, *Report, error) {
 			Counters: &content.Counters{
 				AfterConversation: varID(varAfterConversation), UseResult: varID(varUseResult),
 				Transformed: varID(varTransformed), QuietCombat: varID(varQuietCombat), Transcript: varID(varTranscript),
+				Magnify: varID(varMagnify),
 			},
 		}),
 		init:      in,
@@ -435,7 +436,8 @@ func (im *importer) wallSet(id int) (string, error) {
 		}
 		parts = append(parts, part{b, s, content.Offset{0, 0}}, part{b, s + wallShapes, content.Offset{0, b.Height}})
 		frames[s] = compose(box, b.Transparent, parts)
-		shapes[s] = &content.WallShape{Frame: s, Diagonal: diagonalShapes[s], Face: s == 1 || s == 3}
+		shapes[s] = &content.WallShape{Frame: s, Diagonal: diagonalShapes[s], Face: s == 1 || s == 3,
+			Sight: []int{floorChecks[s][0], floorChecks[s][1]}, Unseen: unseenShapes[s]}
 	}
 	sid := "sprite." + wid
 	im.addSprite(sid, frames, box.Dx(), box.Dy(), b.Transparent)
@@ -557,6 +559,7 @@ func (im *importer) level(index int, l *Level) (*content.Level, error) {
 				cl.Floor[x][y] = lb.plain
 			}
 			if t >= terrainHazard {
+				cl.NoSight = append(cl.NoSight, c)
 				if err := im.place(&cl.Overlays, c, hazardResource, t-terrainHazard, content.Offset{0, 0}, "hazard"); err != nil {
 					return nil, err
 				}
@@ -576,7 +579,7 @@ func (im *importer) level(index int, l *Level) (*content.Level, error) {
 	}
 	lb.procedures()
 	lb.finish()
-	doorSight(cl)
+	lb.doorSight()
 	return cl, nil
 }
 

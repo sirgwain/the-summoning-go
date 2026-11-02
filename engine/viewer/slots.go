@@ -46,18 +46,16 @@ func (v *Viewer) clickPlayer() []input.Command {
 	return []input.Command{input.PickUp{Hand: true}}
 }
 
-// rightClick is a right click: the object in hand goes to the first empty shelf; with an empty
-// hand, a click on the player takes the top object underfoot straight to that shelf. With no
-// empty shelf it does nothing.
-func (v *Viewer) rightClick(onPlayer bool) []input.Command {
+// rightClick is a right click: the object in hand goes to the first empty shelf, if there is
+// one; with an empty hand, a click in the view takes the top object underfoot as the take key
+// does, with its message when there is nothing there or no room.
+func (v *Viewer) rightClick(inView bool) []input.Command {
 	p := v.World.Player()
 	shelf := firstEmptyShelf(p)
 	switch {
-	case shelf < 0:
-		return nil
-	case p.Hand != nil:
+	case p.Hand != nil && shelf >= 0:
 		return []input.Command{input.Swap{Slot: shelf}}
-	case onPlayer && len(v.World.Current().Objects[p.Cell()]) > 0:
+	case p.Hand == nil && inView:
 		return []input.Command{input.PickUp{}}
 	}
 	return nil
@@ -79,6 +77,38 @@ func (v *Viewer) openClick(slot int) ([]input.Command, bool) {
 		v.InventoryOpen = true
 	}
 	return []input.Command{input.Open{Slot: slot}}, true
+}
+
+// useClick is a right click on slot's box with nothing on the pointer: an object there that can
+// be used (a use or use-up action, a potion's drink) is used where it lies (docs/spec/items.md,
+// Using from a slot). It returns false for anything else.
+func (v *Viewer) useClick(slot int) ([]input.Command, bool) {
+	p := v.World.Player()
+	if p.Hand != nil {
+		return nil, false
+	}
+	o := p.Slot(v.Pack, slot)
+	if o == nil || v.Pack.Items[o.Item] == nil {
+		return nil, false
+	}
+	for _, a := range v.Pack.Items[o.Item].Actions {
+		if a.Kind == content.ActionUse || a.Kind == content.ActionUseUp {
+			return []input.Command{input.UseSlot{Slot: slot}}, true
+		}
+	}
+	return nil, false
+}
+
+// boxRightClick is a right click on slot's box: a container opens, a usable object is used, and
+// otherwise it is a right click as anywhere else.
+func (v *Viewer) boxRightClick(slot int) []input.Command {
+	if cmds, ok := v.openClick(slot); ok {
+		return cmds
+	}
+	if cmds, ok := v.useClick(slot); ok {
+		return cmds
+	}
+	return v.rightClick(false)
 }
 
 // firstEmptyShelf returns the player's first empty shelf, or −1.

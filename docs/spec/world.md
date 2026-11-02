@@ -49,7 +49,7 @@ The view is drawn back to front: by increasing `a + b` (screen row), and within 
 | 29h–35h | Floor hazard tiles (spikes and the like) | yes |
 | FFh | Outside the map | no |
 
-"Walkable" here is the terrain alone; doors, entities and triggers add their own rules (entities.md, rules.md). Walls 0, 2, 4 and 5 are diagonal shapes; walking diagonally into them slides along them. Wall shapes 1 and 3 are the two straight faces that can hold a decoration or an exit.
+"Walkable" here is the terrain alone; doors, entities and triggers add their own rules (entities.md, rules.md). Walls 0, 2, 4 and 5 are diagonal shapes; walking diagonally into them slides along them. Wall shapes 1 and 3 are the two straight faces that can hold a decoration or an exit. A wall beside a cell the player cannot see takes another shape for as long as it cannot be seen (**Walls out of sight** below), and everything that reads its terrain meanwhile reads that shape.
 
 Each cell may also have **features**: a decoration, a trigger, a door, a teleporter or exit, a weight plate, and an armed bit (rules.md).
 
@@ -75,7 +75,7 @@ Each half of a cell's floor (the upper half at `(0, 0)`, the lower at `(0, 16)`)
 - 15h–28h: both halves drawn.
 - 29h–35h (hazard tiles): the upper half black; the lower half drawn only for 2Bh, 2Eh, 30h and 33h. The hazard sprite is drawn over it.
 - 0Fh, 12h–14h: both black.
-- Walls (00h–0Eh) and closed doors (10h, 11h): each has two check directions (README.md directions). The upper half is drawn if the neighbor one step in the first direction **counts**, the lower half if the neighbor in the second does. A neighbor counts when it is inside the level, visible, and not a hazard tile (29h–35h). "–" never counts.
+- Walls (00h–0Eh) and closed doors (10h, 11h): each has two check directions (README.md directions), a wall's being those of the shape it has taken (**Walls out of sight**). The upper half is drawn if the neighbor one step in the first direction **counts**, the lower half if the neighbor in the second does. A neighbor counts when it is inside the level, visible, and not a hazard tile (29h–35h). "–" never counts.
 
   | Terrain | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | Ah | Bh | Ch | Dh | Eh | 10h | 11h |
   | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -89,6 +89,8 @@ Each half of a cell's floor (the upper half at `(0, 0)`, the lower at `(0, 16)`)
   | below | 0 | 6 | 2 | 3 | 7 | 8 | 6 | 7 | 8 | Ah | Ah | 2 | 0 | Dh | Eh |
   | left | 6 | 1 | 2 | 8 | 9 | 5 | 6 | Ah | 8 | 9 | Ah | Bh | Ch | 5 | 2 |
   | right | 0 | 1 | 6 | 7 | 4 | 9 | 6 | 7 | Ah | 9 | Ah | Bh | Ch | 4 | 0 |
+
+A wall beside a door checks as the table above says for the doors beside it that are closed now, not as the level starts: when a door opens (its terrain no longer 10h or 11h), the walls beside it go back to their own shape's check directions, and when it closes again they take the closed door's. A door stops counting as closed at its first step opening, and counts again once closing reaches stage 2 (rules.md). The wall beside a door that has been opened therefore shows the floor half that faces the doorway, rather than a black half over the open door's floor.
 
 So the floor under a wall shows only on the sides that face into the room the player sees, and the black halves keep it from sticking out below the wall's art.
 
@@ -128,11 +130,30 @@ From the vision cell, a scanline flood fill marks every cell reachable through c
 
 The fill reaches diagonal neighbors as well: each run marks the blocking cells at its ends, and the rows on either side are searched from the column of one end to the other, those ends included. So the visible cells are every open cell joined to the vision cell through open cells, each step to any of the eight neighbors, together with every blocking cell next to one of them, diagonally included. The vision cell itself always counts as open.
 
-The game also swaps the shapes of some visible walls according to which of their neighbors are visible, so that walls seen from behind look closed. This specification does not cover that; walls are drawn with the shapes the level gives them.
+### Walls out of sight
 
-**Engine model.** The simulation keeps, for the current level, the cells visible from the player's vision cell, computed as above with "open" meaning not blocked: a cell with floor, no wall, and no door that is not open. Each cell that has been visible is **seen**, kept with the level. Only visible cells are drawn: their floors, walls, feature looks, objects and things standing in them. A level's floor halves (pack.md) say which halves each cell may ever show, as if every cell were visible; under a wall, or a closed door that is not sealed, each half also shows only while the neighbor in its check direction (Floor halves) is visible, the check directions being kept with the level. A door that is open or moving shows its floor whole, as the game draws terrain 15h and 1Bh.
+Once visibility is known, every visible wall (00h–0Eh) whose shape joins a wall the player cannot see takes another shape, so that it ends cleanly instead of showing the joint (the caps of a junction, say, pointing at a wall in the dark). Each shape has a list of up to four `(direction, shape)` pairs. They are tried in order: at the first whose neighbor, one step in that direction, lies inside the level and is not visible, the wall becomes that shape, and the new shape's list is tried from its start. When no pair applies, the wall keeps the shape it has come to.
 
-**Import.** The check directions of walls are as Floor halves gives them, with the walls beside closed doors checking as the table above says for the doors as the level starts. A door cell checks as a closed door of its orientation (10h horizontal, 11h vertical), whatever its starting state; a sealed door's floor shows whole.
+| Shape | Pairs, in order |
+| --- | --- |
+| 0 | (2, Eh), (4, Ch) |
+| 1 | (2, Bh), (6, Ch) |
+| 2 | (6, Eh), (4, Bh) |
+| 3 | (0, Eh), (4, Dh) |
+| 4 | (0, Ch), (2, Dh) |
+| 5 | (0, Bh), (6, Dh) |
+| 6 | (2, 2), (4, 1), (6, 0) |
+| 7 | (0, 0), (2, 3), (4, 4) |
+| 8 | (0, 2), (4, 5), (6, 3) |
+| 9 | (0, 1), (2, 5), (6, 4) |
+| Ah | (0, 6), (2, 8), (4, 9), (6, 7) |
+| Bh–Eh | none |
+
+Off-map cells (FFh) count as not visible. The new shape holds only until visibility is next recomputed: every change is undone first, and before the level is saved or left, so the level keeps its own shapes. While it holds, the wall is the new shape for everything that reads its terrain: it is drawn as that shape (with its caps), its floor halves check as that shape (and then as Floor halves says for a door beside it), a decoration shows only if the new shape is 1 or 3, an exit wall is drawn as shape 4 only if the new shape is 3, and a diagonal shape that became a straight one no longer slides the player.
+
+**Engine model.** The simulation keeps, for the current level, the cells visible from the player's vision cell, computed as above with "open" meaning not blocked: a cell with floor, no wall, and no door that is not open. Each cell that has been visible is **seen**, kept with the level. With the visible cells it keeps the shape each visible wall has taken (Walls out of sight), using the shapes' pairs from the wall set; the level's own shapes never change, and saves keep those. The walls are drawn, and slide the player, by the shapes taken; a wall drawn as a shape not its own shows no decoration. A wall that a feature's look draws (an exit) keeps its look. Only visible cells are drawn: their floors, walls, feature looks, objects and things standing in them. A level's floor halves (pack.md) say which halves each cell may ever show, as if every cell were visible; under a closed door that is not sealed, each half also shows only while the neighbor in its check direction (Floor halves) is visible, the check directions being kept with the level. Under a wall, the halves come from the check directions of the shape taken, as the wall set gives them: each half shows while its neighbor is inside the level, has floor, is not a hazard tile, and is visible. A door that is open or moving shows its floor whole, as the game draws terrain 15h and 1Bh. The walls beside a door follow it as Floor halves says, except that the engine counts a door closed only while it is fully closed, so a closing door's walls change two updates later than the game's.
+
+**Import.** Each wall shape gets its check directions from Floor halves and its pairs from Walls out of sight. Hazard tiles are listed as cells that never show a wall's half. For each wall that a door's position can change (a horizontal door at `(x + 1, y)`, a vertical door at `(x, y − 1)` or `(x, y + 1)`), the importer gives, for every combination of those doors closed, the shape each shape checks as, so the engine can follow the doors as they move. The floor halves of walls are still given, as if every cell were visible, for tools that show the level whole. A door cell checks as a closed door of its orientation (10h horizontal, 11h vertical), whatever its starting state; a sealed door's floor shows whole.
 
 ## Level map
 

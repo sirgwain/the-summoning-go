@@ -26,7 +26,7 @@ var sealingSpheres = [3]int{0xC9, 0xCB, 0xCD}
 var categoryTags = map[int]string{1: "body_armor", 4: "quiver", 7: "arrows", 8: "bottle"}
 
 // engineMessages are the TEXT records the engine's own messages use, and the placeholders their
-// format codes (%s, %d, %q) become, in order.
+// format codes (%s, %d, %q, %N) become, in order.
 var engineMessages = map[string]struct {
 	text int
 	args []string
@@ -36,6 +36,9 @@ var engineMessages = map[string]struct {
 	content.MsgSlotStuck:     {0x87, []string{"item"}},
 	content.MsgNoDropHere:    {0x72, nil},
 	content.MsgNoRoom:        {0x7F, nil},
+	content.MsgNothingToTake: {0x80, nil},
+	content.MsgIntoQuiver:    {0x99, []string{"item"}},
+	content.MsgPaused:        {0x79, nil},
 	content.MsgNotACreature:  {0x5A, nil},
 	content.MsgCannotHurt:    {0x5D, nil},
 	content.MsgMiss:          {0x5B, []string{"score"}},
@@ -87,7 +90,7 @@ var engineMessages = map[string]struct {
 func placeholders(s string, args []string) string {
 	var b strings.Builder
 	for i := 0; i < len(s); i++ {
-		if s[i] == '%' && i+1 < len(s) && strings.IndexByte("sdq", s[i+1]) >= 0 && len(args) > 0 {
+		if s[i] == '%' && i+1 < len(s) && strings.IndexByte("sdqN", s[i+1]) >= 0 && len(args) > 0 {
 			b.WriteString("{" + args[0] + "}")
 			args = args[1:]
 			i++
@@ -143,6 +146,9 @@ func (im *importer) text(strs []string) {
 			m.Messages[key] = id
 		}
 	}
+	// Taking an object names it, with no record of its own (items.md, Inventory).
+	t.Strings["msg."+content.MsgTaken] = "{item}"
+	m.Messages[content.MsgTaken] = "msg." + content.MsgTaken
 	im.pack.Messages = m
 }
 

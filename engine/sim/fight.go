@@ -331,6 +331,48 @@ func (w *World) strike(hand, action int) {
 		w.swing(hand, nil, content.ItemAction{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 2}})
 		return
 	}
+	w.handAct(hand, o, action)
+}
+
+// useSlot uses the object in slot by its first use or use-up action, as the right hand would, or
+// in a hand by that hand (docs/spec/items.md, Using from a slot).
+func (w *World) useSlot(slot int) {
+	p, l := w.player, w.Current()
+	refuse := func(why string) {
+		w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: p.Cell(), Detail: why})
+	}
+	o := p.Slot(w.pack, slot)
+	if o == nil || p.Hand == o {
+		refuse("nothing to use there")
+		return
+	}
+	action := -1
+	for i, a := range w.pack.Items[o.Item].Actions {
+		if a.Kind == content.ActionUse || a.Kind == content.ActionUseUp {
+			action = i
+			break
+		}
+	}
+	switch {
+	case action < 0:
+		refuse("the " + o.Item + " cannot be used")
+	case slot == SlotRightHand || slot == SlotLeftHand:
+		w.strike(slot-SlotRightHand, action)
+	case p.Dead:
+		refuse("the player is dead")
+	case p.Delays[0] > 0:
+		refuse("the hand is not ready")
+	default:
+		w.handAct(0, o, action)
+	}
+}
+
+// handAct carries out action of object o as hand's (docs/spec/items.md, Hands and actions).
+func (w *World) handAct(hand int, o *Object, action int) {
+	p, l := w.player, w.Current()
+	refuse := func(why string) {
+		w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: p.Cell(), Detail: why})
+	}
 	it := w.pack.Items[o.Item]
 	if action < 0 || action >= len(it.Actions) {
 		refuse("the " + o.Item + " has no such action")
@@ -366,7 +408,7 @@ func (w *World) strike(hand, action int) {
 			return
 		}
 		w.delay(hand, it, a)
-		w.useObject(hand, o, a)
+		w.useObject(o, a)
 		if a.Swings {
 			if hasTag(it, "weapon") {
 				hand = 2

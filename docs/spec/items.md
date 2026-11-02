@@ -73,7 +73,7 @@ The player has slots:
 | 27 | Neck |
 | 28+ | Pack: the contents of the bag held in the left hand, one slot per capacity |
 
-Pack slots exist only up to the right-hand bag's capacity and take what fits in it. Putting an object in a worn slot (20–27, the hands included) adds its armor and, when its use handler has 80h, starts its power; taking it off ends both. Ending undoes the powers marked "lasts while worn" and the speed powers (09h–0Bh), so a worn object's speed counts only while worn. The Leather Boots (24h) every character starts in have power 0Ah with 80h: interval −2 while worn. Taking an object from the floor with the take key puts it in the first empty shelf; with none, message 7Fh and it stays on the floor. An arrow taken goes into the quiver when it fits.
+Pack slots exist only up to the right-hand bag's capacity and take what fits in it. Putting an object in a worn slot (20–27, the hands included) adds its armor and, when its use handler has 80h, starts its power; taking it off ends both. Ending undoes the powers marked "lasts while worn" and the speed powers (09h–0Bh), so a worn object's speed counts only while worn. The Leather Boots (24h) every character starts in have power 0Ah with 80h: interval −2 while worn. Taking an object from the floor with the take key puts it in the first empty shelf and shows its name as a message; with none, message 7Fh and it stays on the floor. An arrow taken goes into the quiver when it fits, with message 99h (`%N put in your quiver`, the object's name). With nothing on the floor, message 80h. Taking an object onto the pointer shows its name too.
 
 Objects given by the game (conversations, powers) go into the first empty shelf, or are dropped at the player's feet.
 
@@ -87,7 +87,7 @@ Objects given by the game (conversations, powers) go into the first empty shelf,
 
 A click counts as on the player's figure for these, rather than walking, anywhere within 32 view pixels of the point 8 right and 2 down from the top-left of the player's sprite, measured from the pointer's hot spot as `|dx| + |dy| < 32`. The engine also counts the figure's own pixels and its cell's ground.
 
-With the right button, an object on the pointer goes to the first empty shelf; with an empty pointer, clicking the player's figure takes the top object underfoot straight to the first empty shelf. With no empty shelf the right button does nothing.
+With the right button, an object on the pointer goes to the first empty shelf (with none, message 7Fh and it stays on the pointer); with an empty pointer, a click in the view does what the take key does: the top object underfoot goes to the first empty shelf, with its messages. (The engine adds right clicks on boxes: see Opening containers and Using from a slot.)
 
 ## Opening containers
 
@@ -109,7 +109,7 @@ Weights are in half kilograms: a weight `w` shows as `w / 2` kg, with ".5" for a
 
 **Engine model.** The player has a hand and slots numbered as above. Commands:
 
-- **Pick up** takes the top object of the player's cell, as the take key does: an arrow into a worn quiver with room, anything else into the first empty shelf, else message 7Fh (`no_room`) and it stays on the floor. **Pick up into the hand**, as clicking the player with an empty pointer does, takes it onto the pointer instead; with an object already in hand it is a plain pick up. Taking it off the floor lifts its weight off a plate.
+- **Pick up** takes the top object of the player's cell, as the take key does: an arrow into a worn quiver with room, anything else into the first empty shelf, else message 7Fh (`no_room`) and it stays on the floor; with nothing there, message 80h (`nothing_to_take`). Taken, the object is named by the engine message `taken` (`{item}`, the importer's own text, as the game shows the bare name), or `into_quiver` (99h) for an arrow put in the quiver. **Pick up into the hand**, as clicking the player with an empty pointer does, takes it onto the pointer instead; with an object already in hand it is a plain pick up. Taking it off the floor lifts its weight off a plate.
 - **Put down** puts the hand's object down on the player's cell.
 - **Swap** exchanges the hand with a slot. Shelves and the two hands take anything. A pack slot takes an object whose size is at most the bag's largest, and never the bag itself; putting an object in the first free pack slot adds it to the bag's contents, and taking one out removes it, so the contents stay in order. The worn slots (20, 21, 24–27) are added with Fight, along with what each takes.
 
@@ -119,9 +119,9 @@ Each cell holds a list of objects on its floor; at most eight are drawn. Objects
 
 An object on the floor is drawn with its tiny image (about 8×6 pixels; the small 16×16 image is the inventory icon), centered in its cell's tile box: an image `w × h` has its top-left at `(16 − ⌊w/2⌋, 16 − ⌊h/2⌋)` from the box's corner (world.md). The objects of a cell are drawn in list order, each over the last, after the cell's floor and overlays and before anything standing.
 
-**Magnified.** With magnifying on, objects on the floor are drawn with their small image instead, centered the same way, so they are easier to see and to pick up.
+**Magnified.** Objects on the floor are drawn with their small image instead, centered the same way, so they are easier to see and to pick up, while the player has timed sight (the Sight spell, spells.md) or while interaction variable 98 is set. The options menu's Magnify option sets and clears variable 98 (dialogue.md), so it lasts across saves.
 
-**Engine model.** Magnifying is a game setting the player turns on or off; it changes only how floor objects are drawn and where they can be clicked, never the simulation.
+**Engine model.** The pack names the counter that magnifies (`magnify`, pack.md); the presentation draws floor objects magnified while it is set or the player's timed sight lasts, or while its own magnify setting is on. Magnifying changes only how floor objects are drawn and where they can be clicked, never the simulation.
 
 ## Hands and actions
 
@@ -160,6 +160,8 @@ The **delay** of action 0 is `(byte 8 >> 4) + 3` points, of action 1 `(byte 8 & 
 **Using up.** An object used up (icons 9, 10) leaves a spent object in its hand when it has a quantity: bottles (category 8) leave an Empty Bottle (template 7), other objects the next template. An object with no quantity, such as a rune, leaves the hand empty. A charged object (icons 11–20) is never replaced: at no charges it stays where it is, its actions unavailable.
 
 **Engine model.** An item's `spent` is the item it leaves when used up. The importer gives it to items with a `use_up` action and nonzero `charges`; the others have none.
+
+**Using from a slot.** In the game an object is used only from a hand. The engine also lets the player use an object where it lies, on a shelf or in the pack: **use slot** takes the object's first `use` or `use_up` action as the right hand would, with the right hand's delay (it refuses while the right hand is not ready, and does nothing for an object with neither action). The object is used up in its own place, the spent object taking that place, a pack slot's emptying when there is none. Used this way from a hand, it is that hand's action. A right click on the box of such an object, with nothing on the pointer, uses it; a right click on a container's box opens it, as before.
 
 ## Powers
 
@@ -286,7 +288,6 @@ Template 0 in a level becomes a random object rather than the item itself.
 
 ## Unknowns
 
-- Whether the game also magnifies floor objects on its own, for example while the player has timed sight (player.md) or by interaction variable 98 (dialogue.md).
 - The figure in water, and the figure frame shifts in INIT.
 - Which hand objects count as armor drawn last on the doll; the engine draws those with an armor bonus last.
 - Category 6, and the hand delay formula beyond what is given.

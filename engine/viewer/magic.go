@@ -15,8 +15,10 @@ import (
 
 // Spell panel layout, in panel pixels, scaled together like the hotbar's.
 const (
-	iconStep     = 34
-	iconColumns  = 6
+	iconStep    = 34
+	iconColumns = 6
+	// letterHeight is the room under each icon of the grid for the letter that enters it.
+	letterHeight = 12
 	panelPad     = 4
 	buttonWidth  = 60
 	buttonHeight = 20
@@ -26,12 +28,14 @@ const (
 	panelWidthPx = panelPad*2 + content.MaxGesture*iconStep
 )
 
-// IconButton is a gesture icon on the panel; one the player does not know is shown empty.
+// IconButton is a gesture icon on the panel; one the player does not know is shown empty. A known
+// icon of the grid shows the Letter that enters it in LetterRect, under it.
 type IconButton struct {
-	Rect   image.Rectangle
-	Letter byte
-	Icon   content.Image
-	Known  bool
+	Rect       image.Rectangle
+	LetterRect image.Rectangle
+	Letter     byte
+	Icon       content.Image
+	Known      bool
 }
 
 // PanelButton is a labeled button on a panel.
@@ -84,9 +88,12 @@ func (v *Viewer) SpellPanel() *SpellPanel {
 	}
 	for i := range content.GestureIcons {
 		c := byte('A' + i)
-		x, y := panelPad+(i%iconColumns)*iconStep, panelPad+(i/iconColumns)*iconStep
+		x, y := panelPad+(i%iconColumns)*iconStep, panelPad+(i/iconColumns)*(iconStep+letterHeight)
 		img, _ := icon(c)
-		sp.Icons = append(sp.Icons, IconButton{Rect: image.Rect(x, y, x+iconStep-2, y+iconStep-2), Letter: c, Icon: img, Known: p.Magic.Knows(c)})
+		sp.Icons = append(sp.Icons, IconButton{
+			Rect: image.Rect(x, y, x+iconStep-2, y+iconStep-2), LetterRect: image.Rect(x, y+iconStep-2, x+iconStep-2, y+iconStep+letterHeight-2),
+			Letter: c, Icon: img, Known: p.Magic.Knows(c),
+		})
 	}
 	bx := panelPad + iconColumns*iconStep + panelPad
 	for i, b := range []PanelButton{{Name: "learn", Label: "Learn"}, {Name: "back", Label: "Back"}, {Name: "close", Label: "Close"}} {
@@ -94,7 +101,7 @@ func (v *Viewer) SpellPanel() *SpellPanel {
 		b.Rect = image.Rect(bx, y, bx+buttonWidth, y+buttonHeight)
 		sp.Buttons = append(sp.Buttons, b)
 	}
-	y := panelPad + 2*iconStep + panelPad
+	y := panelPad + 2*(iconStep+letterHeight) + panelPad
 	for i := 0; i < len(v.Entered); i++ {
 		img, _ := icon(v.Entered[i])
 		x := panelPad + i*iconStep

@@ -103,11 +103,16 @@ func TestShowingPlacement(t *testing.T) {
 		t.Errorf("by the bottom-right: %+v, want %v", s, v.Origin.Add(want))
 	}
 
-	// A player's sparkle: 12 rows up and 10 columns left of its point.
+	// A player's sparkle: 12 rows up and 10 columns left of its point, the top-left of its
+	// template's sprite box (its ground point less the sprite's anchor), not of what it holds.
 	p := v.World.Player()
-	if s := start(sim.Event{Kind: sim.EventSparkle, Detail: "flipbook.t.sparkle", Thing: sim.PlayerID}); s == nil ||
-		s.At != drawlist.RefPoint(p.U, p.V).Add(image.Pt(-10, -12)) || s.Framed {
-		t.Errorf("player sparkle: %+v", s)
+	a, ok := v.Pack.Sprites[p.Template.Sprite].AnchorOf(0)
+	if !ok || a == (content.Offset{}) {
+		t.Fatalf("the player's sprite has no anchor; the test shows nothing")
+	}
+	at := drawlist.RefPoint(p.U, p.V).Sub(image.Pt(a[0], a[1])).Add(image.Pt(-10, -12))
+	if s := start(sim.Event{Kind: sim.EventSparkle, Detail: "flipbook.t.sparkle", Thing: sim.PlayerID}); s == nil || s.At != at || s.Framed {
+		t.Errorf("player sparkle at %+v, want %v", s, at)
 	}
 	// A feature's: 20 rows up, and only when on screen.
 	v.Recenter()

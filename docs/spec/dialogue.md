@@ -14,7 +14,7 @@ The player talks with the talk key or by clicking a creature. The key talks to t
 
 KEYWORDS lists the words the player can ask about (formats.md). A typed word matches a keyword by its first four characters, ignoring case, up to a space or punctuation. Each keyword has an answer text in TEXT.
 
-A conversation keeps an **offered list** of at most six keywords, shown as buttons beside a field where the player can type a word; with none offered, a single "Bye" button leaves. A typed word that is not a keyword is refused: the field clears and nothing is asked. Typing "Bye", Esc, a right click or an empty answer leaves. In conversation texts, keywords are marked and drawn underlined; while a text shows, clicking one, or typing its initial, asks it next (at most nine marked words per text).
+A conversation keeps an **offered list** of at most six keywords, shown as buttons beside a field where the player can type a word; with none offered, a single "Bye" button leaves. One button, or the field, is highlighted, the first button when the list shows: Up and Down move the highlight through the buttons and the field, the pointer over a button highlights it, and typing a character highlights the field. Enter or a click takes the highlighted button's keyword; with the field highlighted, Enter asks the typed word. A typed word that is not a keyword is refused: the field clears and nothing is asked. Typing "Bye", Esc, a right click or an empty answer leaves. In conversation texts, keywords are marked and drawn underlined; while a text shows, clicking one, or typing its initial, asks it next (at most nine marked words per text).
 
 ## Interaction variables
 
@@ -30,7 +30,7 @@ A conversation keeps an **offered list** of at most six keywords, shown as butto
 | 34 | Set to 1 when play goes on after ending G, from the game it saved (scenes.md, Endings); conversation 7Dh then starts on arrival. A new game leaves it 0 |
 | 96 | Nonzero hides combat messages |
 | 97 | Cleared after every conversation |
-| 98 | Sight: read when drawing objects (scenes.md) |
+| 98 | Magnify: set and cleared by the options menu's Magnify option; while nonzero, objects on the floor are drawn magnified (items.md, Floor) |
 
 Variable number 99 is the "print transcript" option of the disk menu: while it is set, every line said and question asked goes to the transcript. Action 1Ch prints a heading: with `first ≠ 0` TEXT records 74h, 75h, 76h, 78h, otherwise 77h, 75h, 76h, 78h, one to a line.
 
@@ -124,6 +124,7 @@ Conversation text is shown word by word in the portrait window. `@` is replaced 
 - Commands: **talk** (to a thing, or the nearest), **ask** (a word), **leave**, and **menu**, which opens the conversation of the thing template the pack names as its `menu` (the importer: NPC record 0's, the disk menu). While a conversation is open the world does not advance; the presentation shows its lines one at a time and the offered keywords.
 - The **transcript** goes to a text file, `transcript.txt` beside the saves: each line and question wrapped at 80 columns, `@` replaced by the player's name, and under each line holding a keyword a line of `_` under its letters. The pack names the counter that turns it on (`transcript`) and the two headings as the engine messages `transcript_heading` and `transcript_continued`; the `transcript` action prints `heading` or `continued`.
 - A `menu` action waits like a line, of kind `menu`. The presentation opens that menu: save (a typed name, or a save to replace), restore, delete or rename a save, or a yes-or-no question for quit and leave (to the main menu); when it closes, going on runs the rest of the conversation. A save made then leaves the conversation out, and restoring replaces the world with none open.
+- The presentation lays the offered keywords out in a row, so Left and Right also move the highlight among the buttons. Enter with the field highlighted and nothing typed does nothing.
 
 ## Unknowns
 

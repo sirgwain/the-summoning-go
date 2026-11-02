@@ -3,6 +3,7 @@ package viewer
 import (
 	"fmt"
 	"image"
+	"math"
 	"sort"
 	"strings"
 
@@ -79,8 +80,8 @@ type Viewer struct {
 	Entered    string
 	// InventoryOpen shows the inventory panel; MapOpen the full level map.
 	InventoryOpen, MapOpen bool
-	// SaveDir is where saves go, empty for none; Notice is a line shown at the top of the screen
-	// until the update NoticeUntil.
+	// SaveDir is where saves go, empty for none; Notice is the message line, shown above the
+	// hotbar until the update NoticeUntil: the game's messages and the viewer's own.
 	SaveDir     string
 	Notice      string
 	NoticeUntil int64
@@ -91,9 +92,13 @@ type Viewer struct {
 	// Audio plays the world's sounds; nil plays none.
 	Audio *audio.Mixer
 	// Said is a mouth's message showing beside it, nil when none is.
-	Said    *Said
-	Typed   string
-	Reading *content.Image
+	Said  *Said
+	Typed string
+	// TalkSelected is the conversation's highlighted keyword button, or the field after them
+	// (TalkView.Selected); talkCursor is where the pointer was when it last chose one.
+	TalkSelected int
+	talkCursor   image.Point
+	Reading      *content.Image
 	// Front is the frontend while it shows, taking the input; Quit is set when it asks to quit.
 	// Seed is the seed the world was made with, from which new games take theirs.
 	Front *Frontend
@@ -116,6 +121,12 @@ type Viewer struct {
 	seenLevel string
 	// deadFor counts the updates the player has been dead while playing.
 	deadFor int
+	// magnified is whether the world magnified floor objects at the last rebuild.
+	magnified bool
+	// walked is the screen direction the keys last walked, zero for none; walkWaiting is a
+	// straight direction held without walking yet, for walkWait updates (walkNow).
+	walked, walkWaiting [2]int
+	walkWait            int
 }
 
 // New returns a viewer of pack p, running a world with seed, showing level (the start level if
@@ -154,9 +165,10 @@ func (v *Viewer) rebuild() {
 	l := v.World.Current()
 	scene := drawlist.SimScene(v.World, l)
 	if v.SeeAll {
-		scene.Visible = nil
+		scene.Visible, scene.Taken = nil, nil
 	}
-	v.Cmds = drawlist.Build(v.Pack, scene, drawlist.Options{Magnify: v.Magnify})
+	v.magnified = v.World.Magnified()
+	v.Cmds = drawlist.Build(v.Pack, scene, drawlist.Options{Magnify: v.Magnify || v.magnified})
 	v.Labels = drawlist.Labels(v.Pack, scene)
 	v.Bounds = drawlist.Bounds(l.Def)
 	v.Version++
@@ -274,6 +286,14 @@ func (v *Viewer) Update(in Input) {
 		return
 	}
 	acted := in.anyPressed() || in.Left.Released || in.Right.Released
+	// Paused while playing, the game waits for a key or a click, showing the pause message.
+	if v.Play && v.Paused {
+		if acted {
+			v.Paused, v.NoticeUntil = false, v.Ticks
+			v.press, v.drag = nil, nil
+		}
+		return
+	}
 	if v.Said != nil && (v.Ticks > v.Said.Until || acted) {
 		v.Said = nil
 	}
@@ -362,6 +382,7 @@ func (v *Viewer) updateWorld(cmds []input.Command) []sim.Event {
 	v.queueShows(events)
 	v.log(events)
 	v.hear(events)
+	v.announce(events)
 	v.sound(events)
 	v.autosave(events)
 	v.transcribe(events)
@@ -374,7 +395,7 @@ func (v *Viewer) updateWorld(cmds []input.Command) []sim.Event {
 		}
 	}
 	// Shown damage runs out without an event, so a view showing some rebuilds each update.
-	if len(events) > 0 || len(v.Labels) > 0 {
+	if len(events) > 0 || len(v.Labels) > 0 || v.World.Magnified() != v.magnified {
 		v.rebuild()
 	}
 	if v.Play {
@@ -474,7 +495,7 @@ func (v *Viewer) mouse(in Input) []input.Command {
 		case onBar:
 			return bar.click(v, cursor, true)
 		}
-		return v.rightClick(v.onPlayer(v.ViewPoint(cursor)))
+		return v.rightClick(true)
 	}
 	if !in.Left.Released || !clicked() {
 		return nil
@@ -588,11 +609,12 @@ const functionKeys = 8
 // playKeys turns the keys into the player's commands, laid out as the game's are:
 //
 //   - WASD or the arrows walk, two held for a diagonal; Home, PgUp, End and PgDn walk the
-//     diagonals.
+//     diagonals. A single key waits a moment before walking straight, in case it is half of a
+//     diagonal (walkNow).
 //   - Space acts with the right hand (Shift+Space its second action) and X throws from it; Q acts
 //     with the left hand (Shift+Q) and Z throws from it.
 //   - F takes from the floor, G puts down, Enter pulls the lever underfoot or uses a key on the
-//     keyhole underfoot, E talks, H recenters the view, P pauses.
+//     keyhole underfoot, E talks, H recenters the view, P pauses until the next key or click.
 //   - I or Tab opens and closes the inventory panel, as clicking the portrait does.
 //   - Esc closes the inventory panel; with it closed, Esc or O opens the options menu.
 //   - F5 saves to the quick save and F8 loads it; F9 cycles the sound; M shows the level map.
@@ -614,7 +636,7 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 	if in.held(KeyArrowDown, "S", KeyEnd, KeyPageDown) {
 		y++
 	}
-	if x != 0 || y != 0 {
+	if v.walkNow(x, y) {
 		cmds = append(cmds, input.Walk{Direction: screenDirection(x, y)})
 	}
 	action := 0
@@ -658,9 +680,49 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 	case in.pressed("H"):
 		v.Recenter()
 	case in.pressed("P"):
-		v.Paused = !v.Paused
+		v.pause()
 	}
 	return cmds
+}
+
+// pause pauses play until the next key or click, showing the pack's pause message meanwhile.
+func (v *Viewer) pause() {
+	v.Paused = true
+	text := "Paused"
+	if m := v.Pack.Messages; m != nil {
+		if key, ok := m.Messages[content.MsgPaused]; ok {
+			text = inspect.Text(v.Pack, key)
+		}
+	}
+	v.Notice, v.NoticeUntil = text, math.MaxInt64
+}
+
+// walkGrace is how many updates a straight walk waits when it may be half of a diagonal: the
+// second key of a pair pressed a moment after the first, or one let go a moment before the other.
+const walkGrace = 5
+
+// walkNow reports whether to walk toward screen direction (x, y) this update, given the keys
+// held, and remembers the walk. A diagonal walks at once. A straight direction walks at once when
+// it goes on from walking straight that way or turns from another; starting from a stand, or
+// left over from a diagonal it is half of, it walks only once held walkGrace updates, so a pair
+// of keys not pressed or released together walks only along the diagonal.
+func (v *Viewer) walkNow(x, y int) bool {
+	dir := [2]int{x, y}
+	switch {
+	case x == 0 && y == 0:
+		v.walked, v.walkWait = [2]int{}, 0
+		return false
+	case x != 0 && y != 0, v.walked == dir:
+	case v.walked == [2]int{} || v.walked[0] != 0 && v.walked[1] != 0 && (x != 0 && v.walked[0] == x || y != 0 && v.walked[1] == y):
+		if v.walkWaiting != dir {
+			v.walkWaiting, v.walkWait = dir, 0
+		}
+		if v.walkWait++; v.walkWait < walkGrace {
+			return false
+		}
+	}
+	v.walked, v.walkWait = dir, 0
+	return true
 }
 
 // levelKeys are the tools' keys that change level and recenter: Page Up and Page Down or [ and ],

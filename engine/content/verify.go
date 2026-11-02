@@ -38,6 +38,14 @@ func (p *Pack) Verify() error {
 			if shape != nil && (shape.Frame < 0 || (n >= 0 && shape.Frame >= n)) {
 				v.fail("wall set %s: shape %d uses frame %d of %d", id, s, shape.Frame, n)
 			}
+			if shape != nil && shape.Sight != nil && (len(shape.Sight) != 2 || !direction(shape.Sight[0]) || !direction(shape.Sight[1])) {
+				v.fail("wall set %s: shape %d has sight %v", id, s, shape.Sight)
+			}
+			for _, u := range shapeUnseen(shape) {
+				if u[0] < 0 || u[0] >= 8 || w.Shape(u[1]) == nil {
+					v.fail("wall set %s: shape %d takes %v when unseen", id, s, u)
+				}
+			}
 			if shape == nil || shape.Diagonal == "" {
 				continue
 			}
@@ -445,6 +453,7 @@ func (lv *levelVerifier) verify() {
 			lv.grid(name, g, func(v int) bool { return v < 8 })
 		}
 	}
+	lv.doorSight(l)
 
 	for _, layer := range []struct {
 		kind string
@@ -760,4 +769,59 @@ func (lv *levelVerifier) object(what string, o Object) {
 	for _, c := range o.Contents {
 		lv.object(what+" in "+o.Item, c)
 	}
+}
+
+// doorSight checks a level's door_sight and no_sight: each cell in the level, its doors door
+// features, and a table of shapes for every combination of them closed.
+func (lv *levelVerifier) doorSight(l *Level) {
+	doors := map[Cell]bool{}
+	for _, f := range l.Features {
+		if f.Kind == FeatureDoor {
+			doors[f.Cell] = true
+		}
+	}
+	for _, ds := range l.DoorSight {
+		if !l.InBounds(ds.Cell) {
+			lv.fail("door_sight at %v outside the level", ds.Cell)
+		}
+		if len(ds.Doors) == 0 || len(ds.Doors) > 4 {
+			lv.fail("door_sight at %v: %d doors", ds.Cell, len(ds.Doors))
+			continue
+		}
+		for _, d := range ds.Doors {
+			if !doors[d] {
+				lv.fail("door_sight at %v: no door at %v", ds.Cell, d)
+			}
+		}
+		if len(ds.As) != 1<<len(ds.Doors) {
+			lv.fail("door_sight at %v: %d tables for %d doors", ds.Cell, len(ds.As), len(ds.Doors))
+		}
+		for _, as := range ds.As {
+			if lv.walls != nil && len(as) != len(lv.walls.Shapes) {
+				lv.fail("door_sight at %v: %d shapes for a set of %d", ds.Cell, len(as), len(lv.walls.Shapes))
+				continue
+			}
+			for _, s := range as {
+				if !lv.wallShape(s) {
+					lv.fail("door_sight at %v: no shape %d", ds.Cell, s)
+				}
+			}
+		}
+	}
+	for _, c := range l.NoSight {
+		if !l.InBounds(c) {
+			lv.fail("no_sight at %v outside the level", c)
+		}
+	}
+}
+
+// direction reports whether d is a direction or NoFrame.
+func direction(d int) bool { return d >= NoFrame && d < 8 }
+
+// shapeUnseen returns shape s's unseen pairs, none for no shape.
+func shapeUnseen(s *WallShape) [][2]int {
+	if s == nil {
+		return nil
+	}
+	return s.Unseen
 }

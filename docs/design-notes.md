@@ -188,8 +188,8 @@ box opens it as the pack where it lies; resting the pointer on one lists what it
 - Shape Change draws the creature's first frame, not its walk; the player's held objects hide.
 - Records 23h and 2Bh get speed 16 when a conversation turns them hostile (creatures.md,
   Hostility); not done.
-- Interaction variables the game reads itself beyond 14, 19, 32 and 97: 96 (quiet combat), 98
-  (sight) wait for their milestones, as does 34, set when play goes on after ending G.
+- Interaction variables the game reads itself beyond 14, 19, 32, 96 (quiet combat), 97 and 98
+  (magnify): 34, set when play goes on after ending G, waits for its milestone.
 - Gateway's level 30 and the conversations that return from it are imported but not played
   through on the imported game; nor is any quest that a conversation drives across levels.
 - Powers are still numbers the engine knows (items.md, Powers); casting and talking powers
@@ -224,9 +224,20 @@ box opens it as the pack where it lies; resting the pointer on one lists what it
 - Panels from the game's art (the hotbar, the inventory and spell panels and the conversation
   window draw plain boxes and the debug font until then; the game's spell panel art is resource
   7, its icon strip resources 51 and 52),
-  hotkeys for the hotbar's objects, magnified floor objects as a game setting, and the custom
+  hotkeys for the hotbar's objects, and the custom
   outline font (the hotbar's labels and tooltips use the debug font). Play mode's text panel is a
   stand-in.
+- Quality of life, designed in [design.md](design.md) (UI; Editor, Links):
+  - The spellbook as a scrollable list by school with a Memorize button per spell. The panel
+    already lists the spellbook and memorizes on a click; scrolling, the buttons, grouping and the
+    schools' limits are left.
+  - A conversation log: every conversation remembered (who, with portrait and name; where; when;
+    each line and question), a window listing the people talked with, and search across it all.
+    New world state, kept in saves.
+  - The full map switching to any visited level, and hovering a teleporter or exit to see where
+    it took the player, or a lever or plate to see what it changed, from what the player has
+    observed (recorded by the world, kept in saves). Built first as the viewer's link overlay
+    over the pack's own links, then in the editor and the game's map.
 
 ### 10. Modding
 

@@ -30,6 +30,15 @@ func (l *Level) Halves(c Cell) int {
 	return l.FloorHalves[c[0]][c[1]]
 }
 
+// DoorSight is a wall whose floor halves follow the doors beside it: while Doors[i] is closed
+// exactly for the bits i set in m, a wall of shape s checks its halves by the sight of shape
+// As[m][s] (docs/pack.md, door_sight).
+type DoorSight struct {
+	Cell  Cell    `json:"cell"`
+	Doors []Cell  `json:"doors"`
+	As    [][]int `json:"as"`
+}
+
 // Level is a level: its grids, the art fixed in it, its features and procedures, and the things
 // and objects it places.
 type Level struct {
@@ -53,11 +62,17 @@ type Level struct {
 	// FloorHalves says which halves of each cell's floor are drawn (HalfUpper, HalfLower); the
 	// others are blanked. Nil draws every floor whole.
 	FloorHalves Grid `json:"floor_halves,omitempty"`
-	// UpperSight and LowerSight give, for the floor under a wall or closed door, the direction of
+	// UpperSight and LowerSight give, for the floor under a closed door, or a wall whose shape has
+	// no Sight, the direction of
 	// the neighbor that must be visible for each half to show; NoFrame for none. Nil for none at
 	// all.
 	UpperSight Grid `json:"upper_sight,omitempty"`
 	LowerSight Grid `json:"lower_sight,omitempty"`
+	// DoorSight gives the walls whose floor halves follow the doors beside them the shape they
+	// check as for each combination of those doors closed.
+	DoorSight []DoorSight `json:"door_sight,omitempty"`
+	// NoSight are the cells whose sight never shows the floor half of a wall beside them.
+	NoSight []Cell `json:"no_sight,omitempty"`
 	// Overlays are drawn after all floors and before anything standing.
 	Overlays []Placed `json:"overlays,omitempty"`
 	// Decorations are drawn on their cell's wall, right after it.

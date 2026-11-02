@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -329,5 +330,35 @@ func TestFill(t *testing.T) {
 	}
 	if plain := (&Item{Icon: Image{Frame: 7}}); plain.IconFor(4).Frame != 7 || plain.DollFor(4) != nil {
 		t.Error("an item without a fill changed its look")
+	}
+}
+
+// TestWallSetTaken follows a wall's unseen pairs from shape to shape until none applies.
+func TestWallSetTaken(t *testing.T) {
+	w := &WallSet{Shapes: []*WallShape{
+		{Unseen: [][2]int{{2, 1}}},
+		{Unseen: [][2]int{{0, 2}, {4, 3}}},
+		{},
+		{},
+	}}
+	dirs := [8][2]int{{-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}}
+	in := func(c Cell) bool { return c[0] >= 0 && c[1] >= 0 && c[0] < 3 && c[1] < 3 }
+	for _, c := range []struct {
+		hidden []Cell
+		want   int
+	}{
+		{nil, 0},
+		{[]Cell{{1, 2}}, 1},         // (1, 1) + direction 2 unseen: shape 1
+		{[]Cell{{1, 2}, {2, 1}}, 3}, // then direction 4 unseen: shape 3
+		{[]Cell{{1, 2}, {0, 1}}, 2}, // direction 0 first
+	} {
+		visible := func(v Cell) bool { return !slices.Contains(c.hidden, v) }
+		if got := w.Taken(0, Cell{1, 1}, dirs, in, visible); got != c.want {
+			t.Errorf("hidden %v: shape %d, want %d", c.hidden, got, c.want)
+		}
+	}
+	// A neighbor outside the level does not count as unseen.
+	if got := w.Taken(0, Cell{1, 2}, dirs, in, func(Cell) bool { return false }); got != 0 {
+		t.Errorf("outside: shape %d", got)
 	}
 }
