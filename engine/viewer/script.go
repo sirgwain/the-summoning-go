@@ -47,9 +47,10 @@ type Step struct {
 	Right       bool  `json:"right,omitempty"`
 	// Tap taps a named part of the play UI (TapPoint): "spell.0" a school's box, "gesture" the
 	// gesture box, "icon.A" an icon of the spell panel, "learn", "back" and "close" its buttons,
-	// "book.0" a spellbook entry, "offer.0" a conversation's offered keyword (by place), "bye",
-	// "word.<text>" a marked word of the line shown, and "talk.<id>" the middle of the box where
-	// the pointer talks to a creature or mouth of the shown level.
+	// "book.0" the Memorize button of the first spell row of the spellbook showing, "offer.0" a
+	// conversation's offered keyword (by place), "bye", "word.<text>" a marked word of the line
+	// shown, and "talk.<id>" the middle of the box where the pointer talks to a creature or mouth
+	// of the shown level.
 	Tap string `json:"tap,omitempty"`
 	// Hover moves the cursor onto a part named as Tap's, without a click.
 	Hover string `json:"hover,omitempty"`
@@ -271,7 +272,7 @@ func (v *Viewer) TapPoint(name string) (image.Point, error) {
 			}
 		case "book":
 			if n >= 0 && n < len(sp.Book) {
-				return mid(sp.Screen(sp.Book[n].Rect)), nil
+				return mid(sp.Screen(sp.Book[n].Button)), nil
 			}
 		default:
 			for _, b := range sp.Buttons {

@@ -11,7 +11,8 @@ import (
 
 // The spell panel: the gesture icons the player knows, the gesture being entered, and the
 // spellbook (docs/spec/spells.md, Gestures, learning and memorizing). Entering a gesture and
-// choosing Learn sends it; choosing a spell of the spellbook memorizes it once more.
+// choosing Learn sends it. The spellbook is a scrolling list by school, each school headed by its
+// memorizations and limit, each spell a row with a Memorize button that memorizes it once more.
 
 // Spell panel layout, in panel pixels, scaled together like the hotbar's.
 const (
@@ -22,10 +23,14 @@ const (
 	panelPad     = 4
 	buttonWidth  = 60
 	buttonHeight = 20
-	bookColumns  = 2
-	bookWidth    = 136
-	bookHeight   = 18
 	panelWidthPx = panelPad*2 + content.MaxGesture*iconStep
+	// bookRows is how many rows of the spellbook show at once, each rowHeight high; the scroll
+	// bar beside them is barWidth wide and each row's Memorize button memorizeWidth.
+	bookRows      = 8
+	rowHeight     = 20
+	barWidth      = 8
+	memorizeWidth = 64
+	bookWidth     = panelWidthPx - panelPad*2 - barWidth - 2
 )
 
 // IconButton is a gesture icon on the panel; one the player does not know is shown empty. A known
@@ -45,12 +50,28 @@ type PanelButton struct {
 	Label string
 }
 
-// BookEntry is a spell of the spellbook: choosing it memorizes it.
+// BookEntry is a spell row of the spellbook showing on the panel: its icon in IconRect, its
+// name, gesture, cost and memorizations as Label, and Button the Memorize button.
 type BookEntry struct {
-	Rect  image.Rectangle
-	Spell string
-	Icon  *content.Image
-	Label string
+	Rect     image.Rectangle
+	IconRect image.Rectangle
+	Button   image.Rectangle
+	Spell    string
+	Icon     *content.Image
+	Label    string
+}
+
+// BookHeader is a school's heading row: its name and its memorizations of its limit.
+type BookHeader struct {
+	Rect   image.Rectangle
+	School int
+	Label  string
+}
+
+// bookRow is a row of the whole spellbook list: a school's heading, or a spell when Spell is set.
+type bookRow struct {
+	school int
+	spell  string
 }
 
 // SpellPanel is the spell panel laid out on the screen. Rect is on the screen, Scale its screen
@@ -62,13 +83,42 @@ type SpellPanel struct {
 	// Entered are the icons entered so far.
 	Entered []IconButton
 	Buttons []PanelButton
+	// Book and Headers are the spellbook's rows that show, List the rectangle they show in,
+	// Rows how many rows the whole list has and Scroll the first that shows. Bar is the scroll
+	// bar and Thumb the part of it for the rows showing, empty when every row shows.
 	Book    []BookEntry
+	Headers []BookHeader
+	List    image.Rectangle
+	Rows    int
+	Scroll  int
+	Bar     image.Rectangle
+	Thumb   image.Rectangle
+}
+
+// bookList is the spellbook as rows: each school with learned spells, in school order, a heading
+// then its spells in the order learned.
+func (v *Viewer) bookList() []bookRow {
+	p := v.World.Player()
+	var rows []bookRow
+	for school := range content.Schools {
+		head := false
+		for _, id := range p.Magic.Spellbook {
+			if s := v.Pack.Spells[id]; s == nil || s.School != school {
+				continue
+			}
+			if !head {
+				rows, head = append(rows, bookRow{school: school}), true
+			}
+			rows = append(rows, bookRow{school: school, spell: id})
+		}
+	}
+	return rows
 }
 
 // OpenSpells opens the spell panel, when playing.
 func (v *Viewer) OpenSpells() {
 	if v.Play && v.World.Player() != nil {
-		v.SpellsOpen, v.Entered = true, ""
+		v.SpellsOpen, v.Entered, v.bookWheel = true, "", 0
 		v.cue(content.CueGesture)
 	}
 }
@@ -108,20 +158,41 @@ func (v *Viewer) SpellPanel() *SpellPanel {
 		sp.Entered = append(sp.Entered, IconButton{Rect: image.Rect(x, y, x+iconStep-2, y+iconStep-2), Letter: v.Entered[i], Icon: img, Known: true})
 	}
 	y += iconStep + panelPad
-	for i, id := range p.Magic.Spellbook {
-		s := v.Pack.Spells[id]
-		if s == nil {
+	rows := v.bookList()
+	shown := max(1, min(len(rows), bookRows))
+	sp.Rows = len(rows)
+	sp.Scroll = max(0, min(v.bookScroll, len(rows)-shown))
+	sp.List = image.Rect(panelPad, y, panelPad+bookWidth, y+shown*rowHeight)
+	if len(rows) > shown {
+		sp.Bar = image.Rect(sp.List.Max.X+2, y, sp.List.Max.X+2+barWidth, sp.List.Max.Y)
+		h := sp.Bar.Dy()
+		top, bot := sp.Scroll*h/len(rows), (sp.Scroll+shown)*h/len(rows)
+		sp.Thumb = image.Rect(sp.Bar.Min.X, y+top, sp.Bar.Max.X, y+max(bot, top+4))
+	}
+	for i, r := range rows[sp.Scroll : sp.Scroll+min(shown, len(rows))] {
+		ry := y + i*rowHeight
+		rect := image.Rect(sp.List.Min.X, ry, sp.List.Max.X, ry+rowHeight-2)
+		if r.spell == "" {
+			label := fmt.Sprintf("School %d", r.school+1)
+			if m := v.Pack.Magic; m != nil && r.school < len(m.Schools) {
+				label = inspect.Text(v.Pack, m.Schools[r.school])
+			}
+			label += fmt.Sprintf("  %d/%d", v.World.SchoolTotal(r.school), v.World.MemorizeLimit(r.school))
+			sp.Headers = append(sp.Headers, BookHeader{Rect: rect, School: r.school, Label: label})
 			continue
 		}
-		x, ey := panelPad+(i%bookColumns)*bookWidth, y+(i/bookColumns)*bookHeight
+		s := v.Pack.Spells[r.spell]
 		label := fmt.Sprintf("%s %s %d", inspect.Text(v.Pack, s.Name), s.Gesture, s.Cost)
-		if n := p.Magic.Memorized[id]; n > 0 {
+		if n := p.Magic.Memorized[r.spell]; n > 0 {
 			label += fmt.Sprintf(" x%d", n)
 		}
-		sp.Book = append(sp.Book, BookEntry{Rect: image.Rect(x, ey, x+bookWidth-2, ey+bookHeight-2), Spell: id, Icon: s.Icon, Label: label})
+		sp.Book = append(sp.Book, BookEntry{
+			Rect: rect, IconRect: image.Rect(rect.Min.X, ry, rect.Min.X+rowHeight-2, ry+rowHeight-2),
+			Button: image.Rect(rect.Max.X-memorizeWidth, ry, rect.Max.X, ry+rowHeight-2),
+			Spell:  r.spell, Icon: s.Icon, Label: label,
+		})
 	}
-	rows := (len(p.Magic.Spellbook) + bookColumns - 1) / bookColumns
-	size := image.Pt(panelWidthPx, y+rows*bookHeight+panelPad)
+	size := image.Pt(panelWidthPx, sp.List.Max.Y+panelPad)
 	bottom := v.Screen.Y - Margin
 	if h := v.Hotbar(); h != nil {
 		bottom = h.Rect.Min.Y - Margin
@@ -168,10 +239,22 @@ func (v *Viewer) learnEntered() []input.Command {
 	return []input.Command{input.Learn{Gesture: g}}
 }
 
+// scrollBook scrolls the spellbook list by n rows, no further than its ends.
+func (v *Viewer) scrollBook(n int) {
+	rows := len(v.bookList())
+	v.bookScroll = max(0, min(v.bookScroll+n, rows-min(rows, bookRows)))
+}
+
 // spellKeys are the keys while the spell panel is open: A–L enter icons, Backspace takes the last
-// off, Enter learns, Escape, F10 or R closes.
+// off, Enter learns, Page Up and Page Down scroll the spellbook, Escape, F10 or R closes.
 func (v *Viewer) spellKeys(in Input) []input.Command {
 	switch {
+	case in.pressed(KeyPageUp):
+		v.scrollBook(-(bookRows - 1))
+		return nil
+	case in.pressed(KeyPageDown):
+		v.scrollBook(bookRows - 1)
+		return nil
 	case in.pressed(KeyEscape, KeyF10, "R"):
 		v.SpellsOpen = false
 		return nil
@@ -219,11 +302,33 @@ func (v *Viewer) spellClick(sp *SpellPanel, pt image.Point, right bool) []input.
 		return nil
 	}
 	for _, e := range sp.Book {
-		if at.In(e.Rect) {
+		if at.In(e.Button) {
 			return []input.Command{input.Memorize{Spell: e.Spell}}
 		}
 	}
+	if at.In(sp.Bar) && !at.In(sp.Thumb) {
+		if at.Y < sp.Thumb.Min.Y {
+			v.scrollBook(-(bookRows - 1))
+		} else {
+			v.scrollBook(bookRows - 1)
+		}
+	}
 	return nil
+}
+
+// spellWheel scrolls the spellbook by the wheel while the cursor is over the spell panel, a row
+// per whole wheel unit, the wheel turned away scrolling down the list.
+func (v *Viewer) spellWheel(sp *SpellPanel, in Input) {
+	if in.Wheel == 0 || !in.Cursor.In(sp.Rect) {
+		return
+	}
+	v.bookWheel += in.Wheel
+	for ; v.bookWheel >= 1; v.bookWheel-- {
+		v.scrollBook(-1)
+	}
+	for ; v.bookWheel <= -1; v.bookWheel++ {
+		v.scrollBook(1)
+	}
 }
 
 // castKeys are the play keys that cast: F1–F4 or 1–4 cast a school's spell, with Shift select its

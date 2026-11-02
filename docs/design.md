@@ -294,10 +294,9 @@ The file formats are in [pack.md](pack.md).
   gesture (the player's spellbook, kept in saves), so a spell once found never has to be recalled
   as keys or a gesture again. It shows as a scrollable list, by school, each row the spell's icon,
   name, gesture, cost and how often it is memorized, with a Memorize button that memorizes it once
-  more, exactly as entering its gesture would (the school's limit and forgetting apply). The panel
-  already lists the spellbook and memorizes a spell when its entry is clicked; still to do are
-  scrolling once the list outgrows the panel, the per-row button, grouping by school and showing
-  each school's limit.
+  more, exactly as entering its gesture would (the school's limit and forgetting apply). Each
+  school's heading shows its memorizations of its limit; the list shows eight rows and scrolls
+  with the wheel, Page Up and Page Down and its scroll bar.
 - Conversations with keyword entry and a list of known keywords.
 - **Conversation log.** Every conversation is remembered: whom it was with (the speaker's
   portrait and name), on which level and when in play time, and each line said and question asked

@@ -228,9 +228,10 @@ box opens it as the pack where it lies; resting the pointer on one lists what it
   outline font (the hotbar's labels and tooltips use the debug font). Play mode's text panel is a
   stand-in.
 - Quality of life, designed in [design.md](design.md) (UI; Editor, Links):
-  - The spellbook as a scrollable list by school with a Memorize button per spell. The panel
-    already lists the spellbook and memorizes on a click; scrolling, the buttons, grouping and the
-    schools' limits are left.
+  - Done: the spellbook as a scrollable list by school. Each school is headed by its name and its
+    memorizations of its limit, each spell a row of icon, name, gesture, cost and memorizations
+    with a Memorize button; eight rows show, scrolled by the wheel, Page Up and Page Down or the
+    scroll bar. Any gesture that matches a spell adds it (`TestSpellbookList`).
   - Done: the conversation log. The world logs what each speaker says once, by the
     conversation it was first said in (who, the portrait, the level, the step, and each new line
     and gesture taught, with the question that brought it), leaves out the menu's, and keeps it

@@ -699,9 +699,20 @@ func (s *shell) drawSpellPanel(screen *ebiten.Image) {
 		stroke(r, slotEdgeColor)
 		ebitenutil.DebugPrintAt(screen, b.Label, r.Min.X+(r.Dx()-len(b.Label)*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
 	}
+	for _, h := range sp.Headers {
+		fill(sp.Screen(h.Rect), actionColor)
+	}
 	for _, e := range sp.Book {
-		r := sp.Screen(e.Rect)
-		fill(r, slotColor)
+		fill(sp.Screen(e.Rect), slotColor)
+		r := sp.Screen(e.Button)
+		fill(r, actionColor)
+		stroke(r, slotEdgeColor)
+		ebitenutil.DebugPrintAt(screen, "Memorize", r.Min.X+(r.Dx()-8*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+	}
+	if !sp.Bar.Empty() {
+		fill(sp.Screen(sp.Bar), slotColor)
+		stroke(sp.Screen(sp.Bar), slotEdgeColor)
+		fill(sp.Screen(sp.Thumb), slotEdgeColor)
 	}
 	art := s.artImage(sp.Rect.Size().Div(sp.Scale))
 	draw := func(img content.Image, r image.Rectangle) {
@@ -721,7 +732,7 @@ func (s *shell) drawSpellPanel(screen *ebiten.Image) {
 	}
 	for _, e := range sp.Book {
 		if e.Icon != nil {
-			draw(*e.Icon, image.Rect(e.Rect.Min.X, e.Rect.Min.Y, e.Rect.Min.X+e.Rect.Dy(), e.Rect.Max.Y))
+			draw(*e.Icon, e.IconRect)
 		}
 	}
 	s.presenter.PresentAt(screen, art, sp.Scale, sp.Rect.Min)
@@ -731,10 +742,14 @@ func (s *shell) drawSpellPanel(screen *ebiten.Image) {
 			ebitenutil.DebugPrintAt(screen, string(rune(b.Letter)), r.Min.X+(r.Dx()-viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
 		}
 	}
+	for _, h := range sp.Headers {
+		r := sp.Screen(h.Rect)
+		ebitenutil.DebugPrintAt(screen, viewer.Clip(h.Label, (r.Dx()-4)/viewer.CharWidth), r.Min.X+4, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+	}
 	for _, e := range sp.Book {
-		r := sp.Screen(e.Rect)
-		x := r.Min.X + r.Dy() + 2
-		ebitenutil.DebugPrintAt(screen, viewer.Clip(e.Label, (r.Max.X-x)/viewer.CharWidth), x, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+		r, end := sp.Screen(e.Rect), sp.Screen(e.Button).Min.X-2
+		x := sp.Screen(e.IconRect).Max.X + 4
+		ebitenutil.DebugPrintAt(screen, viewer.Clip(e.Label, (end-x)/viewer.CharWidth), x, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
 	}
 }
 

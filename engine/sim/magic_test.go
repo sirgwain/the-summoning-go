@@ -106,7 +106,7 @@ func TestMemorizeLimitForgets(t *testing.T) {
 	for range 3 {
 		do(w, input.Memorize{Spell: devpack.SpellFlameArrow})
 	}
-	if n := w.schoolTotal(0); n != 3 {
+	if n := w.SchoolTotal(0); n != 3 {
 		t.Errorf("school 0 holds %d, want 3", n)
 	}
 	if ev := do(w, input.Memorize{Spell: devpack.SpellFireball}); !has(ev, EventRefused, devpack.SpellFireball+" is not in the spellbook") {

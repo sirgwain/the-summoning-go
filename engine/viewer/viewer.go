@@ -78,6 +78,10 @@ type Viewer struct {
 	// picture of a scroll being read, shown above the hotbar until the next key or click.
 	SpellsOpen bool
 	Entered    string
+	// bookScroll is the first spellbook row the spell panel shows, and bookWheel the wheel's
+	// scrolling not yet turned into rows.
+	bookScroll int
+	bookWheel  float64
 	// InventoryOpen shows the inventory panel; MapOpen the full level map.
 	InventoryOpen, MapOpen bool
 	// LogOpen shows the conversation log (convlog.go) and LogTyped is the search typed in it;
@@ -381,7 +385,11 @@ func (v *Viewer) modal(in Input) ([]input.Command, bool) {
 		return nil, true
 	case v.SpellsOpen:
 		cmds := v.spellKeys(in)
-		if sp := v.SpellPanel(); sp != nil && in.Cursor.In(sp.Rect) && (in.Left.Released || in.Right.Released) {
+		sp := v.SpellPanel()
+		if sp != nil {
+			v.spellWheel(sp, in)
+		}
+		if sp != nil && in.Cursor.In(sp.Rect) && (in.Left.Released || in.Right.Released) {
 			v.press, v.drag = nil, nil
 			return append(cmds, v.spellClick(sp, in.Cursor, in.Right.Released)...), true
 		}

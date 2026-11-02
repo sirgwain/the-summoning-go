@@ -67,15 +67,15 @@ func (m *Magic) teach(gesture string) {
 // Learned reports whether spell is in the spellbook.
 func (m *Magic) Learned(spell string) bool { return slices.Contains(m.Spellbook, spell) }
 
-// memorizeLimit is how many memorizations school can hold.
-func (w *World) memorizeLimit(school int) int {
+// MemorizeLimit is how many memorizations school can hold.
+func (w *World) MemorizeLimit(school int) int {
 	p := w.player
 	n := floorDiv(p.Attributes[AttrTalent]-10, 2) + p.Skills[SkillSchool+school].Level/2
 	return max(1, min(n, maxMemorized))
 }
 
-// schoolTotal is how many memorizations school holds.
-func (w *World) schoolTotal(school int) int {
+// SchoolTotal is how many memorizations school holds.
+func (w *World) SchoolTotal(school int) int {
 	n := 0
 	for id, k := range w.player.Magic.Memorized {
 		if sp := w.pack.Spells[id]; sp != nil && sp.School == school {
@@ -93,7 +93,7 @@ func (w *World) memorize(sp *content.Spell) {
 	if m.Memorized == nil {
 		m.Memorized = map[string]int{}
 	}
-	if total := w.schoolTotal(sp.School); total > 0 && total >= w.memorizeLimit(sp.School) {
+	if total := w.SchoolTotal(sp.School); total > 0 && total >= w.MemorizeLimit(sp.School) {
 		pick := w.rng.IntN(total)
 		for _, id := range sortedKeys(m.Memorized) {
 			if s := w.pack.Spells[id]; s == nil || s.School != sp.School {
