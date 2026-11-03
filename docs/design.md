@@ -275,7 +275,16 @@ The file formats are in [pack.md](pack.md).
 
 ## UI
 
-- Built from panel art in content, as resizable frames, so it keeps the Summoning's look.
+- **Frames.** The engine draws its own panel frames, in the Summoning's spirit but not its art:
+  generated from noise and rules (`engine/frame`) at any size, so no original art is needed. A
+  frame is `frame.Width` (8) of the panel's own pixels on each side, scaled with the panel, with
+  12 × 12 corner pieces. The layout leaves room for it: a panel's `Frame` is its `Rect` grown by
+  the frame, and the panels and the view keep clear of it and take the pointer over it.
+  - _Iron and sapphire_ frames the hotbar and the inventory panel: blue-black brushed iron with a
+    bevel and evenly spaced rivets, a faceted sapphire at each corner.
+  - _Runic slate_ frames the spell panel: dark layered slate cut with small runes and a ring at
+    each corner, lit blue. The light breathes, in three groups of runes out of step, a cycle of
+    about four seconds.
 - **Text** uses a custom outline font drawn for the project to match the original's lettering,
   rendered at native resolution with Ebitengine's `text/v2`. The font is content, so a game can
   supply its own.

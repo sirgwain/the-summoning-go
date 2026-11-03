@@ -5,6 +5,7 @@ import (
 	"image"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
@@ -66,9 +67,9 @@ type ActionButton struct {
 // Hotbar is the hotbar laid out on the screen.
 type Hotbar struct {
 	// Rect is the hotbar on the screen; Scale the screen pixels per hotbar pixel. Every other
-	// rectangle is in hotbar pixels, from Rect's corner.
-	Rect  image.Rectangle
-	Scale int
+	// rectangle is in hotbar pixels, from Rect's corner. Frame is Rect with its frame round it.
+	Rect, Frame image.Rectangle
+	Scale       int
 	// Portrait is the player's portrait and where it goes; Mirrored draws it flipped.
 	Portrait      content.Image
 	PortraitRect  image.Rectangle
@@ -119,9 +120,10 @@ func (v *Viewer) Hotbar() *Hotbar {
 		return nil
 	}
 	size := hotbarSize()
-	s := max(1, min(v.Screen.X/hotbarWidthPer, maxHotbarScale, v.Screen.X/(size.X+2)))
-	at := image.Pt((v.Screen.X-size.X*s)/2, v.Screen.Y-size.Y*s-Margin)
+	s := max(1, min(v.Screen.X/hotbarWidthPer, maxHotbarScale, v.Screen.X/(size.X+2*frame.Width)))
+	at := image.Pt((v.Screen.X-size.X*s)/2, v.Screen.Y-(size.Y+frame.Width)*s-Margin)
 	h := &Hotbar{Rect: image.Rectangle{at, at.Add(size.Mul(s))}, Scale: s}
+	h.Frame = framed(h.Rect, s)
 
 	h.PortraitRect = image.Rect(0, 0, portraitSize, portraitSize)
 	if pt := v.Pack.Portraits[p.Portrait]; pt != nil {
@@ -276,7 +278,7 @@ func (v *Viewer) HoverLines(cursor image.Point) []string {
 		return v.objectLines(o)
 	}
 	h := v.Hotbar()
-	if h == nil || !cursor.In(h.Rect) {
+	if h == nil || !cursor.In(h.Frame) {
 		return nil
 	}
 	for _, s := range h.Spells {
@@ -324,4 +326,9 @@ func (v *Viewer) SlotImage(slot int) (content.Image, bool) {
 		return content.Image{}, false
 	}
 	return v.Pack.Items[o.Item].IconFor(len(o.Contents)), true
+}
+
+// framed is panel rectangle r, at scale screen pixels per panel pixel, with its frame round it.
+func framed(r image.Rectangle, scale int) image.Rectangle {
+	return r.Inset(-frame.Width * scale)
 }

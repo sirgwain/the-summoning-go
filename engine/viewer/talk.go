@@ -124,7 +124,7 @@ func (v *Viewer) Talk() *TalkView {
 	size := image.Pt(w, y)
 	bottom := v.Screen.Y
 	if h := v.Hotbar(); h != nil {
-		bottom = h.Rect.Min.Y - Margin
+		bottom = h.Frame.Min.Y - Margin
 	}
 	tv.Scale = max(1, min(talkScale, (v.Screen.X-2*Margin)/size.X, max(bottom-2*Margin, 1)/size.Y))
 	corner := image.Pt((v.Screen.X-size.X*tv.Scale)/2, max(Margin, (bottom-size.Y*tv.Scale)/2))

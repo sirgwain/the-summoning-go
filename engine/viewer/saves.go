@@ -53,13 +53,13 @@ func (v *Viewer) NoticeRect() image.Rectangle {
 	w, h := len([]rune(v.Notice))*CharWidth+8, LineHeight+4
 	bottom := v.Screen.Y - Margin
 	if bar := v.Hotbar(); bar != nil {
-		bottom = bar.Rect.Min.Y - Margin
+		bottom = bar.Frame.Min.Y - Margin
 	}
 	if sp := v.SpellPanel(); sp != nil {
-		bottom = min(bottom, sp.Rect.Min.Y-Margin)
+		bottom = min(bottom, sp.Frame.Min.Y-Margin)
 	}
 	if ip := v.Inventory(); ip != nil {
-		bottom = min(bottom, ip.Rect.Min.Y-Margin)
+		bottom = min(bottom, ip.Frame.Min.Y-Margin)
 	}
 	x := (v.Screen.X - w) / 2
 	return image.Rect(x, bottom-h, x+w, bottom)

@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
@@ -70,7 +71,7 @@ func (s *Window) drawHotbar(screen *ebiten.Image) {
 	stroke := func(r image.Rectangle, c color.Color) {
 		vector.StrokeRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), 1, c, false)
 	}
-	fill(h.Rect.Inset(-viewer.Margin/2), hotbarColor)
+	s.drawFrame(screen, frame.Iron, h.Frame, h.Scale)
 	for i, g := range h.Gauges {
 		r := h.Screen(g.Rect)
 		fill(r, slotColor)

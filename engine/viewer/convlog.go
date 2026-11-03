@@ -207,7 +207,7 @@ func (v *Viewer) Log() *LogView {
 	}
 	bottom := v.Screen.Y - Margin
 	if h := v.Hotbar(); h != nil {
-		bottom = h.Rect.Min.Y - Margin
+		bottom = h.Frame.Min.Y - Margin
 	}
 	avail := max(bottom-2*Margin, 1)
 	lv := &LogView{Typed: v.LogTyped, Selected: -1}

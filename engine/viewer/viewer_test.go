@@ -492,7 +492,7 @@ func TestTalkPointer(t *testing.T) {
 	if tv == nil {
 		t.Fatal("a click on the sage did not talk")
 	}
-	bar := v.Hotbar().Rect
+	bar := v.Hotbar().Frame
 	mid := tv.Rect.Min.Add(tv.Rect.Max).Div(2)
 	if tv.Scale != 2 || tv.Rect.Max.Y > bar.Min.Y || abs(mid.X-v.Screen.X/2) > 1 || abs(mid.Y-(bar.Min.Y-Margin)/2) > 1 {
 		t.Errorf("the window is at %v, scale %d; the hotbar at %v", tv.Rect, tv.Scale, bar)
@@ -599,7 +599,7 @@ func TestMessageLine(t *testing.T) {
 	if v.Notice != "Rock" {
 		t.Errorf("taking the rock: notice %q", v.Notice)
 	}
-	r, bar := v.NoticeRect(), v.Hotbar().Rect
+	r, bar := v.NoticeRect(), v.Hotbar().Frame
 	if r.Max.Y != bar.Min.Y-Margin || r.Min.X+r.Max.X != v.Screen.X {
 		t.Errorf("message line at %v, hotbar at %v", r, bar)
 	}

@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
 
@@ -25,7 +26,7 @@ func (s *Window) drawSpellPanel(screen *ebiten.Image) {
 	stroke := func(r image.Rectangle, c color.Color) {
 		vector.StrokeRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), 1, c, false)
 	}
-	fill(sp.Rect.Inset(-viewer.Margin/2), hotbarColor)
+	s.drawFrame(screen, frame.Runic, sp.Frame, sp.Scale)
 	for _, b := range sp.Icons {
 		fill(sp.Screen(b.Rect), slotColor)
 		stroke(sp.Screen(b.Rect), slotEdgeColor)

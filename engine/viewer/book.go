@@ -236,7 +236,7 @@ func (v *Viewer) Book() *BookView {
 	src := v.source()
 	bottom := v.Screen.Y - Margin
 	if h := v.Hotbar(); h != nil {
-		bottom = h.Rect.Min.Y - Margin
+		bottom = h.Frame.Min.Y - Margin
 	}
 	avail := max(bottom-2*Margin, 1)
 	bv := &BookView{Tab: v.book.tab, Typed: v.book.typed, Selected: -1, Full: v.book.full, All: v.book.all}

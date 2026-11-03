@@ -316,11 +316,11 @@ func (v *Viewer) covered(pt image.Point) bool {
 	if pt.In(v.PanelRect()) || pt.In(v.LogRect()) {
 		return true
 	}
-	if ip := v.Inventory(); ip != nil && pt.In(ip.Rect) {
+	if ip := v.Inventory(); ip != nil && pt.In(ip.Frame) {
 		return true
 	}
 	h := v.Hotbar()
-	return h != nil && pt.In(h.Rect)
+	return h != nil && pt.In(h.Frame)
 }
 
 // hotbarPoint returns the middle of the hotbar box or button a step taps.

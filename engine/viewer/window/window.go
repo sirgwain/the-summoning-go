@@ -44,6 +44,10 @@ type Window struct {
 	talk, said, inv, log, book *ebiten.Image
 	// tint holds a line of text printed to be drawn in a color.
 	tint *ebiten.Image
+	// frames are the panels' frames, by style and size; drawn counts the draws, the frames'
+	// clock.
+	frames map[frameKey]*framePics
+	drawn  int64
 }
 
 // New returns a window drawing viewer v.
@@ -63,7 +67,7 @@ func New(v *viewer.Viewer) (*Window, error) {
 	s := &Window{
 		v: v, sprites: render.NewSprites(v.Pack), presenter: pr, glow: glow, tr: tr,
 		palette: v.Pack.Palettes[v.Pack.Manifest.Palette], keys: map[viewer.Key]ebiten.Key{},
-		art: map[image.Point]*ebiten.Image{},
+		art: map[image.Point]*ebiten.Image{}, frames: map[frameKey]*framePics{},
 	}
 	s.view = render.NewLevelView(s.sprites)
 	names := map[string]ebiten.Key{}
@@ -149,6 +153,7 @@ func (s *Window) Update() error {
 
 func (s *Window) Draw(screen *ebiten.Image) {
 	v := s.v
+	s.drawn++
 	if v.Front != nil {
 		// The frontend's screens use the system's pointer, which play hides for its own.
 		if ebiten.CursorMode() != ebiten.CursorModeVisible {
@@ -237,18 +242,17 @@ var (
 	selectionColor = color.RGBA{255, 220, 0, 255}
 	hoverColor     = color.RGBA{255, 255, 255, 255}
 	damageColor    = color.RGBA{170, 20, 20, 230}
-	hotbarColor    = color.RGBA{12, 10, 8, 240}
-	slotColor      = color.RGBA{40, 36, 32, 230}
-	slotEdgeColor  = color.RGBA{150, 130, 100, 255}
-	handEdgeColor  = color.RGBA{220, 190, 120, 255}
+	slotColor      = color.RGBA{22, 27, 36, 230}
+	slotEdgeColor  = color.RGBA{86, 102, 126, 255}
+	handEdgeColor  = color.RGBA{143, 194, 255, 255}
 	// openEdgeColor marks the box of the container open as the pack.
 	openEdgeColor  = color.RGBA{90, 220, 120, 255}
-	actionColor    = color.RGBA{70, 50, 30, 230}
+	actionColor    = color.RGBA{30, 42, 64, 230}
 	waitColor      = color.RGBA{40, 40, 40, 230}
 	gaugeColors    = [...]color.RGBA{{200, 30, 30, 255}, {40, 90, 220, 255}, {200, 160, 40, 255}}
 	overloadColor  = color.RGBA{255, 80, 0, 255}
 	spellEdgeColor = color.RGBA{120, 140, 220, 255}
-	talkColor      = color.RGBA{16, 12, 10, 235}
+	talkColor      = color.RGBA{11, 14, 20, 235}
 	bookLevelColor = color.RGBA{30, 70, 40, 235}
 	keywordColor   = color.RGBA{230, 200, 90, 255}
 	// talkSelectedColor fills the highlighted keyword button.

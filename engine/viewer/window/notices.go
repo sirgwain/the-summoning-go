@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
 
@@ -72,12 +73,14 @@ func (s *Window) drawReading(screen *ebiten.Image) {
 	}
 	scale, bottom := v.Scale, v.Screen.Y
 	if h := v.Hotbar(); h != nil {
-		scale, bottom = h.Scale, h.Rect.Min.Y-viewer.Margin
+		scale, bottom = h.Scale, h.Frame.Min.Y-viewer.Margin
 	}
 	size := image.Pt(b.FrameSize[0], b.FrameSize[1])
-	at := image.Pt((v.Screen.X-size.X*scale)/2, bottom-size.Y*scale-viewer.Margin)
-	r := image.Rectangle{at, at.Add(size.Mul(scale))}.Inset(-viewer.Margin)
-	vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), hotbarColor, false)
+	// The picture sits a frame's width in from its frame, with room as wide again round it.
+	pad := 2 * frame.Width
+	at := image.Pt((v.Screen.X-size.X*scale)/2, bottom-(size.Y+pad)*scale)
+	r := image.Rectangle{at, at.Add(size.Mul(scale))}.Inset(-pad * scale)
+	s.drawFrame(screen, frame.Iron, r, scale)
 	art := s.artImage(size)
 	if err := s.sprites.DrawImage(art, *img, 0, 0, false); err != nil && s.err == nil {
 		s.err = err

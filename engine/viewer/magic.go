@@ -5,6 +5,7 @@ import (
 	"image"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
 )
@@ -77,9 +78,10 @@ type bookRow struct {
 // SpellPanel is the spell panel laid out on the screen. Rect is on the screen, Scale its screen
 // pixels per panel pixel; every other rectangle is in panel pixels from Rect's corner.
 type SpellPanel struct {
-	Rect  image.Rectangle
-	Scale int
-	Icons []IconButton
+	// Rect is the panel on the screen, Frame it with its frame round it.
+	Rect, Frame image.Rectangle
+	Scale       int
+	Icons       []IconButton
 	// Entered are the icons entered so far.
 	Entered []IconButton
 	Buttons []PanelButton
@@ -195,12 +197,14 @@ func (v *Viewer) SpellPanel() *SpellPanel {
 	size := image.Pt(panelWidthPx, sp.List.Max.Y+panelPad)
 	bottom := v.Screen.Y - Margin
 	if h := v.Hotbar(); h != nil {
-		bottom = h.Rect.Min.Y - Margin
+		bottom = h.Frame.Min.Y - Margin
 		sp.Scale = h.Scale
 	}
-	sp.Scale = max(1, min(sp.Scale, v.Screen.X/size.X, bottom/max(size.Y, 1)))
-	at := image.Pt((v.Screen.X-size.X*sp.Scale)/2, bottom-size.Y*sp.Scale)
+	outer := size.Add(image.Pt(2*frame.Width, 2*frame.Width))
+	sp.Scale = max(1, min(sp.Scale, v.Screen.X/outer.X, bottom/outer.Y))
+	at := image.Pt((v.Screen.X-size.X*sp.Scale)/2, bottom-(size.Y+frame.Width)*sp.Scale)
 	sp.Rect = image.Rectangle{at, at.Add(size.Mul(sp.Scale))}
+	sp.Frame = framed(sp.Rect, sp.Scale)
 	return sp
 }
 
@@ -319,7 +323,7 @@ func (v *Viewer) spellClick(sp *SpellPanel, pt image.Point, right bool) []input.
 // spellWheel scrolls the spellbook by the wheel while the cursor is over the spell panel, a row
 // per whole wheel unit, the wheel turned away scrolling down the list.
 func (v *Viewer) spellWheel(sp *SpellPanel, in Input) {
-	if in.Wheel == 0 || !in.Cursor.In(sp.Rect) {
+	if in.Wheel == 0 || !in.Cursor.In(sp.Frame) {
 		return
 	}
 	v.spellbook.wheel += in.Wheel

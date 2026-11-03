@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
@@ -53,8 +54,9 @@ type TextLine struct {
 // InventoryPanel is the inventory panel laid out on the screen. Rect is on the screen and Scale
 // its screen pixels per panel pixel; every other rectangle and point is in panel pixels.
 type InventoryPanel struct {
-	Rect  image.Rectangle
-	Scale int
+	// Rect is the panel on the screen, Frame it with its frame round it.
+	Rect, Frame image.Rectangle
+	Scale       int
 	// Doll is the figure, drawn at DollAt, with Parts over it, if HasDoll.
 	Doll    content.Image
 	DollAt  image.Point
@@ -128,12 +130,14 @@ func (v *Viewer) Inventory() *InventoryPanel {
 	size := image.Pt(right+invPad, y+invPad)
 	bottom := v.Screen.Y - Margin
 	if h := v.Hotbar(); h != nil {
-		bottom = h.Rect.Min.Y - Margin
+		bottom = h.Frame.Min.Y - Margin
 		ip.Scale = h.Scale
 	}
-	ip.Scale = max(1, min(ip.Scale, (v.Screen.X-2*Margin)/size.X, max(bottom-Margin, 1)/size.Y))
-	corner := image.Pt((v.Screen.X-size.X*ip.Scale)/2, bottom-size.Y*ip.Scale)
+	outer := size.Add(image.Pt(2*frame.Width, 2*frame.Width))
+	ip.Scale = max(1, min(ip.Scale, (v.Screen.X-2*Margin)/outer.X, max(bottom-Margin, 1)/outer.Y))
+	corner := image.Pt((v.Screen.X-size.X*ip.Scale)/2, bottom-(size.Y+frame.Width)*ip.Scale)
 	ip.Rect = image.Rectangle{corner, corner.Add(size.Mul(ip.Scale))}
+	ip.Frame = framed(ip.Rect, ip.Scale)
 	// The details last: they describe the box under the pointer, which needs the panel placed.
 	o := v.described(ip)
 	for i, s := range v.details(o) {
@@ -301,12 +305,12 @@ func (v *Viewer) stats(p *sim.Player, inv *content.Inventory) []TextLine {
 // point pt.
 func (v *Viewer) objectUnder(ip *InventoryPanel, pt image.Point) *sim.Object {
 	p := v.World.Player()
-	if ip != nil && pt.In(ip.Rect) {
+	if ip != nil && pt.In(ip.Frame) {
 		if b, ok := slotAt(ip.Slots, ip.at(pt)); ok {
 			return p.Slot(v.Pack, b.Slot)
 		}
 	}
-	if h := v.Hotbar(); h != nil && pt.In(h.Rect) {
+	if h := v.Hotbar(); h != nil && pt.In(h.Frame) {
 		if b, ok := slotAt(h.Slots, h.at(pt)); ok {
 			return p.Slot(v.Pack, b.Slot)
 		}

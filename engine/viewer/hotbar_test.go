@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/sirgwain/the-summoning-go/devpack"
+	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
@@ -19,8 +20,8 @@ func TestHotbarLayout(t *testing.T) {
 	if h == nil {
 		t.Fatal("no hotbar while playing")
 	}
-	// 1280 pixels across: scale 2, centered along the bottom.
-	if h.Scale != 2 || h.Rect.Max.Y != 800-Margin || h.Rect.Min.X+h.Rect.Max.X != 1280 {
+	// 1280 pixels across: scale 2, centered along the bottom, its frame round it.
+	if h.Scale != 2 || h.Frame.Max.Y != 800-Margin || h.Rect.Min.X+h.Rect.Max.X != 1280 || h.Frame != h.Rect.Inset(-frame.Width*2) {
 		t.Errorf("hotbar at %v, scale %d", h.Rect, h.Scale)
 	}
 	if !h.Has || h.Portrait.Sprite == "" {

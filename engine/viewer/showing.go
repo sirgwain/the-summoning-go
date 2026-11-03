@@ -177,7 +177,7 @@ func (v *Viewer) thingPoint(tmpl *content.Thing, u, w int) image.Point {
 func (v *Viewer) viewRect() image.Rectangle {
 	size := v.BufferSize()
 	if h := v.Hotbar(); h != nil {
-		size.Y = min(size.Y, (h.Rect.Min.Y-Margin)/v.Scale)
+		size.Y = min(size.Y, (h.Frame.Min.Y-Margin)/v.Scale)
 	}
 	return image.Rectangle{v.Origin, v.Origin.Add(size)}
 }

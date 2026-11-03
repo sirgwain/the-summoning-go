@@ -444,7 +444,7 @@ func (v *Viewer) modal(in Input) ([]input.Command, bool) {
 		if sp != nil {
 			v.spellWheel(sp, in)
 		}
-		if sp != nil && in.Cursor.In(sp.Rect) && (in.Left.Released || in.Right.Released) {
+		if sp != nil && in.Cursor.In(sp.Frame) && (in.Left.Released || in.Right.Released) {
 			v.press, v.drag = nil, nil
 			return append(cmds, v.spellClick(sp, in.Cursor, in.Right.Released)...), true
 		}
@@ -561,8 +561,8 @@ func (v *Viewer) pan(in Input) {
 func (v *Viewer) mouse(in Input) []input.Command {
 	cursor := in.Cursor
 	bar, inv := v.Hotbar(), v.Inventory()
-	onInv := inv != nil && cursor.In(inv.Rect)
-	onBar := bar != nil && cursor.In(bar.Rect) || onInv
+	onInv := inv != nil && cursor.In(inv.Frame)
+	onBar := bar != nil && cursor.In(bar.Frame) || onInv
 	onPanel := cursor.In(v.PanelRect())
 	v.hover(cursor, !onPanel && !onBar)
 	if in.Left.Pressed || in.Right.Pressed {
@@ -971,7 +971,7 @@ func (v *Viewer) LogRect() image.Rectangle {
 	h := len(v.Events)*LineHeight + Margin
 	bottom := v.Screen.Y
 	if bar := v.Hotbar(); bar != nil {
-		bottom = bar.Rect.Min.Y - Margin
+		bottom = bar.Frame.Min.Y - Margin
 	}
 	return image.Rect(0, bottom-h, v.Screen.X-v.panelWidth(), bottom)
 }

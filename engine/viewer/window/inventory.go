@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
 
@@ -27,8 +28,8 @@ func (s *Window) drawInventory(screen *ebiten.Image) {
 		s.inv = ebiten.NewImage(size.X, size.Y)
 	}
 	win := s.inv
-	win.Fill(talkColor)
-	vector.StrokeRect(win, 0.5, 0.5, float32(size.X-1), float32(size.Y-1), 1, slotEdgeColor, false)
+	win.Clear()
+	s.drawFrame(screen, frame.Iron, ip.Frame, ip.Scale)
 	for _, b := range ip.Slots {
 		r := b.Rect.Inset(1)
 		vector.FillRect(win, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), slotColor, false)
