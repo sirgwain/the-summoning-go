@@ -94,15 +94,15 @@ func (v *Viewer) OpenLog() {
 	if !v.Play || v.World.Player() == nil {
 		return
 	}
-	v.LogOpen, v.LogTyped, v.logSelected, v.logScroll, v.logFocus = true, "", 0, 0, nil
+	v.LogOpen, v.LogTyped, v.logView.selected, v.logView.scroll, v.logView.focus = true, "", 0, 0, nil
 	v.SpellsOpen = false
 	if people := v.logPeople(); len(people) > 0 {
-		v.logChosen = people[0].template
+		v.logView.chosen = people[0].template
 	}
 }
 
 // CloseLog closes the conversation log.
-func (v *Viewer) CloseLog() { v.LogOpen, v.LogTyped, v.logFocus = false, "", nil }
+func (v *Viewer) CloseLog() { v.LogOpen, v.LogTyped, v.logView.focus = false, "", nil }
 
 // logPeople returns the templates talked with, the one talked with last first.
 func (v *Viewer) logPeople() []logPerson {
@@ -194,7 +194,7 @@ func (v *Viewer) logLines(width int) ([]logLine, int) {
 	var out []logLine
 	y := 0
 	for _, p := range v.logPeople() {
-		if p.template != v.logChosen {
+		if p.template != v.logView.chosen {
 			continue
 		}
 		log := v.World.Log()
@@ -209,7 +209,7 @@ func (v *Viewer) logLines(width int) ([]logLine, int) {
 			y += LineHeight
 			for j, e := range c.Entries {
 				words := layoutWords(v.logEntryText(c, e), CharWidth, y, width)
-				focus := v.logFocus != nil && *v.logFocus == [2]int{i, j}
+				focus := v.logView.focus != nil && *v.logView.focus == [2]int{i, j}
 				out = append(out, logLine{LogText: LogText{Words: words, Focus: focus}, conv: i, entry: j})
 				if n := len(words); n > 0 {
 					y = words[n-1].Rect.Max.Y
@@ -255,14 +255,14 @@ func (v *Viewer) Log() *LogView {
 		for _, m := range matches {
 			labels = append(labels, m.label)
 		}
-		lv.Selected = min(v.logSelected, len(labels)-1)
+		lv.Selected = min(v.logView.selected, len(labels)-1)
 		if len(matches) == 0 {
 			lv.Empty = "Nothing found."
 		}
 	} else {
 		for i, p := range people {
 			labels = append(labels, v.logName(p.template))
-			if p.template == v.logChosen {
+			if p.template == v.logView.chosen {
 				lv.Selected = i
 			}
 		}
@@ -291,7 +291,7 @@ func (v *Viewer) Log() *LogView {
 	lv.Pane = image.Rect(body.Min.X+logColumn+logPad, body.Min.Y, body.Max.X, body.Max.Y)
 	lines, height := v.logLines(lv.Pane.Dx() - CharWidth)
 	lv.PaneHeight = height
-	lv.Scroll = max(0, min(v.logScroll, height-lv.Pane.Dy()))
+	lv.Scroll = max(0, min(v.logView.scroll, height-lv.Pane.Dy()))
 	for _, l := range lines {
 		t := l.LogText
 		t.Words = slices.Clone(t.Words)
@@ -326,7 +326,7 @@ func (lv *LogView) at(pt image.Point) image.Point { return pt.Sub(lv.Rect.Min).D
 func (v *Viewer) logChoose(i int) {
 	if v.LogTyped == "" {
 		if people := v.logPeople(); i >= 0 && i < len(people) {
-			v.logChosen, v.logScroll, v.logFocus, v.logSelected = people[i].template, 0, nil, i
+			v.logView.chosen, v.logView.scroll, v.logView.focus, v.logView.selected = people[i].template, 0, nil, i
 		}
 		return
 	}
@@ -335,16 +335,16 @@ func (v *Viewer) logChoose(i int) {
 		return
 	}
 	m := matches[i]
-	v.logSelected = i
-	v.logChosen = v.World.Log()[m.conv].Template
+	v.logView.selected = i
+	v.logView.chosen = v.World.Log()[m.conv].Template
 	focus := [2]int{m.conv, m.entry}
-	v.logFocus = &focus
+	v.logView.focus = &focus
 	// Scroll the line to a third of the way down the pane.
 	if lv := v.Log(); lv != nil {
 		lines, _ := v.logLines(lv.Pane.Dx() - CharWidth)
 		for _, l := range lines {
 			if l.conv == m.conv && l.entry == m.entry && len(l.Words) > 0 {
-				v.logScroll = max(0, l.Words[0].Rect.Min.Y-lv.Pane.Dy()/3)
+				v.logView.scroll = max(0, l.Words[0].Rect.Min.Y-lv.Pane.Dy()/3)
 			}
 		}
 	}
@@ -360,7 +360,7 @@ func (v *Viewer) logInput(in Input) {
 		return
 	}
 	if in.pressed(KeyEscape) && v.LogTyped != "" {
-		v.LogTyped, v.logSelected = "", 0
+		v.LogTyped, v.logView.selected = "", 0
 		return
 	}
 	cursor := lv.at(in.Cursor)
@@ -387,10 +387,10 @@ func (v *Viewer) logInput(in Input) {
 		}
 	}
 	if typed {
-		v.logSelected = 0
+		v.logView.selected = 0
 		return
 	}
-	sel := v.logSelected
+	sel := v.logView.selected
 	if v.LogTyped == "" {
 		sel = v.logChosenIndex()
 	}
@@ -402,18 +402,18 @@ func (v *Viewer) logInput(in Input) {
 	case in.pressed(KeyEnter) && v.LogTyped != "":
 		v.logChoose(sel)
 	case in.pressed(KeyPageDown):
-		v.logScroll = lv.Scroll + lv.Pane.Dy()*3/4
+		v.logView.scroll = lv.Scroll + lv.Pane.Dy()*3/4
 	case in.pressed(KeyPageUp):
-		v.logScroll = max(0, lv.Scroll-lv.Pane.Dy()*3/4)
+		v.logView.scroll = max(0, lv.Scroll-lv.Pane.Dy()*3/4)
 	case in.Wheel != 0:
-		v.logScroll = max(0, lv.Scroll-int(in.Wheel*3*LineHeight))
+		v.logView.scroll = max(0, lv.Scroll-int(in.Wheel*3*LineHeight))
 	}
-	v.logScroll = max(0, min(v.logScroll, lv.PaneHeight-lv.Pane.Dy()))
+	v.logView.scroll = max(0, min(v.logView.scroll, lv.PaneHeight-lv.Pane.Dy()))
 }
 
 // logChosenIndex returns the chosen person's place among the people, -1 for none.
 func (v *Viewer) logChosenIndex() int {
-	return slices.IndexFunc(v.logPeople(), func(p logPerson) bool { return p.template == v.logChosen })
+	return slices.IndexFunc(v.logPeople(), func(p logPerson) bool { return p.template == v.logView.chosen })
 }
 
 // logStep moves the left column's choice to row i: a person is chosen at once, a match only
@@ -431,5 +431,5 @@ func (v *Viewer) logStep(i int) {
 		v.logChoose(i)
 		return
 	}
-	v.logSelected = i
+	v.logView.selected = i
 }

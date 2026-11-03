@@ -32,27 +32,20 @@ const (
 	Margin     = 8
 )
 
-// Viewer is the viewer's state: the world it runs, the camera, the selection and the tools.
+// Viewer is the viewer's state: the world it runs, the camera, the selection and the tools, and
+// the windows of play. Each window's own state is declared with it, and its file owns it.
 type Viewer struct {
+	// The world and what is drawn of it.
+
 	Pack  *content.Pack
 	World *sim.World
+	// Seed is the seed the world was made with, from which new games take theirs.
+	Seed uint64
 	// Ticks counts updates, the clock palette effects run on.
 	Ticks int64
 	// Levels are the pack's levels in order; Shown is the one drawn.
 	Levels []string
 	Shown  string
-	// Magnify draws floor objects with their inventory image.
-	Magnify bool
-	// Play drives the player with the keys and keeps the view on it, instead of the tools.
-	// SeeAll draws every cell rather than only what the player sees. HideDebug hides the panel and
-	// the event log and the selection's and hover's outlines: the debug overlay.
-	Play, SeeAll, HideDebug bool
-	// Origin is the view pixel at the buffer's top-left; Scale the screen pixels per view pixel.
-	Origin image.Point
-	Scale  int
-	// Screen is the size of the screen in pixels; Cursor where the mouse was at the last update.
-	Screen image.Point
-	Cursor image.Point
 	// Cmds draw the shown level, back to front, covering Bounds. Version counts their rebuilds,
 	// so a shell knows when to reload them.
 	Cmds    []drawlist.Cmd
@@ -60,60 +53,103 @@ type Viewer struct {
 	Version int
 	// Labels are the damage shown over things, rebuilt with Cmds.
 	Labels []drawlist.Label
+	// Magnify draws floor objects with their inventory image; magnified is whether the world
+	// magnified them at the last rebuild.
+	Magnify   bool
+	magnified bool
+	// Play drives the player with the keys and keeps the view on it, instead of the tools.
+	// SeeAll draws every cell rather than only what the player sees. HideDebug hides the panel and
+	// the event log and the selection's and hover's outlines: the debug overlay.
+	Play, SeeAll, HideDebug bool
+	// Paused stops the world: play until a key or click, the tools until Space again.
+	Paused bool
+	// Audio plays the world's sounds; nil plays none.
+	Audio *audio.Mixer
+	// SaveDir is where saves go, empty for none.
+	SaveDir string
+
+	// The camera and the mouse.
+
+	// Origin is the view pixel at the buffer's top-left; Scale the screen pixels per view pixel.
+	Origin image.Point
+	Scale  int
+	// Screen is the size of the screen in pixels; Cursor where the mouse was at the last update.
+	Screen image.Point
+	Cursor image.Point
+	// press is where the mouse button went down; drag where the view was last dragged from.
+	press, drag *image.Point
+	// wheel accumulates scrolling not yet turned into zoom steps.
+	wheel float64
+	// seen is where the view last saw the player, which the view follows.
+	seen struct {
+		at    image.Point // in view pixels
+		level string
+	}
+
+	// The tools and the debug overlay.
 
 	// Hover is the cell under the cursor and HoverThing the thing drawn there, if any: what a
 	// click selects. Selected is the cell selected and Thing the thing in it, if one was clicked.
 	Hover, Selected *content.Cell
 	HoverThing      string
 	Thing           string
-	Paused          bool
 	// Events are the latest lines of the event log.
 	Events []string
+	// weights is the weight the tools put on plates, by level and plate.
+	weights map[[2]string]int
+	// arrival is where an exit followed by the tools leads, centered on once the world has
+	// followed it.
+	arrival *content.Destination
 
-	// SpellsOpen shows the spell panel, and Entered is the gesture entered on it. Typed is the
-	// word typed in a conversation, and Reading the
-	// picture of a scroll being read, shown above the hotbar until the next key or click.
-	SpellsOpen bool
-	Entered    string
-	// bookScroll is the first spellbook row the spell panel shows, and bookWheel the wheel's
-	// scrolling not yet turned into rows.
-	bookScroll int
-	bookWheel  float64
-	// InventoryOpen shows the inventory panel; MapOpen the full level map.
-	InventoryOpen, MapOpen bool
-	// LogOpen shows the conversation log (convlog.go) and LogTyped is the search typed in it;
-	// logChosen is the template whose conversations it shows, logSelected the match highlighted,
-	// logScroll how far its pane is scrolled and logFocus the line a match chose.
-	LogOpen     bool
-	LogTyped    string
-	logChosen   string
-	logSelected int
-	logScroll   int
-	logFocus    *[2]int
-	// SaveDir is where saves go, empty for none; Notice is the message line, shown above the
-	// hotbar until the update NoticeUntil: the game's messages and the viewer's own.
-	SaveDir     string
-	Notice      string
-	NoticeUntil int64
+	// Play's own state.
+
+	// walk is how the keys walk the player (walkNow).
+	walk struct {
+		// dir is the screen direction the keys last walked, zero for none; waiting is a straight
+		// direction held without walking yet, for wait updates.
+		dir, waiting [2]int
+		wait         int
+	}
 	// Napping is whether N runs the world fast (nap.go); napHeldOff whether N, not released since
 	// the last nap or refusal, may not start another yet.
 	Napping    bool
 	napHeldOff bool
-	// Audio plays the world's sounds; nil plays none.
-	Audio *audio.Mixer
-	// Said is a mouth's message showing beside it, nil when none is.
-	Said  *Said
-	Typed string
-	// TalkSelected is the conversation's highlighted keyword button, or the field after them
-	// (TalkView.Selected); talkCursor is where the pointer was when it last chose one.
+	// deadFor counts the updates the player has been dead while playing.
+	deadFor int
+	// Notice is the message line, shown above the hotbar until the update NoticeUntil: the game's
+	// messages and the viewer's own.
+	Notice      string
+	NoticeUntil int64
+	// Reading is the picture of a scroll being read, shown above the hotbar until the next key or
+	// click.
+	Reading *content.Image
+	// InventoryOpen shows the inventory panel (inventory.go); MapOpen the full level map
+	// (levelmap.go).
+	InventoryOpen, MapOpen bool
+	// SpellsOpen shows the spell panel (magic.go), and Entered is the gesture entered on it.
+	SpellsOpen bool
+	Entered    string
+	// book is how far the spell panel's spellbook is scrolled.
+	book struct {
+		scroll int     // the first row shown
+		wheel  float64 // the wheel's scrolling not yet turned into rows
+	}
+	// Typed is the word typed in a conversation (talk.go), and TalkSelected its highlighted
+	// keyword button, or the field after them (TalkView.Selected); talkCursor is where the pointer
+	// was when it last chose one. Said is a mouth's message showing beside it, nil when none is.
+	Typed        string
 	TalkSelected int
 	talkCursor   image.Point
-	Reading      *content.Image
-	// Front is the frontend while it shows, taking the input; Quit is set when it asks to quit.
-	// Seed is the seed the world was made with, from which new games take theirs.
-	Front *Frontend
-	Quit  bool
-	Seed  uint64
+	Said         *Said
+	// LogOpen shows the conversation log (convlog.go) and LogTyped is the search typed in it.
+	LogOpen  bool
+	LogTyped string
+	logView  struct {
+		chosen   string  // the template whose conversations it shows
+		selected int     // the match highlighted
+		scroll   int     // how far its pane is scrolled
+		focus    *[2]int // the line a match chose
+	}
 	// Showing is the view effect or sparkle playing, nil when none is; shows are the effect and
 	// sparkle events waiting their turn (showing.go). Flipbooks are the pack's flipbooks and
 	// Flipbook the one the tools play.
@@ -122,26 +158,12 @@ type Viewer struct {
 	Flipbooks []string
 	Flipbook  int
 
-	// press is where the mouse button went down; drag where the view was last dragged from.
-	press, drag *image.Point
-	// wheel accumulates scrolling not yet turned into zoom steps.
-	wheel float64
-	// seen is where the view last saw the player, in view pixels, and on which level.
-	seen      image.Point
-	seenLevel string
-	// deadFor counts the updates the player has been dead while playing.
-	deadFor int
-	// magnified is whether the world magnified floor objects at the last rebuild.
-	magnified bool
-	// weights is the weight the tools put on plates, by level and plate.
-	weights map[[2]string]int
-	// arrival is where an exit followed by the tools leads, centered on once the world has
-	// followed it.
-	arrival *content.Destination
-	// walked is the screen direction the keys last walked, zero for none; walkWaiting is a
-	// straight direction held without walking yet, for walkWait updates (walkNow).
-	walked, walkWaiting [2]int
-	walkWait            int
+	// The frontend.
+
+	// Front is the frontend while it shows, taking the input (frontend.go); Quit is set when it
+	// asks to quit.
+	Front *Frontend
+	Quit  bool
 }
 
 // New returns a viewer of pack p, running a world with seed, showing level (the start level if
@@ -214,11 +236,11 @@ func (v *Viewer) follow() {
 		return
 	}
 	at := drawlist.RefPoint(p.U, p.V)
-	moved := at.Sub(v.seen)
-	v.seen = at
+	moved := at.Sub(v.seen.at)
+	v.seen.at = at
 	buf := v.BufferSize()
 	rel := at.Sub(v.Origin)
-	if v.seenLevel != v.Shown || !rel.In(image.Rectangle{Max: buf}) {
+	if v.seen.level != v.Shown || !rel.In(image.Rectangle{Max: buf}) {
 		v.Recenter()
 		return
 	}
@@ -235,8 +257,8 @@ func (v *Viewer) follow() {
 // level, else on the level.
 func (v *Viewer) Recenter() {
 	if p := v.World.Player(); v.Play && p != nil {
-		v.seen, v.seenLevel = drawlist.RefPoint(p.U, p.V), v.Shown
-		v.Origin = v.seen.Sub(v.BufferSize().Div(2))
+		v.seen.at, v.seen.level = drawlist.RefPoint(p.U, p.V), v.Shown
+		v.Origin = v.seen.at.Sub(v.BufferSize().Div(2))
 		return
 	}
 	if s := v.Pack.Manifest.Start; s.Level == v.Shown {
@@ -786,18 +808,18 @@ func (v *Viewer) walkNow(x, y int) bool {
 	dir := [2]int{x, y}
 	switch {
 	case x == 0 && y == 0:
-		v.walked, v.walkWait = [2]int{}, 0
+		v.walk.dir, v.walk.wait = [2]int{}, 0
 		return false
-	case x != 0 && y != 0, v.walked == dir:
-	case v.walked == [2]int{} || v.walked[0] != 0 && v.walked[1] != 0 && (x != 0 && v.walked[0] == x || y != 0 && v.walked[1] == y):
-		if v.walkWaiting != dir {
-			v.walkWaiting, v.walkWait = dir, 0
+	case x != 0 && y != 0, v.walk.dir == dir:
+	case v.walk.dir == [2]int{} || v.walk.dir[0] != 0 && v.walk.dir[1] != 0 && (x != 0 && v.walk.dir[0] == x || y != 0 && v.walk.dir[1] == y):
+		if v.walk.waiting != dir {
+			v.walk.waiting, v.walk.wait = dir, 0
 		}
-		if v.walkWait++; v.walkWait < walkGrace {
+		if v.walk.wait++; v.walk.wait < walkGrace {
 			return false
 		}
 	}
-	v.walked, v.walkWait = dir, 0
+	v.walk.dir, v.walk.wait = dir, 0
 	return true
 }
 
