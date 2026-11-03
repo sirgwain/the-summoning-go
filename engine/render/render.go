@@ -202,16 +202,22 @@ func setUniform(u []float32, colors [256]color.RGBA) {
 // Present draws src onto dst through the palette, scaled by a whole number. What src leaves
 // undrawn shows black.
 func (pr *Presenter) Present(dst, src *ebiten.Image, scale int) {
-	pr.present(dst, src, scale, image.Point{}, false)
+	pr.present(dst, src, float64(scale), float64(scale), image.Point{}, false)
 }
 
 // PresentAt draws src onto dst through the palette at point at, scaled by a whole number. What
 // src leaves undrawn stays as dst has it.
 func (pr *Presenter) PresentAt(dst, src *ebiten.Image, scale int, at image.Point) {
-	pr.present(dst, src, scale, at, true)
+	pr.present(dst, src, float64(scale), float64(scale), at, true)
 }
 
-func (pr *Presenter) present(dst, src *ebiten.Image, scale int, at image.Point, clear bool) {
+// PresentScaled draws src onto dst through the palette at point at, each pixel sx × sy screen
+// pixels. What src leaves undrawn stays as dst has it.
+func (pr *Presenter) PresentScaled(dst, src *ebiten.Image, sx, sy float64, at image.Point) {
+	pr.present(dst, src, sx, sy, at, true)
+}
+
+func (pr *Presenter) present(dst, src *ebiten.Image, sx, sy float64, at image.Point, clear bool) {
 	var op ebiten.DrawRectShaderOptions
 	op.Images[0] = src
 	c := float32(0)
@@ -219,10 +225,25 @@ func (pr *Presenter) present(dst, src *ebiten.Image, scale int, at image.Point, 
 		c = 1
 	}
 	op.Uniforms = map[string]any{"Palette": pr.palette, "Fixed": pr.fixed, "Clear": c}
-	op.GeoM.Scale(float64(scale), float64(scale))
+	op.GeoM.Scale(sx, sy)
 	op.GeoM.Translate(float64(at.X), float64(at.Y))
 	b := src.Bounds()
 	dst.DrawRectShader(b.Dx(), b.Dy(), pr.shader, &op)
+}
+
+// DrawImagePart draws part (in the frame's own pixels) of the frame of image img into the index
+// image dst, its top-left at (x, y).
+func (s *Sprites) DrawImagePart(dst *ebiten.Image, img content.Image, x, y int, part image.Rectangle) error {
+	f, err := s.Frame(img.Sprite, img.Frame)
+	if err != nil {
+		return err
+	}
+	b := f.Bounds()
+	sub := f.SubImage(part.Add(b.Min).Intersect(b)).(*ebiten.Image)
+	var op ebiten.DrawImageOptions
+	op.GeoM.Translate(float64(x), float64(y))
+	dst.DrawImage(sub, &op)
+	return nil
 }
 
 // DrawImage draws the frame of image img into the index image dst at (x, y), flipped left to

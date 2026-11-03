@@ -271,6 +271,9 @@ func (im *importer) audio() {
 	if id := soundID(openingTrack); im.pack.Creation != nil && im.pack.Sounds[id] != nil {
 		im.pack.Creation.Music = id
 	}
+	if id := soundID(storyTrack); im.pack.Creation != nil && im.pack.Sounds[id] != nil {
+		im.pack.Creation.StoryMusic = id
+	}
 	if s, id := im.pack.Scenes[doorSceneID], soundID(firstEffect+doorStepEffect); s != nil && im.pack.Sounds[id] != nil {
 		for i := range s.Steps {
 			if p := s.Steps[i].Part; p != nil {

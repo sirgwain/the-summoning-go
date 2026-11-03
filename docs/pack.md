@@ -550,6 +550,8 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
                 "attributes": { "strength": 18, "…": 0 } }],
   "scene": "scene.door",
   "music": "music.3",
+  "story": "scene.story",
+  "story_music": "music.1",
   "ending": { "scene": "scene.ending", "counter": "var.32", "conversation": "thing.npc.121",
               "choices": [{ "name": "F", "holding": "item.chesschantra_skull", "value": 4 }] }
 }
@@ -561,7 +563,10 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
   skill they start at level 1, and the objects they add, by inventory slot. `icons` are the gesture
   icons a school starts knowing.
 - `inventory` is what every character starts with; one of `body_armor` goes on the body.
-- `music` is the track the frontend starts with its splash.
+- `music` is the track the frontend starts with its splash; `story_music` the track Create
+  Character or a premade character starts, which fades out as the `story` scene ends. `story` plays
+  when a character is made or chosen, before `scene` (`docs/spec/scenes.md`, The story, in
+  short).
 - A new game sets `counter` to 1, plays `scene`, and starts `opening`'s conversation on arrival;
   each is optional. The Summoning's import sets neither `counter` nor `opening`.
 - The ending power takes the first of `ending.choices` whose `holding` item is in a hand, sets
@@ -589,6 +594,28 @@ and the two halves moved `8 × spread` pixels outward, spread going from `from` 
 each `step_ms` (the first steps each `lead_ms`'s, if given); `caption`
 shows a text at the bottom, over `banner` if given; `fade` fades to a color. `ms` holds the step.
 `sounds` start as a step shows, and a part's `step_sounds` at each of its steps.
+
+A scene is 320 × 200 unless its `size` says otherwise; one of 320 × 400 (the frontend's screen)
+shows in the same place, each row half as tall. More steps, for the story:
+
+```json
+{ "id": "scene.story", "size": [320, 400], "steps": [
+  { "text": "story.1", "box": [16, 60, 288, 280], "ms": 9000 },
+  { "picture": { "sprite": "sprite.strip.1254" }, "at": [132, 26], "clear": true },
+  { "picture": { "sprite": "sprite.strip.1256" }, "at": [164, 192], "crop": [0, 124, 120, 64] },
+  { "by_weapon": [{ "text": "story.gift.0", "box": [0, 30, 132, 340], "ms": 6000 }, "…"] },
+  { "say": { "portrait": "portrait.rowena", "side": "top", "text": "story.say.1" }, "ms": 5000 }
+] }
+```
+
+- `text` shows a page of words, wrapped and centered in `box` (`[x, y, w, h]`), in place of the
+  page before; `@` is the character's name. A key or click ends its step early.
+- `crop` draws only that part (`[x, y, w, h]`) of a `picture`, its top-left at `at`.
+- `by_weapon` plays the step of its list at the character's weapon class.
+- `say` shows a line in a speaker's panel, `top` or `bottom`, with `portrait` (the character's
+  own when empty, mirrored as its portrait says) and clears the other panel's line; the picture
+  under the panels shows darkened. A key or click ends its step early.
+- A `clear` also clears the page of words and the panels.
 
 ## Flipbooks
 

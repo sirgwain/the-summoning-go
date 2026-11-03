@@ -120,6 +120,9 @@ func (im *importer) creation(rows int, premades []Premade) {
 	if s := im.doorScene(); s != nil {
 		c.Scene = s.ID
 	}
+	if s := im.storyScene(); s != nil {
+		c.Story = s.ID
+	}
 	// The ending power's choices: the item held, the NPC record stored in the counter, and the
 	// ending's name. Their end scenes are the game's program's, so none is given.
 	c.Ending = &content.Ending{Counter: varID(varEnding)}
@@ -187,6 +190,9 @@ const (
 // openingTrack plays under the opening picture, which the engine's splash stands in for
 // (audio.md, Music in the frontend).
 const openingTrack = 3
+
+// storyTrack plays from Create Character through the story (audio.md, Music in the frontend).
+const storyTrack = 1
 
 // doorEndTicks is how long the open door holds; the door's first doorLeadSteps steps of opening
 // wait 11 − 2s ticks more than the rest (scenes.md, New game).
@@ -263,6 +269,137 @@ func (im *importer) endingScene() *content.Scene {
 			s.Steps = append(s.Steps, content.SceneStep{Caption: msgID(m), Banner: &content.Image{Sprite: banner}, MS: ms(45)})
 		}
 	}
+	im.pack.Scenes[s.ID] = s
+	return s
+}
+
+// The story in short (scenes.md, The story, in short): its pictures, as frontend resources
+// (INIT's frontend base +), and where each goes on the 320 × 400 screen.
+const (
+	storySceneID  = "scene.story"
+	resStoryTop   = 0x16
+	resStoryBelow = 0x17
+	resStoryGifts = 0x18
+	resStoryLift  = 0x19
+	resStoryHands = 0x1A
+	resStoryArms  = 0x26
+	// storyGiftsFront is the first row of the gifts picture drawn again over the lifted hands.
+	storyGiftsFront = 124
+)
+
+// storyWords are the story's words, in the engine's own telling: the summary's pages, Rowena's
+// first page, the gift by weapon class, the conversation (true for Rowena's lines) and the last
+// page.
+var (
+	storySummary = []string{
+		"War has spread across the land, and the black mage Shadow Weaver grows stronger with every season. In a fortress hidden on a lonely hill, a Council of mages led by the archmage Rowena searched for one of the bloodline of the hero who long ago overcame the tower of DarkSpyre. Their search found you.",
+		"Brought before the Council, you swore to stand against Shadow Weaver. Through the months that followed, the weapon master Khail trained your arm, and the mage Jairus taught you to bend magic to your will.",
+		"On the night your training ended, a gateway opened within the fortress and Shadow Weaver's horde poured through. Khail and his warriors fell holding the hall. Jairus held the enemy back with fire and lightning until an arrow found him.",
+	}
+	storyFear  = "Rowena turns to you, and for the first time you see fear in her face."
+	storyGifts = []string{"a falchion", "a war axe", "a spear", "a bow and a quiver of arrows"}
+	storyLines = []struct {
+		rowena bool
+		text   string
+	}{
+		{true, "@, the gateway will not stay open for long. Take these, and listen."},
+		{true, "We are lost here. The Council and I will flee and find shelter where we can, but you must go on alone."},
+		{false, "Then I will go, and finish what my ancestor began."},
+		{true, "I will send you to the entrance of the labyrinth. A man named Malachi waits for you there, and you can trust him. Be sure to ask him about the coins: they will help you on your way."},
+		{true, "The way to destroy Shadow Weaver lies somewhere in the labyrinth. Find it. Now, be ready..."},
+	}
+	storyAway = "Rowena lifts her hands, the air around you begins to shimmer, and the fortress falls away."
+)
+
+// readingMS is how long a page of words holds: 2 seconds and 45 ms a letter.
+func readingMS(text string) int { return 2000 + 45*len([]rune(text)) }
+
+// storyScene adds the story in short (scenes.md, The story, in short).
+func (im *importer) storyScene() *content.Scene {
+	base := int(im.init.Bases.Frontend)
+	strip := func(res int) (string, bool) {
+		id, err := im.stripSprite(base+res, "sprite.strip")
+		return id, err == nil
+	}
+	top, ok1 := strip(resStoryTop)
+	below, ok2 := strip(resStoryBelow)
+	gifts, ok3 := strip(resStoryGifts)
+	lift, ok4 := strip(resStoryLift)
+	hands, ok5 := strip(resStoryHands)
+	var arms []string
+	for class := range storyGifts {
+		if id, ok := strip(resStoryArms + class); ok {
+			arms = append(arms, id)
+		}
+	}
+	if !ok1 || !ok2 || !ok3 || !ok4 || !ok5 || len(arms) != len(storyGifts) {
+		im.report.addf("the story scene: its pictures are missing; left out")
+		return nil
+	}
+	text := func(key, words string) string {
+		im.strings[key] = words
+		return key
+	}
+	pic := func(id string, x, y int) content.SceneStep {
+		return content.SceneStep{Picture: &content.Image{Sprite: id}, At: content.Offset{x, y}}
+	}
+	summaryBox, columnBox := &[4]int{16, 60, 288, 280}, &[4]int{0, 30, 132, 340}
+	s := &content.Scene{ID: storySceneID, Size: [2]int{content.SceneWidth, 2 * content.SceneHeight}}
+	for i, words := range storySummary {
+		st := content.SceneStep{Text: text(fmt.Sprintf("story.%d", i+1), words), Box: summaryBox, MS: readingMS(words)}
+		st.Clear = i == 0
+		s.Steps = append(s.Steps, st)
+	}
+	// picture draws the farewell, raised when lifted, and its arms by weapon class.
+	picture := func(lifted bool) {
+		first := pic(top, 132, 26)
+		first.Clear = true
+		s.Steps = append(s.Steps, first, pic(below, 132, 226))
+		if lifted {
+			s.Steps = append(s.Steps, pic(lift, 164, 54))
+			front := pic(gifts, 164, 68+storyGiftsFront)
+			if sp := im.pack.Sprites[gifts]; sp != nil {
+				front.Crop = &[4]int{0, storyGiftsFront, sp.FrameSize[0], sp.FrameSize[1] - storyGiftsFront}
+			}
+			s.Steps = append(s.Steps, front)
+		} else {
+			s.Steps = append(s.Steps, pic(gifts, 164, 68))
+		}
+		s.Steps = append(s.Steps, pic(hands, 164, 198))
+		var byWeapon []content.SceneStep
+		for _, id := range arms {
+			byWeapon = append(byWeapon, pic(id, 204, 266))
+		}
+		s.Steps = append(s.Steps, content.SceneStep{ByWeapon: byWeapon})
+	}
+	picture(false)
+	s.Steps = append(s.Steps, content.SceneStep{Text: text("story.fear", storyFear), Box: columnBox, MS: readingMS(storyFear)})
+	var gift []content.SceneStep
+	for class, g := range storyGifts {
+		words := "She presses into your hands " + g + ", an apple, a worn old parchment and a scroll of your school's magic."
+		gift = append(gift, content.SceneStep{Text: text(fmt.Sprintf("story.gift.%d", class), words), Box: columnBox, MS: readingMS(words)})
+	}
+	s.Steps = append(s.Steps, content.SceneStep{ByWeapon: gift})
+	_, rowena := im.pack.Portraits[rowenaID]
+	for i, l := range storyLines {
+		say := &content.SceneSay{Side: content.SayBottom, Text: text(fmt.Sprintf("story.say.%d", i+1), l.text)}
+		if l.rowena {
+			say.Side = content.SayTop
+			if rowena {
+				say.Portrait = rowenaID
+			}
+		}
+		if l.rowena && !rowena {
+			// Without her portrait, her lines show as words on the picture.
+			s.Steps = append(s.Steps, content.SceneStep{Text: say.Text, Box: columnBox, MS: readingMS(l.text)})
+			continue
+		}
+		s.Steps = append(s.Steps, content.SceneStep{Say: say, MS: readingMS(l.text)})
+	}
+	picture(true)
+	s.Steps = append(s.Steps,
+		content.SceneStep{Text: text("story.away", storyAway), Box: columnBox, MS: readingMS(storyAway)},
+		content.SceneStep{Fade: "#000000", MS: 1000})
 	im.pack.Scenes[s.ID] = s
 	return s
 }

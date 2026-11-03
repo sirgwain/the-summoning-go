@@ -191,7 +191,8 @@ of live input, and exits when it ends. Its files are written under --out.`,
 					return fmt.Errorf("pack %s has no player", pack.Manifest.ID)
 				}
 				v.SetPlay(true)
-				if menu && script == "" && pack.Creation != nil {
+				// A script starts at the menu only when asked to.
+				if menu && (script == "" || cmd.Flags().Changed("menu")) && pack.Creation != nil {
 					v.ShowSplash()
 				}
 			}
@@ -232,7 +233,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 	viewCmd.Flags().StringVar(&load, "load", "", "start from the saved game in this file, looked for in the saves directory when not found as given")
 	viewCmd.Flags().StringVar(&saves, "saves", "", "directory for saved games (default: the user's config directory; none while a script runs)")
 	if play {
-		viewCmd.Flags().BoolVar(&menu, "menu", true, "start at the main menu when the pack has character creation (not while a script runs)")
+		viewCmd.Flags().BoolVar(&menu, "menu", true, "start at the main menu when the pack has character creation (while a script runs, only when given)")
 	}
 	viewCmd.Flags().BoolVar(&mute, "mute", false, "play no music or sound effects (none while a script runs)")
 	viewCmd.Flags().StringVar(&screenshot, "screenshot", "", "save a frame to this PNG file and exit")

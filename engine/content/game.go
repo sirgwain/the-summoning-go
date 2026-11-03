@@ -24,8 +24,12 @@ type Creation struct {
 	Scene   string `json:"scene,omitempty"`
 	// Ending is how the game ends.
 	Ending *Ending `json:"ending,omitempty"`
-	// Music is the track the frontend starts with its splash.
-	Music string `json:"music,omitempty"`
+	// Music is the track the frontend starts with its splash; StoryMusic the one Create
+	// Character or a premade character starts, fading out as Story ends. Story plays when a
+	// character is made or chosen, before Scene.
+	Music      string `json:"music,omitempty"`
+	Story      string `json:"story,omitempty"`
+	StoryMusic string `json:"story_music,omitempty"`
 }
 
 // Ending is how the game ends (docs/pack.md, Creation). The ending power takes the first choice
@@ -79,25 +83,59 @@ const (
 	SceneHeight = 200
 )
 
-// Scene is steps the presentation plays in order.
+// Scene is steps the presentation plays in order, on a picture of Size (SceneWidth ×
+// SceneHeight when not given; one twice as tall shows each row half as tall).
 type Scene struct {
 	ID    string      `json:"id"`
+	Size  [2]int      `json:"size,omitzero"`
 	Steps []SceneStep `json:"steps"`
 }
 
-// SceneStep is one step of a scene: one of Picture, Part, Caption and Fade, held MS. Sounds
-// start as the step shows.
-type SceneStep struct {
-	Picture *Image   `json:"picture,omitempty"`
-	At      Offset   `json:"at,omitzero"`
-	Clear   bool     `json:"clear,omitempty"`
-	Part    *Part    `json:"part,omitempty"`
-	Caption string   `json:"caption,omitempty"`
-	Banner  *Image   `json:"banner,omitempty"`
-	Fade    string   `json:"fade,omitempty"`
-	MS      int      `json:"ms,omitempty"`
-	Sounds  []string `json:"sounds,omitempty"`
+// Dims returns the size of the scene's picture.
+func (s *Scene) Dims() (w, h int) {
+	if s.Size[0] > 0 && s.Size[1] > 0 {
+		return s.Size[0], s.Size[1]
+	}
+	return SceneWidth, SceneHeight
 }
+
+// SceneStep is one step of a scene: one of Picture, Part, Caption, Fade, Text, Say and ByWeapon,
+// held MS. Sounds start as the step shows. Crop draws only that part (x, y, w, h) of Picture;
+// Text is a page of words wrapped and centered in Box (x, y, w, h); ByWeapon plays the step at
+// the character's weapon class.
+type SceneStep struct {
+	Picture  *Image      `json:"picture,omitempty"`
+	At       Offset      `json:"at,omitzero"`
+	Crop     *[4]int     `json:"crop,omitempty"`
+	Clear    bool        `json:"clear,omitempty"`
+	Part     *Part       `json:"part,omitempty"`
+	Caption  string      `json:"caption,omitempty"`
+	Banner   *Image      `json:"banner,omitempty"`
+	Fade     string      `json:"fade,omitempty"`
+	Text     string      `json:"text,omitempty"`
+	Box      *[4]int     `json:"box,omitempty"`
+	Say      *SceneSay   `json:"say,omitempty"`
+	ByWeapon []SceneStep `json:"by_weapon,omitempty"`
+	MS       int         `json:"ms,omitempty"`
+	Sounds   []string    `json:"sounds,omitempty"`
+}
+
+// Waits reports whether a key or click ends the step early, rather than skipping the scene.
+func (st *SceneStep) Waits() bool { return st.Text != "" || st.Say != nil }
+
+// SceneSay is a line shown in a speaker's panel: Side "top" or "bottom", with Portrait (the
+// character's own when empty).
+type SceneSay struct {
+	Portrait string `json:"portrait,omitempty"`
+	Side     string `json:"side"`
+	Text     string `json:"text"`
+}
+
+// Scene panel sides.
+const (
+	SayTop    = "top"
+	SayBottom = "bottom"
+)
 
 // Part moves a picture's two halves apart (or together) over a background, a step at a time,
 // each held StepMS, or the first ones LeadMS's. StepSounds start at each step.
@@ -191,9 +229,12 @@ func (v *verifier) creation() {
 			v.fail("%s: %s holds no conversation", owner, c.Opening)
 		}
 	}
-	if _, ok := v.p.Scenes[c.Scene]; c.Scene != "" && !ok {
-		v.fail("%s: scene %q not found", owner, c.Scene)
+	for _, id := range []string{c.Scene, c.Story} {
+		if _, ok := v.p.Scenes[id]; id != "" && !ok {
+			v.fail("%s: scene %q not found", owner, id)
+		}
 	}
+	v.music(owner+": story_music", c.StoryMusic)
 	if e := c.Ending; e != nil {
 		scene := func(id string) {
 			if _, ok := v.p.Scenes[id]; id != "" && !ok {
@@ -220,22 +261,52 @@ func (v *verifier) scene(s *Scene) {
 			v.frame(owner, im.Sprite, im.Frame)
 		}
 	}
-	for i, st := range s.Steps {
+	if w, h := s.Dims(); w != SceneWidth || (h != SceneHeight && h != 2*SceneHeight) {
+		v.fail("%s: size %dx%d", owner, w, h)
+	}
+	var check func(name string, st SceneStep, nested bool)
+	check = func(name string, st SceneStep, nested bool) {
 		n := 0
-		for _, set := range []bool{st.Picture != nil, st.Part != nil, st.Caption != "", st.Fade != ""} {
+		for _, set := range []bool{st.Picture != nil, st.Part != nil, st.Caption != "", st.Fade != "",
+			st.Text != "", st.Say != nil, len(st.ByWeapon) > 0} {
 			if set {
 				n++
 			}
 		}
 		if n != 1 && !(n == 0 && st.MS > 0) {
-			v.fail("%s: step %d does %d things", owner, i, n)
+			v.fail("%s: %s does %d things", owner, name, n)
 		}
 		img(st.Picture)
 		img(st.Banner)
-		if st.Caption != "" {
-			v.text(owner, st.Caption)
+		for _, key := range []string{st.Caption, st.Text} {
+			if key != "" {
+				v.text(owner, key)
+			}
 		}
-		step := fmt.Sprintf("%s step %d", owner, i)
+		if st.Text != "" && (st.Box == nil || st.Box[2] <= 0 || st.Box[3] <= 0) {
+			v.fail("%s: %s has text but no box", owner, name)
+		}
+		if st.Crop != nil && (st.Picture == nil || st.Crop[2] <= 0 || st.Crop[3] <= 0) {
+			v.fail("%s: %s crop", owner, name)
+		}
+		if sy := st.Say; sy != nil {
+			v.text(owner, sy.Text)
+			if sy.Side != SayTop && sy.Side != SayBottom {
+				v.fail("%s: %s says on side %q", owner, name, sy.Side)
+			}
+			if _, ok := v.p.Portraits[sy.Portrait]; sy.Portrait != "" && !ok {
+				v.fail("%s: %s: portrait %q not found", owner, name, sy.Portrait)
+			}
+		}
+		if len(st.ByWeapon) > 0 {
+			if nested {
+				v.fail("%s: %s: by_weapon within by_weapon", owner, name)
+			}
+			for j, sub := range st.ByWeapon {
+				check(fmt.Sprintf("%s weapon %d", name, j), sub, true)
+			}
+		}
+		step := owner + " " + name
 		for _, id := range st.Sounds {
 			v.effect(step, id)
 		}
@@ -247,5 +318,8 @@ func (v *verifier) scene(s *Scene) {
 				v.effect(step, id)
 			}
 		}
+	}
+	for i, st := range s.Steps {
+		check(fmt.Sprintf("step %d", i), st, false)
 	}
 }

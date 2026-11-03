@@ -275,6 +275,21 @@ func TestVerify(t *testing.T) {
 		"rotate too far": {func(p *Pack) { p.Palettes["palette.0"].Effects[0].First = 250 }, "outside the palette"},
 		"no period":      {func(p *Pack) { p.Palettes["palette.0"].Effects[1].PeriodMS = 0 }, "period"},
 		"unknown effect": {func(p *Pack) { p.Palettes["palette.0"].Effects[1].Kind = "fade" }, "unknown kind"},
+		"scene size": {func(p *Pack) {
+			p.Scenes["scene.s"] = &Scene{ID: "scene.s", Size: [2]int{320, 300}, Steps: []SceneStep{{MS: 1}}}
+		}, "size 320x300"},
+		"text box": {func(p *Pack) {
+			p.Scenes["scene.s"] = &Scene{ID: "scene.s", Steps: []SceneStep{{Text: "msg.stuck", MS: 1}}}
+		}, "no box"},
+		"say side": {func(p *Pack) {
+			p.Scenes["scene.s"] = &Scene{ID: "scene.s", Steps: []SceneStep{{Say: &SceneSay{Side: "left", Text: "msg.stuck"}}}}
+		}, `side "left"`},
+		"weapon step": {func(p *Pack) {
+			p.Scenes["scene.s"] = &Scene{ID: "scene.s", Steps: []SceneStep{{ByWeapon: []SceneStep{{Text: "msg.nope", Box: &[4]int{0, 0, 1, 1}}}}}}
+		}, "not in text.en"},
+		"two things": {func(p *Pack) {
+			p.Scenes["scene.s"] = &Scene{ID: "scene.s", Steps: []SceneStep{{Fade: "#000000", Say: &SceneSay{Side: SayTop, Text: "msg.stuck"}}}}
+		}, "does 2 things"},
 	}
 	if err := testPack().Verify(); err != nil {
 		t.Fatalf("valid pack: %v", err)

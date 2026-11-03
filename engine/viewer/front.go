@@ -71,6 +71,15 @@ func (v *Viewer) frontUpdate(in Input) {
 	f := v.Front
 	f.Size = v.Screen
 	f.Update(in)
+	for _, id := range f.TakeMusic() {
+		switch {
+		case v.Audio == nil:
+		case id == "":
+			v.Audio.StopMusic()
+		default:
+			v.Audio.PlayMusic(id)
+		}
+	}
 	if f.Scene != nil {
 		for _, id := range f.Scene.TakeSounds() {
 			if v.Audio != nil {

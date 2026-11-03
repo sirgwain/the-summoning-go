@@ -162,7 +162,7 @@ func TestSceneRun(t *testing.T) {
 	r := NewSceneRun(&content.Scene{ID: "s", Steps: []content.SceneStep{
 		{Part: &content.Part{From: 0, To: 2, StepMS: 50, StepSounds: []string{"sfx.step"}}, MS: 0},
 		{Fade: "#000000", MS: 100, Sounds: []string{"sfx.fade"}},
-	}})
+	}}, SceneViewer{})
 	var spreads []int
 	var sounds []string
 	for !r.Update() {
@@ -330,7 +330,7 @@ func TestShiftRRollsTo100(t *testing.T) {
 func TestSceneLeadSteps(t *testing.T) {
 	r := NewSceneRun(&content.Scene{ID: "s", Steps: []content.SceneStep{
 		{Part: &content.Part{From: 0, To: 3, StepMS: 50, LeadMS: []int{200, 100}}},
-	}})
+	}}, SceneViewer{})
 	held := map[int]int{}
 	for i := 0; !r.Update(); i++ {
 		if s, ok := r.Spread(); ok {
@@ -342,5 +342,88 @@ func TestSceneLeadSteps(t *testing.T) {
 	}
 	if held[0] <= held[1] || held[1] <= held[2] {
 		t.Errorf("updates held by spread: %v", held)
+	}
+}
+
+// TestStory: Create Character starts the story's music and going back fades it; a premade
+// character sees the story, words by weapon class with @ its name, and the panels' lines, a key
+// ending a page early, then the door; the music fades as the story ends, and Escape skips it.
+func TestStory(t *testing.T) {
+	p := devpack.Build()
+	pic := &content.Image{Sprite: "sprite.portrait"}
+	p.Scenes["scene.story"] = &content.Scene{ID: "scene.story", Size: [2]int{320, 400}, Steps: []content.SceneStep{
+		{Text: "story.1", Box: &[4]int{16, 60, 288, 280}, MS: 10000, Clear: true},
+		{Picture: pic, At: content.Offset{1, 2}},
+		{Picture: pic, At: content.Offset{3, 4}, Crop: &[4]int{0, 1, 2, 3}},
+		{ByWeapon: []content.SceneStep{{Text: "story.w0", Box: &[4]int{0, 0, 10, 10}, MS: 10000},
+			{Text: "story.w1", Box: &[4]int{0, 0, 10, 10}, MS: 10000}}},
+		{Say: &content.SceneSay{Portrait: "portrait.r", Side: content.SayTop, Text: "story.say"}, MS: 10000},
+		{Say: &content.SceneSay{Side: content.SayBottom, Text: "story.reply"}, MS: 10000},
+		{Fade: "#000000", MS: 100},
+	}}
+	p.Scenes["scene.door"] = &content.Scene{ID: "scene.door", Steps: []content.SceneStep{{Picture: pic, Clear: true, MS: 100}}}
+	p.Creation.Story, p.Creation.StoryMusic, p.Creation.Scene = "scene.story", "music.story", "scene.door"
+	p.Creation.Premade[0].WeaponClass = 1
+	none := Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}}
+	key := Input{Held: map[Key]bool{KeySpace: true}, Pressed: map[Key]bool{KeySpace: true}}
+	esc := Input{Held: map[Key]bool{KeyEscape: true}, Pressed: map[Key]bool{KeyEscape: true}}
+
+	f := NewFrontend(p, 1, nil, image.Pt(1280, 800))
+	f.pick("create")
+	f.pick("back")
+	if m := f.TakeMusic(); !slices.Equal(m, []string{"music.story", ""}) {
+		t.Errorf("create and back: music %q", m)
+	}
+	f.pick("premade")
+	f.pick("premade.0")
+	if m := f.TakeMusic(); !slices.Equal(m, []string{"music.story"}) {
+		t.Errorf("premade: music %q", m)
+	}
+	r := f.Scene
+	if f.Screen != ScreenScene || r == nil || r.Def.ID != "scene.story" || r.Text != "story.1" {
+		t.Fatalf("no story: %s %+v", f.Screen, r)
+	}
+	f.Update(none)
+	if r.Text != "story.1" {
+		t.Fatal("the page did not hold")
+	}
+	f.Update(key)
+	// The pictures drawn in parts show whole with the page that follows them.
+	if len(r.Pictures) != 2 || r.Pictures[1].Crop != image.Rect(0, 1, 2, 4) || r.Text != "story.w1" {
+		t.Fatalf("after a key: pictures %+v, text %q", r.Pictures, r.Text)
+	}
+	f.Update(key)
+	if r.Text != "" || !r.Talking || r.Top == nil || r.Top.Portrait != "portrait.r" || r.Bottom != nil {
+		t.Fatalf("Rowena's line: %+v %+v", r.Top, r.Bottom)
+	}
+	f.Update(key)
+	name := f.Character.Name
+	if r.Top != nil || r.Bottom == nil || r.Bottom.Portrait != f.Character.Portrait || r.Words("@, go") != name+", go" {
+		t.Fatalf("the reply: %+v %+v, %q", r.Top, r.Bottom, r.Words("@, go"))
+	}
+	f.Update(key)
+	if r.Fade == "" || f.Scene != r {
+		t.Fatalf("a key on the reply did not go to the fade: %+v", f.Scene)
+	}
+	f.Update(key)
+	if f.Scene == nil || f.Scene.Def.ID != "scene.door" {
+		t.Fatalf("a key on the fade did not skip to the door: %+v", f.Scene)
+	}
+	if m := f.TakeMusic(); !slices.Equal(m, []string{""}) {
+		t.Errorf("the story's end: music %q", m)
+	}
+	for range 20 {
+		f.Update(none)
+	}
+	if !f.Done || f.Character == nil {
+		t.Errorf("after the door: done %v", f.Done)
+	}
+
+	f = NewFrontend(p, 1, nil, image.Pt(1280, 800))
+	f.pick("premade")
+	f.pick("premade.0")
+	f.Update(esc)
+	if f.Scene == nil || f.Scene.Def.ID != "scene.door" {
+		t.Fatalf("Escape did not skip the story: %+v", f.Scene)
 	}
 }

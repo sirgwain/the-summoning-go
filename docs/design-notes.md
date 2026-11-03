@@ -140,6 +140,17 @@ and `TestSceneRun`. The splash fades its art in, fills its title in from the lef
 opening track; the menus sit over it in the remake's iron frame, lettered in `engine/font`. Seen
 on screen: the splash, the menus and the door. Not yet: the imported ending scene.
 
+**Done (the story, in short).** Create Character (or a premade) starts track 1, which plays
+through the creation screens, fades on going back to the menu, and fades as the story ends.
+Before the door, the story scene plays on the frontend's 320 × 400 screen (shown with half-height
+rows): three pages of the engine's own summary, Rowena's farewell picture with the gifts by
+weapon class, the conversation in two iron-framed panels over the picture darkened (Rowena's
+portrait, F's third header word, above; the character's, mirrored as its row says, below), and
+the second picture as she sends you away. Scenes gained `size`, `text`/`box`, `say`, `by_weapon`
+and `crop`; a key or click ends a page early, Escape skips the story (`TestStory`,
+`TestGameStory`). Scripts can start at the menu with `--menu`. Seen on screen through a script.
+The full seven-part story is still to be specified.
+
 **Done (the disk menu).** O opens the pack's menu conversation (NPC record 0's; the dev pack's
 offers each menu by keyword). Its `menu` actions open frontend screens over play: save under a
 typed name or over a save, restore, delete, rename, and the quit and leave questions; then the
@@ -199,11 +210,12 @@ Change's frame by facing, and the hostile speed of records 23h and 2Bh (`hostile
   (`TestEffectsPlay`, `TestPitEffectInViewer`). Transitions: each change of level or teleport names its cue, and the
   pack gives it a style (iris, slide, squeeze, ripple, fade, cut), drawn from the view as last
   drawn to the new; lost objects shatter or fade in their slot.
-- The intro, the new character's story and the end scenes, whose captions are in the game's
-  program: the plan for their spec is [scenes-plan.md](scenes-plan.md). Ending G's changes to
+- The intro, the new character's full story (it plays in short for now) and the end scenes,
+  whose captions are in the game's program: the plan for their spec is
+  [scenes-plan.md](scenes-plan.md). Ending G's changes to
   the world and its save, and going on from that save with variable 34 set (dialogue.md).
 - Audio's last phase ([audio-plan.md](audio-plan.md)): the view effects' sounds and tracks, and
-  the new character's story's and endings' tracks, with the scenes.
+  the endings' tracks, with the scenes. The story's track plays.
 - Play *The Summoning* from start to end on the imported pack.
 
 ### 9. Remaster UI

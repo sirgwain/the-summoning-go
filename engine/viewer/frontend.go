@@ -78,8 +78,11 @@ type Frontend struct {
 	RollsShown float64
 	rolling    bool
 	rollsLeft  int
-	// then is the screen after the scene.
-	then string
+	// then is the screen after the scene, and following a scene to play before it.
+	then, following string
+	// music are the music cues since the presentation last took them (TakeMusic): a track to
+	// start, or "" to fade the music out.
+	music []string
 	// disk is the menu showing over play (a content.Menu… name), empty for the main frontend;
 	// typed the name being typed on it.
 	disk  string
@@ -130,16 +133,48 @@ func (f *Frontend) SplashShown() int { return SplashUpdates - f.splashLeft }
 func (f *Frontend) PlayScene(id, then string) {
 	f.then = then
 	if s := f.pack.Scenes[id]; s != nil {
-		f.Scene = NewSceneRun(s)
+		f.Scene = NewSceneRun(s, f.viewer())
 		f.show(ScreenScene)
 		return
 	}
 	f.after()
 }
 
-// after leaves a scene.
+// viewer returns who watches a scene: the character being begun, if any.
+func (f *Frontend) viewer() SceneViewer {
+	if ch := f.Character; ch != nil {
+		return SceneViewer{Name: ch.Name, Portrait: ch.Portrait, WeaponClass: ch.WeaponClass}
+	}
+	return SceneViewer{}
+}
+
+// TakeMusic returns the music cues since it was last called: a track to start, or "" to fade
+// the music out.
+func (f *Frontend) TakeMusic() []string {
+	m := f.music
+	f.music = nil
+	return m
+}
+
+// cue asks for track id to start ("" to fade the music out), when the pack names one.
+func (f *Frontend) cue(id string) {
+	if c := f.creation(); c != nil && c.StoryMusic != "" {
+		f.music = append(f.music, id)
+	}
+}
+
+// after leaves a scene: the story's music fades as the story ends, and the scene following
+// plays.
 func (f *Frontend) after() {
+	if c := f.creation(); f.Scene != nil && c != nil && f.Scene.Def.ID == c.Story {
+		f.cue("")
+	}
 	f.Scene = nil
+	if id := f.following; id != "" {
+		f.following = ""
+		f.PlayScene(id, f.then)
+		return
+	}
 	if f.then == "" {
 		f.Done = true
 		return
@@ -469,7 +504,22 @@ func (f *Frontend) Update(in Input) {
 		return
 	}
 	if f.Screen == ScreenScene {
-		if in.anyPressed() || in.Left.Released || in.Right.Released || f.Scene.Update() {
+		// Escape skips the scene; another key or a click ends a page of words or a line early,
+		// and skips the scene from any other step.
+		r := f.Scene
+		switch {
+		case in.pressed(KeyEscape):
+			f.after()
+		case in.anyPressed() || in.Left.Released || in.Right.Released:
+			if st := r.Current(); st != nil && st.Waits() {
+				r.next()
+				if r.Current() == nil {
+					f.after()
+				}
+			} else {
+				f.after()
+			}
+		case r.Update():
 			f.after()
 		}
 		return
@@ -594,6 +644,7 @@ func (f *Frontend) pick(name string) {
 		switch name {
 		case "create":
 			f.char, f.least, f.portrait = sim.Character{}, nil, 0
+			f.cue(f.creation().StoryMusic)
 			f.show(ScreenPortrait)
 		case "restore":
 			f.show(ScreenRestore)
@@ -615,6 +666,7 @@ func (f *Frontend) pick(name string) {
 			f.char.Portrait = c.Portraits[f.portrait]
 			f.show(ScreenName)
 		case "back":
+			f.cue("")
 			f.show(ScreenMenu)
 		}
 	case ScreenName:
@@ -669,6 +721,7 @@ func (f *Frontend) pick(name string) {
 		switch {
 		case num("premade."):
 			pm := c.Premade[i]
+			f.cue(c.StoryMusic)
 			f.begin(sim.Character{Name: pm.Name, Portrait: pm.Portrait, Attributes: pm.Attributes,
 				WeaponClass: pm.WeaponClass, School: pm.School})
 		case name == "back":
@@ -686,15 +739,27 @@ func (f *Frontend) pick(name string) {
 	}
 }
 
-// begin finishes with character ch, after the new game's scene.
+// begin finishes with character ch, after the story and the new game's scene.
 func (f *Frontend) begin(ch sim.Character) {
 	f.Character = &ch
-	f.PlayScene(f.creation().Scene, "")
+	c := f.creation()
+	if c.Story != "" {
+		if _, ok := f.pack.Scenes[c.Story]; ok {
+			f.following = c.Scene
+			f.PlayScene(c.Story, "")
+			return
+		}
+	}
+	f.cue("")
+	f.PlayScene(c.Scene, "")
 }
 
 // SceneRun is a scene playing (docs/pack.md, Scenes).
 type SceneRun struct {
 	Def *content.Scene
+	// Viewer is who watches: the name the words' @ stands for, the portrait the character's
+	// lines show and the weapon class that picks a by_weapon step.
+	Viewer SceneViewer
 	// Step is the step showing; Left the updates it has left; PartStep the step of its part.
 	Step, Left, PartStep int
 	// Pictures are the pictures drawn since the last clear, in order.
@@ -704,8 +769,28 @@ type SceneRun struct {
 	Banner  *content.Image
 	Fade    string
 	Faded   float64
+	// Text is the page of words showing, in Box; Top and Bottom the lines in the panels, Talking
+	// whether the panels show (the picture under them darkened).
+	Text        string
+	Box         image.Rectangle
+	Top, Bottom *SceneLine
+	Talking     bool
 	// Sounds are the sounds started since the presentation last took them (TakeSounds).
 	Sounds []string
+	// cur is the step showing, a by_weapon step resolved.
+	cur content.SceneStep
+}
+
+// SceneViewer is who watches a scene.
+type SceneViewer struct {
+	Name, Portrait string
+	WeaponClass    int
+}
+
+// SceneLine is a line showing in a panel, with its speaker's portrait.
+type SceneLine struct {
+	Portrait string
+	Text     string
 }
 
 // TakeSounds returns the sounds started since it was last called.
@@ -715,37 +800,61 @@ func (r *SceneRun) TakeSounds() []string {
 	return s
 }
 
-// ScenePicture is a picture drawn at a point of the scene.
+// ScenePicture is a picture drawn at a point of the scene; Crop, when not empty, the part of it
+// drawn.
 type ScenePicture struct {
 	Image content.Image
 	At    image.Point
+	Crop  image.Rectangle
 }
 
-// NewSceneRun starts scene s.
-func NewSceneRun(s *content.Scene) *SceneRun {
-	r := &SceneRun{Def: s, Step: -1}
+// NewSceneRun starts scene s, watched by w.
+func NewSceneRun(s *content.Scene, w SceneViewer) *SceneRun {
+	r := &SceneRun{Def: s, Viewer: w, Step: -1}
 	r.next()
 	return r
 }
 
+// Words returns text with @ standing for the viewer's name.
+func (r *SceneRun) Words(text string) string { return strings.ReplaceAll(text, "@", r.Viewer.Name) }
+
 func updates(ms int) int { return (ms*sim.StepsPerSecond + 999) / 1000 }
 
-// next goes to the next step and shows it.
+func rect(b [4]int) image.Rectangle { return image.Rect(b[0], b[1], b[0]+b[2], b[1]+b[3]) }
+
+// next goes to the next step and shows it, and on past pictures that do not hold, so a picture
+// drawn in parts shows whole.
 func (r *SceneRun) next() {
+	for r.show() {
+	}
+}
+
+// show goes to the next step and shows it, and reports whether it is a picture that does not
+// hold.
+func (r *SceneRun) show() bool {
 	r.Step++
 	r.PartStep = 0
 	if r.Step >= len(r.Def.Steps) {
-		return
+		return false
 	}
 	st := r.Def.Steps[r.Step]
+	if n := len(st.ByWeapon); n > 0 {
+		st = st.ByWeapon[min(max(r.Viewer.WeaponClass, 0), n-1)]
+	}
+	r.cur = st
 	r.Left = updates(st.MS)
 	r.Sounds = append(r.Sounds, st.Sounds...)
 	if st.Clear {
 		r.Pictures, r.Caption, r.Banner, r.Fade, r.Faded = nil, "", nil, "", 0
+		r.Text, r.Top, r.Bottom, r.Talking = "", nil, nil, false
 	}
 	switch {
 	case st.Picture != nil:
-		r.Pictures = append(r.Pictures, ScenePicture{*st.Picture, image.Pt(st.At[0], st.At[1])})
+		p := ScenePicture{Image: *st.Picture, At: image.Pt(st.At[0], st.At[1])}
+		if st.Crop != nil {
+			p.Crop = rect(*st.Crop)
+		}
+		r.Pictures = append(r.Pictures, p)
 	case st.Caption != "":
 		r.Caption, r.Banner = st.Caption, st.Banner
 	case st.Fade != "":
@@ -753,7 +862,21 @@ func (r *SceneRun) next() {
 	case st.Part != nil:
 		r.Left = updates(st.Part.HoldMS(0))
 		r.Sounds = append(r.Sounds, st.Part.StepSounds...)
+	case st.Text != "":
+		r.Text, r.Box = st.Text, rect(*st.Box)
+	case st.Say != nil:
+		line := &SceneLine{Portrait: st.Say.Portrait, Text: st.Say.Text}
+		if line.Portrait == "" {
+			line.Portrait = r.Viewer.Portrait
+		}
+		r.Text, r.Talking = "", true
+		if st.Say.Side == content.SayTop {
+			r.Top, r.Bottom = line, nil
+		} else {
+			r.Top, r.Bottom = nil, line
+		}
 	}
+	return st.Picture != nil && st.MS <= 0
 }
 
 // Current returns the step showing, or nil when the scene has ended.
@@ -761,7 +884,7 @@ func (r *SceneRun) Current() *content.SceneStep {
 	if r.Step < 0 || r.Step >= len(r.Def.Steps) {
 		return nil
 	}
-	return &r.Def.Steps[r.Step]
+	return &r.cur
 }
 
 // Spread returns the spread of the part showing, and whether one is.

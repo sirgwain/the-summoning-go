@@ -216,6 +216,9 @@ func Import(src *Source, opt Options) (*content.Pack, *Report, error) {
 			return nil, nil, err
 		}
 		im.portraits(rows)
+		if n, err := ReadRowena(src.F); err == nil {
+			im.rowena(n)
+		}
 		if im.premades, err = ReadPremades(src.F); err != nil {
 			return nil, nil, err
 		}

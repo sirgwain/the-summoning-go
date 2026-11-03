@@ -61,6 +61,32 @@ func ReadPremades(data []byte) ([]Premade, error) {
 	return out, nil
 }
 
+// ReadRowena reads the people bank, less the people base, of Rowena's portrait in the story:
+// F's third header word (formats.md, F).
+func ReadRowena(data []byte) (int, error) {
+	r := &reader{data: data}
+	r.u16()
+	r.u16()
+	n := int(r.u16())
+	if r.err != nil {
+		return 0, fmt.Errorf("f: %w", r.err)
+	}
+	return n, nil
+}
+
+// rowenaID is the portrait of Rowena in the story.
+const rowenaID = "portrait.rowena"
+
+// rowena adds Rowena's portrait, the people bank n past the people base.
+func (im *importer) rowena(n int) {
+	sid, err := im.stripSprite(int(im.init.Bases.People)+n, "sprite.portrait")
+	if err != nil {
+		im.report.addf("Rowena's portrait %d: %v; left out", n, err)
+		return
+	}
+	im.pack.Portraits[rowenaID] = &content.Portrait{ID: rowenaID, Image: content.Image{Sprite: sid}}
+}
+
 // ReadPortraits reads F's portrait rows.
 func ReadPortraits(data []byte) ([]PortraitRow, error) {
 	r := &reader{data: data}

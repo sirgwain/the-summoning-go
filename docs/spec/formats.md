@@ -231,7 +231,7 @@ The portraits and the premade characters.
 ```text
 u16 portrait_count     // 42
 u16 unknown            // 0
-u16 unknown            // 49
+u16 rowena_portrait    // 49: Rowena's portrait in the story (scenes.md), people base + this
 u16 premade_count      // 3
 byte portrait[portrait_count][8]
 byte premade[premade_count][35]
@@ -280,5 +280,5 @@ Resources the game uses by a fixed number rather than through a level header or 
 ## Unknowns
 
 - Header words 1Ch–3Fh, and the second byte of each decoration pair.
-- F's header words 2 and 4. The people banks past the 42 portraits are the creatures' conversation portraits (creatures.md).
+- F's second header word. The people banks past the 42 portraits are the creatures' conversation portraits (creatures.md).
 - The meaning of the INIT tables beyond the ones named (figure frame shifts, base color map): their use belongs to character drawing and is specified with it.
