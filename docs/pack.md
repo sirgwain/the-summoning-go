@@ -585,7 +585,8 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
 ```
 
 A `picture` draws over what is there (`clear` first to start afresh); `part` draws the background
-and the two halves moved `8 × spread` pixels outward, spread going from `from` to `to`; `caption`
+and the two halves moved `8 × spread` pixels outward, spread going from `from` to `to`, a step
+each `step_ms` (the first steps each `lead_ms`'s, if given); `caption`
 shows a text at the bottom, over `banner` if given; `fade` fades to a color. `ms` holds the step.
 `sounds` start as a step shows, and a part's `step_sounds` at each of its steps.
 

@@ -99,8 +99,8 @@ type SceneStep struct {
 	Sounds  []string `json:"sounds,omitempty"`
 }
 
-// Part moves a picture's two halves apart (or together) over a background, a step at a time.
-// StepSounds start at each step.
+// Part moves a picture's two halves apart (or together) over a background, a step at a time,
+// each held StepMS, or the first ones LeadMS's. StepSounds start at each step.
 type Part struct {
 	Left       Image    `json:"left"`
 	Right      Image    `json:"right"`
@@ -108,7 +108,16 @@ type Part struct {
 	From       int      `json:"from"`
 	To         int      `json:"to"`
 	StepMS     int      `json:"step_ms"`
+	LeadMS     []int    `json:"lead_ms,omitempty"`
 	StepSounds []string `json:"step_sounds,omitempty"`
+}
+
+// HoldMS returns how long step i shows.
+func (p *Part) HoldMS(i int) int {
+	if i >= 0 && i < len(p.LeadMS) {
+		return p.LeadMS[i]
+	}
+	return p.StepMS
 }
 
 // Steps returns how many steps the part takes.

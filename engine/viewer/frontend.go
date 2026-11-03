@@ -751,7 +751,7 @@ func (r *SceneRun) next() {
 	case st.Fade != "":
 		r.Fade, r.Faded = st.Fade, 0
 	case st.Part != nil:
-		r.Left = updates(st.Part.StepMS)
+		r.Left = updates(st.Part.HoldMS(0))
 		r.Sounds = append(r.Sounds, st.Part.StepSounds...)
 	}
 }
@@ -794,7 +794,7 @@ func (r *SceneRun) Update() bool {
 	}
 	if p := st.Part; p != nil && r.PartStep < p.Steps() {
 		if r.PartStep++; r.PartStep < p.Steps() {
-			r.Left = updates(p.StepMS)
+			r.Left = updates(p.HoldMS(r.PartStep))
 			r.Sounds = append(r.Sounds, p.StepSounds...)
 		} else {
 			r.Left = updates(st.MS)

@@ -241,7 +241,7 @@ The game starts at a main menu: create a character, restore a game, or select a 
 
 ## New game
 
-The new character starts as player.md (Starting a new game) says. A new game shows the door: the closed door (RESOURCE 3Eh), the door pictures drawn over it at column 135, each held 5 ticks (RESOURCE 55h frames 0–3 at row 0, then 56h frames 0–9 at row 0 with frame `n + 10` below it at row 100), and the door opening (RESOURCE 54h's halves moving apart over the dungeon behind, RESOURCE 3, in 20 steps, each playing sound effect 17h, audio.md). Then the player arrives on the starting level. No conversation starts: conversation 7Dh, which variable 34 starts on arrival (dialogue.md), belongs to play going on after ending G.
+The new character starts as player.md (Starting a new game) says. A new game shows the door: the closed door (RESOURCE 3Eh), the door pictures drawn over it at column 135, each held 5 ticks (RESOURCE 55h frames 0–3 at row 0, then 56h frames 0–9 at row 0 with frame `n + 10` below it at row 100), and the door opening (RESOURCE 54h's halves moving apart over the dungeon behind, RESOURCE 3, in 20 steps, each playing sound effect 17h, audio.md; the first six steps, spread `s` = 0..5, wait `11 − 2s` ticks more than the rest), which then holds open for 18 ticks. Then the player arrives on the starting level. No conversation starts: conversation 7Dh, which variable 34 starts on arrival (dialogue.md), belongs to play going on after ending G.
 
 The door pictures 3Eh and 54h are 320 × 200 pictures stored as 160 tiles of 8 × 50 pixels, four rows of forty, row by row. Drawn with a spread `s`, the columns within `s` of either edge are left out and the rest move `s` columns outward from the middle, so the halves part.
 

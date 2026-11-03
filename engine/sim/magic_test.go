@@ -364,7 +364,7 @@ func TestGesturePictures(t *testing.T) {
 	holds := &content.Magic{Holds: map[string]string{"B": "A"}}
 	for _, c := range []struct {
 		gesture, want string
-		effect         int
+		effect        int
 	}{
 		{"AB", "..AA..BBBB", 7},
 		{"BA", "..BBAAAA", 5},

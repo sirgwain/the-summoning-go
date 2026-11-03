@@ -188,6 +188,22 @@ const (
 // (audio.md, Music in the frontend).
 const openingTrack = 3
 
+// doorEndTicks is how long the open door holds; the door's first doorLeadSteps steps of opening
+// wait 11 − 2s ticks more than the rest (scenes.md, New game).
+const (
+	doorEndTicks  = 18
+	doorLeadSteps = 6
+)
+
+// doorLeadMS returns the times of the door's first steps of opening.
+func doorLeadMS() []int {
+	lead := make([]int, doorLeadSteps)
+	for s := range lead {
+		lead[s] = ms(3 + 11 - 2*s)
+	}
+	return lead
+}
+
 // doorScene adds the new game's door (scenes.md, New game).
 func (im *importer) doorScene() *content.Scene {
 	closed, _, _, ok := im.doorPicture(resClosedDoor)
@@ -211,7 +227,7 @@ func (im *importer) doorScene() *content.Scene {
 			content.SceneStep{Picture: &content.Image{Sprite: second, Frame: f + 10}, At: content.Offset{135, 100}, MS: ms(5)})
 	}
 	s.Steps = append(s.Steps, content.SceneStep{Part: &content.Part{Left: content.Image{Sprite: left}, Right: content.Image{Sprite: right},
-		Background: &content.Image{Sprite: dungeon}, From: 0, To: 19, StepMS: ms(3)}, MS: ms(9)})
+		Background: &content.Image{Sprite: dungeon}, From: 0, To: 19, StepMS: ms(3), LeadMS: doorLeadMS()}, MS: ms(doorEndTicks)})
 	im.pack.Scenes[s.ID] = s
 	return s
 }

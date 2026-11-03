@@ -325,3 +325,22 @@ func TestShiftRRollsTo100(t *testing.T) {
 		}
 	}
 }
+
+// A part's first steps hold their own times.
+func TestSceneLeadSteps(t *testing.T) {
+	r := NewSceneRun(&content.Scene{ID: "s", Steps: []content.SceneStep{
+		{Part: &content.Part{From: 0, To: 3, StepMS: 50, LeadMS: []int{200, 100}}},
+	}})
+	held := map[int]int{}
+	for i := 0; !r.Update(); i++ {
+		if s, ok := r.Spread(); ok {
+			held[s]++
+		}
+		if i > 100 {
+			t.Fatal("the scene does not end")
+		}
+	}
+	if held[0] <= held[1] || held[1] <= held[2] {
+		t.Errorf("updates held by spread: %v", held)
+	}
+}
