@@ -89,11 +89,21 @@ type BookRow struct {
 }
 
 // BookLine is a line of the pane: the entry's name as a heading, a line of what is known, or the
-// hint of what the next stage would show.
+// hint of what the next stage would show. In the full book a line may show pictures below its
+// words, and a click on it may select a thing or a cell of the current level.
 type BookLine struct {
-	Words   []Word
-	Heading bool
-	Hint    bool
+	Words    []Word
+	Heading  bool
+	Hint     bool
+	Pictures []BookPicture
+	Thing    string
+	Cell     *content.Cell
+}
+
+// BookPicture is a picture of the pane, its top-left corner at At.
+type BookPicture struct {
+	Image content.Image
+	At    image.Point
 }
 
 // bookEntry is an entry of a tab: its template and the name it is listed by, and in the full
@@ -485,31 +495,38 @@ func (v *Viewer) Book() *BookView {
 
 	// The pane: the picture, the name, what is known, and the hint.
 	id := entries[chosen].id
-	var lines []string
+	var items []paneItem
 	var hint string
 	if bv.Tab == BookCreatures {
 		if t := v.Pack.Things[id]; t != nil {
 			bv.Picture, bv.HasPicture = v.bookPicture(t), true
 		}
 		if bv.Full {
-			lines = v.fullBookLines(bv.Tab, id)
+			items = v.fullBookLines(bv.Tab, id)
 		} else {
+			var lines []string
 			lines, hint = v.CreatureLines(id, b.Creatures[id])
+			items = textItems(lines)
 		}
 	} else {
 		if it := v.Pack.Items[id]; it != nil {
 			bv.Picture, bv.HasPicture = it.Icon, true
 		}
 		if bv.Full {
-			lines = v.fullBookLines(bv.Tab, id)
+			items = v.fullBookLines(bv.Tab, id)
 		} else {
+			var lines []string
 			lines, hint = v.ItemLines(id, b.Items[id])
+			items = textItems(lines)
 		}
 	}
+	scrolled := false
 	if bv.Full {
-		// The full book's pane scrolls by lines, keeping at least the last one.
-		v.bookView.scroll = max(0, min(v.bookView.scroll, len(lines)-1))
-		lines = lines[v.bookView.scroll:]
+		// The full book's pane scrolls by lines, keeping at least the last one; scrolled, it
+		// leaves out the picture and the name above them.
+		v.bookView.scroll = max(0, min(v.bookView.scroll, len(items)-1))
+		items, scrolled = items[v.bookView.scroll:], v.bookView.scroll > 0
+		bv.HasPicture = bv.HasPicture && !scrolled
 	}
 	bv.PictureAt = bv.Pane.Min
 	y := bv.Pane.Min.Y
@@ -518,27 +535,63 @@ func (v *Viewer) Book() *BookView {
 			y += s.FrameSize[1] + bookWinPad
 		}
 	}
-	add := func(text string, heading, hint bool) {
-		words := layoutWords(strings.ReplaceAll(text, "*", ""), bv.Pane.Min.X, y, bv.Pane.Max.X)
+	add := func(it paneItem, heading, hint bool) {
+		words := layoutWords(strings.ReplaceAll(it.text, "*", ""), bv.Pane.Min.X, y, bv.Pane.Max.X)
 		if n := len(words); n > 0 {
 			y = words[n-1].Rect.Max.Y
+		} else if it.text == "" {
+			y += LineHeight
 		}
+		line := BookLine{Words: words, Heading: heading, Hint: hint, Thing: it.thing, Cell: it.cell}
+		// Pictures lie in a row below the text, each at its frame's size.
+		x, tall := bv.Pane.Min.X+2*CharWidth, 0
+		for _, img := range it.pictures {
+			sp := v.Pack.Sprites[img.Sprite]
+			if sp == nil {
+				continue
+			}
+			if x > bv.Pane.Min.X+2*CharWidth && x+sp.FrameSize[0] > bv.Pane.Max.X {
+				x, y, tall = bv.Pane.Min.X+2*CharWidth, y+tall+2, 0
+			}
+			line.Pictures = append(line.Pictures, BookPicture{Image: img, At: image.Pt(x, y+2)})
+			x += sp.FrameSize[0] + bookWinPad
+			tall = max(tall, sp.FrameSize[1]+4)
+		}
+		y += tall
 		if y <= bv.Pane.Max.Y {
-			bv.Lines = append(bv.Lines, BookLine{Words: words, Heading: heading, Hint: hint})
+			bv.Lines = append(bv.Lines, line)
 		}
 	}
-	if !bv.Full || v.bookView.scroll == 0 {
-		add(entries[chosen].name, true, false)
+	if !scrolled {
+		add(paneItem{text: entries[chosen].name}, true, false)
 		y += LineHeight / 2
 	}
-	for _, l := range lines {
-		add(l, false, false)
+	for _, it := range items {
+		add(it, false, false)
 	}
 	if hint != "" {
 		y += LineHeight / 2
-		add(hint, false, true)
+		add(paneItem{text: hint}, false, true)
 	}
 	return bv
+}
+
+// textItems returns lines as pane items of text alone.
+func textItems(lines []string) []paneItem {
+	items := make([]paneItem, len(lines))
+	for i, l := range lines {
+		items[i] = paneItem{text: l}
+	}
+	return items
+}
+
+// Rect returns the line's text's rectangle, empty for a line without words.
+func (l BookLine) Rect() image.Rectangle {
+	var r image.Rectangle
+	for _, w := range l.Words {
+		r = r.Union(w.Rect)
+	}
+	return r
 }
 
 // at returns the window pixel under screen point pt.
@@ -561,7 +614,8 @@ func (v *Viewer) bookChoose(i int) {
 // takes a letter off; Up, Down, the wheel or a click choose an entry, Page Up and Page Down move
 // a page; Left and Right, or a click on a tab, switch tabs. Escape clears the filter, or closes
 // the book, as a right click or Close does. In the full book, Tab or the toggle switches between
-// the current level's entries and all, and the wheel over the pane scrolls it.
+// the current level's entries and all, the wheel over the pane scrolls it, and a click on a line
+// of where the entry is on the level closes the book and selects it there.
 func (v *Viewer) bookInput(in Input) {
 	bv := v.Book()
 	if bv == nil {
@@ -599,6 +653,13 @@ func (v *Viewer) bookInput(in Input) {
 		case in.Wheel != 0 && cursor.In(bv.Pane):
 			v.bookView.scroll = max(0, v.bookView.scroll-int(in.Wheel)*3)
 			return
+		case in.Left.Released:
+			for _, l := range bv.Lines {
+				if (l.Thing != "" || l.Cell != nil) && cursor.In(l.Rect()) {
+					v.bookGo(l.Thing, l.Cell)
+					return
+				}
+			}
 		}
 	}
 	if in.Left.Released {

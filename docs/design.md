@@ -427,8 +427,10 @@ writes the same pack format.
   creature template and item of the pack, come across or not, at the last stage and with every
   defense known, then where it is on the current level (a creature's things; an item on the floor,
   in a container, carried, taken by a slot, made or shot by a procedure, given or taken by a
-  conversation of a creature there) and its whole record, a line a field. The pane scrolls with
-  the wheel. It lists the current level's entries alone until Tab, or its toggle, lists them all;
+  conversation of a creature there) and its whole record, a line a field: an image (an icon, a
+  floor image, a doll) as its picture at its own size, an item's actions in words. Clicking where
+  it is closes the book and selects it there, the view centered on it. The pane scrolls with the
+  wheel. It lists the current level's entries alone until Tab, or its toggle, lists them all;
   the current level's are marked in green either way.
 - **Play-test.** Start the simulation from the level being edited.
 - It runs `verify` continuously and shows broken references where they are.

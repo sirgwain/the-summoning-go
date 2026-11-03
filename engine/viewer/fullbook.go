@@ -1,10 +1,10 @@
 package viewer
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
@@ -91,12 +91,30 @@ func fullEntry(e *sim.Entry, t *content.Thing) *sim.Entry {
 	return &full
 }
 
+// paneItem is a line of the full book's pane: its text, the pictures shown below it, and what a
+// click on it selects, a thing or a cell of the current level, if anything.
+type paneItem struct {
+	text     string
+	pictures []content.Image
+	thing    string
+	cell     *content.Cell
+}
+
+// place is where an entry is on the current level: in words, and the thing or cell it is at.
+type place struct {
+	text  string
+	thing string
+	cell  *content.Cell
+}
+
 // fullBookLines returns what the full book says of tab's entry id: the book's lines at the last
-// stage; where it is on the current level; then its record, a line a field.
-func (v *Viewer) fullBookLines(tab int, id string) []string {
+// stage; where it is on the current level; then its record, a line a field, an image field as its
+// picture and an item's actions in words.
+func (v *Viewer) fullBookLines(tab int, id string) []paneItem {
 	b := v.World.Book()
 	l := v.World.Current()
-	var lines, places []string
+	var lines []string
+	var places []place
 	var record any
 	if tab == BookCreatures {
 		t := v.Pack.Things[id]
@@ -104,7 +122,7 @@ func (v *Viewer) fullBookLines(tab int, id string) []string {
 		for _, th := range l.Things {
 			if th.Template.ID == id {
 				c := th.Cell()
-				places = append(places, fmt.Sprintf("%s at (%d, %d), %d hit points", th.ID, c[0], c[1], th.HitPoints))
+				places = append(places, place{text: fmt.Sprintf("%s at (%d, %d), %d hit points", th.ID, c[0], c[1], th.HitPoints), thing: th.ID})
 			}
 		}
 		if t != nil {
@@ -117,33 +135,35 @@ func (v *Viewer) fullBookLines(tab int, id string) []string {
 			record = it
 		}
 	}
+	var items []paneItem
+	for _, s := range lines {
+		items = append(items, paneItem{text: s})
+	}
 	if len(places) > 0 {
-		lines = append(lines, "", "On "+l.ID+":")
+		items = append(items, paneItem{}, paneItem{text: "On " + l.ID + " (click to go there):"})
 		for _, p := range places {
-			lines = append(lines, "  "+p)
+			items = append(items, paneItem{text: "  " + p.text, thing: p.thing, cell: p.cell})
 		}
 	}
 	if record != nil {
-		lines = append(lines, "", "Record "+id+":")
-		lines = append(lines, recordLines(record)...)
+		items = append(items, paneItem{}, paneItem{text: "Record " + id + ":"})
+		items = append(items, v.recordItems(record)...)
 	}
-	return lines
+	return items
 }
 
-// recordLines returns record r's fields as its JSON has them, a line each, in the JSON's order.
-func recordLines(r any) []string {
+// recordItems returns record r's fields as its JSON has them, a line each in the JSON's order:
+// an image, or an object holding one, as its picture, and the actions of an item in words.
+func (v *Viewer) recordItems(r any) []paneItem {
 	b, err := json.Marshal(r)
 	if err != nil {
-		return []string{err.Error()}
+		return []paneItem{{text: err.Error()}}
 	}
-	var fields []struct {
-		key string
-		val json.RawMessage
-	}
-	dec := json.NewDecoder(strings.NewReader(string(b)))
+	dec := json.NewDecoder(bytes.NewReader(b))
 	if _, err := dec.Token(); err != nil {
 		return nil
 	}
+	var out []paneItem
 	for dec.More() {
 		k, err := dec.Token()
 		if err != nil {
@@ -153,34 +173,104 @@ func recordLines(r any) []string {
 		if err := dec.Decode(&raw); err != nil {
 			break
 		}
-		fields = append(fields, struct {
-			key string
-			val json.RawMessage
-		}{fmt.Sprint(k), raw})
-	}
-	var lines []string
-	for _, f := range fields {
-		if f.key == "id" {
-			continue
+		key := fmt.Sprint(k)
+		switch {
+		case key == "id":
+		case key == "actions":
+			var acts []content.ItemAction
+			if json.Unmarshal(raw, &acts) == nil {
+				out = append(out, paneItem{text: "  actions:"})
+				for i, a := range acts {
+					it := paneItem{text: fmt.Sprintf("    %d. %s", i+1, describeAction(a))}
+					if a.Icon != nil {
+						it.pictures = []content.Image{*a.Icon}
+					}
+					out = append(out, it)
+				}
+				continue
+			}
+			fallthrough
+		default:
+			if img, rest, ok := v.imageField(raw); ok {
+				text := "  " + key + ":"
+				if rest != "" {
+					text += " " + rest
+				}
+				out = append(out, paneItem{text: text, pictures: []content.Image{img}})
+				continue
+			}
+			out = append(out, paneItem{text: "  " + key + ": " + string(raw)})
 		}
-		lines = append(lines, "  "+f.key+": "+string(f.val))
 	}
-	return lines
+	return out
 }
 
-// itemPlaces returns where item id is on level l, in words: lying on the floor or in a container
-// there, carried by a creature or the player, taken by a slot, made or shot by a procedure, or
-// given or taken by the conversation of a creature on the level.
-func (v *Viewer) itemPlaces(l *sim.Level, id string) []string {
-	var out []string
-	var walk func(objs []*sim.Object, where string)
-	walk = func(objs []*sim.Object, where string) {
+// imageField returns the image a field's value is, or holds under "image", with the rest of the
+// value in words (a doll's place on the figure); false when it is no image of the pack's sprites.
+func (v *Viewer) imageField(raw json.RawMessage) (content.Image, string, bool) {
+	var img content.Image
+	if json.Unmarshal(raw, &img) == nil && v.Pack.Sprites[img.Sprite] != nil {
+		var fields map[string]json.RawMessage
+		if json.Unmarshal(raw, &fields) == nil && len(fields) <= 2 {
+			return img, "", true
+		}
+	}
+	var d content.DollImage
+	if json.Unmarshal(raw, &d) == nil && v.Pack.Sprites[d.Image.Sprite] != nil {
+		return d.Image, fmt.Sprintf("at (%d, %d)", d.At[0], d.At[1]), true
+	}
+	return content.Image{}, "", false
+}
+
+// describeAction says what an item's action does in hand: its kind, damage, wait, the skill it
+// needs, and its swing and sound.
+func describeAction(a content.ItemAction) string {
+	var s string
+	switch a.Kind {
+	case content.ActionAttack:
+		s = "strike"
+	case content.ActionAttackBoth:
+		s = "strike with both hands"
+	case content.ActionFire:
+		s = "fire"
+	case content.ActionUse:
+		s = "use"
+	case content.ActionUseUp:
+		s = "use up"
+	default:
+		s = a.Kind
+	}
+	if a.Damage != (content.Dice{}) {
+		s += " for " + a.Damage.String()
+	}
+	s += fmt.Sprintf(", then wait %d updates", a.Delay)
+	if a.Skill > 0 {
+		s += fmt.Sprintf(", needs skill %d", a.Skill)
+	}
+	if a.Swings {
+		s += ", swings"
+	}
+	if a.Sound != "" {
+		s += ", sound " + a.Sound
+	}
+	return s
+}
+
+// itemPlaces returns where item id is on level l: lying on the floor or in a container there,
+// carried by a creature or the player, taken by a slot, made or shot by a procedure, or given or
+// taken by the conversation of a creature on the level.
+func (v *Viewer) itemPlaces(l *sim.Level, id string) []place {
+	var out []place
+	var walk func(objs []*sim.Object, where place)
+	walk = func(objs []*sim.Object, where place) {
 		for _, o := range objs {
 			if o.Item == id {
 				out = append(out, where)
 			}
 			if len(o.Contents) > 0 {
-				walk(o.Contents, "in "+inspect.ItemName(v.Pack, o.Item)+" "+where)
+				in := where
+				in.text = "in " + inspect.ItemName(v.Pack, o.Item) + " " + where.text
+				walk(o.Contents, in)
 			}
 		}
 	}
@@ -195,25 +285,26 @@ func (v *Viewer) itemPlaces(l *sim.Level, id string) []string {
 		return a[0] - b[0]
 	})
 	for _, c := range cells {
-		walk(l.Objects[c], fmt.Sprintf("on the floor at (%d, %d)", c[0], c[1]))
+		walk(l.Objects[c], place{text: fmt.Sprintf("on the floor at (%d, %d)", c[0], c[1]), cell: &c})
 	}
 	for _, t := range l.Things {
-		walk(t.Items, "carried by "+t.ID)
+		walk(t.Items, place{text: "carried by " + t.ID, thing: t.ID})
 	}
 	if p := v.World.Player(); p != nil {
 		objs := []*sim.Object{p.Hand}
 		objs = append(objs, p.Slots[:]...)
-		walk(slices.DeleteFunc(objs, func(o *sim.Object) bool { return o == nil }), "carried by the player")
+		walk(slices.DeleteFunc(objs, func(o *sim.Object) bool { return o == nil }), place{text: "carried by the player", thing: sim.PlayerID})
 	}
 	for _, f := range l.Features {
 		if f.Accepts == id {
-			out = append(out, fmt.Sprintf("taken by %s at (%d, %d)", f.ID, f.Cell[0], f.Cell[1]))
+			c := f.Cell
+			out = append(out, place{text: fmt.Sprintf("taken by %s at (%d, %d)", f.ID, c[0], c[1]), cell: &c})
 		}
 	}
 	for _, proc := range sortedIDs(l.Def.Procedures) {
 		for _, a := range l.Def.Procedures[proc] {
 			if inspect.ActionItem(a) == id && a.SetAccepts == nil {
-				out = append(out, proc+": "+inspect.Action(v.Pack, a))
+				out = append(out, place{text: proc + ": " + inspect.Action(v.Pack, a)})
 			}
 		}
 	}
@@ -226,12 +317,26 @@ func (v *Viewer) itemPlaces(l *sim.Level, id string) []string {
 			for _, a := range c.Do {
 				switch {
 				case a.Give != nil && a.Give.Item == id:
-					out = append(out, fmt.Sprintf("given by %s (%s, clause %d)", t.ID, conv.ID, i))
+					out = append(out, place{text: fmt.Sprintf("given by %s (%s, clause %d)", t.ID, conv.ID, i), thing: t.ID})
 				case a.Take != nil && *a.Take == id:
-					out = append(out, fmt.Sprintf("taken by %s (%s, clause %d)", t.ID, conv.ID, i))
+					out = append(out, place{text: fmt.Sprintf("taken by %s (%s, clause %d)", t.ID, conv.ID, i), thing: t.ID})
 				}
 			}
 		}
 	}
 	return out
+}
+
+// bookGo closes the book and selects what a pane line names, a thing or a cell, centering the
+// view on it.
+func (v *Viewer) bookGo(thing string, cell *content.Cell) {
+	v.CloseBook()
+	if thing != "" && v.SelectThing(thing) == nil {
+		v.CenterOn(*v.Selected)
+		return
+	}
+	if cell != nil {
+		v.Select(*cell)
+		v.CenterOn(*cell)
+	}
 }

@@ -232,7 +232,7 @@ func TestFullBook(t *testing.T) {
 	typeText(v, "brute")
 	text := strings.Join(bookText(v.Book()), "|")
 	// The brute stands in sight at the start, so it is seen; the full book shows past fighting it.
-	for _, want := range []string{"First seen: ", "Strikes for", "Hit points:", "On " + devpack.Cellar + ":",
+	for _, want := range []string{"First seen: ", "Strikes for", "Hit points:", "On " + devpack.Cellar + " (click to go there):",
 		"brute at (", "Record " + devpack.ThingBrute + ":", `sprite: "sprite.brute"`} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the brute's pane lacks %q: %q", want, text)
@@ -269,9 +269,36 @@ func TestFullBook(t *testing.T) {
 	if text := strings.Join(bookText(v.Book()), "|"); !strings.Contains(text, "carried by brute") {
 		t.Errorf("the key's pane lacks the brute: %q", text)
 	}
+	// The sword's record shows its icon, floor image and doll as pictures, and its strike in words.
+	pressKey(v, KeyEscape)
+	typeText(v, inspect.ItemName(v.Pack, devpack.ItemSword))
+	bv = v.Book()
+	text = strings.Join(bookText(bv), "|")
+	pictures := 0
+	for _, l := range bv.Lines {
+		pictures += len(l.Pictures)
+	}
+	if pictures == 0 || !strings.Contains(text, "icon:|") || !strings.Contains(text, "strike for") || strings.Contains(text, `"sprite"`) {
+		t.Errorf("the sword's record: %d pictures, %q", pictures, text)
+	}
 	pressKey(v, KeyEscape)
 	pressKey(v, KeyEscape)
 	if v.BookOpen || v.BookFull {
 		t.Error("Escape did not close the full book")
+	}
+
+	// Clicking where the brute stands closes the book and selects it there.
+	pressKey(v, "J")
+	pressKey(v, KeyArrowLeft)
+	typeText(v, "brute")
+	bv = v.Book()
+	i := slices.IndexFunc(bv.Lines, func(l BookLine) bool { return l.Thing == "brute" })
+	if i < 0 {
+		t.Fatalf("no line goes to the brute: %q", bookText(bv))
+	}
+	v.Origin = image.Point{}
+	tapAt(v, bv.Rect.Min.Add(bv.Lines[i].Rect().Min.Add(image.Pt(2, 2)).Mul(bv.Scale)))
+	if v.BookOpen || v.Thing != "brute" || v.Selected == nil || *v.Selected != v.World.Current().Thing("brute").Cell() || v.Origin == (image.Point{}) {
+		t.Errorf("after the click: open %v, thing %q, selected %v, origin %v", v.BookOpen, v.Thing, v.Selected, v.Origin)
 	}
 }

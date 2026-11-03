@@ -12,7 +12,7 @@ import (
 )
 
 // drawBook draws the book: its tabs, the entries down the left and the chosen one's picture and
-// lines on the right. It draws the window at its own pixels, then scales it onto the screen.
+// lines on the right, with the full book's pictures of its lines. It draws the window at its own pixels, then scales it onto the screen.
 func (s *Window) drawBook(screen *ebiten.Image) {
 	v := s.v
 	bv := v.Book()
@@ -92,6 +92,11 @@ func (s *Window) drawBook(screen *ebiten.Image) {
 	if bv.HasPicture {
 		draw(bv.Picture, bv.PictureAt)
 	}
+	for _, l := range bv.Lines {
+		for _, p := range l.Pictures {
+			draw(p.Image, p.At)
+		}
+	}
 	s.presenter.PresentAt(win, art, 1, image.Point{})
 
 	for _, r := range bv.Rows {
@@ -117,6 +122,9 @@ func (s *Window) drawBook(screen *ebiten.Image) {
 			vector.FillRect(win, float32(bv.Pane.Min.X), float32(r.Max.Y)-1, float32(bv.Pane.Dx()), 1, keywordColor, false)
 		case l.Hint:
 			fill(image.Rect(bv.Pane.Min.X-4, r.Min.Y, bv.Pane.Min.X-2, r.Max.Y), keywordColor)
+		case l.Thing != "" || l.Cell != nil:
+			// A line that goes to where the entry is, underlined as a link.
+			vector.FillRect(win, float32(r.Min.X), float32(r.Max.Y)-1, float32(r.Dx()), 1, openEdgeColor, false)
 		}
 		for _, w := range l.Words {
 			ebitenutil.DebugPrintAt(win, w.Text, w.Rect.Min.X, w.Rect.Min.Y)
