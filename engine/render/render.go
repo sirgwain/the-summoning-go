@@ -231,21 +231,6 @@ func (pr *Presenter) present(dst, src *ebiten.Image, sx, sy float64, at image.Po
 	dst.DrawRectShader(b.Dx(), b.Dy(), pr.shader, &op)
 }
 
-// DrawImagePart draws part (in the frame's own pixels) of the frame of image img into the index
-// image dst, its top-left at (x, y).
-func (s *Sprites) DrawImagePart(dst *ebiten.Image, img content.Image, x, y int, part image.Rectangle) error {
-	f, err := s.Frame(img.Sprite, img.Frame)
-	if err != nil {
-		return err
-	}
-	b := f.Bounds()
-	sub := f.SubImage(part.Add(b.Min).Intersect(b)).(*ebiten.Image)
-	var op ebiten.DrawImageOptions
-	op.GeoM.Translate(float64(x), float64(y))
-	dst.DrawImage(sub, &op)
-	return nil
-}
-
 // DrawImage draws the frame of image img into the index image dst at (x, y), flipped left to
 // right when mirrored.
 func (s *Sprites) DrawImage(dst *ebiten.Image, img content.Image, x, y int, mirrored bool) error {

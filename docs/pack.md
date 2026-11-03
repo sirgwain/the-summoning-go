@@ -602,20 +602,20 @@ shows in the same place, each row half as tall. More steps, for the story:
 { "id": "scene.story", "size": [320, 400], "steps": [
   { "text": "story.1", "box": [16, 60, 288, 280], "ms": 9000 },
   { "picture": { "sprite": "sprite.strip.1254" }, "at": [132, 26], "clear": true },
-  { "picture": { "sprite": "sprite.strip.1256" }, "at": [164, 192], "crop": [0, 124, 120, 64] },
-  { "by_weapon": [{ "text": "story.gift.0", "box": [0, 30, 132, 340], "ms": 6000 }, "…"] },
+  { "by_weapon": [{ "text": "story.gift.0", "box": [0, 30, 132, 340], "from_top": true,
+                   "ms": 6000 }, "…"] },
   { "say": { "portrait": "portrait.rowena", "side": "top", "text": "story.say.1" }, "ms": 5000 }
 ] }
 ```
 
-- `text` shows a page of words, wrapped and centered in `box` (`[x, y, w, h]`), in place of the
-  page before; `@` is the character's name. A key or click ends its step early.
-- `crop` draws only that part (`[x, y, w, h]`) of a `picture`, its top-left at `at`.
+- `text` shows a page of words, wrapped and centered in `box` (`[x, y, w, h]`), or from the box's
+  top with `from_top`, in place of the page before; `@` is the character's name. A key or click
+  ends its step early.
 - `by_weapon` plays the step of its list at the character's weapon class.
 - `say` shows a line in a speaker's panel, `top` or `bottom`, with `portrait` (the character's
   own when empty, mirrored as its portrait says) and clears the other panel's line; the picture
   under the panels shows darkened. A key or click ends its step early.
-- A `clear` also clears the page of words and the panels.
+- A `clear` also clears the page of words and the panels; `keep_text` keeps the page.
 
 ## Flipbooks
 

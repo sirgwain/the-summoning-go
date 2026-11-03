@@ -214,12 +214,6 @@ func (s *Window) drawScene(screen *ebiten.Image, r *viewer.SceneRun) {
 		}
 	}
 	for _, p := range r.Pictures {
-		if !p.Crop.Empty() {
-			if err := s.sprites.DrawImagePart(art, p.Image, p.At.X, p.At.Y, p.Crop); err != nil && s.err == nil {
-				s.err = err
-			}
-			continue
-		}
 		draw(p.Image, p.At.X, p.At.Y)
 	}
 	if st := r.Current(); st != nil && st.Part != nil {
@@ -252,7 +246,7 @@ func (s *Window) drawScene(screen *ebiten.Image, r *viewer.SceneRun) {
 	textScale := max(1, scale/2)
 	if r.Text != "" {
 		box := image.Rectangle{toScreen(r.Box.Min.X, r.Box.Min.Y), toScreen(r.Box.Max.X, r.Box.Max.Y)}
-		s.centerWords(screen, r.Words(inspect.Text(s.v.Pack, r.Text)), box, textScale)
+		s.centerWords(screen, r.Words(inspect.Text(s.v.Pack, r.Text)), box, textScale, r.FromTop)
 	}
 	if r.Talking {
 		vector.FillRect(screen, float32(at.X), float32(at.Y), float32(size.X*scale), float32(size.Y*scale),
@@ -313,18 +307,25 @@ func (s *Window) drawSay(screen *ebiten.Image, r *viewer.SceneRun, line *viewer.
 			s.presenter.PresentAt(screen, img, scale, image.Pt(x, y))
 		}
 	}
-	s.centerWords(screen, r.Words(inspect.Text(s.v.Pack, line.Text)), textBox, textScale)
+	s.centerWords(screen, r.Words(inspect.Text(s.v.Pack, line.Text)), textBox, textScale, false)
 }
 
+// sceneWordsColor is the gold of a scene's words (scenes.md, The story, in short).
+var sceneWordsColor = color.RGBA{236, 200, 92, 255}
+
 // centerWords draws text wrapped to box, a letter's room kept at each side, each line centered
-// across it and the lines centered down it, in the large face at scale.
-func (s *Window) centerWords(screen *ebiten.Image, text string, box image.Rectangle, scale int) {
+// across it and the lines centered down it (or from its top when fromTop), in the large face at
+// scale, in gold.
+func (s *Window) centerWords(screen *ebiten.Image, text string, box image.Rectangle, scale int, fromTop bool) {
 	face := font.Large
 	lines := wrap(text, max(1, box.Dx()/(face.Advance*scale)-2))
-	y := box.Min.Y + (box.Dy()-len(lines)*face.LineHeight*scale)/2
+	y := box.Min.Y
+	if !fromTop {
+		y += (box.Dy() - len(lines)*face.LineHeight*scale) / 2
+	}
 	for i, l := range lines {
 		x := box.Min.X + (box.Dx()-face.Measure(l)*scale)/2
-		s.printFace(screen, face, l, x, y+i*face.LineHeight*scale, scale, color.White)
+		s.printFace(screen, face, l, x, y+i*face.LineHeight*scale, scale, sceneWordsColor)
 	}
 }
 

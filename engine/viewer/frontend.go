@@ -769,10 +769,11 @@ type SceneRun struct {
 	Banner  *content.Image
 	Fade    string
 	Faded   float64
-	// Text is the page of words showing, in Box; Top and Bottom the lines in the panels, Talking
-	// whether the panels show (the picture under them darkened).
+	// Text is the page of words showing, in Box (from its top when FromTop); Top and Bottom the
+	// lines in the panels, Talking whether the panels show (the picture under them darkened).
 	Text        string
 	Box         image.Rectangle
+	FromTop     bool
 	Top, Bottom *SceneLine
 	Talking     bool
 	// Sounds are the sounds started since the presentation last took them (TakeSounds).
@@ -800,12 +801,10 @@ func (r *SceneRun) TakeSounds() []string {
 	return s
 }
 
-// ScenePicture is a picture drawn at a point of the scene; Crop, when not empty, the part of it
-// drawn.
+// ScenePicture is a picture drawn at a point of the scene.
 type ScenePicture struct {
 	Image content.Image
 	At    image.Point
-	Crop  image.Rectangle
 }
 
 // NewSceneRun starts scene s, watched by w.
@@ -846,15 +845,14 @@ func (r *SceneRun) show() bool {
 	r.Sounds = append(r.Sounds, st.Sounds...)
 	if st.Clear {
 		r.Pictures, r.Caption, r.Banner, r.Fade, r.Faded = nil, "", nil, "", 0
-		r.Text, r.Top, r.Bottom, r.Talking = "", nil, nil, false
+		r.Top, r.Bottom, r.Talking = nil, nil, false
+		if !st.KeepText {
+			r.Text = ""
+		}
 	}
 	switch {
 	case st.Picture != nil:
-		p := ScenePicture{Image: *st.Picture, At: image.Pt(st.At[0], st.At[1])}
-		if st.Crop != nil {
-			p.Crop = rect(*st.Crop)
-		}
-		r.Pictures = append(r.Pictures, p)
+		r.Pictures = append(r.Pictures, ScenePicture{*st.Picture, image.Pt(st.At[0], st.At[1])})
 	case st.Caption != "":
 		r.Caption, r.Banner = st.Caption, st.Banner
 	case st.Fade != "":
@@ -863,7 +861,7 @@ func (r *SceneRun) show() bool {
 		r.Left = updates(st.Part.HoldMS(0))
 		r.Sounds = append(r.Sounds, st.Part.StepSounds...)
 	case st.Text != "":
-		r.Text, r.Box = st.Text, rect(*st.Box)
+		r.Text, r.Box, r.FromTop = st.Text, rect(*st.Box), st.FromTop
 	case st.Say != nil:
 		line := &SceneLine{Portrait: st.Say.Portrait, Text: st.Say.Text}
 		if line.Portrait == "" {

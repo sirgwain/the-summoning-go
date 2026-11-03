@@ -283,8 +283,8 @@ const (
 	resStoryLift  = 0x19
 	resStoryHands = 0x1A
 	resStoryArms  = 0x26
-	// storyGiftsFront is the first row of the gifts picture drawn again over the lifted hands.
-	storyGiftsFront = 124
+	// storyGoneMS is how long Rowena shows alone once the hands and gifts are gone.
+	storyGoneMS = 2000
 )
 
 // storyWords are the story's words, in the engine's own telling: the summary's pages, Rowena's
@@ -344,27 +344,29 @@ func (im *importer) storyScene() *content.Scene {
 		return content.SceneStep{Picture: &content.Image{Sprite: id}, At: content.Offset{x, y}}
 	}
 	summaryBox, columnBox := &[4]int{16, 60, 288, 280}, &[4]int{0, 30, 132, 340}
+	column := func(key, words string) content.SceneStep {
+		return content.SceneStep{Text: text(key, words), Box: columnBox, FromTop: true, MS: readingMS(words)}
+	}
 	s := &content.Scene{ID: storySceneID, Size: [2]int{content.SceneWidth, 2 * content.SceneHeight}}
 	for i, words := range storySummary {
 		st := content.SceneStep{Text: text(fmt.Sprintf("story.%d", i+1), words), Box: summaryBox, MS: readingMS(words)}
 		st.Clear = i == 0
 		s.Steps = append(s.Steps, st)
 	}
-	// picture draws the farewell, raised when lifted, and its arms by weapon class.
-	picture := func(lifted bool) {
+	// rowena draws Rowena, her hands lifted or holding out the gifts.
+	rowena := func(lifted, keepText bool) {
 		first := pic(top, 132, 26)
-		first.Clear = true
+		first.Clear, first.KeepText = true, keepText
 		s.Steps = append(s.Steps, first, pic(below, 132, 226))
 		if lifted {
 			s.Steps = append(s.Steps, pic(lift, 164, 54))
-			front := pic(gifts, 164, 68+storyGiftsFront)
-			if sp := im.pack.Sprites[gifts]; sp != nil {
-				front.Crop = &[4]int{0, storyGiftsFront, sp.FrameSize[0], sp.FrameSize[1] - storyGiftsFront}
-			}
-			s.Steps = append(s.Steps, front)
 		} else {
 			s.Steps = append(s.Steps, pic(gifts, 164, 68))
 		}
+	}
+	// picture draws the farewell with the hands holding the gifts and the arms by weapon class.
+	picture := func(lifted bool) {
+		rowena(lifted, false)
 		s.Steps = append(s.Steps, pic(hands, 164, 198))
 		var byWeapon []content.SceneStep
 		for _, id := range arms {
@@ -373,33 +375,35 @@ func (im *importer) storyScene() *content.Scene {
 		s.Steps = append(s.Steps, content.SceneStep{ByWeapon: byWeapon})
 	}
 	picture(false)
-	s.Steps = append(s.Steps, content.SceneStep{Text: text("story.fear", storyFear), Box: columnBox, MS: readingMS(storyFear)})
+	s.Steps = append(s.Steps, column("story.fear", storyFear))
 	var gift []content.SceneStep
 	for class, g := range storyGifts {
 		words := "She presses into your hands " + g + ", an apple, a worn old parchment and a scroll of your school's magic."
-		gift = append(gift, content.SceneStep{Text: text(fmt.Sprintf("story.gift.%d", class), words), Box: columnBox, MS: readingMS(words)})
+		gift = append(gift, column(fmt.Sprintf("story.gift.%d", class), words))
 	}
 	s.Steps = append(s.Steps, content.SceneStep{ByWeapon: gift})
-	_, rowena := im.pack.Portraits[rowenaID]
+	_, hasRowena := im.pack.Portraits[rowenaID]
 	for i, l := range storyLines {
 		say := &content.SceneSay{Side: content.SayBottom, Text: text(fmt.Sprintf("story.say.%d", i+1), l.text)}
 		if l.rowena {
 			say.Side = content.SayTop
-			if rowena {
+			if hasRowena {
 				say.Portrait = rowenaID
 			}
 		}
-		if l.rowena && !rowena {
+		if l.rowena && !hasRowena {
 			// Without her portrait, her lines show as words on the picture.
-			s.Steps = append(s.Steps, content.SceneStep{Text: say.Text, Box: columnBox, MS: readingMS(l.text)})
+			s.Steps = append(s.Steps, column(say.Text, l.text))
 			continue
 		}
 		s.Steps = append(s.Steps, content.SceneStep{Say: say, MS: readingMS(l.text)})
 	}
 	picture(true)
-	s.Steps = append(s.Steps,
-		content.SceneStep{Text: text("story.away", storyAway), Box: columnBox, MS: readingMS(storyAway)},
-		content.SceneStep{Fade: "#000000", MS: 1000})
+	s.Steps = append(s.Steps, column("story.away", storyAway))
+	// The hands and gifts are gone: Rowena alone, the page still showing.
+	rowena(true, true)
+	s.Steps[len(s.Steps)-1].MS = storyGoneMS
+	s.Steps = append(s.Steps, content.SceneStep{Fade: "#000000", MS: 1000})
 	im.pack.Scenes[s.ID] = s
 	return s
 }

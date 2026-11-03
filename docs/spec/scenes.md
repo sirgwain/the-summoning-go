@@ -245,7 +245,7 @@ The game plays a new character's story from the moment Create Character is chose
 
 **Engine model.** Choosing Create Character starts the creation record's story track (the importer gives track 1), which plays on through the creation screens; going back to the main menu fades it out. Choosing a premade character starts it too. When the character is made (or a premade one chosen), the creation record's story scene plays, then the new game's door. The story track fades out with the slow fade as the story scene ends. Escape skips the rest of the story scene; any other key or a click ends a page of words (below) early, and skips the scene from any other step.
 
-The story scene is drawn on the frontend's screen of 320 × 400, whose pixels are half as tall as wide (the presentation shows it in the same place as a 320 × 200 scene, each row half as tall). In order:
+The story scene is drawn on the frontend's screen of 320 × 400, whose pixels are half as tall as wide (the presentation shows it in the same place as a 320 × 200 scene, each row half as tall). The game letters its pages in gold; the engine's own lettering does the same. In order:
 
 1. **The summary**, three pages on black, each centered in the box (16, 60)–(304, 340), held its reading time (2 seconds and 45 ms a letter) or until a key or click:
 
@@ -255,7 +255,7 @@ The story scene is drawn on the frontend's screen of 320 × 400, whose pixels ar
    | 2 | Brought before the Council, you swore to stand against Shadow Weaver. Through the months that followed, the weapon master Khail trained your arm, and the mage Jairus taught you to bend magic to your will. |
    | 3 | On the night your training ended, a gateway opened within the fortress and Shadow Weaver's horde poured through. Khail and his warriors fell holding the hall. Jairus held the enemy back with fire and lightning until an arrow found him. |
 
-2. **Rowena's farewell**, the first picture: frontend resources (INIT's frontend base +) 16h at (132, 26), 17h at (132, 226), 18h at (164, 68), 1Ah at (164, 198), and the weapon class's picture 26h + class at (204, 266), each a strip drawn with its top-left at the point (x, y) given, over black, in palette 0. Over it, in the column (0, 30)–(132, 370) left of the picture, two pages: "Rowena turns to you, and for the first time you see fear in her face." Then, by weapon class: "She presses into your hands **a falchion** (**a war axe**, **a spear**, **a bow and a quiver of arrows**), an apple, a worn old parchment and a scroll of your school's magic."
+2. **Rowena's farewell**, the first picture: frontend resources (INIT's frontend base +) 16h at (132, 26), 17h at (132, 226), 18h at (164, 68), 1Ah at (164, 198), and the weapon class's picture 26h + class at (204, 266), each a strip drawn with its top-left at the point (x, y) given, over black, in palette 0. Over it, in the column (0, 30)–(132, 370) left of the picture, its lines from the column's top, each centered across it, two pages: "Rowena turns to you, and for the first time you see fear in her face." Then, by weapon class: "She presses into your hands **a falchion** (**a war axe**, **a spear**, **a bow and a quiver of arrows**), an apple, a worn old parchment and a scroll of your school's magic."
 
 3. **The conversation**, over the same picture darkened: two framed panels across the screen, Rowena's above with her portrait (F's Rowena portrait, its header's third word, a people bank) at its left, and the character's below with its portrait at its right, mirrored when the portrait row says so. Each line shows in its speaker's panel, and clears the other's; `@` is the character's name:
 
@@ -267,7 +267,7 @@ The story scene is drawn on the frontend's screen of 320 × 400, whose pixels ar
    | Rowena | I will send you to the entrance of the labyrinth. A man named Malachi waits for you there, and you can trust him. Be sure to ask him about the coins: they will help you on your way. |
    | Rowena | The way to destroy Shadow Weaver lies somewhere in the labyrinth. Find it. Now, be ready... |
 
-4. **The second picture**: as the first, with resource 19h (Rowena raising her hands) at (164, 54) in place of 18h, then resource 18h's rows from 124 down drawn again at (164, 192), so the hands holding the gifts stay in front; then 1Ah and the weapon as before. Over it: "Rowena lifts her hands, the air around you begins to shimmer, and the fortress falls away." Then the picture fades to black over a second.
+4. **The second picture**: as the first, with resource 19h (Rowena raising her hands) at (164, 54) in place of 18h; 17h is the lower part of her robe, and 1Ah (the hands holding the gifts) and the weapon go in front as before. Over it, in the column: "Rowena lifts her hands, the air around you begins to shimmer, and the fortress falls away." After the page's reading time the hands and gifts are gone: 16h, 17h and 19h alone, the page still showing, for 2 seconds. Then the picture fades to black over a second.
 
 ## New game
 

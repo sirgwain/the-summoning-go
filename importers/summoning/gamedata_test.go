@@ -399,7 +399,7 @@ func TestGameWallsOutOfSight(t *testing.T) {
 }
 
 // TestGameStory: the game's import plays the story in short on a tall screen, with
-// Rowena's portrait in her panel and the gifts' front rows drawn again over the lifted hands.
+// Rowena's portrait in her panel, and at the end Rowena alone under the last page.
 func TestGameStory(t *testing.T) {
 	p, _ := gamePack(t)
 	c := p.Creation
@@ -410,7 +410,7 @@ func TestGameStory(t *testing.T) {
 	if w, h := s.Dims(); w != 320 || h != 400 {
 		t.Errorf("story size %dx%d", w, h)
 	}
-	says, rowena, crops := 0, 0, 0
+	says, rowena, kept := 0, 0, 0
 	for _, st := range s.Steps {
 		if st.Say != nil {
 			says++
@@ -418,15 +418,18 @@ func TestGameStory(t *testing.T) {
 				rowena++
 			}
 		}
-		if st.Crop != nil && st.Crop[1] == storyGiftsFront && st.Crop[3] > 0 {
-			crops++
+		if st.KeepText {
+			kept++
 		}
 		if len(st.ByWeapon) != 0 && len(st.ByWeapon) != len(c.WeaponClasses) {
 			t.Errorf("a by-weapon step of %d for %d classes", len(st.ByWeapon), len(c.WeaponClasses))
 		}
 	}
-	if says != len(storyLines) || rowena != 4 || crops != 1 {
-		t.Errorf("%d lines, %d Rowena's, %d crops", says, rowena, crops)
+	if says != len(storyLines) || rowena != 4 || kept != 1 {
+		t.Errorf("%d lines, %d Rowena's, %d clears keeping the page", says, rowena, kept)
+	}
+	if last := s.Steps[len(s.Steps)-2]; last.Picture == nil || last.MS != storyGoneMS {
+		t.Errorf("Rowena alone: %+v", last)
 	}
 	if b := p.Sprites[p.Portraits[rowenaID].Image.Sprite]; b == nil || b.FrameSize != [2]int{48, 48} {
 		t.Errorf("Rowena's portrait: %+v", b)

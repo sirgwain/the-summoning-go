@@ -100,20 +100,21 @@ func (s *Scene) Dims() (w, h int) {
 }
 
 // SceneStep is one step of a scene: one of Picture, Part, Caption, Fade, Text, Say and ByWeapon,
-// held MS. Sounds start as the step shows. Crop draws only that part (x, y, w, h) of Picture;
-// Text is a page of words wrapped and centered in Box (x, y, w, h); ByWeapon plays the step at
-// the character's weapon class.
+// held MS. Sounds start as the step shows. Text is a page of words wrapped and centered in Box
+// (x, y, w, h), or from its top with FromTop; ByWeapon plays the step at the character's weapon
+// class. Clear starts the picture afresh, keeping the page of words with KeepText.
 type SceneStep struct {
 	Picture  *Image      `json:"picture,omitempty"`
 	At       Offset      `json:"at,omitzero"`
-	Crop     *[4]int     `json:"crop,omitempty"`
 	Clear    bool        `json:"clear,omitempty"`
+	KeepText bool        `json:"keep_text,omitempty"`
 	Part     *Part       `json:"part,omitempty"`
 	Caption  string      `json:"caption,omitempty"`
 	Banner   *Image      `json:"banner,omitempty"`
 	Fade     string      `json:"fade,omitempty"`
 	Text     string      `json:"text,omitempty"`
 	Box      *[4]int     `json:"box,omitempty"`
+	FromTop  bool        `json:"from_top,omitempty"`
 	Say      *SceneSay   `json:"say,omitempty"`
 	ByWeapon []SceneStep `json:"by_weapon,omitempty"`
 	MS       int         `json:"ms,omitempty"`
@@ -285,9 +286,6 @@ func (v *verifier) scene(s *Scene) {
 		}
 		if st.Text != "" && (st.Box == nil || st.Box[2] <= 0 || st.Box[3] <= 0) {
 			v.fail("%s: %s has text but no box", owner, name)
-		}
-		if st.Crop != nil && (st.Picture == nil || st.Crop[2] <= 0 || st.Crop[3] <= 0) {
-			v.fail("%s: %s crop", owner, name)
 		}
 		if sy := st.Say; sy != nil {
 			v.text(owner, sy.Text)
