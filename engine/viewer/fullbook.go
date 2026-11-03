@@ -160,6 +160,7 @@ func (v *Viewer) fullBookLines(tab int, id string) []paneItem {
 // creature's animations as their frames.
 func (v *Viewer) recordItems(r any) []paneItem {
 	thing, _ := r.(*content.Thing)
+	item, _ := r.(*content.Item)
 	b, err := json.Marshal(r)
 	if err != nil {
 		return []paneItem{{text: err.Error()}}
@@ -222,7 +223,16 @@ func (v *Viewer) recordItems(r any) []paneItem {
 				out = append(out, paneItem{text: text, pictures: []content.Image{img}})
 				continue
 			}
-			out = append(out, paneItem{text: "  " + key + ": " + string(raw)})
+			text := "  " + key + ": " + string(raw)
+			if key == "power" && item != nil {
+				if d := v.powerText(item); d != "" {
+					text += " (" + d + ")"
+				}
+			} else if s := v.textOf(raw); s != "" {
+				// A text key, as its words.
+				text += " " + strconv.Quote(s)
+			}
+			out = append(out, paneItem{text: text})
 		}
 	}
 	if thing != nil {
@@ -304,6 +314,32 @@ func frames(sprite string, fs []int) []content.Image {
 		out[i] = content.Image{Sprite: sprite, Frame: f}
 	}
 	return out
+}
+
+// textOf returns the words of the text a field's value names, empty for a value that names none.
+func (v *Viewer) textOf(raw json.RawMessage) string {
+	var key string
+	if json.Unmarshal(raw, &key) != nil || key == "" {
+		return ""
+	}
+	if s := inspect.Text(v.Pack, key); s != key {
+		return s
+	}
+	return ""
+}
+
+// powerText says what item it's power does: its effect text, else the spell it casts or the
+// conversation it starts.
+func (v *Viewer) powerText(it *content.Item) string {
+	switch {
+	case it.Effect != "":
+		return inspect.Text(v.Pack, it.Effect)
+	case it.Casts != nil:
+		return "casts " + v.spellName(it.Casts.Spell)
+	case it.Conversation != "":
+		return "starts the conversation of " + v.logName(it.Conversation)
+	}
+	return "no effect of its own"
 }
 
 // imageField returns the image a field's value is, or holds under "image", with the rest of the

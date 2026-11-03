@@ -428,7 +428,7 @@ writes the same pack format.
   defense known, then where it is on the current level (a creature's things; an item on the floor,
   in a container, carried, taken by a slot, made or shot by a procedure, given or taken by a
   conversation of a creature there) and its whole record, a line a field: an image (an icon, a
-  floor image, a doll) as its picture, an item's actions and a creature's behaviors in words, its animations as
+  floor image, a doll) as its picture, an item's actions and power and a creature's behaviors in words, a text key with its words, its animations as
   their frames (of those made for each direction, the down-right one's), at twice their size as
   the book's pane shows its pictures. Clicking where
   it is closes the book and selects it there, the view centered on it. The pane scrolls with the

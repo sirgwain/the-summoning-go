@@ -105,6 +105,8 @@ func powerEffect(p int, classes, schools [4]string) string {
 		return "Cures poison and confusion."
 	case 0x17:
 		return "Heals you slowly."
+	case 0x18:
+		return `Shows the words "(cast smoke spell)", and does nothing more.`
 	case 0x1B:
 		return "Turns into another object."
 	case 0x1C:
@@ -129,6 +131,8 @@ func powerEffect(p int, classes, schools [4]string) string {
 		return "Shields you from lightning for a while."
 	case 0x28:
 		return "Heals 5d10 hit points."
+	case 0x42:
+		return `Shows the words "(open all doors)", and does nothing more.`
 	case 0x43:
 		return "Makes your blows truer."
 	case 0x44:
@@ -147,6 +151,8 @@ func powerEffect(p int, classes, schools [4]string) string {
 		return "Confuses whoever drinks it."
 	case 0x5B:
 		return "Wards off death blows."
+	case 0x5E:
+		return "Ends the game, if you hold what an ending needs."
 	}
 	return ""
 }

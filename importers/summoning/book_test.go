@@ -15,7 +15,9 @@ func TestPowerEffect(t *testing.T) {
 		{0x34, "Raises agility by 2."},
 		{0x2D, "Raises accuracy by 2 for a while."},
 		{0x13, ""}, // a spell: the book names it
-		{0x16, ""},
+		{0x16, ""}, // nothing
+		{0x18, `Shows the words "(cast smoke spell)", and does nothing more.`},
+		{0x5E, "Ends the game, if you hold what an ending needs."},
 	} {
 		if got := powerEffect(c.power, classes, schools); got != c.want {
 			t.Errorf("power %02Xh: %q, want %q", c.power, got, c.want)
