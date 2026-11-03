@@ -19,6 +19,7 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/render"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
+	"github.com/sirgwain/the-summoning-go/engine/viewer/window"
 	"github.com/spf13/cobra"
 )
 
@@ -79,13 +80,7 @@ in play; Q quits. A finished flipbook starts again after a second.`,
 	rootCmd.AddCommand(cmd)
 }
 
-var (
-	flipbookBackdrop = color.RGBA{40, 44, 52, 255}
-	flipbookFrame    = color.RGBA{120, 100, 70, 255}
-)
-
-// flipbookBorder is the width of a framed flipbook's border, in art pixels.
-const flipbookBorder = 8
+var flipbookBackdrop = color.RGBA{40, 44, 52, 255}
 
 // restartMS is how long a finished flipbook waits before it starts again.
 const restartMS = 1000
@@ -186,12 +181,12 @@ func (p *flipbookPlayer) Draw(screen *ebiten.Image) {
 	if err := p.sprites.DrawImage(p.art, content.Image{Sprite: f.Sprite, Frame: p.run.Frame()}, 0, 0, false); err != nil && p.err == nil {
 		p.err = err
 	}
-	outer := size.Add(image.Pt(2*flipbookBorder, 2*flipbookBorder))
+	outer := size.Add(image.Pt(2*window.FlipbookBorder, 2*window.FlipbookBorder))
 	scale := max(1, min(p.screen.X/outer.X, (p.screen.Y-40)/outer.Y))
 	at := p.screen.Sub(size.Mul(scale)).Div(2)
 	if f.Framed {
-		bw := float32(flipbookBorder * scale)
-		vector.FillRect(screen, float32(at.X)-bw, float32(at.Y)-bw, float32(size.X*scale)+2*bw, float32(size.Y*scale)+2*bw, flipbookFrame, false)
+		bw := float32(window.FlipbookBorder * scale)
+		vector.FillRect(screen, float32(at.X)-bw, float32(at.Y)-bw, float32(size.X*scale)+2*bw, float32(size.Y*scale)+2*bw, window.FlipbookFrame, false)
 		vector.FillRect(screen, float32(at.X), float32(at.Y), float32(size.X*scale), float32(size.Y*scale), flipbookBackdrop, false)
 	}
 	p.presenter.SetColors(p.palette.At(int64(p.clock)), p.palette.Colors)

@@ -75,6 +75,7 @@ engine/audio/          music and effects: the mixer's rules; speaker/ plays thro
 engine/input/          commands (plain data, no Ebitengine); bindings in a subpackage
 engine/inspect/        the simulation's state in words and as JSON dumps, for tools
 engine/viewer/         the viewer's controls and scripts, from input snapshots; no Ebitengine
+engine/viewer/window/  the viewer in a window: Ebitengine's input in, the viewer's state drawn
 engine/save/           save format
 importers/summoning/   reads the original files, writes a content pack
 internal/opl2/         an OPL2 emulator, for rendering the original's songs

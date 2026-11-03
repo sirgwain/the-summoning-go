@@ -1,4 +1,4 @@
-package cmd
+package window
 
 import (
 	"image"
@@ -24,7 +24,7 @@ var (
 // sceneBannerRow is where a scene's caption and banner show.
 const sceneBannerRow = 180
 
-func (s *shell) drawFront(screen *ebiten.Image) {
+func (s *Window) drawFront(screen *ebiten.Image) {
 	f := s.v.Front
 	screen.Fill(frontColor)
 	if f.Screen == viewer.ScreenScene {
@@ -62,7 +62,7 @@ func (s *shell) drawFront(screen *ebiten.Image) {
 }
 
 // drawScene draws a scene's pictures, part, banner, caption and fade.
-func (s *shell) drawScene(screen *ebiten.Image, r *viewer.SceneRun) {
+func (s *Window) drawScene(screen *ebiten.Image, r *viewer.SceneRun) {
 	if r == nil {
 		return
 	}

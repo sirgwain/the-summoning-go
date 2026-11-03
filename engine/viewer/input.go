@@ -1,7 +1,7 @@
 // Package viewer is the level viewer's controls: a camera over a level, a selection, and tools
 // that send debug commands to the simulation. It reads its input as a snapshot per update and
 // does not import Ebitengine, so tests and scripts drive it as a person would (docs/design.md,
-// Testing). The window, drawing and reading the real keyboard are the command's.
+// Testing). The window, drawing and reading the real keyboard are engine/viewer/window's.
 package viewer
 
 import (
