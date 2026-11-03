@@ -69,6 +69,15 @@ type Frontend struct {
 	attr     int
 	// splashLeft is the number of updates remaining on the opening splash.
 	splashLeft int
+	// step is how far the update's − or + moves an attribute: shiftStep with Shift held, else 1.
+	step int
+	// Rolls counts the rolls of the last run of Shift and R, shown at RollsShown (1 while
+	// rolling and for a while after, then fading to 0). rolling is set while the run goes on;
+	// rollsLeft is how many updates the count has left to show once it is done.
+	Rolls      int
+	RollsShown float64
+	rolling    bool
+	rollsLeft  int
 	// then is the screen after the scene.
 	then string
 	// disk is the menu showing over play (a content.Menu… name), empty for the main frontend;
@@ -217,7 +226,7 @@ func (f *Frontend) list(opts []option) {
 	for _, o := range opts {
 		w = max(w, len(o.label))
 	}
-	w = (w + 6) * CharWidth
+	w = (w + 6) * MenuCharWidth
 	y := f.top()
 	if f.Screen == ScreenMenu && f.disk == "" {
 		// Under the splash's lettering.
@@ -225,8 +234,8 @@ func (f *Frontend) list(opts []option) {
 	}
 	for _, o := range opts {
 		x := (f.Size.X - w) / 2
-		f.Buttons = append(f.Buttons, PanelButton{Rect: image.Rect(x, y, x+w, y+LineHeight+4), Name: o.name, Label: o.label})
-		y += LineHeight + 8
+		f.Buttons = append(f.Buttons, PanelButton{Rect: image.Rect(x, y, x+w, y+MenuLineHeight+4), Name: o.name, Label: o.label})
+		y += MenuLineHeight + 8
 	}
 }
 
@@ -235,19 +244,19 @@ const PortraitScale = 3
 
 // top returns where the buttons start: below the title, the lines and the portrait.
 func (f *Frontend) top() int {
-	y := f.Size.Y/5 + 2*LineHeight + len(f.Lines)*LineHeight + LineHeight
+	y := f.Size.Y/5 + 2*MenuLineHeight + len(f.Lines)*MenuLineHeight + MenuLineHeight
 	if f.Portrait != nil {
-		y += f.portraitSize().Y*PortraitScale + LineHeight
+		y += f.portraitSize().Y*PortraitScale + MenuLineHeight
 	}
 	return y
 }
 
 // TitleAt is where the title's line is; LinesAt the first line; PortraitAt the portrait's corner.
 func (f *Frontend) TitleAt() int { return f.Size.Y / 5 }
-func (f *Frontend) LinesAt() int { return f.Size.Y/5 + 2*LineHeight }
+func (f *Frontend) LinesAt() int { return f.Size.Y/5 + 2*MenuLineHeight }
 func (f *Frontend) PortraitAt() image.Point {
 	s := f.portraitSize().Mul(PortraitScale)
-	return image.Pt((f.Size.X-s.X)/2, f.LinesAt()+len(f.Lines)*LineHeight+LineHeight/2)
+	return image.Pt((f.Size.X-s.X)/2, f.LinesAt()+len(f.Lines)*MenuLineHeight+MenuLineHeight/2)
 }
 
 func (f *Frontend) portraitSize() image.Point {
@@ -298,20 +307,20 @@ func (f *Frontend) layoutAttributes() {
 	if len(m.Points) > 0 {
 		f.Lines = append(f.Lines, fmt.Sprintf("Points to spend: %d", f.points))
 	}
-	w := 24 * CharWidth
+	w := 24 * MenuCharWidth
 	x := (f.Size.X - w) / 2
 	y := f.top()
 	for i, name := range Attributes {
-		row := image.Rect(x, y, x+w, y+LineHeight+4)
+		row := image.Rect(x, y, x+w, y+MenuLineHeight+4)
 		f.Buttons = append(f.Buttons, PanelButton{Rect: row, Name: fmt.Sprintf("attr.%d", i),
 			Label: fmt.Sprintf("%s %2d", AttributeLabels[i], a[name])})
 		if len(m.Points) > 0 {
-			bw := 3 * CharWidth
+			bw := 3 * MenuCharWidth
 			f.Buttons = append(f.Buttons,
 				PanelButton{Rect: image.Rect(row.Max.X+4, y, row.Max.X+4+bw, row.Max.Y), Name: fmt.Sprintf("dec.%d", i), Label: "-"},
 				PanelButton{Rect: image.Rect(row.Max.X+8+bw, y, row.Max.X+8+2*bw, row.Max.Y), Name: fmt.Sprintf("inc.%d", i), Label: "+"})
 		}
-		y += LineHeight + 8
+		y += MenuLineHeight + 8
 	}
 	var opts []option
 	if len(m.Roll) > 0 && len(m.Points) == 0 {
@@ -322,8 +331,8 @@ func (f *Frontend) layoutAttributes() {
 	}
 	opts = append(opts, option{"back", "Back"})
 	for _, o := range opts {
-		f.Buttons = append(f.Buttons, PanelButton{Rect: image.Rect(x, y, x+w, y+LineHeight+4), Name: o.name, Label: o.label})
-		y += LineHeight + 8
+		f.Buttons = append(f.Buttons, PanelButton{Rect: image.Rect(x, y, x+w, y+MenuLineHeight+4), Name: o.name, Label: o.label})
+		y += MenuLineHeight + 8
 	}
 	f.Choice = min(f.Choice, len(f.Buttons)-1)
 }
@@ -356,16 +365,82 @@ func (f *Frontend) dice(d content.Dice) int {
 	return n
 }
 
-// spend moves attribute i by delta, within its least and the method's maximum and the points.
+// shiftStep is how far Shift moves an attribute at once.
+const shiftStep = 10
+
+// A run of Shift and R rolls rollsPerUpdate times an update until the total is at least
+// rollTarget; its count then shows rollsHold updates and fades over rollsFade.
+const (
+	rollTarget     = 100
+	rollsPerUpdate = 100
+	rollsHold      = 2 * sim.StepsPerSecond
+	rollsFade      = 1 * sim.StepsPerSecond
+)
+
+// total is the attributes' sum with the points still to spend: what they come to once spent.
+func (f *Frontend) total() int {
+	n := f.points
+	for _, name := range Attributes {
+		n += f.char.Attributes[name]
+	}
+	return n
+}
+
+// rollDone reports whether a run of Shift and R can stop: the total reaches rollTarget, and
+// every point can be spent.
+func (f *Frontend) rollDone() bool {
+	t := f.total()
+	return t >= rollTarget && t <= len(Attributes)*f.creation().Methods[f.method].Max
+}
+
+// canReach reports whether the method's dice and maximum can make a total of rollTarget.
+func (f *Frontend) canReach() bool {
+	m := f.creation().Methods[f.method]
+	most := func(ds []content.Dice) int {
+		n := 0
+		for _, d := range ds {
+			n += d.Count*d.Sides + d.Bonus
+		}
+		return n
+	}
+	best := min(len(Attributes)*min(most(m.Roll), m.Max)+most(m.Points), len(Attributes)*m.Max)
+	return best >= rollTarget
+}
+
+// tickRolls runs a run of Shift and R for an update, or fades its count.
+func (f *Frontend) tickRolls() {
+	if f.Screen != ScreenAttributes {
+		f.rolling, f.rollsLeft = false, 0
+	}
+	if f.rolling {
+		for range rollsPerUpdate {
+			f.roll()
+			f.Rolls++
+			if f.rollDone() {
+				f.rolling, f.rollsLeft = false, rollsHold+rollsFade
+				break
+			}
+		}
+	} else if f.rollsLeft > 0 {
+		f.rollsLeft--
+	}
+	switch {
+	case f.rolling:
+		f.RollsShown = 1
+	default:
+		f.RollsShown = min(1, float64(f.rollsLeft)/rollsFade)
+	}
+}
+
+// spend moves attribute i by up to delta, as far as its least, the method's maximum and the
+// points allow.
 func (f *Frontend) spend(i, delta int) {
 	m := f.creation().Methods[f.method]
 	name := Attributes[i]
-	v := f.char.Attributes[name] + delta
-	if v < f.least[name] || v > m.Max || f.points-delta < 0 {
-		return
-	}
-	f.char.Attributes[name] = v
-	f.points -= delta
+	v := f.char.Attributes[name]
+	to := max(f.least[name], min(v+delta, m.Max, v+f.points))
+	f.char.Attributes[name] = to
+	f.points -= to - v
 }
 
 // Update runs the frontend for one update.
@@ -385,6 +460,10 @@ func (f *Frontend) Update(in Input) {
 			f.after()
 		}
 		return
+	}
+	f.step = 1
+	if in.held(KeyShift) {
+		f.step = shiftStep
 	}
 	pick := ""
 	if in.Left.Released {
@@ -449,12 +528,17 @@ func (f *Frontend) Update(in Input) {
 			}
 		}
 		if in.pressed("R") {
-			pick = "reroll"
+			if in.held(KeyShift) && f.canReach() {
+				f.rolling, f.Rolls = true, 0
+			} else {
+				pick = "reroll"
+			}
 		}
 	}
 	if pick != "" {
 		f.pick(pick)
 	}
+	f.tickRolls()
 	f.layout()
 }
 
@@ -541,9 +625,9 @@ func (f *Frontend) pick(name string) {
 	case ScreenAttributes:
 		switch {
 		case num("dec."):
-			f.spend(i, -1)
+			f.spend(i, -f.step)
 		case num("inc."):
-			f.spend(i, 1)
+			f.spend(i, f.step)
 		case name == "reroll":
 			f.roll()
 		case name == "ok" && f.points == 0:

@@ -70,5 +70,5 @@ func (s *Window) drawSplashTitle(screen *ebiten.Image, r image.Rectangle) {
 // so the lettering's pixels stay square and crisp.
 func (s *Window) splashText(screen *ebiten.Image, text string, x, y, scale float64, tint color.RGBA) {
 	k := max(1, int(scale+0.5))
-	s.printScaled(screen, text, int(x)-font.Width(text)*k/2, int(y), k, tint)
+	s.printFace(screen, font.Small, text, int(x)-font.Small.Measure(text)*k/2, int(y), k, tint)
 }

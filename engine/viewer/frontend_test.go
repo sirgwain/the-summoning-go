@@ -1,6 +1,7 @@
 package viewer
 
 import (
+	"fmt"
 	"image"
 	"testing"
 
@@ -209,5 +210,111 @@ func TestSplash(t *testing.T) {
 	v.Front.Update(Input{})
 	if v.Front.Screen != ScreenMenu {
 		t.Fatal("splash did not time out")
+	}
+}
+
+// TestShiftSpendsTen spends points ten at a time with Shift, clicked or with the arrows, as far
+// as the maximum, the points left and the starting value allow.
+func TestShiftSpendsTen(t *testing.T) {
+	v := newViewer(t)
+	v.OpenFrontend()
+	f := v.Front
+	clickButton(t, v, "create")
+	clickButton(t, v, "ok")
+	typeText(v, "Ash")
+	pressKey(v, KeyEnter)
+	clickButton(t, v, "method.1")
+	f.points = 25
+	shiftClick := func(name string) {
+		t.Helper()
+		for _, b := range f.Buttons {
+			if b.Name == name {
+				v.Update(Input{Held: map[Key]bool{KeyShift: true}, Pressed: map[Key]bool{}, Cursor: b.Rect.Min.Add(image.Pt(2, 2)), Left: Button{Pressed: true, Released: true}})
+				return
+			}
+		}
+		t.Fatalf("no button %q", name)
+	}
+	str := func() int { return f.char.Attributes[sim.AttrStrength] }
+	shiftClick("inc.0")
+	if str() != 10 || f.points != 15 {
+		t.Fatalf("Shift and +: strength %d, %d points", str(), f.points)
+	}
+	shiftClick("inc.0")
+	shiftClick("inc.0")
+	if str() != 20 || f.points != 5 {
+		t.Fatalf("Shift and + past the maximum: strength %d, %d points", str(), f.points)
+	}
+	shiftClick("inc.1")
+	if a := f.char.Attributes[sim.AttrAgility]; a != 5 || f.points != 0 {
+		t.Fatalf("Shift and + past the points: agility %d, %d points", a, f.points)
+	}
+	shiftClick("dec.1")
+	if a := f.char.Attributes[sim.AttrAgility]; a != 0 || f.points != 5 {
+		t.Fatalf("Shift and − past the start: agility %d, %d points", a, f.points)
+	}
+	// Shift and Left on the chosen attribute, then a plain click moves a single point.
+	f.Choice = 0
+	v.Update(Input{Held: map[Key]bool{KeyShift: true}, Pressed: map[Key]bool{KeyArrowLeft: true}, Cursor: image.Pt(-1, -1)})
+	if str() != 10 || f.points != 15 {
+		t.Fatalf("Shift and Left: strength %d, %d points", str(), f.points)
+	}
+	clickButton(t, v, "inc.0")
+	if str() != 11 || f.points != 14 {
+		t.Fatalf("a plain +: strength %d, %d points", str(), f.points)
+	}
+}
+
+// TestShiftRRollsTo100 rolls with Shift and R, by each method, until the total (the attributes
+// and the points still to spend) is 100 or more and can all be spent, the count of rolls showing
+// while they roll, for two seconds after and fading over one.
+func TestShiftRRollsTo100(t *testing.T) {
+	for method := range 3 {
+		v := newViewer(t)
+		v.OpenFrontend()
+		f := v.Front
+		clickButton(t, v, "create")
+		clickButton(t, v, "ok")
+		typeText(v, "Ash")
+		pressKey(v, KeyEnter)
+		clickButton(t, v, fmt.Sprintf("method.%d", method))
+		idle := Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: image.Pt(-1, -1)}
+		// R alone rolls once.
+		pressKey(v, "R")
+		if f.rolling || f.Rolls != 0 || f.RollsShown != 0 {
+			t.Fatalf("method %d, R alone: rolling %v, %d rolls shown at %v", method, f.rolling, f.Rolls, f.RollsShown)
+		}
+		v.Update(Input{Held: map[Key]bool{KeyShift: true}, Pressed: map[Key]bool{"R": true}, Cursor: image.Pt(-1, -1)})
+		updates := 1
+		for f.rolling {
+			if f.RollsShown != 1 || f.Rolls != updates*rollsPerUpdate {
+				t.Fatalf("method %d, rolling: %d rolls after %d updates, shown at %v", method, f.Rolls, updates, f.RollsShown)
+			}
+			v.Update(idle)
+			if updates++; updates > 10000 {
+				t.Fatalf("method %d never reached 100", method)
+			}
+		}
+		if total := f.total(); total < rollTarget || total > 6*20 || f.Rolls == 0 || f.RollsShown != 1 {
+			t.Fatalf("method %d, done: total %d after %d rolls, shown at %v", method, total, f.Rolls, f.RollsShown)
+		}
+		for range rollsHold {
+			v.Update(idle)
+		}
+		if f.RollsShown != 1 {
+			t.Errorf("method %d faded before two seconds: %v", method, f.RollsShown)
+		}
+		for range rollsFade / 2 {
+			v.Update(idle)
+		}
+		if f.RollsShown <= 0 || f.RollsShown >= 1 {
+			t.Errorf("method %d, half way through the fade: %v", method, f.RollsShown)
+		}
+		for range rollsFade / 2 {
+			v.Update(idle)
+		}
+		if f.RollsShown != 0 {
+			t.Errorf("method %d still shown after the fade: %v", method, f.RollsShown)
+		}
 	}
 }

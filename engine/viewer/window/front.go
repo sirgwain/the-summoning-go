@@ -1,6 +1,7 @@
 package window
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"strconv"
@@ -8,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/font"
 	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
@@ -74,15 +76,15 @@ func (s *Window) drawFront(screen *ebiten.Image) {
 			lettered = true
 		}
 	}
-	s.drawMenuPanel(screen, f, lettered)
+	panel := s.drawMenuPanel(screen, f, lettered)
 	center := func(text string, y int) {
-		s.print(screen, text, (f.Size.X-len(text)*viewer.CharWidth)/2, y)
+		s.printFace(screen, font.Large, text, (f.Size.X-font.Large.Measure(text))/2, y, 1, color.White)
 	}
 	if !lettered {
 		center(f.Title, f.TitleAt())
 	}
 	for i, l := range f.Lines {
-		center(l, f.LinesAt()+i*viewer.LineHeight)
+		center(l, f.LinesAt()+i*viewer.MenuLineHeight)
 	}
 	if f.Portrait != nil {
 		if b := s.v.Pack.Sprites[f.Portrait.Sprite]; b != nil {
@@ -96,9 +98,17 @@ func (s *Window) drawFront(screen *ebiten.Image) {
 	}
 	cursor := image.Pt(ebiten.CursorPosition())
 	for i, b := range f.Buttons {
-		drawPlaque(screen, b.Rect, i == f.Choice, cursor.In(b.Rect), menuScale(f))
-		r := b.Rect
-		s.print(screen, b.Label, r.Min.X+(r.Dx()-len(b.Label)*viewer.CharWidth)/2, r.Min.Y+2)
+		r, w := b.Rect, font.Large.Measure(b.Label)
+		// The sapphires go only where there is room beside the label.
+		gems := (r.Dx()-w)/2 >= r.Dy()
+		drawPlaque(screen, r, i == f.Choice, cursor.In(r), gems, menuScale(f))
+		s.printFace(screen, font.Large, b.Label, r.Min.X+(r.Dx()-w)/2, r.Min.Y+2, 1, color.White)
+	}
+	if f.RollsShown > 0 && !panel.Empty() {
+		text := fmt.Sprintf("Rolls: %d", f.Rolls)
+		a := f.RollsShown
+		c := color.RGBA{uint8(200 * a), uint8(220 * a), uint8(255 * a), uint8(255 * a)}
+		s.printFace(screen, font.Large, text, (f.Size.X-font.Large.Measure(text))/2, panel.Max.Y+viewer.MenuLineHeight/2, 1, c)
 	}
 	s.drawNotice(screen)
 }
@@ -107,8 +117,8 @@ func (s *Window) drawFront(screen *ebiten.Image) {
 func menuScale(f *viewer.Frontend) int { return max(1, min(4, f.Size.X/600)) }
 
 // drawMenuPanel draws the iron frame round what a menu shows: its title (unless the splash
-// letters it), lines, portrait and buttons.
-func (s *Window) drawMenuPanel(screen *ebiten.Image, f *viewer.Frontend, lettered bool) {
+// letters it), lines, portrait and buttons. It returns the frame's rectangle, empty with none.
+func (s *Window) drawMenuPanel(screen *ebiten.Image, f *viewer.Frontend, lettered bool) image.Rectangle {
 	var r image.Rectangle
 	add := func(q image.Rectangle) {
 		if r.Empty() {
@@ -118,16 +128,16 @@ func (s *Window) drawMenuPanel(screen *ebiten.Image, f *viewer.Frontend, lettere
 		}
 	}
 	line := func(text string, y int) {
-		if w := len(text) * viewer.CharWidth; w > 0 {
+		if w := font.Large.Measure(text); w > 0 {
 			x := (f.Size.X - w) / 2
-			add(image.Rect(x, y, x+w, y+viewer.LineHeight))
+			add(image.Rect(x, y, x+w, y+viewer.MenuLineHeight))
 		}
 	}
 	if !lettered {
 		line(f.Title, f.TitleAt())
 	}
 	for i, l := range f.Lines {
-		line(l, f.LinesAt()+i*viewer.LineHeight)
+		line(l, f.LinesAt()+i*viewer.MenuLineHeight)
 	}
 	if f.Portrait != nil {
 		if b := s.v.Pack.Sprites[f.Portrait.Sprite]; b != nil {
@@ -139,7 +149,7 @@ func (s *Window) drawMenuPanel(screen *ebiten.Image, f *viewer.Frontend, lettere
 		add(b.Rect)
 	}
 	if r.Empty() {
-		return
+		return r
 	}
 	scale := menuScale(f)
 	outer := r.Inset(-(menuPad + frame.Width*scale))
@@ -147,11 +157,12 @@ func (s *Window) drawMenuPanel(screen *ebiten.Image, f *viewer.Frontend, lettere
 	outer.Max.X += (scale - outer.Dx()%scale) % scale
 	outer.Max.Y += (scale - outer.Dy()%scale) % scale
 	s.drawFrame(screen, frame.Iron, outer, scale, menuOpacity)
+	return outer
 }
 
-// drawPlaque draws a menu button's iron plaque in r, its edges k pixels: lit steel with a
-// sapphire at each end when chosen, lighter under the pointer.
-func drawPlaque(screen *ebiten.Image, r image.Rectangle, chosen, hovered bool, k int) {
+// drawPlaque draws a menu button's iron plaque in r, its edges k pixels: lit steel when chosen,
+// with a sapphire at each end if gems, lighter under the pointer.
+func drawPlaque(screen *ebiten.Image, r image.Rectangle, chosen, hovered, gems bool, k int) {
 	fill := func(q image.Rectangle, c color.Color) {
 		vector.FillRect(screen, float32(q.Min.X), float32(q.Min.Y), float32(q.Dx()), float32(q.Dy()), c, false)
 	}
@@ -166,7 +177,7 @@ func drawPlaque(screen *ebiten.Image, r image.Rectangle, chosen, hovered bool, k
 	fill(r, plaqueDarkColor)
 	fill(image.Rect(r.Min.X, r.Min.Y, r.Max.X-k, r.Max.Y-k), light)
 	fill(image.Rect(r.Min.X+k, r.Min.Y+k, r.Max.X-k, r.Max.Y-k), face)
-	if !chosen {
+	if !chosen || !gems {
 		return
 	}
 	// A cut sapphire at each end: light above, dark below.

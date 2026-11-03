@@ -6,6 +6,7 @@ import (
 	"image"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/sirgwain/the-summoning-go/engine/audio"
@@ -163,6 +164,10 @@ of live input, and exits when it ends. Its files are written under --out.`,
 			if screenshot != "" {
 				steps = append(steps, viewer.Step{At: int64(shotTicks), Shot: screenshot})
 			}
+			if !cmd.Flags().Changed("seed") && script == "" && screenshot == "" {
+				// Live play rolls differently each launch.
+				seed = uint64(time.Now().UnixNano())
+			}
 			v, err := viewer.New(pack, seed, level, scale, magnify, image.Pt(windowWidth, windowHeight))
 			if err != nil {
 				return err
@@ -222,7 +227,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 	viewCmd.Flags().IntSliceVar(&at, "at", nil, "center the view on this cell, as x,y")
 	viewCmd.Flags().IntSliceVar(&sel, "select", nil, "select this cell, as x,y")
 	viewCmd.Flags().BoolVar(&magnify, "magnify", false, "start with objects on the floor magnified")
-	viewCmd.Flags().Uint64Var(&seed, "seed", 1, "seed for the simulation's random choices")
+	viewCmd.Flags().Uint64Var(&seed, "seed", 1, "seed for the simulation's random choices (default: the clock in live play, 1 for a script or screenshot)")
 	viewCmd.Flags().StringVar(&script, "script", "", "run this script instead of live input, then exit")
 	viewCmd.Flags().StringVar(&out, "out", ".", "directory for a script's screenshots and dumps")
 	viewCmd.Flags().StringVar(&load, "load", "", "start from the saved game in this file, looked for in the saves directory when not found as given")

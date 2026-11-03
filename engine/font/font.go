@@ -1,7 +1,7 @@
-// Package font is the engine's own lettering: a small pixel font drawn for the project, each
+// Package font is the engine's own lettering: small pixel faces drawn for the project, each
 // letter filled light with a dark outline round it so it reads over any art (docs/design.md, UI).
-// Letters are 5 pixels wide at most, capitals 7 high with 2 below the line for descenders, on a
-// fixed advance, so text measures as len × Advance. It uses only the standard library.
+// A face's letters share one advance, so text measures as its length × the advance. It uses
+// only the standard library.
 package font
 
 import (
@@ -10,44 +10,68 @@ import (
 )
 
 const (
-	// Advance is the distance from one letter to the next; LineHeight from one line to the
-	// next.
+	// Advance is the distance from one letter of the small face to the next; LineHeight from
+	// one line to the next.
 	Advance    = 6
 	LineHeight = 16
-	// CellWidth is a letter's cell in the atlas, its outline included; a letter's first column
-	// is Left in from its cell's edge, and its cell is drawn Left before where the letter goes.
-	CellWidth = Advance + 2
-	Left      = 1
-	// top is the row of a line where capitals start.
-	top = 4
-	// first and last are the letters the atlas has; any other draws as '?'.
+	// LargeAdvance and LargeLineHeight are the large face's.
+	LargeAdvance    = 8
+	LargeLineHeight = 20
+	// Left is how far a letter's first column is in from its cell's edge: a cell is drawn Left
+	// before where the letter goes, so its outline has room.
+	Left = 1
+	// first and last are the letters a face has; any other draws as '?'.
 	first, last = ' ', '~'
 )
 
+// Face is a set of letters of one size.
+type Face struct {
+	// Advance is the distance from one letter to the next, LineHeight from one line to the next,
+	// Width the widest a letter is and Rows the most rows one has.
+	Advance, LineHeight int
+	Width, Rows         int
+	// top is the row of a line where capitals start.
+	top    int
+	glyphs map[rune]glyph
+}
+
+var (
+	// Small is the face of the play UI: letters at most 5 wide, capitals 7 high with 2 below the
+	// line.
+	Small = &Face{Advance: Advance, LineHeight: LineHeight, Width: 5, Rows: 9, top: 4, glyphs: smallGlyphs}
+	// Large is a third bigger, for the frontend: letters at most 7 wide, capitals 9 high with 3
+	// below the line.
+	Large = &Face{Advance: LargeAdvance, LineHeight: LargeLineHeight, Width: 7, Rows: 12, top: 5, glyphs: largeGlyphs}
+)
+
+// CellWidth is a letter's cell in the atlas, its outline included.
+func (f *Face) CellWidth() int { return f.Advance + 2 }
+
 // Atlas returns every letter, first to last, a cell each in one row: white with the gentlest
 // shading downward, for drawing tinted, inside a dark outline.
-func Atlas() *image.RGBA {
+func (f *Face) Atlas() *image.RGBA {
 	n := int(last - first + 1)
-	img := image.NewRGBA(image.Rect(0, 0, n*CellWidth, LineHeight))
+	img := image.NewRGBA(image.Rect(0, 0, n*f.CellWidth(), f.LineHeight))
 	lit := map[image.Point]bool{}
 	for r := first; r <= last; r++ {
-		g := glyphs[r]
-		x0 := int(r-first)*CellWidth + Left
+		g := f.glyphs[r]
+		x0 := int(r-first)*f.CellWidth() + Left
 		for row, line := range g.rows {
 			for col, ch := range line {
 				if ch == '#' {
-					lit[image.Pt(x0+col, top+g.at+row)] = true
+					lit[image.Pt(x0+col, f.top+g.at+row)] = true
 				}
 			}
 		}
 	}
+	// Brightest at the capitals' top, a little greyer toward the foot of the descenders.
+	shade := 48 / f.Rows
 	for p := range lit {
-		// Brightest at the capitals' top, a little greyer toward the line.
-		k := uint8(255 - 6*max(0, p.Y-top))
+		k := uint8(255 - shade*max(0, p.Y-f.top))
 		img.SetRGBA(p.X, p.Y, color.RGBA{k, k, k, 255})
 	}
 	outline := color.RGBA{8, 9, 14, 255}
-	for y := range LineHeight {
+	for y := range f.LineHeight {
 		for x := range img.Rect.Dx() {
 			if lit[image.Pt(x, y)] {
 				continue
@@ -65,16 +89,16 @@ func Atlas() *image.RGBA {
 }
 
 // Cell is letter r's cell in the atlas.
-func Cell(r rune) image.Rectangle {
+func (f *Face) Cell(r rune) image.Rectangle {
 	if r < first || r > last {
 		r = '?'
 	}
-	x := int(r-first) * CellWidth
-	return image.Rect(x, 0, x+CellWidth, LineHeight)
+	x := int(r-first) * f.CellWidth()
+	return image.Rect(x, 0, x+f.CellWidth(), f.LineHeight)
 }
 
-// Width is how wide text is.
-func Width(text string) int { return len([]rune(text)) * Advance }
+// Measure is how wide text is in the face.
+func (f *Face) Measure(text string) int { return len([]rune(text)) * f.Advance }
 
 // glyph is a letter: its rows, the first at row at from the capitals' top.
 type glyph struct {
@@ -84,7 +108,7 @@ type glyph struct {
 
 func g(at int, rows ...string) glyph { return glyph{at, rows} }
 
-var glyphs = map[rune]glyph{
+var smallGlyphs = map[rune]glyph{
 	' ':  g(0),
 	'!':  g(0, "..#..", "..#..", "..#..", "..#..", "..#..", ".....", "..#.."),
 	'"':  g(0, ".#.#.", ".#.#."),

@@ -15,6 +15,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/font"
 	"github.com/sirgwain/the-summoning-go/engine/render"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
@@ -33,8 +34,8 @@ type Window struct {
 	version int
 	buffer  *ebiten.Image
 	splash  *ebiten.Image
-	// font is the engine's lettering.
-	font *ebiten.Image
+	// fonts are the faces' letters, made when first drawn.
+	fonts map[*font.Face]*ebiten.Image
 	// backdrop is how bright the splash artwork shows behind the frontend now.
 	backdrop float32
 	keys     map[viewer.Key]ebiten.Key
@@ -71,6 +72,7 @@ func New(v *viewer.Viewer) (*Window, error) {
 		v: v, sprites: render.NewSprites(v.Pack), presenter: pr, glow: glow, tr: tr,
 		palette: v.Pack.Palettes[v.Pack.Manifest.Palette], keys: map[viewer.Key]ebiten.Key{},
 		art: map[image.Point]*ebiten.Image{}, frames: map[frameKey]*framePics{},
+		fonts: map[*font.Face]*ebiten.Image{},
 	}
 	s.view = render.NewLevelView(s.sprites)
 	names := map[string]ebiten.Key{}

@@ -234,7 +234,7 @@ The game starts at a main menu: create a character, restore a game, or select a 
    - **Spent**: every attribute starts at 0, with 28d5 points to spend.
    - **Rolled and spent**: each attribute 2d5, with 14d5 points to spend.
 
-   Spent points raise an attribute up to 20, and can be taken back down to its starting value; the character is kept only when every point is spent. Hit points `STR + END + 20` and magic points `TAL + POW + 20` show as the attributes change.
+   Spent points raise an attribute up to 20, and can be taken back down to its starting value; the character is kept only when every point is spent. Hit points `STR + END + 20` and magic points `TAL + POW + 20` show as the attributes change. **Engine model.** Each attribute has − and + buttons, and Left and Right move the chosen one by a point. With Shift held, a click on − or +, or Left or Right, moves it by 10 at once, or as far as its starting value, the maximum and the points left allow. R rolls the attributes, and any points to spend, again; Shift and R rolls again and again, 100 rolls an update, until the total (the attributes and the points still to spend) is 100 or more and can all be spent (at most 6 × the maximum), or once when the method's dice and maximum cannot reach that. A count of the rolls shows under the attributes while they roll and for two seconds after, then fades over one. Leaving the screen stops the rolling.
 4. **The training**: a weapon class (0 sword, 1 axe, 2 spear, 3 bow) and a magic school.
 
 **A premade character** comes from F's premade records: its name, portrait, attributes, school and weapon class.

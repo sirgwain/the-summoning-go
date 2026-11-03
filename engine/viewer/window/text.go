@@ -7,33 +7,35 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/font"
 )
 
-// letters returns the engine's lettering as an image, made once.
-func (s *Window) letters() *ebiten.Image {
-	if s.font == nil {
-		s.font = ebiten.NewImageFromImage(font.Atlas())
+// letters returns face's letters as an image, made once.
+func (s *Window) letters(face *font.Face) *ebiten.Image {
+	img, ok := s.fonts[face]
+	if !ok {
+		img = ebiten.NewImageFromImage(face.Atlas())
+		s.fonts[face] = img
 	}
-	return s.font
+	return img
 }
 
-// print draws text on dst with its first line's top left at (x, y), in white; a newline starts
-// a line below.
+// print draws text on dst in the small face with its first line's top left at (x, y), in
+// white; a newline starts a line below.
 func (s *Window) print(dst *ebiten.Image, text string, x, y int) {
-	s.printScaled(dst, text, x, y, 1, color.White)
+	s.printFace(dst, font.Small, text, x, y, 1, color.White)
 }
 
 // printIn draws text as print does, in color c.
 func (s *Window) printIn(dst *ebiten.Image, text string, x, y int, c color.Color) {
-	s.printScaled(dst, text, x, y, 1, c)
+	s.printFace(dst, font.Small, text, x, y, 1, c)
 }
 
-// printScaled draws text as printIn does, each pixel of the lettering scale pixels square.
-func (s *Window) printScaled(dst *ebiten.Image, text string, x, y, scale int, c color.Color) {
-	atlas := s.letters()
+// printFace draws text in face and color c, each pixel of the lettering scale pixels square.
+func (s *Window) printFace(dst *ebiten.Image, face *font.Face, text string, x, y, scale int, c color.Color) {
+	atlas := s.letters(face)
 	op := &ebiten.DrawImageOptions{}
 	cx, cy := x, y
 	for _, r := range text {
 		if r == '\n' {
-			cx, cy = x, cy+font.LineHeight*scale
+			cx, cy = x, cy+face.LineHeight*scale
 			continue
 		}
 		if r != ' ' {
@@ -42,8 +44,8 @@ func (s *Window) printScaled(dst *ebiten.Image, text string, x, y, scale int, c 
 			op.GeoM.Translate(float64(cx-font.Left*scale), float64(cy))
 			op.ColorScale.Reset()
 			op.ColorScale.ScaleWithColor(c)
-			dst.DrawImage(atlas.SubImage(font.Cell(r)).(*ebiten.Image), op)
+			dst.DrawImage(atlas.SubImage(face.Cell(r)).(*ebiten.Image), op)
 		}
-		cx += font.Advance * scale
+		cx += face.Advance * scale
 	}
 }

@@ -100,7 +100,9 @@ func (w *World) Update(cmds []input.Command) []Event // one fixed step
 - **Fixed timestep** at 60 Hz. Durations in content are in milliseconds or ticks, never frames of
   the renderer.
 - **Seeded RNG** owned by the world. That makes replays, tests and bug reports reproducible. Exact
-  reproduction across versions is not promised.
+  reproduction across versions is not promised. Live play takes its seed from the clock, so each
+  launch rolls differently; a given `--seed`, a script and a screenshot run use a fixed one (1
+  unless given).
 - **Plain-data state.** Records refer to each other by ID, so a save is the state encoded, and the
   editor can inspect anything.
 - **Events** tell the presentation what to do: play a sound, show a message, start an effect, open a
@@ -283,8 +285,9 @@ The file formats are in [pack.md](pack.md).
   the frame, and the panels and the view keep clear of it and take the pointer over it.
   - _Iron and sapphire_ frames the hotbar, the inventory panel and the frontend's menus:
     blue-black brushed iron with a bevel and evenly spaced rivets, a faceted sapphire at each
-    corner. A menu's buttons are iron plaques; the chosen one is lit steel with a sapphire
-    marker, and the one under the pointer is lighter.
+    corner. A menu's buttons are iron plaques; the chosen one is lit steel with a blue edge,
+    and a sapphire at each end where the label leaves room, and the one under the pointer is
+    lighter.
   - _Runic slate_ frames the spell panel: dark layered slate cut with small runes and a ring at
     each corner, lit blue. The light breathes, in three groups of runes out of step, a cycle of
     about four seconds.
@@ -293,7 +296,9 @@ The file formats are in [pack.md](pack.md).
   7 high with 2 below the line, filled light with a dark outline so they read over any art, on a
   fixed advance of 6 and lines 16 apart. It covers printable ASCII; any other letter shows as
   `?`. It is drawn from an atlas at whole scales only, tinted for color, so it stays crisp. A
-  pack supplying its own font is for later.
+  larger face of the same letters, a third bigger (at most 7 wide, capitals 9 high with 3 below
+  the line, an advance of 8 and lines 20 apart), letters the frontend's menus and screens, which
+  are laid out by its measure. A pack supplying its own font is for later.
 - **Hotbar.** A bar along the bottom of the play view, always shown: the player's portrait, gauges
   for hit points, magic points and load, the two hands with their action buttons, the twenty
   shelves in two rows of ten, and later the memorized spells. It is how the mouse plays: clicking

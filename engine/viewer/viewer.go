@@ -31,7 +31,10 @@ const (
 	// lettering's.
 	CharWidth  = font.Advance
 	LineHeight = font.LineHeight
-	Margin     = 8
+	// MenuCharWidth and MenuLineHeight are the frontend's: the large face's.
+	MenuCharWidth  = font.LargeAdvance
+	MenuLineHeight = font.LargeLineHeight
+	Margin         = 8
 )
 
 // Viewer is the viewer's state: the world it runs, the camera, the selection and the tools, and
