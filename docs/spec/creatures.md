@@ -121,7 +121,7 @@ Each NPC record `n` becomes a thing template `thing.npc.n` of kind creature:
 - **Hit points**: `(byte 3)d10 + 4 × byte 2`.
 - **Facing**: for walkers, direction table entry `2 × byte 6`; for stationary casters, 2.
 - **Behaviors**: `hostile` (0100h), `never_hostile` (0004h or 1000h), `leaves_corpse` (0010h), `resists_teleport` (0200h), `invulnerable` (1000h), `talks` (0008h).
-- **Conversation**: `conversation.n` for script `n` of byte 0 when the record talks; **talk portrait** `portrait.p` for byte 1. Portraits past F's rows are the people banks `people base + p`, imported as portraits with only an image.
+- **Conversation**: `conversation.n` for script `n` of byte 0 when the record talks; **talk portrait** `portrait.p` for byte 1, also only when it talks (the others hold 0 in both bytes). Portraits past F's rows are the people banks `people base + p`, imported as portraits with only an image.
 - **Spell**: the spell of byte 12 (spells.md), when it is one.
 - **Stats**: `resistance` (byte 4), `bonus` (byte 5), `accuracy` (byte 10).
 - **Animations**, the template's own (the sprite is shared by records that start on different frames), named by engine direction `e = 2d` for a creature direction `d`:

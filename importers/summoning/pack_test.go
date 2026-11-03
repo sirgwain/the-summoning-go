@@ -706,8 +706,9 @@ func TestSharedChargesImport(t *testing.T) {
 	}
 }
 
-// TestImportConversationOnlyWhenTalks imports NPC record 0, whose script byte is 0, with INTERACT
-// holding script 0: the hostile record holds no conversation, and once it talks it holds script 0's.
+// TestImportConversationOnlyWhenTalks imports NPC record 0, whose script and portrait bytes are 0,
+// with INTERACT holding script 0: the hostile record holds no conversation and no portrait, and
+// once it talks it holds script 0's.
 func TestImportConversationOnlyWhenTalks(t *testing.T) {
 	for _, talks := range []bool{false, true} {
 		src := importFixture()
@@ -730,6 +731,9 @@ func TestImportConversationOnlyWhenTalks(t *testing.T) {
 		}
 		if got := p.Things["thing.npc.0"].Conversation; got != want {
 			t.Errorf("talks %v: conversation %q, want %q", talks, got, want)
+		}
+		if got := p.Things["thing.npc.0"].TalkPortrait; !talks && got != "" {
+			t.Errorf("a record that does not talk has portrait %q", got)
 		}
 	}
 }
