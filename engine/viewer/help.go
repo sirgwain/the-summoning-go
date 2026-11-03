@@ -60,6 +60,7 @@ var ToolBindings = []Binding{
 	{"X", "take object"},
 	{"Space", "pause"},
 	{"N", "step"},
+	{"J", "the full book"},
 }
 
 // CommonBindings are what the keys do in play and with the tools alike (Update).

@@ -48,6 +48,9 @@ func (s *Window) drawBook(screen *ebiten.Image) {
 		button(t, bg)
 	}
 	button(bv.Close, actionColor)
+	if bv.Full {
+		button(bv.Toggle, actionColor)
+	}
 	ebitenutil.DebugPrintAt(win, "Find:", bv.Field.Min.X-6*viewer.CharWidth, bv.Field.Min.Y+2)
 	fill(bv.Field, slotColor)
 	edge(bv.Field, keywordColor)
@@ -58,10 +61,16 @@ func (s *Window) drawBook(screen *ebiten.Image) {
 	ebitenutil.DebugPrintAt(win, viewer.Clip(bv.Typed+cursor, (bv.Field.Dx()-8)/viewer.CharWidth), bv.Field.Min.X+4, bv.Field.Min.Y+2)
 	for i, r := range bv.Rows {
 		bg := slotColor
-		if i == bv.Selected {
+		switch {
+		case i == bv.Selected:
 			bg = talkSelectedColor
+		case r.InLevel:
+			bg = bookLevelColor
 		}
 		fill(r.Rect, bg)
+		if r.InLevel {
+			fill(image.Rect(r.Rect.Max.X-3, r.Rect.Min.Y, r.Rect.Max.X, r.Rect.Max.Y), openEdgeColor)
+		}
 	}
 
 	// The pictures, drawn in the palette's colors.

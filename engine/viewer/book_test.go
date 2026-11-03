@@ -201,3 +201,77 @@ func TestBookFilter(t *testing.T) {
 		t.Error("a second Escape did not close the book")
 	}
 }
+
+// TestFullBook opens the tools' full book in the cellar: it lists the cellar's creatures alone,
+// at their last stage with their records and where they stand, until Tab lists the whole pack's,
+// those not in the cellar unmarked; and it finds the key the brute carries.
+func TestFullBook(t *testing.T) {
+	v, err := New(devpack.Build(), 1, devpack.Cellar, 2, false, image.Pt(1280, 800))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pressKey(v, "J")
+	bv := v.Book()
+	if bv == nil || !bv.Full || bv.All {
+		t.Fatalf("J did not open the full book: %+v", bv)
+	}
+	here := map[string]bool{}
+	for _, th := range v.World.Current().Things {
+		if th.Template.Kind == content.ThingCreature {
+			here[th.Template.ID] = true
+		}
+	}
+	if bv.Count != len(here) || !slices.ContainsFunc(bv.Rows, func(r BookRow) bool { return r.Label == "Brute" }) {
+		t.Fatalf("the cellar's creatures: %d of %d, rows %+v", bv.Count, len(here), bv.Rows)
+	}
+	for _, r := range bv.Rows {
+		if !r.InLevel {
+			t.Errorf("row %q is listed for the cellar but not marked", r.Label)
+		}
+	}
+	typeText(v, "brute")
+	text := strings.Join(bookText(v.Book()), "|")
+	// The brute stands in sight at the start, so it is seen; the full book shows past fighting it.
+	for _, want := range []string{"First seen: ", "Strikes for", "Hit points:", "On " + devpack.Cellar + ":",
+		"brute at (", "Record " + devpack.ThingBrute + ":", `sprite: "sprite.brute"`} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the brute's pane lacks %q: %q", want, text)
+		}
+	}
+	if strings.Contains(text, hintFight) {
+		t.Errorf("the full book hints: %q", text)
+	}
+	pressKey(v, KeyEscape)
+
+	pressKey(v, KeyTab)
+	bv = v.Book()
+	creatures := 0
+	for _, th := range v.Pack.Things {
+		if th.Kind == content.ThingCreature {
+			creatures++
+		}
+	}
+	if !bv.All || bv.Count != creatures || bv.Toggle.Label != "All" {
+		t.Fatalf("Tab: all %v, %d of %d creatures", bv.All, bv.Count, creatures)
+	}
+	if creatures > len(here) && !slices.ContainsFunc(bv.Rows, func(r BookRow) bool { return !r.InLevel }) {
+		t.Errorf("no creature is unmarked among all: %+v", bv.Rows)
+	}
+	// The ghost haunts another level: the player has not come across it.
+	typeText(v, v.logName(devpack.ThingGhost))
+	if text := strings.Join(bookText(v.Book()), "|"); !strings.Contains(text, "Not come across yet.") || strings.Contains(text, "On "+devpack.Cellar) {
+		t.Errorf("the ghost's pane: %q", text)
+	}
+	pressKey(v, KeyEscape)
+
+	pressKey(v, KeyArrowRight)
+	typeText(v, inspect.ItemName(v.Pack, devpack.ItemKey))
+	if text := strings.Join(bookText(v.Book()), "|"); !strings.Contains(text, "carried by brute") {
+		t.Errorf("the key's pane lacks the brute: %q", text)
+	}
+	pressKey(v, KeyEscape)
+	pressKey(v, KeyEscape)
+	if v.BookOpen || v.BookFull {
+		t.Error("Escape did not close the full book")
+	}
+}

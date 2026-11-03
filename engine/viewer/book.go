@@ -32,6 +32,7 @@ const (
 	bookWinTab       = 120
 	bookWinButton    = 60
 	bookWinField     = 220
+	bookWinToggle    = 90
 )
 
 // Hints for what the next stage would show.
@@ -49,12 +50,16 @@ type BookView struct {
 	Rect  image.Rectangle
 	Scale int
 	// Tabs are the Creatures and Items tabs, Tab the one open; Field is the filter field and
-	// Typed what is typed in it; Close the button that closes.
-	Tabs  [2]PanelButton
-	Tab   int
-	Field image.Rectangle
-	Typed string
-	Close PanelButton
+	// Typed what is typed in it; Close the button that closes. Full is the tools' full book, whose
+	// Toggle switches between the current level's entries and all of them, as All tells.
+	Tabs   [2]PanelButton
+	Tab    int
+	Field  image.Rectangle
+	Typed  string
+	Close  PanelButton
+	Full   bool
+	All    bool
+	Toggle PanelButton
 	// Rows are the entries that show down the left; First is the index of the first among them
 	// all, Count how many the tab has, and Selected the chosen row among those shown, -1 for
 	// none.
@@ -73,12 +78,14 @@ type BookView struct {
 	Empty string
 }
 
-// BookRow is an entry down the left: its name, beside its icon for an item.
+// BookRow is an entry down the left: its name, beside its icon for an item. InLevel marks, in
+// the full book, an entry on the current level.
 type BookRow struct {
 	Rect    image.Rectangle
 	Label   string
 	Icon    content.Image
 	HasIcon bool
+	InLevel bool
 }
 
 // BookLine is a line of the pane: the entry's name as a heading, a line of what is known, or the
@@ -89,9 +96,11 @@ type BookLine struct {
 	Hint    bool
 }
 
-// bookEntry is an entry of a tab: its template and the name it is listed by.
+// bookEntry is an entry of a tab: its template and the name it is listed by, and in the full
+// book whether it is on the current level.
 type bookEntry struct {
 	id, name string
+	inLevel  bool
 }
 
 // OpenBook opens the book, when playing, on the tab and entry last chosen.
@@ -99,11 +108,11 @@ func (v *Viewer) OpenBook() {
 	if !v.Play || v.World.Player() == nil {
 		return
 	}
-	v.BookOpen, v.BookTyped, v.SpellsOpen = true, "", false
+	v.BookOpen, v.BookFull, v.BookTyped, v.SpellsOpen = true, false, "", false
 }
 
 // CloseBook closes the book.
-func (v *Viewer) CloseBook() { v.BookOpen, v.BookTyped = false, "" }
+func (v *Viewer) CloseBook() { v.BookOpen, v.BookFull, v.BookTyped = false, false, "" }
 
 // bookEntries returns tab's entries whose names hold the filter typed, ignoring case, by name.
 func (v *Viewer) bookEntries(tab int) []bookEntry {
@@ -115,7 +124,13 @@ func (v *Viewer) bookEntries(tab int) []bookEntry {
 			out = append(out, bookEntry{id: id, name: name})
 		}
 	}
-	if tab == BookCreatures {
+	if v.BookFull {
+		for _, e := range v.fullBookEntries(tab) {
+			if filter == "" || strings.Contains(strings.ToLower(e.name), filter) || strings.Contains(e.id, filter) {
+				out = append(out, e)
+			}
+		}
+	} else if tab == BookCreatures {
 		for id := range b.Creatures {
 			add(id, v.logName(id))
 		}
@@ -184,8 +199,12 @@ func (v *Viewer) spellName(id string) string {
 	return id
 }
 
-// firstSeen says where and when entry e was first come across.
+// firstSeen says where and when entry e was first come across; the full book's entries the
+// player has not come across have no level.
 func (v *Viewer) firstSeen(e *sim.Entry) string {
+	if e.Level == "" {
+		return "Not come across yet."
+	}
 	return "First seen: " + v.levelName(e.Level) + ", " + LogTime(e.Step)
 }
 
@@ -395,7 +414,7 @@ func (v *Viewer) Book() *BookView {
 		bottom = h.Rect.Min.Y - Margin
 	}
 	avail := max(bottom-2*Margin, 1)
-	bv := &BookView{Tab: v.bookView.tab, Typed: v.BookTyped, Selected: -1}
+	bv := &BookView{Tab: v.bookView.tab, Typed: v.BookTyped, Selected: -1, Full: v.BookFull, All: v.BookAll}
 	bv.Scale = max(1, min(talkScale, (v.Screen.X-2*Margin)/bookWinWidth, avail/bookWinMinHeight))
 	size := image.Pt(bookWinWidth, max(bookWinMinHeight, avail/bv.Scale))
 	corner := image.Pt((v.Screen.X-size.X*bv.Scale)/2, max(Margin, (bottom-size.Y*bv.Scale)/2))
@@ -409,8 +428,17 @@ func (v *Viewer) Book() *BookView {
 			Label: fmt.Sprintf("%s (%d)", name, len(tabs[i]))}
 	}
 	bv.Close = PanelButton{Rect: image.Rect(size.X-bookWinPad-bookWinButton, bookWinPad, size.X-bookWinPad, bookWinPad+LineHeight+4), Name: "close", Label: "Close"}
+	fieldEnd := bv.Close.Rect.Min.X - bookWinPad
+	if bv.Full {
+		label := "This level"
+		if bv.All {
+			label = "All"
+		}
+		bv.Toggle = PanelButton{Rect: image.Rect(fieldEnd-bookWinToggle, bookWinPad, fieldEnd, bookWinPad+LineHeight+4), Name: "toggle", Label: label}
+		fieldEnd = bv.Toggle.Rect.Min.X - bookWinPad
+	}
 	fx := bv.Tabs[1].Rect.Max.X + bookWinPad + 6*CharWidth
-	bv.Field = image.Rect(fx, bookWinPad, min(fx+bookWinField, bv.Close.Rect.Min.X-bookWinPad), bookWinPad+LineHeight+4)
+	bv.Field = image.Rect(fx, bookWinPad, min(fx+bookWinField, fieldEnd), bookWinPad+LineHeight+4)
 	top := bv.Tabs[0].Rect.Max.Y + bookWinPad
 	body := image.Rect(bookWinPad, top, size.X-bookWinPad, size.Y-bookWinPad)
 	bv.Pane = image.Rect(body.Min.X+bookWinColumn+bookWinPad, body.Min.Y, body.Max.X, body.Max.Y)
@@ -421,6 +449,8 @@ func (v *Viewer) Book() *BookView {
 		switch {
 		case v.BookTyped != "":
 			bv.Empty = "Nothing matches."
+		case bv.Full:
+			bv.Empty = "None on this level. Tab shows all."
 		case bv.Tab == BookCreatures:
 			bv.Empty = "No creatures found yet."
 		default:
@@ -440,7 +470,7 @@ func (v *Viewer) Book() *BookView {
 	bv.First = first
 	for i := first; i < len(entries) && i-first < fits; i++ {
 		y := body.Min.Y + (i-first)*bookWinRow
-		r := BookRow{Rect: image.Rect(body.Min.X, y, body.Min.X+bookWinColumn, y+bookWinRow-2)}
+		r := BookRow{Rect: image.Rect(body.Min.X, y, body.Min.X+bookWinColumn, y+bookWinRow-2), InLevel: entries[i].inLevel}
 		room := bookWinColumn - 8
 		if bv.Tab == BookItems {
 			if it := v.Pack.Items[entries[i].id]; it != nil {
@@ -461,12 +491,25 @@ func (v *Viewer) Book() *BookView {
 		if t := v.Pack.Things[id]; t != nil {
 			bv.Picture, bv.HasPicture = v.bookPicture(t), true
 		}
-		lines, hint = v.CreatureLines(id, b.Creatures[id])
+		if bv.Full {
+			lines = v.fullBookLines(bv.Tab, id)
+		} else {
+			lines, hint = v.CreatureLines(id, b.Creatures[id])
+		}
 	} else {
 		if it := v.Pack.Items[id]; it != nil {
 			bv.Picture, bv.HasPicture = it.Icon, true
 		}
-		lines, hint = v.ItemLines(id, b.Items[id])
+		if bv.Full {
+			lines = v.fullBookLines(bv.Tab, id)
+		} else {
+			lines, hint = v.ItemLines(id, b.Items[id])
+		}
+	}
+	if bv.Full {
+		// The full book's pane scrolls by lines, keeping at least the last one.
+		v.bookView.scroll = max(0, min(v.bookView.scroll, len(lines)-1))
+		lines = lines[v.bookView.scroll:]
 	}
 	bv.PictureAt = bv.Pane.Min
 	y := bv.Pane.Min.Y
@@ -484,8 +527,10 @@ func (v *Viewer) Book() *BookView {
 			bv.Lines = append(bv.Lines, BookLine{Words: words, Heading: heading, Hint: hint})
 		}
 	}
-	add(entries[chosen].name, true, false)
-	y += LineHeight / 2
+	if !bv.Full || v.bookView.scroll == 0 {
+		add(entries[chosen].name, true, false)
+		y += LineHeight / 2
+	}
 	for _, l := range lines {
 		add(l, false, false)
 	}
@@ -506,13 +551,17 @@ func (v *Viewer) bookChoose(i int) {
 		return
 	}
 	i = max(0, min(len(entries)-1, i))
+	if v.bookView.chosen[v.bookView.tab] != entries[i].id {
+		v.bookView.scroll = 0
+	}
 	v.bookView.chosen[v.bookView.tab] = entries[i].id
 }
 
 // bookInput takes input while the book is open. Typing filters the entries by name, Backspace
 // takes a letter off; Up, Down, the wheel or a click choose an entry, Page Up and Page Down move
 // a page; Left and Right, or a click on a tab, switch tabs. Escape clears the filter, or closes
-// the book, as a right click or Close does.
+// the book, as a right click or Close does. In the full book, Tab or the toggle switches between
+// the current level's entries and all, and the wheel over the pane scrolls it.
 func (v *Viewer) bookInput(in Input) {
 	bv := v.Book()
 	if bv == nil {
@@ -541,10 +590,21 @@ func (v *Viewer) bookInput(in Input) {
 		v.bookView.first = 0
 		return
 	}
+	if bv.Full {
+		switch {
+		case in.pressed(KeyTab) || in.Left.Released && cursor.In(bv.Toggle.Rect):
+			v.BookAll = !v.BookAll
+			v.bookView.first, v.bookView.scroll = 0, 0
+			return
+		case in.Wheel != 0 && cursor.In(bv.Pane):
+			v.bookView.scroll = max(0, v.bookView.scroll-int(in.Wheel)*3)
+			return
+		}
+	}
 	if in.Left.Released {
 		for i, t := range bv.Tabs {
 			if cursor.In(t.Rect) {
-				v.bookView.tab = i
+				v.bookView.tab, v.bookView.scroll = i, 0
 				return
 			}
 		}
@@ -559,9 +619,9 @@ func (v *Viewer) bookInput(in Input) {
 	page := max(1, len(bv.Rows)-1)
 	switch {
 	case in.pressed(KeyArrowLeft):
-		v.bookView.tab = BookCreatures
+		v.bookView.tab, v.bookView.scroll = BookCreatures, 0
 	case in.pressed(KeyArrowRight):
-		v.bookView.tab = BookItems
+		v.bookView.tab, v.bookView.scroll = BookItems, 0
 	case in.pressed(KeyArrowUp):
 		v.bookChoose(chosen - 1)
 	case in.pressed(KeyArrowDown):

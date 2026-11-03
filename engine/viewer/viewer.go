@@ -152,12 +152,18 @@ type Viewer struct {
 	}
 	// BookOpen shows the book (book.go) and BookTyped is the filter typed in it; bookView is the tab open, the entry chosen on each tab,
 	// and the first entry its list shows.
+	// BookFull makes it the tools' full book (fullbook.go), and BookAll lists the whole pack in
+	// it rather than the current level's; bookView's scroll is how many lines the full book's pane
+	// is scrolled.
 	BookOpen  bool
 	BookTyped string
+	BookFull  bool
+	BookAll   bool
 	bookView  struct {
 		tab    int
 		chosen [2]string
 		first  int
+		scroll int
 	}
 	// Showing is the view effect or sparkle playing, nil when none is; shows are the effect and
 	// sparkle events waiting their turn (showing.go). Flipbooks are the pack's flipbooks and
@@ -384,6 +390,8 @@ func (v *Viewer) Update(in Input) {
 	case in.pressed("M") && !v.Play:
 		v.Magnify = !v.Magnify
 		v.rebuild()
+	case in.pressed("J") && !v.Play:
+		v.OpenFullBook()
 	case in.pressed(KeyF12):
 		v.SetPlay(!v.Play)
 	case in.pressed(KeyBackquote):

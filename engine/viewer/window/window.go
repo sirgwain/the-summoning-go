@@ -238,6 +238,7 @@ var (
 	overloadColor  = color.RGBA{255, 80, 0, 255}
 	spellEdgeColor = color.RGBA{120, 140, 220, 255}
 	talkColor      = color.RGBA{16, 12, 10, 235}
+	bookLevelColor = color.RGBA{30, 70, 40, 235}
 	keywordColor   = color.RGBA{230, 200, 90, 255}
 	// talkSelectedColor fills the highlighted keyword button.
 	talkSelectedColor = color.RGBA{150, 105, 40, 245}
