@@ -632,7 +632,7 @@ the engine draws, so a pack chooses its look without art:
     "exit_wall":  { "style": "slide", "from": "right", "ms": 350 },
     "fall":       { "style": "squeeze", "from": "bottom", "ms": 300, "steps": 5 }
   },
-  "item_lost": { "style": "shatter", "ms": 600, "inventory": true } }
+  "item_lost": { "style": "shatter", "ms": 1200, "inventory": true } }
 ```
 
 - The transition cues are what moved the player: `teleporter`, `ripple` (to a rune mark),
