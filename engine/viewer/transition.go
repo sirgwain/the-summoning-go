@@ -224,8 +224,17 @@ func (v *Viewer) loseItems(events []sim.Event) {
 		}
 		if it := v.Pack.Items[e.Item]; it != nil {
 			v.lost = append(v.lost, lostItem{image: it.IconFor(0), slot: e.Slot, at: v.Ticks})
+			if v.Pack.Lost().Inventory && !v.InventoryOpen {
+				v.InventoryOpen, v.lostOpened = true, true
+			}
 		}
 	}
+}
+
+// lostHolds reports whether a lost object going on the inventory panel holds the world.
+func (v *Viewer) lostHolds() bool {
+	def := v.Pack.Lost()
+	return def != nil && def.Inventory && len(v.lost) > 0
 }
 
 // lostAge is how far lost object l has gone, 0 to 1 and beyond.
@@ -243,6 +252,9 @@ func (v *Viewer) dropLost() {
 		}
 	}
 	v.lost = out
+	if len(v.lost) == 0 && v.lostOpened {
+		v.InventoryOpen, v.lostOpened = false, false
+	}
 }
 
 // LostItems are the lost objects showing going: in the slot's box on the inventory panel while

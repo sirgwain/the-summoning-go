@@ -149,3 +149,55 @@ func TestLostItems(t *testing.T) {
 		t.Errorf("%d lost items still showing after their time", n)
 	}
 }
+
+// With inventory, a lost object opens the inventory panel and holds the world while it goes
+// there, and the panel closes again after.
+func TestLostOnInventory(t *testing.T) {
+	v := transitionViewer(t)
+	v.Pack.Effects.ItemLost.Inventory = true
+	item := ""
+	for id, it := range v.Pack.Items {
+		if it.Icon.Sprite != "" {
+			item = id
+			break
+		}
+	}
+	if item == "" {
+		t.Skip("the dev pack has no item with an icon")
+	}
+	v.took([]sim.Event{{Kind: sim.EventObject, Item: item, Detail: "worn_out", Slot: sim.SlotNeck}})
+	if !v.InventoryOpen || !v.Holding() {
+		t.Fatalf("inventory open %v, holding %v", v.InventoryOpen, v.Holding())
+	}
+	lost := v.LostItems()
+	ip := v.Inventory()
+	want := image.Rectangle{}
+	for _, b := range ip.Slots {
+		if b.Slot == sim.SlotNeck {
+			want = ip.Screen(b.Rect)
+		}
+	}
+	if len(lost) != 1 || lost[0].Rect != want || lost[0].Scale != ip.Scale {
+		t.Errorf("lost %+v, want the neck's box %v on the panel", lost, want)
+	}
+	step := v.World.Step()
+	for range 5 {
+		v.Update(Input{})
+	}
+	if !v.Holding() || v.World.Step() != step {
+		t.Errorf("going: holding %v, world ran %d steps", v.Holding(), v.World.Step()-step)
+	}
+	v.Update(Input{})
+	if v.InventoryOpen || v.Holding() {
+		t.Errorf("after: inventory open %v, holding %v", v.InventoryOpen, v.Holding())
+	}
+	// A panel already open stays open.
+	v.InventoryOpen = true
+	v.took([]sim.Event{{Kind: sim.EventObject, Item: item, Detail: "worn_out", Slot: sim.SlotNeck}})
+	for range 7 {
+		v.Update(Input{})
+	}
+	if !v.InventoryOpen {
+		t.Error("the panel the player had open closed")
+	}
+}

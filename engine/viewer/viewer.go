@@ -165,6 +165,8 @@ type Viewer struct {
 	Transition  *Transition
 	transitions int
 	lost        []lostItem
+	// lostOpened is whether a lost object opened the inventory panel, to close it after.
+	lostOpened bool
 
 	// The frontend.
 

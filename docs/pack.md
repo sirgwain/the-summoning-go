@@ -632,7 +632,7 @@ the engine draws, so a pack chooses its look without art:
     "exit_wall":  { "style": "slide", "from": "right", "ms": 350 },
     "fall":       { "style": "squeeze", "from": "bottom", "ms": 300, "steps": 5 }
   },
-  "item_lost": { "style": "shatter", "ms": 450 } }
+  "item_lost": { "style": "shatter", "ms": 600, "inventory": true } }
 ```
 
 - The transition cues are what moved the player: `teleporter`, `ripple` (to a rune mark),
@@ -647,8 +647,11 @@ the engine draws, so a pack chooses its look without art:
   or `bottom` (a squeeze's). `steps`, above 0, moves it in that many even steps.
 - `size` is a ripple's largest shift in view pixels (8 by default), and `rows` how many rows each
   zag takes (16).
-- `item_lost` is how an object lost from a slot goes: `shatter` (its image breaks into pieces that
-  fly apart, fall and fade), `fade` or `none`, over `ms`. Left out, it goes with nothing shown.
+- `item_lost` is how an object lost from a slot goes: `shatter` (its box flashes and its image
+  breaks into pieces that fly apart, fall and fade), `fade` or `none`, over `ms`. With
+  `"inventory": true` the inventory panel opens for it and the world waits until it has gone;
+  without, it goes where its slot shows (the panel, the hotbar, or over the player's head) while
+  the game goes on. Left out, it goes with nothing shown.
 
 ## Keywords
 

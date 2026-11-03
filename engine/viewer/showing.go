@@ -64,13 +64,18 @@ func (v *Viewer) queueShows(events []sim.Event) {
 
 // Holding reports whether a transition or a flipbook plays, or a flipbook waits to, holding the
 // world.
-func (v *Viewer) Holding() bool { return v.Transition != nil || v.Showing != nil || len(v.shows) > 0 }
+func (v *Viewer) Holding() bool {
+	return v.Transition != nil || v.Showing != nil || len(v.shows) > 0 || v.lostHolds()
+}
 
 // updateShowing plays the transition playing, and then the flipbooks queued: Esc or the right
 // button cuts one short where it allows.
 func (v *Viewer) updateShowing(in Input) {
 	if v.Transition != nil {
 		v.updateTransition()
+		return
+	}
+	if v.lostHolds() {
 		return
 	}
 	for v.Showing == nil && len(v.shows) > 0 {

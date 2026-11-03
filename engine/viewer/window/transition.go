@@ -3,9 +3,11 @@ package window
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
@@ -138,8 +140,12 @@ func (tr *transitions) draw(screen *ebiten.Image, t *viewer.Transition, scale in
 	screen.DrawRectShader(size.X, size.Y, tr.shader, &op)
 }
 
-// shatterPieces is how many pieces a side of a shattering image breaks into.
-const shatterPieces = 3
+// shatterPieces is how many pieces a side of a shattering image breaks into, and lostFlash how
+// much of its time its box flashes.
+const (
+	shatterPieces = 3
+	lostFlash     = 0.35
+)
 
 // drawLost draws the objects lost from the player's slots, each going by its style.
 func (s *Window) drawLost(screen *ebiten.Image) {
@@ -172,6 +178,12 @@ func (s *Window) drawLost(screen *ebiten.Image) {
 			op.ColorScale.ScaleAlpha(float32(1 - l.Age))
 			screen.DrawImage(icon, op)
 		case content.LostShatter:
+			// The box flashes as the image breaks.
+			if f := 1 - l.Age/lostFlash; f > 0 {
+				r := l.Rect.Inset(l.Scale)
+				vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()),
+					color.RGBA{255, 240, 200, uint8(220 * f)}, false)
+			}
 			drawShatter(screen, icon, size, at, l.Scale, l.Age)
 		}
 	}
@@ -194,8 +206,8 @@ func drawShatter(screen, icon *ebiten.Image, size, at image.Point, scale int, ag
 			dx, dy := c[0]-mid[0], c[1]-mid[1]
 			n := float64(i*shatterPieces + j)
 			spin := (math.Mod(n*2.3, 2) - 1) * 4
-			x := c[0] + dx*2.5*age
-			y := c[1] + (dy*1.5-6)*age + 30*age*age
+			x := c[0] + dx*4*age
+			y := c[1] + (dy*3-10)*age + 40*age*age
 			op := &ebiten.DrawImageOptions{}
 			op.GeoM.Translate(-float64(r.Dx())/2, -float64(r.Dy())/2)
 			op.GeoM.Rotate(spin * age)

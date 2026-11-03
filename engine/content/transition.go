@@ -103,6 +103,9 @@ var lostStyles = map[string]bool{LostShatter: true, LostFade: true, LostNone: tr
 type LostItem struct {
 	Style string `json:"style"`
 	MS    int    `json:"ms,omitempty"`
+	// Inventory opens the inventory panel while the object goes, holding the world, and shows it
+	// going there; the panel closes again after unless it was open.
+	Inventory bool `json:"inventory,omitempty"`
 }
 
 // Transition returns how cue shows, or nil when the pack shows the new view at once.

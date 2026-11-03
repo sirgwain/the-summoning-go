@@ -63,7 +63,7 @@ func (im *importer) linkFlipbooks() {
 		}
 	}
 	im.pack.Effects = &content.EffectCues{ID: "effects", Cues: cues, Transitions: transitions(),
-		ItemLost: &content.LostItem{Style: content.LostShatter, MS: 450}}
+		ItemLost: &content.LostItem{Style: content.LostShatter, MS: 600, Inventory: true}}
 	keep := func(as []content.Action) []content.Action {
 		out := as[:0]
 		for _, a := range as {
