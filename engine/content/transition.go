@@ -22,11 +22,13 @@ const (
 	TransitionFall      = "fall"
 	// TransitionTravel is a conversation's travel or return, or a portal.
 	TransitionTravel = "travel"
+	// TransitionLoad is a saved game loaded during play.
+	TransitionLoad = "load"
 )
 
 var transitionCues = map[string]bool{
 	TransitionTeleporter: true, TransitionRipple: true, TransitionExitWall: true,
-	TransitionExitFloor: true, TransitionFall: true, TransitionTravel: true,
+	TransitionExitFloor: true, TransitionFall: true, TransitionTravel: true, TransitionLoad: true,
 }
 
 // Transition styles.
@@ -45,10 +47,13 @@ const (
 	StyleRipple = "ripple"
 	// StyleFade fades the old view to the color and the color to the new view.
 	StyleFade = "fade"
+	// StyleCurtains draws two pleated curtains of the color in from the sides over the old view,
+	// holds them closed, and parts them on the new.
+	StyleCurtains = "curtains"
 )
 
 var transitionStyles = map[string]bool{
-	StyleCut: true, StyleIris: true, StyleSlide: true, StyleSqueeze: true, StyleRipple: true, StyleFade: true,
+	StyleCut: true, StyleIris: true, StyleSlide: true, StyleSqueeze: true, StyleRipple: true, StyleFade: true, StyleCurtains: true,
 }
 
 // Sides a sliding or squeezing view comes in from.
@@ -64,8 +69,8 @@ var sides = map[string]bool{SideLeft: true, SideRight: true, SideTop: true, Side
 // Transition is how one cue shows the new view.
 type Transition struct {
 	Style string `json:"style"`
-	// MS is how long the whole transition takes. HoldMS is, for an iris, the time within it that
-	// the view is closed.
+	// MS is how long the whole transition takes. HoldMS is, for an iris or curtains, the time
+	// within it that the view is closed.
 	MS     int `json:"ms,omitempty"`
 	HoldMS int `json:"hold_ms,omitempty"`
 	// From is the side the new view comes in from, for slide and squeeze: right or bottom when
@@ -73,10 +78,11 @@ type Transition struct {
 	From string `json:"from,omitempty"`
 	// Steps, when above 0, moves the transition in that many even steps instead of smoothly.
 	Steps int `json:"steps,omitempty"`
-	// Color is what an iris closes to and a fade passes through, "#rrggbb"; black when empty.
+	// Color is what an iris closes to, a fade passes through and curtains are, "#rrggbb"; black
+	// when empty.
 	Color string `json:"color,omitempty"`
 	// Size is a ripple's largest sideways shift, in view pixels, and Rows how many rows each
-	// zag of it takes.
+	// zag of it takes. For curtains, Size is the width of a pleat, in view pixels.
 	Size int `json:"size,omitempty"`
 	Rows int `json:"rows,omitempty"`
 }

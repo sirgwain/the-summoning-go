@@ -254,6 +254,10 @@ func (v *Viewer) SetPlay(play bool) {
 	v.Recenter()
 }
 
+// minimapClear is how far in view pixels the player is kept from the minimap's corner: about
+// the height of a figure standing at its cell.
+const minimapClear = 2 * drawlist.TileSize
+
 // follow scrolls the view after the player as the game does (docs/spec/player.md, View): it
 // stays put while the player is in the middle half of the view, scrolls along an axis by as far
 // as the player moved when a move leaves it outside, and centers on a player outside the view.
@@ -272,6 +276,11 @@ func (v *Viewer) follow() {
 		return
 	}
 	lo, hi := buf.Div(4), buf.Mul(3).Div(4)
+	// The minimap covers the top-left corner: the view moves before the player goes under it.
+	if mm := v.Minimap(); mm != nil {
+		corner := image.Pt(mm.Frame.Max.X, max(mm.Frame.Max.Y, mm.Plaque.Max.Y)).Div(v.Scale).Add(image.Pt(minimapClear, minimapClear))
+		lo = image.Pt(max(lo.X, min(corner.X, buf.X/2)), max(lo.Y, min(corner.Y, buf.Y/2)))
+	}
 	if rel.X < lo.X && moved.X < 0 || rel.X > hi.X && moved.X > 0 {
 		v.Origin.X += moved.X
 	}
@@ -364,6 +373,10 @@ func (v *Viewer) Update(in Input) {
 		return
 	}
 	if v.Said != nil && (v.Ticks > v.Said.Until || acted) {
+		// Esc that clears a mouth's words is used up, so it does not open the menu too.
+		if acted && in.pressed(KeyEscape) {
+			in = in.without(KeyEscape)
+		}
 		v.Said = nil
 	}
 	if acted {
@@ -649,8 +662,7 @@ func (v *Viewer) barClick(bar *Hotbar, in Input) []input.Command {
 		return bar.click(v, cursor, true)
 	}
 	if cursor.In(bar.Screen(bar.PortraitRect)) {
-		v.ToggleInventory()
-		return nil
+		return v.ToggleInventory()
 	}
 	if b, ok := slotAt(bar.Slots, bar.at(cursor)); ok && in.held(KeyShift) {
 		return v.moveClick(b.Slot)
@@ -834,7 +846,7 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 	cmds = append(cmds, v.castKeys(in)...)
 	switch {
 	case in.pressed("I", KeyTab):
-		v.ToggleInventory()
+		cmds = append(cmds, v.ToggleInventory()...)
 	case in.pressed("M") && in.held(KeyShift):
 		v.MinimapHidden = !v.MinimapHidden
 	case in.pressed("M"):
@@ -844,7 +856,7 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 	case in.pressed("J"):
 		v.OpenBook()
 	case in.pressed(KeyEscape) && v.InventoryOpen:
-		v.InventoryOpen = false
+		cmds = append(cmds, v.CloseInventory()...)
 	case in.pressed("O", KeyEscape):
 		cmds = append(cmds, input.Menu{})
 	case in.pressed(KeyF5):

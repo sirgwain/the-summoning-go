@@ -448,6 +448,7 @@ const (
 	MsgNoRoomToShoot         = "no_room_to_shoot"
 	MsgCannotThrow           = "cannot_throw"
 	MsgCannotAct             = "cannot_act"
+	MsgNeedsBothHands        = "needs_both_hands"
 
 	MsgCannotCast           = "cannot_cast"
 	MsgNotMemorized         = "not_memorized"
@@ -519,6 +520,7 @@ var messageKeys = map[string]bool{
 	MsgNoRoomToShoot:         true,
 	MsgCannotThrow:           true,
 	MsgCannotAct:             true,
+	MsgNeedsBothHands:        true,
 	MsgCannotCast:            true, MsgNotMemorized: true, MsgOnlySpell: true, MsgNoMagic: true,
 	MsgForgot: true, MsgForgotMore: true, MsgNoRoomForWall: true, MsgWallFailed: true,
 	MsgNoRoomForPortal: true, MsgNoSpellNear: true, MsgNothingToMend: true, MsgNoCreatureNear: true,

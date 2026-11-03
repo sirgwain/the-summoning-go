@@ -99,9 +99,26 @@ type InventoryPanel struct {
 	Armor Gauge
 }
 
-// ToggleInventory opens or closes the inventory panel, when playing.
-func (v *Viewer) ToggleInventory() {
-	v.InventoryOpen = !v.InventoryOpen && v.Play && v.World.Player() != nil
+// ToggleInventory opens or closes the inventory panel, when playing, returning the commands
+// closing it makes.
+func (v *Viewer) ToggleInventory() []input.Command {
+	if v.InventoryOpen {
+		return v.CloseInventory()
+	}
+	v.InventoryOpen = v.Play && v.World.Player() != nil
+	return nil
+}
+
+// CloseInventory closes the inventory panel, and returns the command that closes the container
+// opened as the pack, if one is (docs/spec/items.md, Opening containers).
+func (v *Viewer) CloseInventory() []input.Command {
+	v.InventoryOpen = false
+	if p := v.World.Player(); p != nil {
+		if s, ok := p.OpenSlot(v.Pack); ok {
+			return []input.Command{input.Open{Slot: s}}
+		}
+	}
+	return nil
 }
 
 // Inventory returns the inventory panel as it is now, or nil when it is closed.

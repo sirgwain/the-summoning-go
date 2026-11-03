@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
 
 	"github.com/sirgwain/the-summoning-go/engine/save"
@@ -88,8 +89,15 @@ func (v *Viewer) LoadGame(name string) {
 		v.notice("No place to load from")
 		return
 	}
+	playing := v.Play && v.Front == nil
 	if err := v.LoadFile(v.savePath(name)); err != nil {
 		v.notice("Not loaded: " + err.Error())
+		return
+	}
+	// Loaded during play, the view as last drawn gives way to the loaded world.
+	if d := v.Pack.Transition(content.TransitionLoad); playing && d != nil {
+		v.transitions++
+		v.Transition = &Transition{Def: d, From: v.playerMiddle(), To: v.playerMiddle(), Seq: v.transitions}
 	}
 }
 

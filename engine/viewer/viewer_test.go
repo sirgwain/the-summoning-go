@@ -551,6 +551,47 @@ func TestQuickSaveAndLoad(t *testing.T) {
 	if got := v.World.Player().Cell(); got != at || v.Notice != "Loaded" {
 		t.Errorf("loaded at %v, want %v; notice %q", got, at, v.Notice)
 	}
+	// With a load cue the loaded world comes in by it.
+	if v.Pack.Effects == nil {
+		v.Pack.Effects = &content.EffectCues{ID: "effects"}
+	}
+	v.Pack.Effects.Transitions = map[string]*content.Transition{content.TransitionLoad: {Style: content.StyleCurtains, MS: 200, HoldMS: 50}}
+	v.Transition = nil
+	press(KeyF8)
+	if v.Transition == nil || v.Transition.Def.Style != content.StyleCurtains || !v.Holding() {
+		t.Errorf("quick load played %+v", v.Transition)
+	}
+}
+
+// TestViewClearsMinimap: with the minimap showing, a player walking left near its corner, though
+// still within the view's middle half, scrolls the view; with it hidden, the view stays put.
+func TestViewClearsMinimap(t *testing.T) {
+	for _, hidden := range []bool{false, true} {
+		v := newViewer(t)
+		v.SetPlay(true)
+		v.MinimapHidden = hidden
+		mm := v.Minimap()
+		if !hidden && mm == nil {
+			t.Fatal("no minimap")
+		}
+		p := v.World.Player()
+		buf := v.BufferSize()
+		// The player right of where the minimap's corner is when it shows, at the middle's height.
+		x := (Margin+v.Screen.X/4)/v.Scale + minimapClear/2
+		if mm != nil && x != mm.Frame.Max.X/v.Scale+minimapClear/2 {
+			t.Fatalf("minimap frame %v", mm.Frame)
+		}
+		at := drawlist.RefPoint(p.U, p.V)
+		v.Origin = at.Sub(image.Pt(x, buf.Y/2))
+		v.seen.at = at
+		start := v.Origin
+		for range 2 * int(v.World.PlayerInterval()) {
+			v.Update(Input{Held: map[Key]bool{"A": true}, Pressed: map[Key]bool{}})
+		}
+		if moved := v.Origin != start; moved == hidden {
+			t.Errorf("minimap hidden %v: the view moved %v (from %v to %v)", hidden, moved, start, v.Origin)
+		}
+	}
 }
 
 // TestLevelMap opens the map with M in the hall: it shows the seen cells and the player, and

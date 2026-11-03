@@ -48,13 +48,18 @@ func (w *World) castMissile(l *Level, c caster, m *content.MissileSpell, power i
 	}
 }
 
+// flightFrame is the frame of a directional look for flying along direction d: the frames are
+// numbered by the facing that launches along d, one eighth of a turn on from it
+// (docs/spec/spells.md, Missiles).
+func flightFrame(d int) int { return (d + 1) % 8 }
+
 // launchSpell sends missile m flying from c along direction d. A caster touching something ahead
 // hits it at once.
 func (w *World) launchSpell(l *Level, c caster, d int, m *content.MissileSpell, power int) {
 	f := &Flight{U: c.u, V: c.v, Direction: d, Range: missileRange, Damage: power, ByPlayer: c.player, Thrower: c.thing,
 		Spell: &SpellFlight{Missile: m, Power: power, Sprite: m.Sprite}, next: w.step + Steps(flightTicks)}
 	if m.Directional {
-		f.Spell.Frame = d
+		f.Spell.Frame = flightFrame(d)
 	}
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: f.Cell(), Detail: "spell flies"})
 	l.Flights = append(l.Flights, f)
@@ -109,7 +114,7 @@ func (w *World) updateSpell(l *Level, f *Flight) {
 			f.U, f.V = CellUnits*dest[0]+f.U-CellUnits*to[0], CellUnits*dest[1]+f.V-CellUnits*to[1]
 			f.Direction = (f.Direction + t.Turn + 8) % 8
 			if s.Missile.Directional {
-				s.Frame = f.Direction
+				s.Frame = flightFrame(f.Direction)
 			}
 		}
 	}
@@ -135,7 +140,7 @@ func (w *World) bounce(l *Level, f *Flight, du, dv int) {
 		}
 	}
 	if f.Spell.Missile.Directional {
-		f.Spell.Frame = f.Direction
+		f.Spell.Frame = flightFrame(f.Direction)
 	}
 }
 

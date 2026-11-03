@@ -402,6 +402,11 @@ func (w *World) handAct(hand int, o *Object, action int) {
 		w.message(l, p.Cell(), content.MsgCannotAct, "")
 		return
 	}
+	// A two-handed weapon strikes or shoots only with the other hand empty.
+	if a.Attack() && hasTag(it, "two_handed") && p.Slots[SlotRightHand+1-hand] != nil {
+		w.message(l, p.Cell(), content.MsgNeedsBothHands, o.Item)
+		return
+	}
 	switch a.Kind {
 	case content.ActionAttack, content.ActionAttackBoth:
 		if class >= 0 && p.Skills[SkillWeapon+class].Level < a.Skill {

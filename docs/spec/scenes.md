@@ -200,16 +200,17 @@ Within a level:
 - **Teleport** (an armed teleporter): sound 16h. Circles grow around the player's point on screen, radius 0 to 21, a tick apart, in colors `83h + ((22 − r) / 2 & 0Fh)`. The view slides in, slides out flipped top to bottom, holds 9 ticks, slides in again and slides out. At the destination the circles shrink from 22 to 1 around the player, a tick apart.
 - **Ripple** (ripple teleport, spells.md): the player is placed first. The view's rows shift sideways in a zigzag whose size grows over 23 frames and shrinks back over 22.
 
-**Engine model.** Each change of level or teleport names its cue, by what moved the player: `teleporter`, `ripple` (a rune mark, by spell or power), `exit_wall`, `exit_floor` (an exit marker), `fall` (a pit or an open trapdoor) and `travel` (a conversation's travel or return, a portal). The pack gives each cue a style (pack.md, Effects); a cue it leaves out shows the new view at once. The presentation holds the world while a transition plays, and draws it over the whole view, from the view as last drawn to the new one, scaled to its own view's size; what it draws over the view (glows, links, damage) waits for it to end. The styles:
+**Engine model.** Each change of level or teleport names its cue, by what moved the player: `teleporter`, `ripple` (a rune mark, by spell or power), `exit_wall`, `exit_floor` (an exit marker), `fall` (a pit or an open trapdoor) and `travel` (a conversation's travel or return, a portal); and `load`, the engine's own, for a saved game loaded during play (quick load or the disk menu), from the view as it was to the loaded world. The pack gives each cue a style (pack.md, Effects); a cue it leaves out shows the new view at once. The presentation holds the world while a transition plays, and draws it over the whole view, from the view as last drawn to the new one, scaled to its own view's size; what it draws over the view (glows, links, damage) waits for it to end. The styles:
 
 - `iris`: a circle about the player's middle closes on the old view to the color, holds closed for `hold_ms`, and opens about the player's middle on the new view. It stands in for the game's circles and slides.
 - `slide`: the new view pushes the old one out, coming in from a side (`from`, right by default), unstretched. It is scroll.
 - `squeeze`: the new view comes in from a side (bottom by default) squeezed into the part it has taken, and the old one squeezes into the rest. Rise is from the bottom and descend from the top, in 5 steps: with `steps` n the transition moves in n even steps, the part taken going 1/(n+1), 2/(n+1), … n/(n+1).
 - `ripple`: the view's rows shift sideways by a triangle wave, zigzagging over `rows` rows each way, whose size grows to `size` view pixels at the middle and shrinks back as a half sine; the old view shows until the middle, and the new view from it.
 - `fade`: the old view fades to the color, and the color to the new view, each over half the time.
+- `curtains`: two curtains of the color, hung in vertical pleats `size` view pixels wide (12 by default) and shaded along their leading edges, draw in from the left and right over the old view until they meet in the middle, hold closed for `hold_ms`, and part again on the new view. Each half of what is left eases in and out.
 - `cut`: the new view at once.
 
-The importer gives the teleporter an iris of 700 ms holding 150 ms in black; the ripple 750 ms, size 8, rows 16; exits in walls and travel a slide from the right of 350 ms; falls a squeeze from the bottom, and exit markers one from the top, of 300 ms in 5 steps.
+The importer gives the teleporter an iris of 700 ms holding 150 ms in black; the ripple 750 ms, size 8, rows 16; exits in walls and travel a slide from the right of 350 ms; falls a squeeze from the bottom, and exit markers one from the top, of 300 ms in 5 steps; and loading curtains of 900 ms holding 150 ms, in dark red (`#5c1418`), pleats 12.
 
 ## The game screen
 

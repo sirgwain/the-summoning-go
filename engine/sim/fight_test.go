@@ -650,3 +650,25 @@ func TestTimedObjects(t *testing.T) {
 		t.Errorf("the shared count ran out: right %v, left %v", p.Slots[SlotRightHand], p.Slots[SlotLeftHand])
 	}
 }
+
+// TestTwoHandedNeedsAnEmptyHand: a two-handed sword strikes only with the other hand empty; with
+// something there it is refused with needs_both_hands, taking no time.
+func TestTwoHandedNeedsAnEmptyHand(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) { p.Items["item.sword"].Tags = []string{"weapon", "two_handed"} },
+		"#####",
+		"#@G.#",
+		"#####")
+	p := w.Player()
+	p.Facing = 2
+	besideGuard(w)
+	p.Slots[SlotRightHand] = w.newObject("item.sword")
+	p.Slots[SlotRightHand+1] = w.newObject("item.sword")
+	ev := strike(w, 0, 0)
+	if !has(ev, EventMessage, content.MsgNeedsBothHands) || p.Delays[0] != 0 || p.Delays[1] != 0 {
+		t.Fatalf("struck with the other hand full: %v, delays %v", ev, p.Delays)
+	}
+	p.Slots[SlotRightHand+1] = nil
+	if ev := strike(w, 0, 0); has(ev, EventMessage, content.MsgNeedsBothHands) {
+		t.Errorf("refused with the other hand empty: %v", ev)
+	}
+}

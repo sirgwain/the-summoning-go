@@ -192,6 +192,15 @@ func TestRightClickOpens(t *testing.T) {
 	if p.Pack(v.Pack) != nil {
 		t.Errorf("a second right click left %+v open", p.Pack(v.Pack))
 	}
+	// Closing the panel closes the opened sack too.
+	rightAt(r.Min.Add(r.Max).Div(2))
+	if p.Pack(v.Pack) != sack || !v.InventoryOpen {
+		t.Fatal("the sack did not open again")
+	}
+	pressKey(v, "I")
+	if v.InventoryOpen || p.Pack(v.Pack) != nil {
+		t.Errorf("closing the panel: open %v, pack %+v", v.InventoryOpen, p.Pack(v.Pack))
+	}
 }
 
 // TestShiftClickMoves shift-clicks a sword on a shelf with the panel closed: it goes to the right

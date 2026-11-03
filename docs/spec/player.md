@@ -63,7 +63,7 @@ A walk step moves the player's speed (8 units) in the facing, or half that when 
 
 **Dying.** At 0 hit points the player is dead: it no longer acts, and the world reports it; what follows comes with scenes.
 
-**View.** The view does not follow the player step by step. While the player stands within the middle of the view it stays put; a move that leaves the player outside it, horizontally or vertically, scrolls the view along that axis by as far as the player moved on screen. The engine takes the middle half of the view each way. A player outside the view altogether (arriving on a level, teleported) is centered.
+**View.** The view does not follow the player step by step. While the player stands within the middle of the view it stays put; a move that leaves the player outside it, horizontally or vertically, scrolls the view along that axis by as far as the player moved on screen. The engine takes the middle half of the view each way. While the minimap shows (world.md, The map), the middle's top and left edges move down and right, as far as needed to keep two cells' width (64 view pixels) between them and the minimap's corner, its plaque included, but never past the view's middle, so the view scrolls before the player walks under the minimap. A player outside the view altogether (arriving on a level, teleported) is centered.
 
 **Figure.** Out of water the player's figure is drawn in four layers from the character animation banks (INIT base `C`), each over the last, for frame `f` of group `g = f / 8` and step `s = f mod 8`:
 

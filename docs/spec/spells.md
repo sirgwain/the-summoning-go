@@ -93,13 +93,15 @@ Only the player's missiles practice, and a creature hit by one turns hostile. Ty
 
 | Type | Sprite | Frame in flight |
 | --- | --- | --- |
-| 0 | held-item base + 2Eh (INIT) | The direction it flies |
-| 5 | held-item base + 2Fh | The direction it flies |
+| 0 | held-item base + 2Eh (INIT) | `(direction + 1) mod 8` |
+| 5 | held-item base + 2Fh | `(direction + 1) mod 8` |
 | 3 | 65 | 0 |
 | 4 | 41 | 0 |
 | 0Bh | 73 | 0 |
 | 0Eh | 61 | 0 |
 | 1Ah | 66 | 0 |
+
+A directional sprite's eight frames are numbered by the caster's facing, which is one eighth of a turn on from the direction the missile flies (it flies along `facing − 1`), so the frame in flight is `(direction + 1) mod 8`, as a fired arrow's flying look is. A missile turned in flight (a teleporter, a bounce) takes the frame of its new direction the same way.
 
 ## Effects
 

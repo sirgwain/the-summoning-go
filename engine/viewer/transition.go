@@ -53,12 +53,18 @@ type TransitionFrame struct {
 	Center      image.Point
 	Radius      float64
 	Color       color.RGBA
+	// Pleats, when above 0, shades the Color outside the panels as curtains: folds Pleats pixels
+	// wide, hanging from the left curtain's edge at LeftEdge left of the middle and from the right
+	// one's at RightEdge right of it.
+	Pleats              float64
+	LeftEdge, RightEdge float64
 }
 
-// Ripple defaults, in view pixels.
+// Ripple defaults, and the curtains' pleat, in view pixels.
 const (
 	rippleSize = 8
 	rippleRows = 16
+	pleatSize  = 12
 )
 
 // Frame is what the transition shows now on a screen of size, at scale screen pixels per view
@@ -115,11 +121,40 @@ func (t *Transition) Frame(size image.Point, scale int) TransitionFrame {
 	case content.StyleFade:
 		f.New = p >= 0.5
 		f.Amount = 1 - math.Abs(2*p-1)
+	case content.StyleCurtains:
+		f.Panels = true
+		hold := float64(d.HoldMS) / float64(d.MS)
+		half := (1 - hold) / 2
+		// How far each curtain has come across its half of the screen, 0 to 1.
+		shut := 1.0
+		switch {
+		case p < half:
+			shut = smooth(p / half)
+		case p >= half+hold:
+			shut = 1 - smooth(min(1, (p-half-hold)/half))
+		}
+		w := size.X
+		in := int(math.Round(shut * float64(w) / 2))
+		gap := image.Rect(in, 0, w-in, size.Y)
+		if p < half {
+			f.OldDst, f.OldSrc = gap, gap
+		} else {
+			f.NewDst, f.NewSrc = gap, gap
+		}
+		pleat := d.Size
+		if pleat == 0 {
+			pleat = pleatSize
+		}
+		f.Pleats = float64(pleat * scale)
+		f.LeftEdge, f.RightEdge = float64(in), float64(w-in)
 	default:
 		f.New = true
 	}
 	return f
 }
+
+// smooth eases x, 0 to 1, in and out.
+func smooth(x float64) float64 { return x * x * (3 - 2*x) }
 
 // split cuts r where a view coming in from side has come in by in pixels: the parts of the
 // screen the new view and the old take, and the parts of each view that show unstretched.

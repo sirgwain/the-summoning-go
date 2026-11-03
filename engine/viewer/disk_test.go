@@ -123,6 +123,12 @@ func TestEscapeClosesThenOpensMenu(t *testing.T) {
 	if v.Reading != nil || v.World.Talk() != nil {
 		t.Fatalf("Esc over a scroll: reading %v, talk %v", v.Reading != nil, v.World.Talk() != nil)
 	}
+	v.Said = &Said{Text: "Welcome", Until: v.Ticks + 100}
+	pressKey(v, KeyEscape)
+	idle()
+	if v.Said != nil || v.World.Talk() != nil {
+		t.Fatalf("Esc over a mouth's words: said %v, talk %v", v.Said != nil, v.World.Talk() != nil)
+	}
 	pressKey(v, KeyEscape)
 	idle()
 	if v.World.Talk() == nil {
