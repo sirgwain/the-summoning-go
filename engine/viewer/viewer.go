@@ -172,6 +172,8 @@ type Viewer struct {
 	lost        []lostItem
 	// lostOpened is whether a lost object opened the inventory panel, to close it after.
 	lostOpened bool
+	// autosaveDue is whether a change of level waits to be autosaved (saves.go).
+	autosaveDue bool
 
 	// The frontend.
 
@@ -490,7 +492,6 @@ func (v *Viewer) took(events []sim.Event) []sim.Event {
 	v.hear(events)
 	v.announce(events)
 	v.sound(events)
-	v.autosave(events)
 	v.transcribe(events)
 	v.openMap(events)
 	for _, e := range events {
@@ -514,6 +515,7 @@ func (v *Viewer) took(events []sim.Event) []sim.Event {
 		v.follow()
 	}
 	v.startTransition(events, from)
+	v.autosave(events)
 	v.afterPlay()
 	// The selection follows the selected thing, and drops it when it leaves the level.
 	if v.Thing != "" {

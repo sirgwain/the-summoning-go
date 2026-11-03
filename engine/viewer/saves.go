@@ -71,6 +71,10 @@ func (v *Viewer) SaveGame(name string) {
 		v.notice("No place to save")
 		return
 	}
+	if v.Holding() {
+		v.notice("Not saved while an effect plays")
+		return
+	}
 	if err := save.Write(v.savePath(name), name, v.World); err != nil {
 		v.notice("Not saved: " + err.Error())
 		return
@@ -107,17 +111,22 @@ func (v *Viewer) LoadFile(path string) error {
 	return nil
 }
 
-// autosave writes the autosave when events change level while playing.
+// autosave writes the autosave when events change level while playing. A change of level that
+// comes with a transition, a view effect or anything waiting for one is saved once they are over.
 func (v *Viewer) autosave(events []sim.Event) {
-	if !v.Play || v.SaveDir == "" || v.World.Talk() != nil {
+	if !v.Play || v.SaveDir == "" {
 		return
 	}
 	for _, e := range events {
 		if e.Kind == sim.EventLevelChanged {
-			if err := save.Write(v.savePath(AutoSave), AutoSave, v.World); err != nil {
-				v.notice("Not saved: " + err.Error())
-			}
-			return
+			v.autosaveDue = true
 		}
+	}
+	if !v.autosaveDue || v.World.Talk() != nil || v.Holding() || v.World.Waiting() {
+		return
+	}
+	v.autosaveDue = false
+	if err := save.Write(v.savePath(AutoSave), AutoSave, v.World); err != nil {
+		v.notice("Not saved: " + err.Error())
 	}
 }

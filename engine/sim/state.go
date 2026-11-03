@@ -97,10 +97,14 @@ type CellObjects struct {
 }
 
 // State returns the world's state, or an error while a conversation is open, unless it waits on
-// a menu: the state then leaves the conversation out.
+// a menu (the state then leaves the conversation out), and while something waits for a view
+// effect.
 func (w *World) State() (*State, error) {
 	if t := w.talk; t != nil && (t.Line == nil || t.Line.Kind != LineMenu) {
 		return nil, fmt.Errorf("the world cannot be saved during a conversation")
+	}
+	if w.effectPlayed || w.Waiting() {
+		return nil, fmt.Errorf("the world cannot be saved while a view effect plays")
 	}
 	rng, err := w.src.MarshalBinary()
 	if err != nil {

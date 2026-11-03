@@ -62,3 +62,17 @@ func TestStateRoundTrip(t *testing.T) {
 		t.Error("saving during a conversation did not fail")
 	}
 }
+
+// The world is not saved while something waits for a view effect.
+func TestNoStateWhileWaiting(t *testing.T) {
+	w := studyWorld(t, devpack.StudyStart, 2)
+	w.effectPlayed = true
+	w.afterEffect(func() {})
+	if _, err := w.State(); err == nil {
+		t.Error("saved while waiting for a view effect")
+	}
+	w.Update(nil)
+	if _, err := w.State(); err != nil {
+		t.Errorf("not saved once the effect is over: %v", err)
+	}
+}
