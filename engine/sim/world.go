@@ -136,7 +136,7 @@ func (w *World) Hold(cmds []input.Command) []Event {
 // heldCommand reports whether a held world takes cmd.
 func heldCommand(cmd input.Command) bool {
 	switch cmd.(type) {
-	case input.PickUp, input.PutDown, input.Swap, input.Open, input.PutOn, input.UseSlot, input.Read,
+	case input.PickUp, input.PutDown, input.Swap, input.Open, input.PutOn, input.UseSlot, input.MoveSlot, input.Read,
 		input.Learn, input.Memorize, input.NextSpell:
 		return true
 	}

@@ -107,7 +107,7 @@ Weights are in half kilograms: a weight `w` shows as `w / 2` kg, with ".5" for a
 
 **Engine model.** The pack's inventory record gives the doll's picture, the quiver slot's look, the empty hands' pictures, the strike and throw icons, the skills' icons and ratings, the level titles and the panel's labels; an item gives its worn look (`doll`, an image and where it goes on the doll) and each action its icon. The engine's panel shows the doll with the worn looks and a box for each worn slot beside it, the pack's slots, the character's attributes, skills, hit and magic points, armor, level and experience, and the details of the object under the pointer or on it. Its boxes work as the hotbar's do (The mouse). The pointer resting on a box of either names its object beside the pointer; for a container (a bag, a chest) the names of what it holds follow, a line each in the order they were put in, repeats counted (`Arrow x4`), or "Empty". The hotbar's hands show three action boxes each, the third throwing; a box shows the action's icon alone, without the object's picture under it, since the hand's own box beside it shows the object.
 
-**Holding the world.** The game does not pause for its inventory panels, and neither does the engine's inventory panel: the world runs while it is open, so what an object sets off in time (a missile cast by a potion or wand, a timed boost) goes on as it would with the panel closed. The engine's spell panel holds the world while it is open (spells.md). A held world takes the commands that only handle the player's objects and spells, and does them at once: picking up, putting down, swapping with a slot, opening a container, putting on, using from a slot, reading, learning, memorizing and selecting a spell. What these set off happens then too (a plate pressed, a slot filled, a potion drunk), and what waits for a view effect is done before the next of them. No time passes: the player, creatures, flights, doors and timers do not move, and the step does not advance. Any other command is refused.
+**Holding the world.** The game does not pause for its inventory panels, and neither does the engine's inventory panel: the world runs while it is open, so what an object sets off in time (a missile cast by a potion or wand, a timed boost) goes on as it would with the panel closed. The engine's spell panel holds the world while it is open (spells.md). A held world takes the commands that only handle the player's objects and spells, and does them at once: picking up, putting down, swapping with a slot, opening a container, putting on, using from a slot, moving a slot, reading, learning, memorizing and selecting a spell. What these set off happens then too (a plate pressed, a slot filled, a potion drunk), and what waits for a view effect is done before the next of them. No time passes: the player, creatures, flights, doors and timers do not move, and the step does not advance. Any other command is refused.
 
 **Engine model.** The player has a hand and slots numbered as above. Commands:
 
@@ -164,6 +164,23 @@ The **delay** of action 0 is `(byte 8 >> 4) + 3` points, of action 1 `(byte 8 & 
 **Engine model.** An item's `spent` is the item it leaves when used up. The importer gives it to items with a `use_up` action and nonzero `charges`; the others have none.
 
 **Using from a slot.** In the game an object is used only from a hand. The engine also lets the player use an object where it lies, on a shelf or in the pack: **use slot** takes the object's first `use` or `use_up` action as the right hand would, with the right hand's delay (it refuses while the right hand is not ready, and does nothing for an object with neither action). The object is used up in its own place, the spent object taking that place, a pack slot's emptying when there is none. Used this way from a hand, it is that hand's action. A right click on the box of such an object, with nothing on the pointer, uses it; a right click on a container's box opens it, as before.
+
+**Quick moves.** In the game every move goes through the pointer. The engine also moves an object from one slot to another in one click. **Engine model.** **Move slot** takes the object in a slot (a fixed slot or a pack slot) to a place of one of three kinds, while nothing is on the pointer:
+
+- `pack`: the pack's next place, after what it holds. It is refused with no pack, when the pack is full or the object is larger than its largest size, and for the pack's own container.
+- `shelf`: the first empty shelf; with none, message 7Fh and the object stays.
+- `worn`: the slot its `wear` names. A hand item goes in the right hand, a shield (a hand item with armor and no weapon class) in the left. What the slot held takes the object's old place, so a shelf's sword and the right hand's axe change places. It is refused for an object with no `wear`, and for one already in its slot.
+
+Each place takes the object as a swap with the pointer would: putting it on or taking it off starts and ends its armor and power, and it is not read. A refused move leaves everything where it was.
+
+The mouse moves with Shift: Shift and a left click on a box, with nothing on the pointer, moves its object
+
+1. from the pack to the first empty shelf;
+2. else, while the inventory panel is open and shows a pack, into the pack (but the pack's own container);
+3. else, from a worn slot or a hand to the first empty shelf;
+4. else to its worn slot.
+
+An object that none of these can take (one with no `wear` on a shelf, with the panel closed) is read instead, as Shift and a click on a box reads with an object on the pointer.
 
 ## Powers
 

@@ -621,7 +621,7 @@ func (v *Viewer) dragTo(cursor image.Point) {
 }
 
 // barClick handles a click on the hotbar: the portrait opens the inventory, Shift and a click
-// reads a box's object, and the boxes work with the hand (slots.go).
+// moves a box's object (moveClick), and the boxes work with the hand (slots.go).
 func (v *Viewer) barClick(bar *Hotbar, in Input) []input.Command {
 	cursor := in.Cursor
 	if in.Right.Released {
@@ -632,7 +632,7 @@ func (v *Viewer) barClick(bar *Hotbar, in Input) []input.Command {
 		return nil
 	}
 	if b, ok := slotAt(bar.Slots, bar.at(cursor)); ok && in.held(KeyShift) {
-		return []input.Command{input.Read{Slot: b.Slot}}
+		return v.moveClick(b.Slot)
 	}
 	return bar.click(v, cursor, false)
 }

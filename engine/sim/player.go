@@ -844,6 +844,23 @@ func (w *World) swap(i int) {
 		w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: p.Cell(), Detail: why})
 	}
 	exchanged := p.Hand != nil || p.Slot(w.pack, i) != nil
+	if why := w.exchange(i); why != "" {
+		refuse(why)
+		return
+	}
+	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "swapped"})
+	if exchanged {
+		w.cue(p.Cell(), content.CueTake)
+	}
+	if p.Hand != nil {
+		w.read(input.SlotHand)
+	}
+}
+
+// exchange exchanges the hand with slot i, putting on and taking off what goes in and out of a
+// worn slot, and returns why not when it cannot.
+func (w *World) exchange(i int) string {
+	p := w.player
 	switch {
 	case i >= 0 && i < Shelves:
 		p.Hand, p.Slots[i] = p.Slots[i], p.Hand
@@ -852,8 +869,7 @@ func (w *World) swap(i int) {
 	case i >= Shelves && i < SlotCount:
 		if wear := wearOf(i); wear != "" && p.Hand != nil {
 			if it := w.pack.Items[p.Hand.Item]; it == nil || it.Wear != wear {
-				refuse("that is not worn there")
-				return
+				return "that is not worn there"
 			}
 		}
 		off := p.Slots[i]
@@ -867,18 +883,15 @@ func (w *World) swap(i int) {
 	case i >= SlotPack:
 		bag := p.Pack(w.pack)
 		if bag == nil {
-			refuse("no container open")
-			return
+			return "no container open"
 		}
 		box := w.pack.Items[bag.Item].Container
 		k := i - SlotPack
 		if k >= box.Capacity {
-			refuse("the bag has no such place")
-			return
+			return "the bag has no such place"
 		}
 		if p.Hand != nil && w.pack.Items[p.Hand.Item].Size > box.Largest {
-			refuse("too big for the bag")
-			return
+			return "too big for the bag"
 		}
 		switch {
 		case k < len(bag.Contents) && p.Hand != nil:
@@ -891,16 +904,9 @@ func (w *World) swap(i int) {
 			p.Hand = nil
 		}
 	default:
-		refuse("no such slot")
-		return
+		return "no such slot"
 	}
-	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "swapped"})
-	if exchanged {
-		w.cue(p.Cell(), content.CueTake)
-	}
-	if p.Hand != nil {
-		w.read(input.SlotHand)
-	}
+	return ""
 }
 
 // activate uses the lever in the player's cell, or puts the key a keyhole there takes into it,
@@ -1010,4 +1016,98 @@ func (w *World) findCarried(item string) (func() (*Object, func()), bool) {
 		}
 	}
 	return nil, false
+}
+
+// moveSlot moves the object in slot from to a place of kind to without the pointer: the pack's
+// next place, the first empty shelf or its worn slot, whatever that slot held taking its old
+// place (docs/spec/items.md, Quick moves).
+func (w *World) moveSlot(from int, to string) {
+	p, l := w.player, w.Current()
+	refuse := func(why string) {
+		w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: p.Cell(), Detail: why})
+	}
+	o := p.Slot(w.pack, from)
+	switch {
+	case p.Hand != nil:
+		refuse("something in hand")
+		return
+	case o == nil:
+		refuse("nothing there")
+		return
+	}
+	var dest int
+	switch to {
+	case input.ToPack:
+		bag := p.Pack(w.pack)
+		switch {
+		case bag == nil:
+			refuse("no container open")
+			return
+		case bag == o:
+			refuse("that is the pack")
+			return
+		case from >= SlotPack:
+			refuse("already in the pack")
+			return
+		}
+		dest = SlotPack + len(bag.Contents)
+	case input.ToShelf:
+		if dest = firstEmptyShelf(p); dest < 0 {
+			w.message(l, p.Cell(), content.MsgNoRoom, o.Item)
+			return
+		}
+	case input.ToWorn:
+		var ok bool
+		if dest, ok = w.wornSlot(o); !ok {
+			refuse("that is not worn")
+			return
+		}
+		if dest == from {
+			refuse("already worn")
+			return
+		}
+	default:
+		refuse("no such place")
+		return
+	}
+	if why := w.exchange(from); why != "" {
+		refuse(why)
+		return
+	}
+	if why := w.exchange(dest); why != "" {
+		w.exchange(from)
+		refuse(why)
+		return
+	}
+	if p.Hand != nil {
+		w.exchange(from)
+	}
+	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "moved"})
+	w.cue(p.Cell(), content.CueTake)
+}
+
+// wornSlot returns the slot object o is worn in: its wear's, the left hand for a shield (a hand
+// item with armor and no weapon class), else the right hand; false when it is not worn.
+func (w *World) wornSlot(o *Object) (int, bool) {
+	it := w.pack.Items[o.Item]
+	switch {
+	case it == nil || it.Wear == "":
+		return 0, false
+	case it.Wear == content.WearHand && it.Armor > 0 && it.WeaponClass == nil:
+		return SlotLeftHand, true
+	case it.Wear == content.WearHand:
+		return SlotRightHand, true
+	}
+	s, ok := wearSlots[it.Wear]
+	return s, ok
+}
+
+// firstEmptyShelf returns the player's first empty shelf, or −1.
+func firstEmptyShelf(p *Player) int {
+	for i := range Shelves {
+		if p.Slots[i] == nil {
+			return i
+		}
+	}
+	return -1
 }

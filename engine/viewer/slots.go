@@ -111,6 +111,30 @@ func (v *Viewer) boxRightClick(slot int) []input.Command {
 	return v.rightClick(false)
 }
 
+// moveClick is Shift and a left click on slot's box (docs/spec/items.md, Quick moves): with
+// nothing on the pointer, a pack object goes to a shelf; with the inventory panel showing a pack,
+// anything else goes into it; else a worn object goes to a shelf and a wearable one is put on.
+// Anything else, or with an object on the pointer, the box's object is read.
+func (v *Viewer) moveClick(slot int) []input.Command {
+	p := v.World.Player()
+	o := p.Slot(v.Pack, slot)
+	move := func(to string) []input.Command { return []input.Command{input.MoveSlot{Slot: slot, To: to}} }
+	if p.Hand != nil || o == nil {
+		return []input.Command{input.Read{Slot: slot}}
+	}
+	switch bag := p.Pack(v.Pack); {
+	case slot >= sim.SlotPack:
+		return move(input.ToShelf)
+	case v.Inventory() != nil && bag != nil && bag != o:
+		return move(input.ToPack)
+	case slot >= sim.Shelves && slot < sim.SlotCount:
+		return move(input.ToShelf)
+	case v.Pack.Items[o.Item] != nil && v.Pack.Items[o.Item].Wear != "":
+		return move(input.ToWorn)
+	}
+	return []input.Command{input.Read{Slot: slot}}
+}
+
 // firstEmptyShelf returns the player's first empty shelf, or −1.
 func firstEmptyShelf(p *sim.Player) int {
 	for i := range sim.Shelves {

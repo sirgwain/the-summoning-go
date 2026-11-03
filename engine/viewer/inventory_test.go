@@ -193,3 +193,51 @@ func TestRightClickOpens(t *testing.T) {
 		t.Errorf("a second right click left %+v open", p.Pack(v.Pack))
 	}
 }
+
+// TestShiftClickMoves shift-clicks a sword on a shelf with the panel closed: it goes to the right
+// hand. With a sack opened as the pack, shift-clicking the sword leaves it in hand (it is too
+// big for the sack), shift-clicking boots puts them in the sack, and shift-clicking them in
+// the sack takes them back to the first empty shelf.
+func TestShiftClickMoves(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	p := v.World.Player()
+	for i := range sim.Shelves {
+		p.Slots[i] = nil
+	}
+	sword, sack := &sim.Object{Item: devpack.ItemSword}, &sim.Object{Item: devpack.ItemSack}
+	p.Slots[5], p.Slots[6], p.Slots[sim.SlotRightHand] = sword, sack, nil
+	shiftAt := func(r image.Rectangle) {
+		v.Update(Input{Held: map[Key]bool{KeyShift: true}, Pressed: map[Key]bool{}, Cursor: r.Min.Add(r.Max).Div(2),
+			Left: Button{Pressed: true, Released: true}})
+	}
+	r, _ := v.Hotbar().SlotRect(5)
+	shiftAt(r)
+	if p.Slots[sim.SlotRightHand] != sword || p.Slots[5] != nil || p.Hand != nil {
+		t.Fatalf("shift click on the shelf: right hand %+v, shelf %+v, pointer %+v", p.Slots[sim.SlotRightHand], p.Slots[5], p.Hand)
+	}
+	r, _ = v.Hotbar().SlotRect(6)
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: r.Min.Add(r.Max).Div(2), Right: Button{Pressed: true, Released: true}})
+	if p.Pack(v.Pack) != sack || v.Inventory() == nil {
+		t.Fatal("the sack did not open on the panel")
+	}
+	r, ok := v.Inventory().SlotRect(sim.SlotRightHand)
+	if !ok {
+		t.Fatal("no right hand box on the panel")
+	}
+	shiftAt(r)
+	if p.Slots[sim.SlotRightHand] != sword || len(sack.Contents) != 0 {
+		t.Fatalf("a sword too big for the sack moved: hand %+v, sack %+v", p.Slots[sim.SlotRightHand], sack.Contents)
+	}
+	boots := &sim.Object{Item: devpack.ItemBoots}
+	p.Slots[7] = boots
+	r, _ = v.Hotbar().SlotRect(7)
+	shiftAt(r)
+	if p.Slots[7] != nil || len(sack.Contents) != 1 || sack.Contents[0] != boots {
+		t.Fatalf("shift click on the boots: shelf %+v, sack %+v", p.Slots[7], sack.Contents)
+	}
+	r, _ = v.Inventory().SlotRect(sim.SlotPack)
+	shiftAt(r)
+	if len(sack.Contents) != 0 || p.Slots[0] != boots {
+		t.Fatalf("shift click in the sack: sack %+v, first shelf %+v", sack.Contents, p.Slots[0])
+	}
+}

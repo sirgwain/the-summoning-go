@@ -72,9 +72,12 @@ the player takes the top object underfoot onto the pointer, or puts the pointer'
 with the pointer; clicking an action box acts with that hand. The right button puts the
 pointer's object on the first empty shelf, or takes the object underfoot straight there; on a
 box with nothing on the pointer, it uses a potion or other usable object where it lies, with
-the right hand's delay. Shift and a click reads an object (a shelf, a hand, or the pointer's on
-the player): a scroll shows its picture and teaches its icons, as selecting it (taking it from a
-shelf onto the pointer) does. The four boxes after the shelves are the schools' selected
+the right hand's delay. Shift and a click, with nothing on the pointer, moves an object at once:
+from the pack to the first empty shelf; with the inventory panel showing a pack, into the pack;
+otherwise from a worn slot or a hand to a shelf, or onto the figure (a weapon to the right hand,
+a shield to the left). Shift and a click reads an object it does not move (a scroll on a shelf,
+or the pointer's on the player): a scroll shows its picture and teaches its icons, as selecting
+it (taking it from a shelf onto the pointer) does. The four boxes after the shelves are the schools' selected
 spells: click to cast, right click for the next; the box at the end shows the gesture playing,
 and opens the spell panel. Over a creature that talks, or a mouth (a skull), the pointer becomes
 a speech bubble: a click talks to the creature, or shows the mouth's message beside it. Taking a

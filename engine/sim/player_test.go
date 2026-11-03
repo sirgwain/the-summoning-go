@@ -674,3 +674,56 @@ func TestOpenContainer(t *testing.T) {
 		t.Error("opening an empty shelf changed the pack")
 	}
 }
+
+func TestMoveSlot(t *testing.T) {
+	w := walkWorld(t, "@.")
+	pk := w.Pack()
+	pk.Items["item.sword"] = &content.Item{ID: "item.sword", Size: 2, Wear: content.WearHand, WeaponClass: ptr(0)}
+	pk.Items["item.axe"] = &content.Item{ID: "item.axe", Size: 2, Wear: content.WearHand, WeaponClass: ptr(1)}
+	pk.Items["item.shield"] = &content.Item{ID: "item.shield", Size: 2, Wear: content.WearHand, Armor: 2}
+	pk.Items["item.helm"] = &content.Item{ID: "item.helm", Size: 2, Wear: content.WearHead, Armor: 1}
+	p := w.Player()
+	chest := &Object{Item: "item.bag", Contents: []*Object{{Item: "item.key"}}}
+	sword, axe, shield, helm := &Object{Item: "item.sword"}, &Object{Item: "item.axe"}, &Object{Item: "item.shield"}, &Object{Item: "item.helm"}
+	p.Slots[0], p.Slots[1], p.Slots[2], p.Slots[3], p.Slots[SlotRightHand] = chest, sword, shield, helm, axe
+
+	do(w, input.MoveSlot{Slot: 1, To: input.ToWorn})
+	if p.Slots[SlotRightHand] != sword || p.Slots[1] != axe {
+		t.Fatalf("sword to the right hand: hand %+v, shelf %+v", p.Slots[SlotRightHand], p.Slots[1])
+	}
+	do(w, input.MoveSlot{Slot: 2, To: input.ToWorn}, input.MoveSlot{Slot: 3, To: input.ToWorn})
+	if p.Slots[SlotLeftHand] != shield || p.Slots[2] != nil || p.Slots[SlotHead] != helm {
+		t.Fatalf("shield to the left hand, helm on: left %+v, head %+v", p.Slots[SlotLeftHand], p.Slots[SlotHead])
+	}
+	if ev := do(w, input.MoveSlot{Slot: SlotHead, To: input.ToWorn}); !has(ev, EventRefused, "already worn") {
+		t.Error("moving a worn helm to its own slot was not refused")
+	}
+
+	do(w, input.Open{Slot: 0})
+	do(w, input.MoveSlot{Slot: SlotRightHand, To: input.ToPack})
+	if p.Slots[SlotRightHand] != nil || len(chest.Contents) != 2 || chest.Contents[1] != sword {
+		t.Fatalf("sword into the chest: hand %+v, chest %+v", p.Slots[SlotRightHand], chest.Contents)
+	}
+	if ev := do(w, input.MoveSlot{Slot: 1, To: input.ToPack}); !has(ev, EventRefused, "the bag has no such place") {
+		t.Error("a full chest took the axe")
+	}
+	if p.Slots[1] != axe || p.Hand != nil {
+		t.Fatalf("a refused move moved: shelf %+v, hand %+v", p.Slots[1], p.Hand)
+	}
+	if ev := do(w, input.MoveSlot{Slot: 0, To: input.ToPack}); !has(ev, EventRefused, "that is the pack") {
+		t.Error("the chest went into itself")
+	}
+
+	do(w, input.MoveSlot{Slot: SlotPack, To: input.ToShelf})
+	if len(chest.Contents) != 1 || p.Slots[2] == nil || p.Slots[2].Item != "item.key" {
+		t.Fatalf("key to the first empty shelf: chest %+v, shelf %+v", chest.Contents, p.Slots[2])
+	}
+	for i := range Shelves {
+		if p.Slots[i] == nil {
+			p.Slots[i] = &Object{Item: "item.rock"}
+		}
+	}
+	if ev := do(w, input.MoveSlot{Slot: SlotPack, To: input.ToShelf}); !has(ev, EventMessage, content.MsgNoRoom) || len(chest.Contents) != 1 {
+		t.Error("with no empty shelf the chest's object moved, or no message")
+	}
+}

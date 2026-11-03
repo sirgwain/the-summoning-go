@@ -120,9 +120,25 @@ type PutOn struct{}
 // action, as the right hand would; in a hand, by that hand.
 type UseSlot struct{ Slot int }
 
-func (Strike) command()  {}
-func (PutOn) command()   {}
-func (UseSlot) command() {}
+// MoveSlot moves the object in a slot, with nothing on the pointer, to a place of kind To: the
+// pack (ToPack), the first empty shelf (ToShelf) or its worn slot (ToWorn), what that slot held
+// taking its old place.
+type MoveSlot struct {
+	Slot int
+	To   string
+}
+
+// The places MoveSlot moves to.
+const (
+	ToPack  = "pack"
+	ToShelf = "shelf"
+	ToWorn  = "worn"
+)
+
+func (Strike) command()   {}
+func (PutOn) command()    {}
+func (UseSlot) command()  {}
+func (MoveSlot) command() {}
 
 func (Walk) command()        {}
 func (PickUp) command()      {}
