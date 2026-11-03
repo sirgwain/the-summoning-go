@@ -34,6 +34,8 @@ type Window struct {
 	version int
 	buffer  *ebiten.Image
 	splash  *ebiten.Image
+	// title is where the splash's title is lettered while it fills in.
+	title *ebiten.Image
 	// fonts are the faces' letters, made when first drawn.
 	fonts map[*font.Face]*ebiten.Image
 	// backdrop is how bright the splash artwork shows behind the frontend now.

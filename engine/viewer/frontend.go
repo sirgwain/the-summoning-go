@@ -107,11 +107,24 @@ func NewFrontend(p *content.Pack, seed uint64, saves []string, size image.Point)
 // OverPlay reports whether the frontend is a menu over play rather than the main frontend.
 func (f *Frontend) OverPlay() bool { return f.disk != "" }
 
+// The splash (docs/spec/scenes.md, The frontend): the artwork fades in, then its title fills in
+// from the left, then the prompt fades in; it goes on to the menu after SplashUpdates.
+const (
+	SplashUpdates      = 7 * sim.StepsPerSecond
+	SplashArtUpdates   = sim.StepsPerSecond
+	SplashTitleUpdates = 3 * sim.StepsPerSecond / 2
+	SplashPromptUpdate = SplashArtUpdates + SplashTitleUpdates
+	SplashPromptFade   = sim.StepsPerSecond / 2
+)
+
 // ShowSplash displays the opening artwork before the main menu.
 func (f *Frontend) ShowSplash() {
-	f.splashLeft = 5 * sim.StepsPerSecond
+	f.splashLeft = SplashUpdates
 	f.show(ScreenSplash)
 }
+
+// SplashShown is how many updates the splash has shown.
+func (f *Frontend) SplashShown() int { return SplashUpdates - f.splashLeft }
 
 // PlayScene shows scene id, then goes to screen then ("" to finish).
 func (f *Frontend) PlayScene(id, then string) {
@@ -691,6 +704,15 @@ type SceneRun struct {
 	Banner  *content.Image
 	Fade    string
 	Faded   float64
+	// Sounds are the sounds started since the presentation last took them (TakeSounds).
+	Sounds []string
+}
+
+// TakeSounds returns the sounds started since it was last called.
+func (r *SceneRun) TakeSounds() []string {
+	s := r.Sounds
+	r.Sounds = nil
+	return s
 }
 
 // ScenePicture is a picture drawn at a point of the scene.
@@ -717,6 +739,7 @@ func (r *SceneRun) next() {
 	}
 	st := r.Def.Steps[r.Step]
 	r.Left = updates(st.MS)
+	r.Sounds = append(r.Sounds, st.Sounds...)
 	if st.Clear {
 		r.Pictures, r.Caption, r.Banner, r.Fade, r.Faded = nil, "", nil, "", 0
 	}
@@ -729,6 +752,7 @@ func (r *SceneRun) next() {
 		r.Fade, r.Faded = st.Fade, 0
 	case st.Part != nil:
 		r.Left = updates(st.Part.StepMS)
+		r.Sounds = append(r.Sounds, st.Part.StepSounds...)
 	}
 }
 
@@ -771,6 +795,7 @@ func (r *SceneRun) Update() bool {
 	if p := st.Part; p != nil && r.PartStep < p.Steps() {
 		if r.PartStep++; r.PartStep < p.Steps() {
 			r.Left = updates(p.StepMS)
+			r.Sounds = append(r.Sounds, p.StepSounds...)
 		} else {
 			r.Left = updates(st.MS)
 		}

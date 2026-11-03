@@ -23,6 +23,17 @@ func (v *Viewer) OpenFrontend() {
 	v.Front = NewFrontend(v.Pack, v.Seed+uint64(v.Ticks), v.SaveNames(), v.Screen)
 }
 
+// ShowSplash shows the main menu's splash first, starting the frontend's music.
+func (v *Viewer) ShowSplash() {
+	if v.Front == nil {
+		v.OpenFrontend()
+	}
+	v.Front.ShowSplash()
+	if c := v.Pack.Creation; c != nil && c.Music != "" && v.Audio != nil {
+		v.Audio.PlayMusic(c.Music)
+	}
+}
+
 // SaveNames returns the saves in SaveDir, the newest first.
 func (v *Viewer) SaveNames() []string {
 	if v.SaveDir == "" {
@@ -60,6 +71,13 @@ func (v *Viewer) frontUpdate(in Input) {
 	f := v.Front
 	f.Size = v.Screen
 	f.Update(in)
+	if f.Scene != nil {
+		for _, id := range f.Scene.TakeSounds() {
+			if v.Audio != nil {
+				v.Audio.PlayEffect(id)
+			}
+		}
+	}
 	if !f.Done {
 		return
 	}

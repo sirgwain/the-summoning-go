@@ -1,5 +1,7 @@
 package content
 
+import "fmt"
+
 // Character creation and scenes (docs/pack.md, Creation and Scenes; docs/spec/scenes.md).
 
 // Creation is what character creation offers and how a new game starts.
@@ -22,6 +24,8 @@ type Creation struct {
 	Scene   string `json:"scene,omitempty"`
 	// Ending is how the game ends.
 	Ending *Ending `json:"ending,omitempty"`
+	// Music is the track the frontend starts with its splash.
+	Music string `json:"music,omitempty"`
 }
 
 // Ending is how the game ends (docs/pack.md, Creation). The ending power takes the first choice
@@ -81,26 +85,30 @@ type Scene struct {
 	Steps []SceneStep `json:"steps"`
 }
 
-// SceneStep is one step of a scene: one of Picture, Part, Caption and Fade, held MS.
+// SceneStep is one step of a scene: one of Picture, Part, Caption and Fade, held MS. Sounds
+// start as the step shows.
 type SceneStep struct {
-	Picture *Image `json:"picture,omitempty"`
-	At      Offset `json:"at,omitzero"`
-	Clear   bool   `json:"clear,omitempty"`
-	Part    *Part  `json:"part,omitempty"`
-	Caption string `json:"caption,omitempty"`
-	Banner  *Image `json:"banner,omitempty"`
-	Fade    string `json:"fade,omitempty"`
-	MS      int    `json:"ms,omitempty"`
+	Picture *Image   `json:"picture,omitempty"`
+	At      Offset   `json:"at,omitzero"`
+	Clear   bool     `json:"clear,omitempty"`
+	Part    *Part    `json:"part,omitempty"`
+	Caption string   `json:"caption,omitempty"`
+	Banner  *Image   `json:"banner,omitempty"`
+	Fade    string   `json:"fade,omitempty"`
+	MS      int      `json:"ms,omitempty"`
+	Sounds  []string `json:"sounds,omitempty"`
 }
 
 // Part moves a picture's two halves apart (or together) over a background, a step at a time.
+// StepSounds start at each step.
 type Part struct {
-	Left       Image  `json:"left"`
-	Right      Image  `json:"right"`
-	Background *Image `json:"background,omitempty"`
-	From       int    `json:"from"`
-	To         int    `json:"to"`
-	StepMS     int    `json:"step_ms"`
+	Left       Image    `json:"left"`
+	Right      Image    `json:"right"`
+	Background *Image   `json:"background,omitempty"`
+	From       int      `json:"from"`
+	To         int      `json:"to"`
+	StepMS     int      `json:"step_ms"`
+	StepSounds []string `json:"step_sounds,omitempty"`
 }
 
 // Steps returns how many steps the part takes.
@@ -125,6 +133,7 @@ func (v *verifier) creation() {
 		return
 	}
 	const owner = "creation.json"
+	v.music(owner+": music", c.Music)
 	for _, pt := range c.Portraits {
 		if _, ok := v.p.Portraits[pt]; !ok {
 			v.fail("%s: portrait %q not found", owner, pt)
@@ -217,10 +226,17 @@ func (v *verifier) scene(s *Scene) {
 		if st.Caption != "" {
 			v.text(owner, st.Caption)
 		}
+		step := fmt.Sprintf("%s step %d", owner, i)
+		for _, id := range st.Sounds {
+			v.effect(step, id)
+		}
 		if p := st.Part; p != nil {
 			img(&p.Left)
 			img(&p.Right)
 			img(p.Background)
+			for _, id := range p.StepSounds {
+				v.effect(step, id)
+			}
 		}
 	}
 }

@@ -268,6 +268,16 @@ func (im *importer) audio() {
 	if id := soundID(newGameTrack); im.pack.Sounds[id] != nil {
 		im.pack.Manifest.Start.Music = id
 	}
+	if id := soundID(openingTrack); im.pack.Creation != nil && im.pack.Sounds[id] != nil {
+		im.pack.Creation.Music = id
+	}
+	if s, id := im.pack.Scenes[doorSceneID], soundID(firstEffect+doorStepEffect); s != nil && im.pack.Sounds[id] != nil {
+		for i := range s.Steps {
+			if p := s.Steps[i].Part; p != nil {
+				p.StepSounds = []string{id}
+			}
+		}
+	}
 	if t, id := im.pack.Things[npcID(themeNPC)], soundID(themeTrack); t != nil && im.pack.Sounds[id] != nil {
 		t.Theme = id
 	}

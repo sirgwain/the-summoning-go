@@ -3,6 +3,7 @@ package viewer
 import (
 	"fmt"
 	"image"
+	"slices"
 	"testing"
 
 	"github.com/sirgwain/the-summoning-go/devpack"
@@ -159,11 +160,13 @@ func TestDeathAndEndingGoToMenu(t *testing.T) {
 // TestSceneRun plays a part's steps and a fade by the clock.
 func TestSceneRun(t *testing.T) {
 	r := NewSceneRun(&content.Scene{ID: "s", Steps: []content.SceneStep{
-		{Part: &content.Part{From: 0, To: 2, StepMS: 50}, MS: 0},
-		{Fade: "#000000", MS: 100},
+		{Part: &content.Part{From: 0, To: 2, StepMS: 50, StepSounds: []string{"sfx.step"}}, MS: 0},
+		{Fade: "#000000", MS: 100, Sounds: []string{"sfx.fade"}},
 	}})
 	var spreads []int
+	var sounds []string
 	for !r.Update() {
+		sounds = append(sounds, r.TakeSounds()...)
 		if s, ok := r.Spread(); ok {
 			spreads = append(spreads, s)
 		}
@@ -176,6 +179,10 @@ func TestSceneRun(t *testing.T) {
 	}
 	if r.Faded != 1 {
 		t.Errorf("faded %v", r.Faded)
+	}
+	// The part sounds at each of its steps, the fade as it starts.
+	if want := []string{"sfx.step", "sfx.step", "sfx.step", "sfx.fade"}; !slices.Equal(append(sounds, r.TakeSounds()...), want) {
+		t.Errorf("sounds %v, want %v", sounds, want)
 	}
 }
 
@@ -201,7 +208,7 @@ func TestSplash(t *testing.T) {
 	v := newViewer(t)
 	v.OpenFrontend()
 	v.Front.ShowSplash()
-	for range 5*sim.StepsPerSecond - 1 {
+	for range SplashUpdates - 1 {
 		v.Front.Update(Input{})
 	}
 	if v.Front.Screen != ScreenSplash {

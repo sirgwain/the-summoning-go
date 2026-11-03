@@ -192,8 +192,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 				}
 				v.SetPlay(true)
 				if menu && script == "" && pack.Creation != nil {
-					v.OpenFrontend()
-					v.Front.ShowSplash()
+					v.ShowSplash()
 				}
 			}
 			if center != nil {

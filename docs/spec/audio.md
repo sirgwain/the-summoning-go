@@ -53,6 +53,8 @@ The game starts these tracks with a loop; every other track plays once. The fron
 - Once per pass over the creatures, the game checks whether a creature of NPC record 0Dh is on screen. When one first is, it starts track 8 (12 bars); when none is any longer, it stops the music track playing with the slow fade.
 - A change of level, and restoring a game, stop the music track playing with the slow fade.
 
+**Music in the frontend.** The intro's crossing figures start track 2; the war story's last caption starts track 3, which plays on under the opening picture that ends the intro, and fades out when the picture does. Each plays once. The main menu fades out whatever plays as it appears.
+
 ## Song descriptor (24 bytes)
 
 | Offset | Type | Meaning |
@@ -249,4 +251,4 @@ The song player's output, the thing to test, is the list of register writes in o
 
 ## Unknowns
 
-- The menus' and endings' tracks; specified with scenes.
+- The new character's story's and the endings' tracks; specified with scenes.

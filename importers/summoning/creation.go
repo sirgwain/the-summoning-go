@@ -177,6 +177,17 @@ func (im *importer) doorPicture(res int) (whole, left, right string, ok bool) {
 	return whole, left, right, true
 }
 
+// doorSceneID is the new game's door; doorStepEffect sounds at each step of its opening
+// (audio.md, Sound effects).
+const (
+	doorSceneID    = "scene.door"
+	doorStepEffect = 0x17
+)
+
+// openingTrack plays under the opening picture, which the engine's splash stands in for
+// (audio.md, Music in the frontend).
+const openingTrack = 3
+
 // doorScene adds the new game's door (scenes.md, New game).
 func (im *importer) doorScene() *content.Scene {
 	closed, _, _, ok := im.doorPicture(resClosedDoor)
@@ -188,7 +199,7 @@ func (im *importer) doorScene() *content.Scene {
 		im.report.addf("the door scene: its pictures are missing; left out")
 		return nil
 	}
-	s := &content.Scene{ID: "scene.door"}
+	s := &content.Scene{ID: doorSceneID}
 	s.Steps = append(s.Steps, content.SceneStep{Picture: &content.Image{Sprite: closed}, Clear: true, MS: ms(18)})
 	at := content.Offset{135, 0}
 	for f := range 4 {

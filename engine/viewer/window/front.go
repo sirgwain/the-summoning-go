@@ -53,7 +53,7 @@ func (s *Window) drawFront(screen *ebiten.Image) {
 	switch f.Screen {
 	case viewer.ScreenSplash:
 		s.backdrop = 1
-		s.drawSplash(screen)
+		s.drawSplash(screen, f.SplashShown())
 		return
 	case viewer.ScreenScene:
 		s.drawScene(screen, f.Scene)
@@ -72,7 +72,7 @@ func (s *Window) drawFront(screen *ebiten.Image) {
 		}
 		art := s.drawSplashArt(screen, s.backdrop)
 		if f.Screen == viewer.ScreenMenu {
-			s.drawSplashTitle(screen, art)
+			s.drawSplashTitle(screen, art, 1)
 			lettered = true
 		}
 	}

@@ -39,3 +39,21 @@ func TestLeverSound(t *testing.T) {
 		t.Errorf("after F9 twice: mode %v, notice %q", v.Audio.Mode(), v.Notice)
 	}
 }
+
+// The splash starts the frontend's music, which plays on into the menu.
+func TestSplashMusic(t *testing.T) {
+	v := newViewer(t)
+	sp := &testSpeaker{}
+	v.Audio = audio.New(sp, v.Pack)
+	v.Pack.Creation.Music = devpack.MusicTune
+	v.ShowSplash()
+	if v.Front == nil || v.Front.Screen != ScreenSplash || v.Audio.MusicPlaying() != devpack.MusicTune {
+		t.Fatalf("splash: front %v, music %q", v.Front, v.Audio.MusicPlaying())
+	}
+	for range SplashUpdates {
+		v.Update(Input{})
+	}
+	if v.Front.Screen != ScreenMenu || v.Audio.MusicPlaying() != devpack.MusicTune {
+		t.Errorf("after the splash: screen %s, music %q", v.Front.Screen, v.Audio.MusicPlaying())
+	}
+}

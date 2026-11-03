@@ -223,7 +223,7 @@ The message line shows the game's messages: what the player takes, refusals, com
 
 The game starts at a main menu: create a character, restore a game, or select a premade character.
 
-**Engine model.** On an interactive start with the main menu enabled, the engine first shows its own splash artwork for five seconds. Any key or mouse click dismisses it to the menu. Returning to the menu after play does not show the splash again. The main menu, restoring and the screens of creating a character show over the splash artwork darkened, the main menu with its lettering; leaving the splash, the artwork darkens over half a second. The main menu's buttons start three eighths of the way down the screen, under the lettering.
+**Engine model.** On an interactive start with the main menu enabled, the engine first shows its own splash artwork for seven seconds, in place of the game's opening picture, and starts the opening picture's track 3 (audio.md), which plays on into the menu. The artwork fades in from black over one second, as the opening picture's colors do. Then its title fills in from the left over a second and a half, each column showing as the fill's soft edge (three tenths of the title's width) passes it, much as the opening picture's lettering colors slide in one at a time; then the prompt to go on fades in over half a second. Any key or mouse click dismisses it to the menu. Returning to the menu after play does not show the splash again. The main menu, restoring and the screens of creating a character show over the splash artwork darkened, the main menu with its lettering; leaving the splash, the artwork darkens over half a second. The main menu's buttons start three eighths of the way down the screen, under the lettering.
 
 **Creating a character** goes through:
 
@@ -241,7 +241,7 @@ The game starts at a main menu: create a character, restore a game, or select a 
 
 ## New game
 
-The new character starts as player.md (Starting a new game) says. A new game shows the door: the closed door (RESOURCE 3Eh), the door pictures drawn over it at column 135, each held 5 ticks (RESOURCE 55h frames 0–3 at row 0, then 56h frames 0–9 at row 0 with frame `n + 10` below it at row 100), and the door opening (RESOURCE 54h's halves moving apart over the dungeon behind, RESOURCE 3, in 20 steps). Then the player arrives on the starting level. No conversation starts: conversation 7Dh, which variable 34 starts on arrival (dialogue.md), belongs to play going on after ending G.
+The new character starts as player.md (Starting a new game) says. A new game shows the door: the closed door (RESOURCE 3Eh), the door pictures drawn over it at column 135, each held 5 ticks (RESOURCE 55h frames 0–3 at row 0, then 56h frames 0–9 at row 0 with frame `n + 10` below it at row 100), and the door opening (RESOURCE 54h's halves moving apart over the dungeon behind, RESOURCE 3, in 20 steps, each playing sound effect 17h, audio.md). Then the player arrives on the starting level. No conversation starts: conversation 7Dh, which variable 34 starts on arrival (dialogue.md), belongs to play going on after ending G.
 
 The door pictures 3Eh and 54h are 320 × 200 pictures stored as 160 tiles of 8 × 50 pixels, four rows of forty, row by row. Drawn with a spread `s`, the columns within `s` of either edge are left out and the rest move `s` columns outward from the middle, so the halves part.
 

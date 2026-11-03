@@ -543,6 +543,7 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
   "premade": [{ "name": "Kordan", "portrait": "portrait.3", "weapon_class": 0, "school": 1,
                 "attributes": { "strength": 18, "…": 0 } }],
   "scene": "scene.door",
+  "music": "music.3",
   "ending": { "scene": "scene.ending", "counter": "var.32", "conversation": "thing.npc.121",
               "choices": [{ "name": "F", "holding": "item.chesschantra_skull", "value": 4 }] }
 }
@@ -554,6 +555,7 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
   skill they start at level 1, and the objects they add, by inventory slot. `icons` are the gesture
   icons a school starts knowing.
 - `inventory` is what every character starts with; one of `body_armor` goes on the body.
+- `music` is the track the frontend starts with its splash.
 - A new game sets `counter` to 1, plays `scene`, and starts `opening`'s conversation on arrival;
   each is optional. The Summoning's import sets neither `counter` nor `opening`.
 - The ending power takes the first of `ending.choices` whose `holding` item is in a hand, sets
@@ -569,7 +571,8 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
 { "id": "scene.door", "steps": [
   { "picture": { "sprite": "sprite.picture.62", "frame": 0 }, "ms": 1000 },
   { "picture": { "sprite": "sprite.res.85", "frame": 0 }, "at": [135, 0], "ms": 275 },
-  { "part": { "left": {…}, "right": {…}, "background": {…}, "from": 0, "to": 20, "step_ms": 110 } },
+  { "part": { "left": {…}, "right": {…}, "background": {…}, "from": 0, "to": 20, "step_ms": 110,
+              "step_sounds": ["sfx.23"] } },
   { "caption": "msg.343", "banner": { "sprite": "…" }, "ms": 2500 },
   { "fade": "#ffffff", "ms": 500 }
 ] }
@@ -578,6 +581,7 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
 A `picture` draws over what is there (`clear` first to start afresh); `part` draws the background
 and the two halves moved `8 × spread` pixels outward, spread going from `from` to `to`; `caption`
 shows a text at the bottom, over `banner` if given; `fade` fades to a color. `ms` holds the step.
+`sounds` start as a step shows, and a part's `step_sounds` at each of its steps.
 
 ## Flipbooks
 
