@@ -17,6 +17,10 @@ const (
 type EffectCues struct {
 	ID   string            `json:"id"`
 	Cues map[string]string `json:"cues"`
+	// Transitions are how each transition cue shows the new view (transition.go), and ItemLost
+	// how an object lost from a slot goes.
+	Transitions map[string]*Transition `json:"transitions,omitempty"`
+	ItemLost    *LostItem              `json:"item_lost,omitempty"`
 }
 
 // Engine effect cues.

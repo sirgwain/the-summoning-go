@@ -670,9 +670,9 @@ func (w *World) endTalk() {
 	case t.back && p.Return != nil:
 		to := *p.Return
 		p.Return = nil
-		w.travel(&to)
+		w.travel(&to, content.TransitionTravel)
 	case t.after != nil:
-		w.travel(t.after)
+		w.travel(t.after, content.TransitionTravel)
 	}
 }
 

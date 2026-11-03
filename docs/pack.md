@@ -617,6 +617,39 @@ The cues: `climb_down` (the player stepping down into a pit or open trapdoor, al
 powers that show one, `cure` (power 15h) and `heal` (powers 1Dh and 45h). A cue the pack leaves out
 plays nothing, and a level change it would have held happens at once.
 
+### Transitions and lost objects
+
+`effects.json` also says how the presentation shows the player moving by a teleport or a change of
+level, and an object breaking or running out in one of the player's slots
+(`docs/spec/scenes.md`, Level transitions; `docs/spec/items.md`, Timed objects). Both are styles
+the engine draws, so a pack chooses its look without art:
+
+```json
+{ "id": "effects", "cues": { "fall": "flipbook.effect.2" },
+  "transitions": {
+    "teleporter": { "style": "iris", "ms": 700, "hold_ms": 150, "color": "#000000" },
+    "ripple":     { "style": "ripple", "ms": 750, "size": 8, "rows": 16 },
+    "exit_wall":  { "style": "slide", "from": "right", "ms": 350 },
+    "fall":       { "style": "squeeze", "from": "bottom", "ms": 300, "steps": 5 }
+  },
+  "item_lost": { "style": "shatter", "ms": 450 } }
+```
+
+- The transition cues are what moved the player: `teleporter`, `ripple` (to a rune mark),
+  `exit_wall`, `exit_floor` (an exit marker), `fall` (a pit or an open trapdoor) and `travel` (a
+  conversation's travel or return, a portal). A cue left out, a `cut`, or one of 0 `ms` shows the
+  new view at once.
+- `style` is `iris`, `slide`, `squeeze`, `ripple`, `fade` or `cut` (scenes.md says what each does),
+  and `ms` how long the whole of it takes.
+- `hold_ms` is how long an iris stays closed, within `ms`; `color` what an iris closes to and a
+  fade passes through, `#rrggbb`, black by default.
+- `from` is the side a slide or squeeze comes in from: `left`, `right` (a slide's default), `top`
+  or `bottom` (a squeeze's). `steps`, above 0, moves it in that many even steps.
+- `size` is a ripple's largest shift in view pixels (8 by default), and `rows` how many rows each
+  zag takes (16).
+- `item_lost` is how an object lost from a slot goes: `shatter` (its image breaks into pieces that
+  fly apart, fall and fade), `fade` or `none`, over `ms`. Left out, it goes with nothing shown.
+
 ## Keywords
 
 `keywords.json`: the words the player can ask about in conversations.

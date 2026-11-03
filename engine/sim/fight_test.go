@@ -135,6 +135,19 @@ func TestWeaponPracticeAndWear(t *testing.T) {
 	if !has(ev, EventMessage, content.MsgWeaponBreaks) || p.Slots[SlotRightHand] != nil {
 		t.Errorf("the worn-out sword did not break: %v", ev)
 	}
+	if !wornOut(ev, "item.sword", SlotRightHand) {
+		t.Errorf("no worn_out event for the right hand: %v", ev)
+	}
+}
+
+// wornOut reports whether events say item broke or ran out in slot.
+func wornOut(events []Event, item string, slot int) bool {
+	for _, e := range events {
+		if e.Kind == EventObject && e.Detail == "worn_out" && e.Item == item && e.Slot == slot {
+			return true
+		}
+	}
+	return false
 }
 
 func TestWearing(t *testing.T) {
@@ -625,6 +638,9 @@ func TestTimedObjects(t *testing.T) {
 	w.statusTickPlayer()
 	if p.Slots[SlotArms] != nil || p.Status.Regenerating || !has(w.events, EventMessage, content.MsgVanishes) {
 		t.Errorf("two ticks: bracers %v, regenerating %v, events %v", p.Slots[SlotArms], p.Status.Regenerating, w.events)
+	}
+	if !wornOut(w.events, "item.bracers", SlotArms) {
+		t.Errorf("no worn_out event for the arms: %v", w.events)
 	}
 	if boots.Value != 65534 {
 		t.Errorf("boots of value 0 have %d after two ticks", boots.Value)

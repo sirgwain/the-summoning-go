@@ -348,6 +348,7 @@ func (w *World) startPower(power, sign int) bool {
 		w.weigh(l, p.Cell(), -p.weight(), 0)
 		w.place(w.mark(runeOf(power)).Cell, false)
 		w.emit(Event{Kind: EventSound, Level: l.ID, Cell: p.Cell(), Detail: soundTeleport})
+		w.transition(content.TransitionRipple)
 	case 0x12:
 		for _, t := range w.creaturesNear() {
 			w.hurtThing(l, t, smiteDamage, combat.Physical)
@@ -496,6 +497,7 @@ func (w *World) runDownTimed() {
 		w.takeOff(o)
 		w.message(w.Current(), p.Cell(), content.MsgVanishes, o.Item)
 		w.emit(Event{Kind: EventObject, Level: w.current, Cell: p.Cell(), Item: o.Item, Detail: "used"})
+		w.emit(Event{Kind: EventObject, Level: w.current, Cell: p.Cell(), Item: o.Item, Detail: "worn_out", Slot: slot})
 	}
 }
 

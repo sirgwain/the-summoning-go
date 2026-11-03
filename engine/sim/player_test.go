@@ -435,9 +435,12 @@ func TestExitsAndPits(t *testing.T) {
 		"#####",
 		"#@X.#",
 		"#####")
-	walk(w, 2, 2)
+	ev := walk(w, 2, 2)
 	if w.Current().ID != "level.below" || w.Player().Cell() != (cell{1, 1}) {
 		t.Fatalf("the floor exit took the player to %s %v", w.Current().ID, w.Player().Cell())
+	}
+	if !has(ev, EventTransition, content.TransitionExitFloor) {
+		t.Errorf("no floor exit transition: %v", ev)
 	}
 
 	w = walkWorld(t,
@@ -452,9 +455,12 @@ func TestExitsAndPits(t *testing.T) {
 		"##e##",
 		"#.@.#",
 		"#####")
-	walk(w, 0, 4)
+	ev = walk(w, 0, 4)
 	if w.Current().ID != "level.below" {
 		t.Error("walking into a wall exit did not take it")
+	}
+	if !has(ev, EventTransition, content.TransitionExitWall) {
+		t.Errorf("no wall exit transition: %v", ev)
 	}
 
 	w = walkWorld(t,
@@ -469,9 +475,12 @@ func TestExitsAndPits(t *testing.T) {
 		"#####",
 		"#.O@#",
 		"#####")
-	walk(w, 6, 4)
+	ev = walk(w, 6, 4)
 	if w.Current().ID != "level.below" || w.Player().HitPoints >= 30 {
 		t.Errorf("falling into the pit: %s, %d hit points", w.Current().ID, w.Player().HitPoints)
+	}
+	if !has(ev, EventTransition, content.TransitionFall) {
+		t.Errorf("no fall transition: %v", ev)
 	}
 }
 
@@ -481,9 +490,12 @@ func TestTeleporterAndFloors(t *testing.T) {
 		"#@t...#",
 		"#^....#",
 		"#######")
-	walk(w, 2, 2)
+	ev := walk(w, 2, 2)
 	if c := w.Player().Cell(); c != (cell{1, 4}) {
 		t.Errorf("the teleporter sent the player to %v", c)
+	}
+	if !has(ev, EventTransition, content.TransitionTeleporter) {
+		t.Errorf("no teleporter transition: %v", ev)
 	}
 	w = walkWorld(t,
 		"#######",

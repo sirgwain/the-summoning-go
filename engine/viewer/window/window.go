@@ -27,6 +27,7 @@ type Window struct {
 	view      *render.LevelView
 	presenter *render.Presenter
 	glow      *render.Glow
+	tr        *transitions
 	palette   *content.Palette
 	// version is the viewer's draw commands the view holds.
 	version int
@@ -55,8 +56,12 @@ func New(v *viewer.Viewer) (*Window, error) {
 	if err != nil {
 		return nil, err
 	}
+	tr, err := newTransitions()
+	if err != nil {
+		return nil, err
+	}
 	s := &Window{
-		v: v, sprites: render.NewSprites(v.Pack), presenter: pr, glow: glow,
+		v: v, sprites: render.NewSprites(v.Pack), presenter: pr, glow: glow, tr: tr,
 		palette: v.Pack.Palettes[v.Pack.Manifest.Palette], keys: map[viewer.Key]ebiten.Key{},
 		art: map[image.Point]*ebiten.Image{},
 	}
@@ -163,14 +168,20 @@ func (s *Window) Draw(screen *ebiten.Image) {
 	s.buffer.Clear()
 	s.view.Draw(s.buffer, v.Origin)
 	s.presenter.SetColors(s.palette.At(v.Ticks*1000/int64(ebiten.TPS())), v.FixedColors(s.palette))
-	s.presenter.Present(screen, s.buffer, v.Scale)
+	world := s.tr.world(screen.Bounds().Size(), v.Transition)
+	s.presenter.Present(world, s.buffer, v.Scale)
+	s.tr.draw(screen, v.Transition, v.Scale)
 	overlay := v.Overlay()
-	s.drawGlow(screen, overlay.Marks)
-	s.drawLinks(screen, overlay.Links)
-	s.drawLabels(screen)
+	// What is drawn over the world belongs to the new view, so waits for a transition to end.
+	if !v.Transitioning() {
+		s.drawGlow(screen, overlay.Marks)
+		s.drawLinks(screen, overlay.Links)
+		s.drawLabels(screen)
+	}
 	s.drawHotbar(screen)
 	s.drawSpellPanel(screen)
 	s.drawInventory(screen)
+	s.drawLost(screen)
 	s.drawSaid(screen)
 	s.drawMinimap(screen)
 	s.drawTalk(screen)

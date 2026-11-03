@@ -281,12 +281,17 @@ const (
 	// EventMap reports a cell's floor or wall changed.
 	EventMap = "map"
 	// EventObject reports an object landed on a cell (Detail "landed"), was taken (Detail
-	// "taken"), was used up or lost (Detail "used", "sank"), or left for another level ("fell").
+	// "taken"), was used up or lost (Detail "used", "sank"), or left for another level ("fell"),
+	// or broke or ran out in the player's slot Slot ("worn_out").
 	EventObject = "object"
 	// EventThing reports a thing was placed, moved, hurt or removed: Detail says which.
 	EventThing = "thing"
 	// EventLevelChanged reports the current level changed.
 	EventLevelChanged = "level"
+	// EventTransition reports the player moved by a teleport or a change of level that the
+	// presentation shows: Detail is the transition cue (content.Transition*), Level the level
+	// it arrived on.
+	EventTransition = "transition"
 	// EventNotYet reports something the simulation cannot do yet: Detail says what.
 	EventNotYet = "not_yet"
 	// EventRefused reports a command that could not be carried out: Detail says why.
@@ -311,6 +316,8 @@ type Event struct {
 	Detail  string
 	// Score and Damage are a strike's numbers, for its message.
 	Score, Damage int
+	// Slot is the player's slot an object left, for "worn_out".
+	Slot int
 }
 
 func (e Event) String() string {

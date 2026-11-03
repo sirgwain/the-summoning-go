@@ -159,6 +159,12 @@ type Viewer struct {
 	shows     []sim.Event
 	Flipbooks []string
 	Flipbook  int
+	// Transition is the teleport or change of level showing, nil when none is, and transitions
+	// counts those started; lost are the objects lost from the player's slots still showing going
+	// (transition.go).
+	Transition  *Transition
+	transitions int
+	lost        []lostItem
 
 	// The frontend.
 
@@ -320,6 +326,7 @@ func (v *Viewer) CellPoint(c content.Cell) image.Point {
 func (v *Viewer) Update(in Input) {
 	v.Ticks++
 	v.Cursor = in.Cursor
+	v.dropLost()
 	if v.Front != nil {
 		v.frontUpdate(in)
 		return
@@ -463,7 +470,14 @@ func (v *Viewer) holdWorld(cmds []input.Command) []sim.Event {
 
 // took brings the view up to date with what an update or a held world's commands did.
 func (v *Viewer) took(events []sim.Event) []sim.Event {
+	// Where the player was in the view as last drawn, for a transition: its middle now, moved
+	// back by how far it went since the view last followed it.
+	from := image.Point{}
+	if p := v.World.Player(); p != nil && v.Play {
+		from = v.playerMiddle().Add(v.seen.at.Sub(drawlist.RefPoint(p.U, p.V)).Mul(v.Scale))
+	}
 	v.queueShows(events)
+	v.loseItems(events)
 	v.log(events)
 	v.hear(events)
 	v.announce(events)
@@ -491,6 +505,7 @@ func (v *Viewer) took(events []sim.Event) []sim.Event {
 	if v.Play {
 		v.follow()
 	}
+	v.startTransition(events, from)
 	v.afterPlay()
 	// The selection follows the selected thing, and drops it when it leaves the level.
 	if v.Thing != "" {

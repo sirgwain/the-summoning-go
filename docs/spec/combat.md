@@ -109,7 +109,7 @@ For damage `d` of kind `k`, with `poison` set by poisoning attacks:
 
 An object's wear value starts at its template's durability (items.md). Wearing by `n` takes `3n` when `n > 1`.
 
-- **Weapons** (category flag set): durability 30000 never wears. When the wear exceeds what is left, the weapon breaks: message 8Ah with its name, and it is destroyed.
+- **Weapons** (category flag set): durability 30000 never wears. When the wear exceeds what is left, the weapon breaks: message 8Ah with its name, and it is destroyed. The engine shows it going from its hand as a timed object running out does (items.md, Timed objects).
 - **Armor** (category 1): wear is taken off the value, at most what is left. Each time the value falls past a multiple of 500 and the armor's effective AC drops, the player's armor class drops by 1.
 
 ## Special weapons

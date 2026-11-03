@@ -93,6 +93,7 @@ func (p *Pack) Verify() error {
 	}
 	v.cues()
 	v.effectCues()
+	v.transitions()
 	for _, id := range sortedKeys(p.Spells) {
 		v.spell(p.Spells[id])
 	}

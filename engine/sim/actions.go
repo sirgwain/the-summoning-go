@@ -180,7 +180,7 @@ func (w *World) apply(cmd input.Command) {
 			return
 		}
 		if w.player != nil {
-			w.travel(f.To)
+			w.travel(f.To, "")
 			return
 		}
 		if err := w.enter(f.To.Level); err != nil {
@@ -193,7 +193,7 @@ func (w *World) apply(cmd input.Command) {
 			if dest, err := w.load(c.Level); err != nil {
 				refuse(content.Cell{}, err.Error())
 			} else {
-				w.travel(&content.Destination{Level: c.Level, Cell: w.arrival(dest)})
+				w.travel(&content.Destination{Level: c.Level, Cell: w.arrival(dest)}, "")
 			}
 			return
 		}

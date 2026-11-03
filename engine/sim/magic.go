@@ -441,6 +441,7 @@ func (w *World) spellEffect(l *Level, c caster, sp *content.Spell, e content.Act
 			w.weigh(l, at, -p.weight(), 0)
 			w.place(f.Cell, false)
 			w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "rippled"})
+			w.transition(content.TransitionRipple)
 		}
 	case e.Dispel != nil:
 		for _, f := range w.spellsNear(l, *e.Dispel) {
@@ -593,7 +594,7 @@ func (w *World) enterPortal(l *Level, t *Thing) {
 	to := *t.Portal
 	w.removeThing(l, t, "closed")
 	p.Return = &content.Destination{Level: l.ID, Cell: p.Cell()}
-	w.travel(&to)
+	w.travel(&to, content.TransitionTravel)
 }
 
 // shapeChange gives the player the look of sprite until it next moves.

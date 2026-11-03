@@ -559,6 +559,7 @@ func (w *World) wearWeapon(hand int, o *Object, n int) {
 	for i := range 2 {
 		if p.Slots[SlotRightHand+i] == o {
 			p.Slots[SlotRightHand+i] = nil
+			w.emit(Event{Kind: EventObject, Level: l.ID, Cell: p.Cell(), Item: o.Item, Detail: "worn_out", Slot: SlotRightHand + i})
 		}
 	}
 	w.message(l, p.Cell(), content.MsgWeaponBreaks, o.Item)

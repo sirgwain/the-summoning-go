@@ -35,6 +35,21 @@ var effectCues = map[string]string{
 	content.SparkleCure: sparkleID("cure"), content.SparkleHeal: sparkleID("heal"),
 }
 
+// transitions are how the level transitions and teleports show (scenes.md, Level transitions):
+// the teleporter closes on the player and opens again, scroll slides in from the right, rise and
+// descend squeeze in five steps, and the ripple zigzags.
+func transitions() map[string]*content.Transition {
+	scroll := &content.Transition{Style: content.StyleSlide, From: content.SideRight, MS: 350}
+	return map[string]*content.Transition{
+		content.TransitionTeleporter: {Style: content.StyleIris, MS: 700, HoldMS: 150},
+		content.TransitionRipple:     {Style: content.StyleRipple, MS: 750, Size: 8, Rows: 16},
+		content.TransitionExitWall:   scroll,
+		content.TransitionTravel:     scroll,
+		content.TransitionFall:       {Style: content.StyleSqueeze, From: content.SideBottom, MS: 300, Steps: 5},
+		content.TransitionExitFloor:  {Style: content.StyleSqueeze, From: content.SideTop, MS: 300, Steps: 5},
+	}
+}
+
 // linkFlipbooks writes the effect cues and drops the references to flipbooks that could not be
 // rendered, so that what would play them plays nothing. Conversations naming effects 16 and up
 // lose them this way, as those effects do nothing.
@@ -47,7 +62,8 @@ func (im *importer) linkFlipbooks() {
 			cues[cue] = id
 		}
 	}
-	im.pack.Effects = &content.EffectCues{ID: "effects", Cues: cues}
+	im.pack.Effects = &content.EffectCues{ID: "effects", Cues: cues, Transitions: transitions(),
+		ItemLost: &content.LostItem{Style: content.LostShatter, MS: 450}}
 	keep := func(as []content.Action) []content.Action {
 		out := as[:0]
 		for _, a := range as {
