@@ -129,3 +129,19 @@ func TestState(t *testing.T) {
 		}
 	}
 }
+
+// TestBehaviors describes every behavior the engine knows.
+func TestBehaviors(t *testing.T) {
+	for _, b := range []string{content.BehaviorHostile, content.BehaviorNeverHostile, content.BehaviorLeavesCorpse,
+		content.BehaviorResistsTeleport, content.BehaviorInvulnerable, content.BehaviorPoisonous, content.BehaviorHurtsOnContact,
+		content.BehaviorDeathBlow, content.BehaviorPhysicalOnly, content.BehaviorResistsFire, content.BehaviorResistsLight,
+		content.BehaviorResistsPoison, content.BehaviorAnimated, content.BehaviorStationary, content.BehaviorTalks,
+		content.BehaviorMirrors} {
+		if Behavior(b) == "" {
+			t.Errorf("no description of %s", b)
+		}
+	}
+	if Behavior("unknown") != "" {
+		t.Error("an unknown behavior is described")
+	}
+}

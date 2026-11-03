@@ -181,6 +181,15 @@ func (v *Viewer) recordItems(r any) []paneItem {
 		key := fmt.Sprint(k)
 		switch {
 		case key == "id":
+		case key == "behaviors" && thing != nil:
+			out = append(out, paneItem{text: "  behaviors:"})
+			for _, b := range thing.Behaviors {
+				text := "    " + b
+				if d := inspect.Behavior(b); d != "" {
+					text += ": " + d
+				}
+				out = append(out, paneItem{text: text})
+			}
 		case key == "animations" && thing != nil:
 			// The template's and its sprite's together, below.
 		case key == "animate" && thing != nil && thing.Animate != nil:

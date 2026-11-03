@@ -433,3 +433,26 @@ func statuses(pl *sim.Player) string {
 	}
 	return strings.Join(out, ", ")
 }
+
+// behaviors describe the creature behaviors (docs/spec/creatures.md).
+var behaviors = map[string]string{
+	content.BehaviorHostile:         "hostile from the start",
+	content.BehaviorNeverHostile:    "never turns hostile, even when attacked",
+	content.BehaviorLeavesCorpse:    "leaves a corpse, which weighs on plates and can be pushed",
+	content.BehaviorResistsTeleport: "not taken by teleporters, pits or open trapdoors",
+	content.BehaviorInvulnerable:    "cannot be hurt, and never turns hostile",
+	content.BehaviorPoisonous:       "its hits poison, 2 times in 8",
+	content.BehaviorHurtsOnContact:  "does 1 damage when it walks into the player",
+	content.BehaviorDeathBlow:       "its every attack kills the player outright, unless warded",
+	content.BehaviorPhysicalOnly:    "hurt only by physical blows, and of weapons only by the Silver Sword",
+	content.BehaviorResistsFire:     "fire does a quarter damage",
+	content.BehaviorResistsLight:    "lightning does a quarter damage",
+	content.BehaviorResistsPoison:   "poison does a quarter damage",
+	content.BehaviorAnimated:        "an animated object: only animates in place, and cannot be struck",
+	content.BehaviorStationary:      "stands still and casts",
+	content.BehaviorTalks:           "can be talked to, until it turns hostile",
+	content.BehaviorMirrors:         "passes the damage it takes to the player, and can be struck though it only animates",
+}
+
+// Behavior describes creature behavior b in words; empty for a behavior the engine does not know.
+func Behavior(b string) string { return behaviors[b] }

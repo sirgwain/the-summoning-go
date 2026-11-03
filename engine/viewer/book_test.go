@@ -233,7 +233,8 @@ func TestFullBook(t *testing.T) {
 	text := strings.Join(bookText(v.Book()), "|")
 	// The brute stands in sight at the start, so it is seen; the full book shows past fighting it.
 	for _, want := range []string{"First seen: ", "Strikes for", "Hit points:", "On " + devpack.Cellar + " (click to go there):",
-		"brute at (", "Record " + devpack.ThingBrute + ":", `sprite: "sprite.brute"`} {
+		"brute at (", "Record " + devpack.ThingBrute + ":", `sprite: "sprite.brute"`,
+		"hostile: hostile from the start"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the brute's pane lacks %q: %q", want, text)
 		}
