@@ -1,6 +1,6 @@
 # Audio plan
 
-Status: 2026-11-01. Phases 1–5 done. How music and sound effects get from the game's files to
+Status: 2026-11-03. Phases 1–5 done; phase 6 but for the scenes still to be specified. How music and sound effects get from the game's files to
 the speakers, and the order to build it in. Update this file as work lands, and fold what's
 settled into [design.md](design.md#audio), [pack.md](pack.md) and the spec; delete it once audio
 is done.
@@ -113,13 +113,14 @@ the timing corrected the spec: the timer's divisor comes from 1193180, but it co
 
 - [x] The effects of combat, the bow, used-up objects, missiles, thrown bottles, handling
       objects and gestures (spec, Sound effects).
-- [ ] The view effects' effects and tracks, and the new game's door opening (effect 17h a step),
-      with the view effects and scenes.
+- [x] The view effects' effects and tracks (their flipbooks' steps), and the new game's door
+      opening (effect 17h a step, the part's `step_sounds`).
 - [x] Footsteps, a new game's track 0, the theme track 8 of the creature of NPC record 0Dh while
       it is in sight, and the slow fade on a change of level or a restore; leaving play
       quick-fades.
-- [ ] The front end's and endings' tracks (spec **Unknowns**, with scenes): 1 (a new
-      character's story, 48 bars), 2 and 3 (the intro), 4 (the closing, 8 bars), 5, 6 and 7 (end
+- [x] Track 3 under the splash, in place of the opening picture (creation's `music`).
+- [ ] The intro's and endings' tracks (spec **Unknowns**, with scenes): 1 (a new character's
+      story, 48 bars), 2 (the intro's crossing), 4 (the closing, 8 bars), 5, 6 and 7 (end
       scenes). Levels have no music of their own in the game, and the engine keeps it so.
 - [x] Which tracks loop when started, and with how many bars (spec, Songs).
 

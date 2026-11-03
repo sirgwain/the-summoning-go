@@ -1,6 +1,6 @@
 # Design notes: progress and what remains
 
-Status: 2026-11-01. Where the milestones of [design.md](design.md#milestones) stand, and the work each
+Status: 2026-11-03. Where the milestones of [design.md](design.md#milestones) stand, and the work each
 has left or handed on. Choices that may need revisiting are in
 [design-questions.md](design-questions.md); what the game's behavior leaves open is in each spec's
 **Unknowns**. Update this file as work lands: move an item to the milestone that does it, and drop
@@ -92,7 +92,9 @@ templates and things by id and the random source's state, so a restored world ru
 the saved one would (`TestStateRoundTrip`). `engine/save` writes it gzipped as JSON with the save's
 name and time, and warns when it loads on another pack or version. In play, F5 saves to the quick
 save, F8 loads it, and changing level writes the autosave; saves go under the user's config
-directory per pack (`--saves` to choose). A conversation in progress cannot be saved.
+directory per pack (`--saves` to choose). A conversation in progress cannot be saved, nor a world
+while a transition, view effect or sparkle plays or something waits for one; the autosave of a
+change of level waits until they end (`TestNoSaveWhileHolding`, `TestNoStateWhileWaiting`).
 `--load` starts play or the viewer from a save file, or a bare name in the saves directory.
 
 **Done (the original's saves).** `import-save` reads the game's save files (spec/saves.md) with its
@@ -104,8 +106,9 @@ for is reported (`TestReadSave`, `TestImportSave`).
 **Done (audio, most of it).** The importer renders the game's songs through `internal/opl2` to
 WAV with loop sidecars; `engine/audio` mixes music and effects in layers with the game's fades,
 and `speaker` plays them (`TestLayers`, `TestFades`). Combat, object, missile and gesture effects,
-footsteps, the new game's track, the theme of NPC record 0Dh's creature and the fades on level
-change, restore and leaving play are in; F9 cycles music and effects, effects only and silence.
+footsteps, the new game's track, the theme of NPC record 0Dh's creature, the fades on level
+change, restore and leaving play, the door's sound at each step of its opening and the splash's
+track 3 are in; F9 cycles music and effects, effects only and silence.
 Checked by ear against the game. What is left is in [audio-plan.md](audio-plan.md) phase 6.
 
 **Done (the level map).** Levels have names (TEXT 129h + level) and a map setting; levels 13h and
@@ -133,8 +136,9 @@ the weapon and the school), restore a save, or pick a premade character; then th
 scene and play. A dead player shows for three seconds, then the menu; an ending plays its scene,
 then the menu. Scenes play pictures, parts, captions over banners and fades by the clock; a key
 or click skips. Tested by `TestCreateCharacter`, `TestPremadeAndBack`, `TestDeathAndEndingGoToMenu`
-and `TestSceneRun`. Not yet seen on screen (no display this session): the menus, and the
-imported door and ending scenes.
+and `TestSceneRun`. The splash fades its art in, fills its title in from the left and plays the
+opening track; the menus sit over it in the remake's iron frame, lettered in `engine/font`. Seen
+on screen: the splash, the menus and the door. Not yet: the imported ending scene.
 
 **Done (the disk menu).** O opens the pack's menu conversation (NPC record 0's; the dev pack's
 offers each menu by keyword). Its `menu` actions open frontend screens over play: save under a
@@ -166,28 +170,13 @@ box opens it as the pack where it lies; resting the pointer on one lists what it
 
 ## Handed on
 
-### 5. Fight, left
+### 5–7. Fight, Inventory, Magic and talk, left
 
-- Damage numbers are drawn with the debug font until the UI has its own (Remaster UI).
-- Animations that run on time (a sprite's `ms`) are not played; things show their idle frame or
-  step by moves, and animated creatures by `animate`.
+Done since: timed idle animations (`drawlist.Animator`), the figure's click regions, the chest's
+left-hand look and the hands' armor drawn last (`doll_left`, `doll_over`), attributes in color
+and the armor gauge, the gesture timing with the game's holds (`magic.json` `holds`), Shape
+Change's frame by facing, and the hostile speed of records 23h and 2Bh (`hostile_speed`).
 
-### 6. Inventory, left
-
-- Clicking the figure itself: the game picks a worn slot by the region clicked (items.md, The
-  inventory panel); the engine's panel has a box for each slot beside the figure instead.
-- The chest has a look of its own on the figure; it is not imported. Which hand objects count as
-  the armor drawn last is a guess (those with an armor bonus).
-- The game draws an attribute below or above its maximum in another color, and an armor gauge;
-  the panel writes the maximum after it and the armor class as a number.
-
-### 7. Magic and talk, left
-
-- Gesture timing: the game holds some icons over two updates by a table of which may follow
-  which (spells.md, Unknowns); the engine shows one an update.
-- Shape Change draws the creature's first frame, not its walk; the player's held objects hide.
-- Records 23h and 2Bh get speed 16 when a conversation turns them hostile (creatures.md,
-  Hostility); not done.
 - Interaction variables the game reads itself beyond 14, 19, 32, 96 (quiet combat), 97 and 98
   (magnify): 34, set when play goes on after ending G, waits for its milestone.
 - Gateway's level 30 and the conversations that return from it are imported but not played
@@ -207,26 +196,26 @@ box opens it as the pack where it lies; resting the pointer on one lists what it
   effect to its next update. The view plays them with the world paused, placed by scenes.md, and
   its tools play any flipbook (B, K). The dev pack draws a flipbook for each cue and wires one
   to the hall's exit D, socket and sealed door, the Heal spell and the sage's word on fireballs
-  (`TestEffectsPlay`, `TestPitEffectInViewer`). Left: changing level shows the new view by its style
-  (scroll, rise, descend, teleport, ripple); `rippled` is a thing event until then. What waits
-  for an effect is not saved, so a save taken while one plays loses it.
+  (`TestEffectsPlay`, `TestPitEffectInViewer`). Transitions: each change of level or teleport names its cue, and the
+  pack gives it a style (iris, slide, squeeze, ripple, fade, cut), drawn from the view as last
+  drawn to the new; lost objects shatter or fade in their slot.
 - The intro, the new character's story and the end scenes, whose captions are in the game's
   program: the plan for their spec is [scenes-plan.md](scenes-plan.md). Ending G's changes to
   the world and its save, and going on from that save with variable 34 set (dialogue.md).
-- Audio's last phase ([audio-plan.md](audio-plan.md)): the view effects' sounds and tracks, the
-  new game's door, and the front end's and endings' tracks 1–7, with the scenes.
+- Audio's last phase ([audio-plan.md](audio-plan.md)): the view effects' sounds and tracks, and
+  the new character's story's and endings' tracks, with the scenes.
 - Play *The Summoning* from start to end on the imported pack.
 
 ### 9. Remaster UI
 
 - Play uses the game's key layout (Space and Q for the hands, X and Z to throw, F take, G put
   down, Enter lever, E talk, H recenter, P pause; 1–4 and R wait for spells).
-- Panels from the game's art (the hotbar, the inventory and spell panels and the conversation
-  window draw plain boxes and the debug font until then; the game's spell panel art is resource
-  7, its icon strip resources 51 and 52),
-  hotkeys for the hotbar's objects, and the custom
-  outline font (the hotbar's labels and tooltips use the debug font). Play mode's text panel is a
-  stand-in.
+- Done: the remake's own panel frames (iron and sapphire, runic slate for the spell panel) and
+  outline font (`engine/font`). The game's panel art is not used, by choice.
+- Hotkeys for the hotbar's objects.
+- The map in the engine's own style, with the links the player has travelled
+  (`docs/spec/world.md`, The engine's map): specified, not built. The minimap now shrinks the
+  whole level into a plain box.
 - Quality of life, designed in [design.md](design.md) (UI; Editor, Links):
   - Done: the spellbook as a scrollable list by school. Each school is headed by its name and its
     memorizations of its limit, each spell a row of icon, name, gesture, cost and memorizations
@@ -255,10 +244,8 @@ box opens it as the pack where it lies; resting the pointer on one lists what it
     arrows. The selection and the features and
     things its links reach glow in the link's color (`render.Glow`). Left: destinations on other
     levels, and following a link off the screen.
-  - The full map switching to any visited level, and hovering a teleporter or exit to see where
-    it took the player, or a lever or plate to see what it changed, from what the player has
-    observed (recorded by the world, kept in saves), in the editor and the game's map, from the
-    viewer's link overlay.
+  - Hovering a lever or plate on the map to see what it changed, from what the player has
+    observed (design.md, Map of past levels and their links); after the map above.
 
 ### 10. Modding
 

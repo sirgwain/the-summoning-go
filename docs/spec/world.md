@@ -180,7 +180,52 @@ Some levels refuse the map:
 | 13h | Message 90h |
 | 21h, 22h, 23h | Conversation 7Dh |
 
-**Engine model.** The map belongs to the interface, not to an item. A minimap and a full map are always available and show the same seen cells. A seen cell shows what it is, as the game's icons tell apart: wall, door, exit (an exit marker, or a teleporter or exit in a wall), mouth, armed teleporter, weight plate, rune mark, pit or open trapdoor, closed trapdoor, gem socket; the engine also shows floor and water. The full map has a legend naming the color of each kind it shows, and the player's. Each level has a map setting: shown, or refused with a message or a conversation. While the map is refused the minimap is hidden, and trying to open the map shows the message or runs the conversation. The importer sets levels 13h, 21h, 22h and 23h from the table above and every other level to shown. Power 22h imports as "open the map", following the same rule.
+### The engine's map
+
+The map belongs to the interface, not to an item: a minimap and a full map are always available, with no Palimpsest needed. Both show the same thing, the level as the player has seen it, and differ in size and in what the mouse can do. The engine draws them in its own style, not with the game's icons.
+
+**Refusing.** Each level has a map setting: shown, or refused with a message or a conversation. While the current level refuses its map the minimap is hidden, and trying to open the full map shows the message or runs the conversation. The importer sets levels 13h, 21h, 22h and 23h from the table above and every other level to shown. Power 22h imports as "open the map", following the same rule. The full map can still show another visited level that does not refuse its map (Other levels, below).
+
+**What a cell shows.** Only seen cells are drawn; the rest is the map's background. A seen cell is a tile in the view's projection, its rows and columns turned as the view turns them, so the map has the view's shape and north. Each cell is drawn by what it is, in this order, the first that applies:
+
+| Cell | Drawn as |
+| --- | --- |
+| A wall (any shape), or a closed door's frame | A raised block: the cell's diamond in the wall color, lit on its top-left edges and shaded on its bottom-right ones, standing a quarter of the cell's height above the floor |
+| A door | Floor, with a bar in the door color along the line of its wall, drawn open (a gap in the middle) while the door is open |
+| Water (a floor of depth above 0) | The cell in the water color, a lighter line where it meets a floor that is not water |
+| Any other floor | The cell in the floor color, its edges a little darker, so the tiles read as a grid |
+
+Over its floor, a feature draws a symbol of its own, about half the cell's width, centered on the cell:
+
+| Feature | Symbol |
+| --- | --- |
+| Exit marker, exit or teleporter in a wall | An arrowhead pointing out of the level, in the exit color |
+| Armed teleporter | A ring in the teleporter color |
+| Pit, open trapdoor | A dark hole with a lighter rim |
+| Closed trapdoor | A square outline in the trapdoor color |
+| Weight plate | A small square in the plate color, drawn sunk while pressed |
+| Rune mark | A dot in the mark color with a ring round it |
+| Gem socket | A small diamond in the socket color, filled with each gem set in it |
+| Mouth | A speech dot in the mouth color |
+
+A teleporter not armed draws no symbol. Each kind has one color, the same in the legend.
+
+**The player** is a marker on its cell: a filled circle with a pointer showing its facing, in the player's color with a dark outline, its brightness pulsing once a second so it can be found at a glance.
+
+**The minimap** sits in the top-left corner of the view, in a frame of the panels' style (the inventory's iron), 25% of the screen's width and half as tall, within the margin. Unlike the full map it does not fit the whole level: each cell is 12 screen pixels wide at the hotbar's scale (6 panel pixels at its scale), and the map is centered on the player and follows it as the view does. Cells cut by the frame are clipped by it. Under the frame a plaque names the level. The minimap is hidden while the full map, a conversation, the inventory panel, the spell panel or the book is open, and the player can hide or show it with Shift+M; that choice is a setting of the presentation, not of the world. The minimap takes no clicks: they go to the view under it.
+
+**The full map** opens with M (or power 22h) over the view, which shows darkened behind it, in the same frame, filling the screen within the margin. It fits the level's seen cells, with a margin of two cells, as large as fits, then can be zoomed with the mouse wheel (from that size to 32 screen pixels a cell, about the pointer) and panned by dragging with the left button. The level's name is its title. Down its left side a legend shows a swatch and a name for the player and for each kind the map shows. Esc or M closes it; other keys and clicks do what the map's own controls say, and are otherwise ignored while it is open. The world holds while the full map is open.
+
+**Links the player has been through.** The world records, for the player, each link it has travelled: a teleporter (by its feature), an exit marker or an exit in a wall, a pit or an open trapdoor. A record is the link's level and cell, and the level and cell the player arrived at; travelling the same link to the same place again adds nothing, and a teleporter that sent the player to several places keeps each. Travel by a conversation, a portal, a rune mark or a spell is not a link and is not recorded. The records are world state, kept in saves; a save imported from the game starts with none, since the game keeps none.
+
+On both maps a cell with a recorded link draws a small bright dot at its symbol's corner, so the player can see which ways it knows. On the full map, resting the pointer on such a cell shows where it leads:
+
+- **On the same level**, a curved arrow from the cell to each place it led, in the link's color, ending in a small ring on the arrival cell, with the place's distance in cells beside it when the arrow is long.
+- **To another level**, a label by the cell naming the level (its name, or "Level n" without one) and the arrival cell's coordinates, with a short arrow from the cell to the label. A label for a level the full map can show is a button: clicking it switches the map to that level, centered on the arrival cell, with the arrival cell marked.
+
+The same arrows and labels show for the links leading to the cell under the pointer, drawn dashed, so the player can also see where they came from. With the pointer on nothing, the full map shows no arrows.
+
+**Other levels.** The full map can show any level the player has visited whose map setting is shown, with its seen cells as they were last seen (each level keeps its own). Page Up and Page Down step through the visited levels in the order they were first visited, and clicking a link's label goes to its level, as above; Home comes back to the current level. On a level other than the current one there is no player marker, and the title says it is not the current level ("Level name — visited"). The minimap always shows the current level.
 
 ## Liquids
 
@@ -211,4 +256,5 @@ The header's liquid kind:
 
 ## Unknowns
 
+- The engine's map: its exact colors, which belong to the remake's palette of panels.
 - The use of terrain 0Fh and 12h–14h, which no level is known to contain.

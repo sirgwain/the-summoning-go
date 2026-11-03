@@ -338,18 +338,16 @@ The file formats are in [pack.md](pack.md).
   inventory image instead of their small floor image, so they are easier to see and to click.
   An item template carries both images (`docs/spec/items.md`). Presentation only.
 - A level map, always available, with no item needed: a minimap in a corner of the view, and a
-  full-screen map on a key. Both show only the cells the player has seen. A level can refuse the
+  full map on a key, drawn in the engine's own style (`docs/spec/world.md`, The engine's map).
+  Both show only the cells the player has seen. A level can refuse the
   map (`docs/spec/world.md`): the minimap then hides, and opening the map shows the level's message
   or starts its conversation instead.
 - **Map of past levels and their links.** The full map can switch to any level the player has
-  visited, showing that level's seen cells (kept per level). It is interactive: hovering a
-  teleporter, exit, pit or trapdoor the player has used shows where it took them, a line or a
-  label to each destination they have travelled through it (one teleporter can have several);
-  hovering a lever, plate or slot whose effect the player has seen shows what it changed (the doors,
-  walls and floors that moved when it was used while in sight). Only what the player has
-  observed is shown: the world records each use's destination and each switch's seen effects,
-  and keeps them in saves. The tools show the same links without the observing (below), and are
-  built first.
+  visited, and shows where the teleporters, exits, pits and trapdoors the player has travelled
+  through took it, from what the world records of the player's travels (`docs/spec/world.md`,
+  The engine's map). Later: hovering a lever, plate or slot whose effect the player has seen shows
+  what it changed (the doors, walls and floors that moved when it was used while in sight), from
+  the same kind of record. The tools show the same links without the observing (below).
 - Esc closes the topmost window over the view (a conversation, the map, the spell panel, a scroll's
   picture, the inventory), one per press; with none open it opens the options menu, as O does.
 - The UI only sends commands; it never changes game state directly.
