@@ -5,7 +5,6 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/frame"
@@ -26,7 +25,7 @@ func (s *Window) drawSpellPanel(screen *ebiten.Image) {
 	stroke := func(r image.Rectangle, c color.Color) {
 		vector.StrokeRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), 1, c, false)
 	}
-	s.drawFrame(screen, frame.Runic, sp.Frame, sp.Scale)
+	s.drawFrame(screen, frame.Runic, sp.Frame, sp.Scale, 1)
 	for _, b := range sp.Icons {
 		fill(sp.Screen(b.Rect), slotColor)
 		stroke(sp.Screen(b.Rect), slotEdgeColor)
@@ -35,7 +34,7 @@ func (s *Window) drawSpellPanel(screen *ebiten.Image) {
 		r := sp.Screen(b.Rect)
 		fill(r, actionColor)
 		stroke(r, slotEdgeColor)
-		ebitenutil.DebugPrintAt(screen, b.Label, r.Min.X+(r.Dx()-len(b.Label)*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+		s.print(screen, b.Label, r.Min.X+(r.Dx()-len(b.Label)*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
 	}
 	for _, h := range sp.Headers {
 		fill(sp.Screen(h.Rect), actionColor)
@@ -45,7 +44,7 @@ func (s *Window) drawSpellPanel(screen *ebiten.Image) {
 		r := sp.Screen(e.Button)
 		fill(r, actionColor)
 		stroke(r, slotEdgeColor)
-		ebitenutil.DebugPrintAt(screen, "Memorize", r.Min.X+(r.Dx()-8*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+		s.print(screen, "Memorize", r.Min.X+(r.Dx()-8*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
 	}
 	if !sp.Bar.Empty() {
 		fill(sp.Screen(sp.Bar), slotColor)
@@ -77,16 +76,16 @@ func (s *Window) drawSpellPanel(screen *ebiten.Image) {
 	for _, b := range sp.Icons {
 		if b.Known {
 			r := sp.Screen(b.LetterRect)
-			ebitenutil.DebugPrintAt(screen, string(rune(b.Letter)), r.Min.X+(r.Dx()-viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+			s.print(screen, string(rune(b.Letter)), r.Min.X+(r.Dx()-viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
 		}
 	}
 	for _, h := range sp.Headers {
 		r := sp.Screen(h.Rect)
-		ebitenutil.DebugPrintAt(screen, viewer.Clip(h.Label, (r.Dx()-4)/viewer.CharWidth), r.Min.X+4, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+		s.print(screen, viewer.Clip(h.Label, (r.Dx()-4)/viewer.CharWidth), r.Min.X+4, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
 	}
 	for _, e := range sp.Book {
 		r, end := sp.Screen(e.Rect), sp.Screen(e.Button).Min.X-2
 		x := sp.Screen(e.IconRect).Max.X + 4
-		ebitenutil.DebugPrintAt(screen, viewer.Clip(e.Label, (end-x)/viewer.CharWidth), x, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+		s.print(screen, viewer.Clip(e.Label, (end-x)/viewer.CharWidth), x, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
 	}
 }

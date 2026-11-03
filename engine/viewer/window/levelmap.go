@@ -5,7 +5,6 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
@@ -91,7 +90,7 @@ func (s *Window) drawFullMap(screen *ebiten.Image) {
 	if name == "" {
 		name = v.World.Current().ID
 	}
-	ebitenutil.DebugPrintAt(screen, name, (v.Screen.X-len(name)*viewer.CharWidth)/2, viewer.LineHeight)
+	s.print(screen, name, (v.Screen.X-len(name)*viewer.CharWidth)/2, viewer.LineHeight)
 }
 
 // drawMapLegend draws the full map's legend down its left side, a swatch and a name for the
@@ -103,7 +102,7 @@ func (s *Window) drawMapLegend(screen *ebiten.Image, m *viewer.LevelMap) int {
 	line := func(c color.Color, name string) {
 		vector.FillRect(screen, float32(x), float32(y+(viewer.LineHeight-swatch)/2), swatch, swatch, c, false)
 		vector.StrokeRect(screen, float32(x), float32(y+(viewer.LineHeight-swatch)/2), swatch, swatch, 1, slotEdgeColor, false)
-		ebitenutil.DebugPrintAt(screen, name, x+swatch+viewer.CharWidth, y)
+		s.print(screen, name, x+swatch+viewer.CharWidth, y)
 		width = max(width, swatch+viewer.CharWidth*(1+len(name)))
 		y += viewer.LineHeight + 4
 	}

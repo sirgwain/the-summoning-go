@@ -29,7 +29,7 @@ const (
 	Runic
 )
 
-// Picture is a frame drawn at one size: Base is the frame with its inside filled, and Glow, for
+// Picture is a frame drawn at one size: Base is the frame with its inside clear, and Glow, for
 // a style with lights, the lights of each group, to be drawn over Base at Pulse's strength.
 type Picture struct {
 	Base *image.RGBA
@@ -44,19 +44,16 @@ func Pulse(g int, t float64) float64 {
 // Draw draws a frame of style with its outer size w × h, the frame Width inside that.
 func Draw(style Style, w, h int) *Picture {
 	p := &Picture{Base: image.NewRGBA(image.Rect(0, 0, w, h))}
-	var st painter = iron{}
+	st := painterOf(style)
 	if style == Runic {
-		st = runic{}
 		for g := range p.Glow {
 			p.Glow[g] = image.NewRGBA(p.Base.Rect)
 		}
 	}
-	inside := st.inside()
 	for y := range h {
 		for x := range w {
 			d := min(x, y, w-1-x, h-1-y)
 			if d >= Width {
-				p.Base.SetRGBA(x, y, inside)
 				continue
 			}
 			var px pixel
@@ -86,6 +83,16 @@ func Draw(style Style, w, h int) *Picture {
 		}
 	}
 	return p
+}
+
+// Inside is the color a panel framed in style fills its inside with, before any see-through.
+func Inside(style Style) color.RGBA { return painterOf(style).inside() }
+
+func painterOf(style Style) painter {
+	if style == Runic {
+		return runic{}
+	}
+	return iron{}
 }
 
 // cornerAt is where coordinate v lies in a corner piece along a side of length n, or -1 when it

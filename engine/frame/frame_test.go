@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
-func TestDrawFillsTheInsideAndBorder(t *testing.T) {
+func TestDrawFillsTheBorderAndLeavesTheInside(t *testing.T) {
 	for _, style := range []Style{Iron, Runic} {
 		p := Draw(style, 120, 60)
 		if got := p.Base.Bounds(); got != image.Rect(0, 0, 120, 60) {
 			t.Fatalf("style %d: bounds %v", style, got)
 		}
-		// Every frame pixel is opaque; the inside is the panel's fill.
+		// Every frame pixel is opaque; the inside is clear.
 		for y := range 60 {
 			for x := range 120 {
 				a := p.Base.RGBAAt(x, y).A
@@ -19,8 +19,8 @@ func TestDrawFillsTheInsideAndBorder(t *testing.T) {
 				if inFrame && a != 255 {
 					t.Fatalf("style %d: frame pixel (%d, %d) has alpha %d", style, x, y, a)
 				}
-				if !inFrame && p.Base.RGBAAt(x, y) != p.Base.RGBAAt(60, 30) {
-					t.Fatalf("style %d: inside pixel (%d, %d) differs", style, x, y)
+				if !inFrame && a != 0 {
+					t.Fatalf("style %d: inside pixel (%d, %d) has alpha %d", style, x, y, a)
 				}
 			}
 		}

@@ -278,16 +278,22 @@ The file formats are in [pack.md](pack.md).
 - **Frames.** The engine draws its own panel frames, in the Summoning's spirit but not its art:
   generated from noise and rules (`engine/frame`) at any size, so no original art is needed. A
   frame is `frame.Width` (8) of the panel's own pixels on each side, scaled with the panel, with
-  12 × 12 corner pieces. The layout leaves room for it: a panel's `Frame` is its `Rect` grown by
+  12 × 12 corner pieces. Its inside is left clear, for each panel to fill as see-through as it
+  needs. The layout leaves room for it: a panel's `Frame` is its `Rect` grown by
   the frame, and the panels and the view keep clear of it and take the pointer over it.
-  - _Iron and sapphire_ frames the hotbar and the inventory panel: blue-black brushed iron with a
-    bevel and evenly spaced rivets, a faceted sapphire at each corner.
+  - _Iron and sapphire_ frames the hotbar, the inventory panel and the frontend's menus:
+    blue-black brushed iron with a bevel and evenly spaced rivets, a faceted sapphire at each
+    corner. A menu's buttons are iron plaques; the chosen one is lit steel with a sapphire
+    marker, and the one under the pointer is lighter.
   - _Runic slate_ frames the spell panel: dark layered slate cut with small runes and a ring at
     each corner, lit blue. The light breathes, in three groups of runes out of step, a cycle of
     about four seconds.
-- **Text** uses a custom outline font drawn for the project to match the original's lettering,
-  rendered at native resolution with Ebitengine's `text/v2`. The font is content, so a game can
-  supply its own.
+- **Text** uses the engine's own pixel font (`engine/font`), drawn for the project in the
+  spirit of the original's lettering, not copied from it: letters at most 5 pixels wide, capitals
+  7 high with 2 below the line, filled light with a dark outline so they read over any art, on a
+  fixed advance of 6 and lines 16 apart. It covers printable ASCII; any other letter shows as
+  `?`. It is drawn from an atlas at whole scales only, tinted for color, so it stays crisp. A
+  pack supplying its own font is for later.
 - **Hotbar.** A bar along the bottom of the play view, always shown: the player's portrait, gauges
   for hit points, magic points and load, the two hands with their action buttons, the twenty
   shelves in two rows of ten, and later the memorized spells. It is how the mouse plays: clicking

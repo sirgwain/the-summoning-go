@@ -5,7 +5,6 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
@@ -35,17 +34,17 @@ func (s *Window) drawLog(screen *ebiten.Image) {
 	edge := func(r image.Rectangle, c color.Color) {
 		vector.StrokeRect(win, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx()-1), float32(r.Dy()-1), 1, c, false)
 	}
-	ebitenutil.DebugPrintAt(win, "Find:", lv.Field.Min.X-6*viewer.CharWidth, lv.Field.Min.Y+2)
+	s.print(win, "Find:", lv.Field.Min.X-6*viewer.CharWidth, lv.Field.Min.Y+2)
 	fill(lv.Field, slotColor)
 	edge(lv.Field, keywordColor)
 	cursor := ""
 	if v.Ticks/30%2 == 0 {
 		cursor = "_"
 	}
-	ebitenutil.DebugPrintAt(win, lv.Typed+cursor, lv.Field.Min.X+4, lv.Field.Min.Y+2)
+	s.print(win, lv.Typed+cursor, lv.Field.Min.X+4, lv.Field.Min.Y+2)
 	fill(lv.Close.Rect, actionColor)
 	edge(lv.Close.Rect, slotEdgeColor)
-	ebitenutil.DebugPrintAt(win, lv.Close.Label, lv.Close.Rect.Min.X+(lv.Close.Rect.Dx()-len(lv.Close.Label)*viewer.CharWidth)/2, lv.Close.Rect.Min.Y+2)
+	s.print(win, lv.Close.Label, lv.Close.Rect.Min.X+(lv.Close.Rect.Dx()-len(lv.Close.Label)*viewer.CharWidth)/2, lv.Close.Rect.Min.Y+2)
 
 	for i, r := range lv.Rows {
 		bg := slotColor
@@ -64,10 +63,10 @@ func (s *Window) drawLog(screen *ebiten.Image) {
 			}
 			x += 48 + 4
 		}
-		ebitenutil.DebugPrintAt(win, r.Label, x, r.Rect.Min.Y+(r.Rect.Dy()-viewer.LineHeight)/2)
+		s.print(win, r.Label, x, r.Rect.Min.Y+(r.Rect.Dy()-viewer.LineHeight)/2)
 	}
 	if lv.Empty != "" {
-		ebitenutil.DebugPrintAt(win, lv.Empty, lv.Pane.Min.X, lv.Pane.Min.Y)
+		s.print(win, lv.Empty, lv.Pane.Min.X, lv.Pane.Min.Y)
 	}
 	for _, t := range lv.Text {
 		if t.Focus {
@@ -81,7 +80,7 @@ func (s *Window) drawLog(screen *ebiten.Image) {
 			if t.Heading {
 				vector.FillRect(win, float32(lv.Pane.Min.X), float32(w.Rect.Max.Y)-1, float32(lv.Pane.Dx()), 1, slotEdgeColor, false)
 			}
-			ebitenutil.DebugPrintAt(win, w.Text, w.Rect.Min.X, w.Rect.Min.Y)
+			s.print(win, w.Text, w.Rect.Min.X, w.Rect.Min.Y)
 			if w.Keyword {
 				vector.StrokeLine(win, float32(w.Rect.Min.X), float32(w.Rect.Max.Y)-0.5, float32(w.Rect.Max.X), float32(w.Rect.Max.Y)-0.5, 1, keywordColor, false)
 			}

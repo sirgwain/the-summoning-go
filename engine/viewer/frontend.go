@@ -18,6 +18,7 @@ import (
 
 // Frontend screens.
 const (
+	ScreenSplash     = "splash"
 	ScreenMenu       = "menu"
 	ScreenPortrait   = "portrait"
 	ScreenName       = "name"
@@ -66,6 +67,8 @@ type Frontend struct {
 	least    map[string]int
 	points   int
 	attr     int
+	// splashLeft is the number of updates remaining on the opening splash.
+	splashLeft int
 	// then is the screen after the scene.
 	then string
 	// disk is the menu showing over play (a content.Menu… name), empty for the main frontend;
@@ -90,6 +93,15 @@ func NewFrontend(p *content.Pack, seed uint64, saves []string, size image.Point)
 	f := &Frontend{pack: p, rng: rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)), Saves: saves, Size: size}
 	f.show(ScreenMenu)
 	return f
+}
+
+// OverPlay reports whether the frontend is a menu over play rather than the main frontend.
+func (f *Frontend) OverPlay() bool { return f.disk != "" }
+
+// ShowSplash displays the opening artwork before the main menu.
+func (f *Frontend) ShowSplash() {
+	f.splashLeft = 5 * sim.StepsPerSecond
+	f.show(ScreenSplash)
 }
 
 // PlayScene shows scene id, then goes to screen then ("" to finish).
@@ -205,8 +217,12 @@ func (f *Frontend) list(opts []option) {
 	for _, o := range opts {
 		w = max(w, len(o.label))
 	}
-	w = (w + 4) * CharWidth
+	w = (w + 6) * CharWidth
 	y := f.top()
+	if f.Screen == ScreenMenu && f.disk == "" {
+		// Under the splash's lettering.
+		y = f.Size.Y * 3 / 8
+	}
 	for _, o := range opts {
 		x := (f.Size.X - w) / 2
 		f.Buttons = append(f.Buttons, PanelButton{Rect: image.Rect(x, y, x+w, y+LineHeight+4), Name: o.name, Label: o.label})
@@ -355,6 +371,13 @@ func (f *Frontend) spend(i, delta int) {
 // Update runs the frontend for one update.
 func (f *Frontend) Update(in Input) {
 	if f.Done {
+		return
+	}
+	if f.Screen == ScreenSplash {
+		f.splashLeft--
+		if in.anyPressed() || in.Left.Released || in.Right.Released || f.splashLeft <= 0 {
+			f.show(ScreenMenu)
+		}
 		return
 	}
 	if f.Screen == ScreenScene {

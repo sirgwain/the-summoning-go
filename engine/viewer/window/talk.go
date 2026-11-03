@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
@@ -52,7 +51,7 @@ func (s *Window) drawTalk(screen *ebiten.Image) {
 		draw(img, tv.IconsAt[i], 2, false)
 	}
 	for _, w := range tv.Words {
-		ebitenutil.DebugPrintAt(win, w.Text, w.Rect.Min.X, w.Rect.Min.Y)
+		s.print(win, w.Text, w.Rect.Min.X, w.Rect.Min.Y)
 		if w.Keyword {
 			vector.StrokeLine(win, float32(w.Rect.Min.X), float32(w.Rect.Max.Y)-0.5, float32(w.Rect.Max.X), float32(w.Rect.Max.Y)-0.5, 1, keywordColor, false)
 		}
@@ -73,7 +72,7 @@ func (s *Window) drawTalk(screen *ebiten.Image) {
 		}
 		fill(b.Rect, bg)
 		edge(b.Rect, selected)
-		ebitenutil.DebugPrintAt(win, b.Label, b.Rect.Min.X+(b.Rect.Dx()-len(b.Label)*viewer.CharWidth)/2, b.Rect.Min.Y+2)
+		s.print(win, b.Label, b.Rect.Min.X+(b.Rect.Dx()-len(b.Label)*viewer.CharWidth)/2, b.Rect.Min.Y+2)
 	}
 	if !tv.Waiting {
 		fill(tv.Field, slotColor)
@@ -82,7 +81,7 @@ func (s *Window) drawTalk(screen *ebiten.Image) {
 		if v.Ticks/30%2 == 0 {
 			cursor = "_"
 		}
-		ebitenutil.DebugPrintAt(win, tv.Typed+cursor, tv.Field.Min.X+4, tv.Field.Min.Y+2)
+		s.print(win, tv.Typed+cursor, tv.Field.Min.X+4, tv.Field.Min.Y+2)
 	}
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(float64(tv.Scale), float64(tv.Scale))
@@ -110,7 +109,7 @@ func (s *Window) drawSaid(screen *ebiten.Image) {
 	s.said.Fill(talkColor)
 	vector.StrokeRect(s.said, 0.5, 0.5, float32(size.X-1), float32(size.Y-1), 1, slotEdgeColor, false)
 	for i, l := range lines {
-		ebitenutil.DebugPrintAt(s.said, l, 4, 4+i*viewer.LineHeight)
+		s.print(s.said, l, 4, 4+i*viewer.LineHeight)
 	}
 	at := v.ScreenPoint(said.At)
 	shown := size.Mul(scale)

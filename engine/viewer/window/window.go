@@ -32,7 +32,12 @@ type Window struct {
 	// version is the viewer's draw commands the view holds.
 	version int
 	buffer  *ebiten.Image
-	keys    map[viewer.Key]ebiten.Key
+	splash  *ebiten.Image
+	// font is the engine's lettering.
+	font *ebiten.Image
+	// backdrop is how bright the splash artwork shows behind the frontend now.
+	backdrop float32
+	keys     map[viewer.Key]ebiten.Key
 	// script, if set, gives the input; shots are screenshots due at the next draw.
 	script *viewer.Runner
 	shots  []string
@@ -42,8 +47,6 @@ type Window struct {
 	// talk, said, inv and log are the conversation window, a mouth's message, the inventory
 	// panel and the conversation log, drawn at their own pixels and scaled onto the screen.
 	talk, said, inv, log, book *ebiten.Image
-	// tint holds a line of text printed to be drawn in a color.
-	tint *ebiten.Image
 	// frames are the panels' frames, by style and size; drawn counts the draws, the frames'
 	// clock.
 	frames map[frameKey]*framePics

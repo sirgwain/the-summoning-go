@@ -8,7 +8,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
@@ -35,7 +34,7 @@ func (s *Window) drawTools(screen *ebiten.Image, o viewer.Overlay) {
 			if c, ok := markColors[line.Kind]; ok && line.Kind != "" {
 				s.printColored(screen, line.Text, x, y, c)
 			} else {
-				ebitenutil.DebugPrintAt(screen, line.Text, x, y)
+				s.print(screen, line.Text, x, y)
 			}
 			if line.Item != "" {
 				s.drawItemIcon(screen, line.Item, x+utf8.RuneCountInString(line.Text)*viewer.CharWidth+4, y, r.Max.X)
@@ -72,21 +71,9 @@ func (s *Window) drawItemIcon(screen *ebiten.Image, item string, x, y, right int
 	s.presenter.PresentAt(screen, art, 1, image.Pt(x, y+(viewer.LineHeight-size.Y)/2))
 }
 
-// printColored prints text at (x, y) on the screen in color c: the debug font's white, tinted.
+// printColored prints text at (x, y) on the screen in color c.
 func (s *Window) printColored(screen *ebiten.Image, text string, x, y int, c color.RGBA) {
-	w := utf8.RuneCountInString(text)*viewer.CharWidth + viewer.CharWidth
-	if s.tint == nil || s.tint.Bounds().Dx() < w {
-		if s.tint != nil {
-			s.tint.Deallocate()
-		}
-		s.tint = ebiten.NewImage(max(w, 512), viewer.LineHeight)
-	}
-	s.tint.Clear()
-	ebitenutil.DebugPrintAt(s.tint, text, 0, 0)
-	var op ebiten.DrawImageOptions
-	op.GeoM.Translate(float64(x), float64(y))
-	op.ColorScale.ScaleWithColor(c)
-	screen.DrawImage(s.tint, &op)
+	s.printIn(screen, text, x, y, c)
 }
 
 // markColors are the colors of the glow and the links for the selection and each kind of link.
@@ -184,7 +171,7 @@ func (s *Window) drawLinks(screen *ebiten.Image, links []viewer.SelectionLink) {
 		for i, l := range lines {
 			ly := y + i*viewer.LineHeight
 			vector.FillRect(screen, float32(x), float32(ly), 4, float32(viewer.LineHeight), l.c, false)
-			ebitenutil.DebugPrintAt(screen, l.text, x+7, ly)
+			s.print(screen, l.text, x+7, ly)
 		}
 	}
 }
@@ -226,7 +213,7 @@ func (s *Window) drawLabels(screen *ebiten.Image) {
 		w := len(l.Text)*viewer.CharWidth + 4
 		x, y := at.X-w/2, at.Y-viewer.LineHeight
 		vector.FillRect(screen, float32(x), float32(y), float32(w), float32(viewer.LineHeight), damageColor, false)
-		ebitenutil.DebugPrintAt(screen, l.Text, x+2, y)
+		s.print(screen, l.Text, x+2, y)
 	}
 }
 

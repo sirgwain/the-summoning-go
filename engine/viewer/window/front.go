@@ -6,19 +6,40 @@ import (
 	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
 
-// Drawing the frontend: its menus with the debug font until the UI has its own, and scenes
-// through the palette at the largest whole scale that fits.
+// Drawing the frontend: its menus in an iron frame over the splash artwork darkened, with the
+// debug font until the UI has its own, and scenes through the palette at the largest whole scale
+// that fits.
 
 var (
-	frontColor  = color.RGBA{8, 6, 4, 255}
-	chosenColor = color.RGBA{120, 80, 40, 240}
+	frontColor = color.RGBA{8, 6, 4, 255}
+	// A menu button's iron plaque: plain, under the pointer and chosen, with its edges.
+	plaqueColor        = color.RGBA{28, 34, 44, 255}
+	plaqueHoverColor   = color.RGBA{40, 48, 63, 255}
+	plaqueChosenColor  = color.RGBA{50, 66, 94, 255}
+	plaqueLightColor   = color.RGBA{84, 98, 120, 255}
+	plaqueDarkColor    = color.RGBA{6, 8, 12, 255}
+	sapphireLightColor = color.RGBA{143, 194, 255, 255}
+	sapphireDarkColor  = color.RGBA{42, 96, 198, 255}
+)
+
+const (
+	// menuBrightness and creationBrightness are how bright the splash artwork shows behind
+	// the main menu and behind the other screens; backdropStep is how far it moves each draw
+	// toward that, half a second from full.
+	menuBrightness     = 0.45
+	creationBrightness = 0.3
+	backdropStep       = (1 - menuBrightness) / 30
+	// menuPad is the room inside a menu's frame round what it shows, in screen pixels.
+	menuPad = 12
+	// menuOpacity is how solid a menu panel's inside is.
+	menuOpacity = 0.85
 )
 
 // sceneBannerRow is where a scene's caption and banner show.
@@ -27,14 +48,39 @@ const sceneBannerRow = 180
 func (s *Window) drawFront(screen *ebiten.Image) {
 	f := s.v.Front
 	screen.Fill(frontColor)
-	if f.Screen == viewer.ScreenScene {
+	switch f.Screen {
+	case viewer.ScreenSplash:
+		s.backdrop = 1
+		s.drawSplash(screen)
+		return
+	case viewer.ScreenScene:
 		s.drawScene(screen, f.Scene)
 		return
 	}
-	center := func(text string, y int) {
-		ebitenutil.DebugPrintAt(screen, text, (f.Size.X-len(text)*viewer.CharWidth)/2, y)
+	lettered := false
+	if !f.OverPlay() {
+		target := float32(creationBrightness)
+		if f.Screen == viewer.ScreenMenu {
+			target = menuBrightness
+		}
+		if s.backdrop < target {
+			s.backdrop = min(target, s.backdrop+backdropStep)
+		} else {
+			s.backdrop = max(target, s.backdrop-backdropStep)
+		}
+		art := s.drawSplashArt(screen, s.backdrop)
+		if f.Screen == viewer.ScreenMenu {
+			s.drawSplashTitle(screen, art)
+			lettered = true
+		}
 	}
-	center(f.Title, f.TitleAt())
+	s.drawMenuPanel(screen, f, lettered)
+	center := func(text string, y int) {
+		s.print(screen, text, (f.Size.X-len(text)*viewer.CharWidth)/2, y)
+	}
+	if !lettered {
+		center(f.Title, f.TitleAt())
+	}
 	for i, l := range f.Lines {
 		center(l, f.LinesAt()+i*viewer.LineHeight)
 	}
@@ -48,17 +94,100 @@ func (s *Window) drawFront(screen *ebiten.Image) {
 			s.presenter.PresentAt(screen, art, viewer.PortraitScale, f.PortraitAt())
 		}
 	}
+	cursor := image.Pt(ebiten.CursorPosition())
 	for i, b := range f.Buttons {
-		c := actionColor
-		if i == f.Choice {
-			c = chosenColor
-		}
+		drawPlaque(screen, b.Rect, i == f.Choice, cursor.In(b.Rect), menuScale(f))
 		r := b.Rect
-		vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), c, false)
-		vector.StrokeRect(screen, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx()-1), float32(r.Dy()-1), 1, slotEdgeColor, false)
-		ebitenutil.DebugPrintAt(screen, b.Label, r.Min.X+(r.Dx()-len(b.Label)*viewer.CharWidth)/2, r.Min.Y+2)
+		s.print(screen, b.Label, r.Min.X+(r.Dx()-len(b.Label)*viewer.CharWidth)/2, r.Min.Y+2)
 	}
 	s.drawNotice(screen)
+}
+
+// menuScale is the screen pixels per frame pixel of a menu's frame.
+func menuScale(f *viewer.Frontend) int { return max(1, min(4, f.Size.X/600)) }
+
+// drawMenuPanel draws the iron frame round what a menu shows: its title (unless the splash
+// letters it), lines, portrait and buttons.
+func (s *Window) drawMenuPanel(screen *ebiten.Image, f *viewer.Frontend, lettered bool) {
+	var r image.Rectangle
+	add := func(q image.Rectangle) {
+		if r.Empty() {
+			r = q
+		} else {
+			r = r.Union(q)
+		}
+	}
+	line := func(text string, y int) {
+		if w := len(text) * viewer.CharWidth; w > 0 {
+			x := (f.Size.X - w) / 2
+			add(image.Rect(x, y, x+w, y+viewer.LineHeight))
+		}
+	}
+	if !lettered {
+		line(f.Title, f.TitleAt())
+	}
+	for i, l := range f.Lines {
+		line(l, f.LinesAt()+i*viewer.LineHeight)
+	}
+	if f.Portrait != nil {
+		if b := s.v.Pack.Sprites[f.Portrait.Sprite]; b != nil {
+			at := f.PortraitAt()
+			add(image.Rectangle{at, at.Add(image.Pt(b.FrameSize[0], b.FrameSize[1]).Mul(viewer.PortraitScale))})
+		}
+	}
+	for _, b := range f.Buttons {
+		add(b.Rect)
+	}
+	if r.Empty() {
+		return
+	}
+	scale := menuScale(f)
+	outer := r.Inset(-(menuPad + frame.Width*scale))
+	// The frame is whole frame pixels.
+	outer.Max.X += (scale - outer.Dx()%scale) % scale
+	outer.Max.Y += (scale - outer.Dy()%scale) % scale
+	s.drawFrame(screen, frame.Iron, outer, scale, menuOpacity)
+}
+
+// drawPlaque draws a menu button's iron plaque in r, its edges k pixels: lit steel with a
+// sapphire at each end when chosen, lighter under the pointer.
+func drawPlaque(screen *ebiten.Image, r image.Rectangle, chosen, hovered bool, k int) {
+	fill := func(q image.Rectangle, c color.Color) {
+		vector.FillRect(screen, float32(q.Min.X), float32(q.Min.Y), float32(q.Dx()), float32(q.Dy()), c, false)
+	}
+	face, light := plaqueColor, plaqueLightColor
+	switch {
+	case chosen:
+		face, light = plaqueChosenColor, sapphireLightColor
+	case hovered:
+		face = plaqueHoverColor
+	}
+	k = min(k, r.Dy()/4)
+	fill(r, plaqueDarkColor)
+	fill(image.Rect(r.Min.X, r.Min.Y, r.Max.X-k, r.Max.Y-k), light)
+	fill(image.Rect(r.Min.X+k, r.Min.Y+k, r.Max.X-k, r.Max.Y-k), face)
+	if !chosen {
+		return
+	}
+	// A cut sapphire at each end: light above, dark below.
+	rad := float32(r.Dy()-2*k) / 2 * 0.45
+	cy := float32(r.Min.Y+r.Max.Y) / 2
+	for _, cx := range []float32{float32(r.Min.X+k+3) + rad, float32(r.Max.X-k-3) - rad} {
+		for i, c := range []color.RGBA{sapphireLightColor, sapphireDarkColor} {
+			dy := -rad
+			if i == 1 {
+				dy = rad
+			}
+			var p vector.Path
+			p.MoveTo(cx-rad, cy)
+			p.LineTo(cx, cy+dy)
+			p.LineTo(cx+rad, cy)
+			p.Close()
+			op := &vector.DrawPathOptions{AntiAlias: true}
+			op.ColorScale.ScaleWithColor(c)
+			vector.FillPath(screen, &p, nil, op)
+		}
+	}
 }
 
 // drawScene draws a scene's pictures, part, banner, caption and fade.
@@ -93,7 +222,7 @@ func (s *Window) drawScene(screen *ebiten.Image, r *viewer.SceneRun) {
 	s.presenter.PresentAt(screen, art, scale, at)
 	if r.Caption != "" {
 		text := inspect.Text(s.v.Pack, r.Caption)
-		ebitenutil.DebugPrintAt(screen, text, at.X+(size.X*scale-len(text)*viewer.CharWidth)/2, at.Y+sceneBannerRow*scale+(20*scale-viewer.LineHeight)/2)
+		s.print(screen, text, at.X+(size.X*scale-len(text)*viewer.CharWidth)/2, at.Y+sceneBannerRow*scale+(20*scale-viewer.LineHeight)/2)
 	}
 	if r.Fade != "" && r.Faded > 0 {
 		c := parseColor(r.Fade)

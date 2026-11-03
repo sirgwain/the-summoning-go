@@ -223,6 +223,8 @@ The message line shows the game's messages: what the player takes, refusals, com
 
 The game starts at a main menu: create a character, restore a game, or select a premade character.
 
+**Engine model.** On an interactive start with the main menu enabled, the engine first shows its own splash artwork for five seconds. Any key or mouse click dismisses it to the menu. Returning to the menu after play does not show the splash again. The main menu, restoring and the screens of creating a character show over the splash artwork darkened, the main menu with its lettering; leaving the splash, the artwork darkens over half a second. The main menu's buttons start three eighths of the way down the screen, under the lettering.
+
 **Creating a character** goes through:
 
 1. **The descendant**: one of F's portrait rows (formats.md, F), shown as its portrait; the arrows step through them and R picks one at random. The row gives the character's sex, other-sex portrait and talk portrait.

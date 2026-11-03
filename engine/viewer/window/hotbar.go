@@ -7,7 +7,6 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/frame"
@@ -71,7 +70,7 @@ func (s *Window) drawHotbar(screen *ebiten.Image) {
 	stroke := func(r image.Rectangle, c color.Color) {
 		vector.StrokeRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), 1, c, false)
 	}
-	s.drawFrame(screen, frame.Iron, h.Frame, h.Scale)
+	s.drawFrame(screen, frame.Iron, h.Frame, h.Scale, 1)
 	for i, g := range h.Gauges {
 		r := h.Screen(g.Rect)
 		fill(r, slotColor)
@@ -110,7 +109,7 @@ func (s *Window) drawHotbar(screen *ebiten.Image) {
 		box := h.Screen(b.Rect).Inset(1)
 		fill(box, actionColor)
 		stroke(box, slotEdgeColor)
-		ebitenutil.DebugPrintAt(screen, b.Label, box.Min.X+(box.Dx()-len(b.Label)*viewer.CharWidth)/2, box.Min.Y+(box.Dy()-viewer.LineHeight)/2)
+		s.print(screen, b.Label, box.Min.X+(box.Dx()-len(b.Label)*viewer.CharWidth)/2, box.Min.Y+(box.Dy()-viewer.LineHeight)/2)
 	}
 	for _, a := range h.Actions {
 		r := h.Screen(a.Rect).Inset(1)
@@ -118,7 +117,7 @@ func (s *Window) drawHotbar(screen *ebiten.Image) {
 		fillWait(screen, r, actionWait(a), waitColor)
 		stroke(r, slotEdgeColor)
 		if a.Icon == nil {
-			ebitenutil.DebugPrintAt(screen, a.Label, r.Min.X+(r.Dx()-len(a.Label)*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+			s.print(screen, a.Label, r.Min.X+(r.Dx()-len(a.Label)*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
 		}
 	}
 
@@ -165,7 +164,7 @@ func (s *Window) drawHotbar(screen *ebiten.Image) {
 		fillWait(screen, h.Screen(b.Rect).Inset(1), b.Wait, waitShade)
 		if b.Count > 1 {
 			r := h.Screen(b.Rect)
-			ebitenutil.DebugPrintAt(screen, fmt.Sprint(min(b.Count, 9)), r.Max.X-viewer.CharWidth-2, r.Max.Y-viewer.LineHeight)
+			s.print(screen, fmt.Sprint(min(b.Count, 9)), r.Max.X-viewer.CharWidth-2, r.Max.Y-viewer.LineHeight)
 		}
 	}
 }

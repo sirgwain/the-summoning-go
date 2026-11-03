@@ -177,3 +177,37 @@ func TestSceneRun(t *testing.T) {
 		t.Errorf("faded %v", r.Faded)
 	}
 }
+
+func TestSplash(t *testing.T) {
+	for _, dismiss := range []struct {
+		name  string
+		input Input
+	}{
+		{"key", Input{Pressed: map[Key]bool{KeyEnter: true}}},
+		{"left click", Input{Left: Button{Released: true}}},
+		{"right click", Input{Right: Button{Released: true}}},
+	} {
+		t.Run(dismiss.name, func(t *testing.T) {
+			v := newViewer(t)
+			v.OpenFrontend()
+			v.Front.ShowSplash()
+			v.Front.Update(dismiss.input)
+			if v.Front.Screen != ScreenMenu || v.Front.Done {
+				t.Fatalf("dismissal: %+v", v.Front)
+			}
+		})
+	}
+	v := newViewer(t)
+	v.OpenFrontend()
+	v.Front.ShowSplash()
+	for range 5*sim.StepsPerSecond - 1 {
+		v.Front.Update(Input{})
+	}
+	if v.Front.Screen != ScreenSplash {
+		t.Fatal("splash ended early")
+	}
+	v.Front.Update(Input{})
+	if v.Front.Screen != ScreenMenu {
+		t.Fatal("splash did not time out")
+	}
+}

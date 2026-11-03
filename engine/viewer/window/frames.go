@@ -2,8 +2,10 @@ package window
 
 import (
 	"image"
+	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/frame"
 )
 
@@ -22,9 +24,9 @@ type frameKey struct {
 const maxFrames = 16
 
 // drawFrame draws a frame of style filling outer, a panel's Frame on the screen, at scale screen
-// pixels per panel pixel. Its lights breathe with the window's own clock, so they go on while
-// the world is held.
-func (s *Window) drawFrame(screen *ebiten.Image, style frame.Style, outer image.Rectangle, scale int) {
+// pixels per panel pixel, its inside filled at opacity (0..1) of the style's own. Its lights
+// breathe with the window's own clock, so they go on while the world is held.
+func (s *Window) drawFrame(screen *ebiten.Image, style frame.Style, outer image.Rectangle, scale int, opacity float32) {
 	key := frameKey{style, outer.Size().Div(scale)}
 	f, ok := s.frames[key]
 	if !ok {
@@ -43,6 +45,11 @@ func (s *Window) drawFrame(screen *ebiten.Image, style frame.Style, outer image.
 		}
 		s.frames[key] = f
 	}
+	in := outer.Inset(frame.Width * scale)
+	c := frame.Inside(style)
+	k := opacity * float32(c.A) / 255
+	fill := color.RGBA{uint8(float32(c.R) * k), uint8(float32(c.G) * k), uint8(float32(c.B) * k), uint8(255 * k)}
+	vector.FillRect(screen, float32(in.Min.X), float32(in.Min.Y), float32(in.Dx()), float32(in.Dy()), fill, false)
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(float64(scale), float64(scale))
 	op.GeoM.Translate(float64(outer.Min.X), float64(outer.Min.Y))

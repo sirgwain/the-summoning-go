@@ -6,7 +6,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
@@ -26,7 +25,7 @@ func (s *Window) drawNotice(screen *ebiten.Image) {
 	}
 	r := v.NoticeRect()
 	vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), panelColor, false)
-	ebitenutil.DebugPrintAt(screen, v.Notice, r.Min.X+4, r.Min.Y+2)
+	s.print(screen, v.Notice, r.Min.X+4, r.Min.Y+2)
 }
 
 // drawShowing draws the view effect or sparkle playing at its place in the view, a view
@@ -80,7 +79,7 @@ func (s *Window) drawReading(screen *ebiten.Image) {
 	pad := 2 * frame.Width
 	at := image.Pt((v.Screen.X-size.X*scale)/2, bottom-(size.Y+pad)*scale)
 	r := image.Rectangle{at, at.Add(size.Mul(scale))}.Inset(-pad * scale)
-	s.drawFrame(screen, frame.Iron, r, scale)
+	s.drawFrame(screen, frame.Iron, r, scale, 1)
 	art := s.artImage(size)
 	if err := s.sprites.DrawImage(art, *img, 0, 0, false); err != nil && s.err == nil {
 		s.err = err
@@ -107,7 +106,7 @@ func (s *Window) drawPointer(screen *ebiten.Image) {
 		at.Y = max(at.Y, 0)
 		vector.FillRect(screen, float32(at.X), float32(at.Y), float32(w), float32(h), panelColor, false)
 		for i, l := range lines {
-			ebitenutil.DebugPrintAt(screen, l, at.X+2, at.Y+i*viewer.LineHeight)
+			s.print(screen, l, at.X+2, at.Y+i*viewer.LineHeight)
 		}
 	}
 	img, centered, ok := v.Pointer()

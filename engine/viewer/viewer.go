@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirgwain/the-summoning-go/engine/audio"
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/font"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
 	"github.com/sirgwain/the-summoning-go/engine/render/drawlist"
@@ -26,9 +27,10 @@ const (
 	// LogLines is how many events the log keeps.
 	LogLines   = 12
 	panelWidth = 456
-	// CharWidth and LineHeight are the size of a character of the panel's text.
-	CharWidth  = 6
-	LineHeight = 16
+	// CharWidth and LineHeight are the size of a character of the panel's text: the engine's
+	// lettering's.
+	CharWidth  = font.Advance
+	LineHeight = font.LineHeight
 	Margin     = 8
 )
 

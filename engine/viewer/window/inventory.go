@@ -4,7 +4,6 @@ import (
 	"image"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/frame"
@@ -29,7 +28,7 @@ func (s *Window) drawInventory(screen *ebiten.Image) {
 	}
 	win := s.inv
 	win.Clear()
-	s.drawFrame(screen, frame.Iron, ip.Frame, ip.Scale)
+	s.drawFrame(screen, frame.Iron, ip.Frame, ip.Scale, 1)
 	for _, b := range ip.Slots {
 		r := b.Rect.Inset(1)
 		vector.FillRect(win, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), slotColor, false)
@@ -72,7 +71,7 @@ func (s *Window) drawInventory(screen *ebiten.Image) {
 	}
 	s.presenter.PresentAt(win, art, 1, image.Point{})
 	for i, l := range ip.Lines {
-		ebitenutil.DebugPrintAt(win, l.Text, l.At.X+textAt[i], l.At.Y)
+		s.print(win, l.Text, l.At.X+textAt[i], l.At.Y)
 	}
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(float64(ip.Scale), float64(ip.Scale))

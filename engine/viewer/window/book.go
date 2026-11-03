@@ -5,7 +5,6 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
@@ -38,7 +37,7 @@ func (s *Window) drawBook(screen *ebiten.Image) {
 	button := func(b viewer.PanelButton, bg color.Color) {
 		fill(b.Rect, bg)
 		edge(b.Rect, slotEdgeColor)
-		ebitenutil.DebugPrintAt(win, b.Label, b.Rect.Min.X+(b.Rect.Dx()-len(b.Label)*viewer.CharWidth)/2, b.Rect.Min.Y+2)
+		s.print(win, b.Label, b.Rect.Min.X+(b.Rect.Dx()-len(b.Label)*viewer.CharWidth)/2, b.Rect.Min.Y+2)
 	}
 	for i, t := range bv.Tabs {
 		bg := actionColor
@@ -51,14 +50,14 @@ func (s *Window) drawBook(screen *ebiten.Image) {
 	if bv.Full {
 		button(bv.Toggle, actionColor)
 	}
-	ebitenutil.DebugPrintAt(win, "Find:", bv.Field.Min.X-6*viewer.CharWidth, bv.Field.Min.Y+2)
+	s.print(win, "Find:", bv.Field.Min.X-6*viewer.CharWidth, bv.Field.Min.Y+2)
 	fill(bv.Field, slotColor)
 	edge(bv.Field, keywordColor)
 	cursor := ""
 	if v.Ticks/30%2 == 0 {
 		cursor = "_"
 	}
-	ebitenutil.DebugPrintAt(win, viewer.Clip(bv.Typed+cursor, (bv.Field.Dx()-8)/viewer.CharWidth), bv.Field.Min.X+4, bv.Field.Min.Y+2)
+	s.print(win, viewer.Clip(bv.Typed+cursor, (bv.Field.Dx()-8)/viewer.CharWidth), bv.Field.Min.X+4, bv.Field.Min.Y+2)
 	for i, r := range bv.Rows {
 		bg := slotColor
 		switch {
@@ -118,10 +117,10 @@ func (s *Window) drawBook(screen *ebiten.Image) {
 		if r.HasIcon {
 			x += viewer.SlotSize + 4
 		}
-		ebitenutil.DebugPrintAt(win, r.Label, x, r.Rect.Min.Y+(r.Rect.Dy()-viewer.LineHeight)/2)
+		s.print(win, r.Label, x, r.Rect.Min.Y+(r.Rect.Dy()-viewer.LineHeight)/2)
 	}
 	if bv.Empty != "" {
-		ebitenutil.DebugPrintAt(win, bv.Empty, bv.Pane.Min.X, bv.Pane.Min.Y)
+		s.print(win, bv.Empty, bv.Pane.Min.X, bv.Pane.Min.Y)
 	}
 	for _, l := range bv.Lines {
 		if len(l.Words) == 0 {
@@ -141,7 +140,7 @@ func (s *Window) drawBook(screen *ebiten.Image) {
 			vector.FillRect(win, float32(r.Min.X), float32(r.Max.Y)-1, float32(r.Dx()), 1, openEdgeColor, false)
 		}
 		for _, w := range l.Words {
-			ebitenutil.DebugPrintAt(win, w.Text, w.Rect.Min.X, w.Rect.Min.Y)
+			s.print(win, w.Text, w.Rect.Min.X, w.Rect.Min.Y)
 		}
 	}
 	op := &ebiten.DrawImageOptions{}
