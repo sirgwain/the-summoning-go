@@ -31,7 +31,9 @@ type State struct {
 	Shared  map[string]int     `json:"shared,omitempty"`
 	Records map[string]*Record `json:"records,omitempty"`
 	// Log is the conversation log.
-	Log    []*Logged     `json:"log,omitempty"`
+	Log []*Logged `json:"log,omitempty"`
+	// Book is the book (book.go).
+	Book   *Book         `json:"book,omitempty"`
 	Player *PlayerState  `json:"player,omitempty"`
 	Levels []*LevelState `json:"levels"`
 }
@@ -105,7 +107,7 @@ func (w *World) State() (*State, error) {
 		return nil, err
 	}
 	s := &State{Format: StateFormat, Pack: w.pack.Manifest.ID, Version: w.pack.Manifest.Version,
-		Step: w.step, Current: w.current, Status: w.status, RNG: rng, Counters: w.counters, Shared: maps.Clone(w.shared), Records: w.records, Log: w.log}
+		Step: w.step, Current: w.current, Status: w.status, RNG: rng, Counters: w.counters, Shared: maps.Clone(w.shared), Records: w.records, Log: w.log, Book: w.bookState()}
 	if p := w.player; p != nil {
 		s.Player = &PlayerState{Player: *p, Template: p.Template.ID, Want: p.want, Next: p.next, Vision: p.vision,
 			StatusTicks: p.statusTicks, PoseLeft: p.poseLeft}
@@ -166,6 +168,7 @@ func Restore(p *content.Pack, s *State) (*World, error) {
 		w.counters = map[string]int{}
 	}
 	w.log = w.filterLog(s.Log)
+	w.book = w.restoreBook(s.Book)
 	for _, id := range sortedKeys(p.Items) {
 		if p.Items[id].Random {
 			w.randomItems = append(w.randomItems, id)

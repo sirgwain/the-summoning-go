@@ -22,5 +22,6 @@
       }
     }
   ],
-  "power": 40
+  "power": 40,
+  "effect": "effect.potion"
 }

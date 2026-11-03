@@ -17,5 +17,6 @@
         "sprite": "sprite.bolt"
       }
     }
-  ]
+  ],
+  "effect": "spell.fireball.effect"
 }

@@ -187,6 +187,43 @@ On each of the player's updates: the hands' delays count down (items.md), spell 
 
 Napping is the engine's own addition, to wait for magic points without leaving the game running: holding N runs the whole world 32 times as fast. A press of N starts a nap unless the magic points are full ("Your magic points are full.") or a living creature is near the player (within the distance power 12h reaches, items.md; "A creature is near."). The nap goes on while N is held, and stops when N is released, the magic points become full, a creature comes near, the player is hurt, a message is shown or a conversation starts, or another key or a click is taken. While it runs, the top of the screen shows "Waiting: " with the magic points and the time played (hours, minutes and seconds of world time). After a stop, N starts a nap again only once released and pressed again.
 
+## The book
+
+The book is the engine's own addition: a record of the creatures and objects the player has come across, with what the player has learned of each. The game has nothing like it, and no text that describes a creature or an object; what the book says it works out from the templates, with a pack's own texts beside.
+
+**Engine model.** The world keeps an entry for each thing template of kind creature, other than the player's, and each item template, once the player has come across one of its creatures or objects. An entry has a stage, the level and step it was first reached on, and for a creature the kills, the items dropped and the defenses learned. Reaching a stage reaches those before it: a creature first met by being killed is entered at its last stage. The book is world state, kept in saves; a save without one, or imported from the game, starts with an empty book.
+
+| Stage | A creature's, when one of its creatures | An item's, when one of its objects |
+| --- | --- | --- |
+| 1, seen | stands in a cell visible to the player at the end of an update | lies uppermost in a cell visible to the player at the end of an update (contents of what lies there are not seen) |
+| 2, fought or handled | strikes at the player, hit or miss; hurts the player by touch or by any blow it is named for; or is hurt, on the current level | is on the pointer, in any inventory slot, or inside a container there at any depth, at the end of an update |
+| 3, killed or used | dies on the current level, by any cause | is used, or put on, with a power, even when the power refuses (a refusal tells what it does); is in a worn slot (the hands included) at the end of an update, with a power that starts worn (`power_worn`); casts its spell; or starts its conversation |
+
+A creature's defenses are learned only by meeting them, each at the moment it works on one of the template's creatures on the current level, which also reaches stage 2:
+
+| Defense | Learned when |
+| --- | --- |
+| Its vulnerability | the player's blow hits it with a weapon of that class, or an arrow hurts it and the class is the bows' (3) |
+| `resists_fire`, `resists_lightning`, `resists_poison` | it is hurt by fire, lightning or poison, or the player's blow hits it with a poisoning weapon (`poisons`) and it resists poison |
+| `physical_only` | the player's blow hits it, or it is hurt by anything but a physical blow |
+| `resists_teleport` | it stands on an armed teleporter, a pit or an open trapdoor and is not taken |
+
+Each death on the current level adds one to its template's kills. The items of the objects a dying creature drops are added to its entry's drops, each once, in the order first dropped. An item with nothing to use (no power, spell or conversation) has nothing more to learn after stage 2.
+
+What an entry shows, stage by stage, each stage adding to the last:
+
+- **Creature, seen:** its name (the template's `name`, else its conversation's name), its picture (the first frame of its idle animation for its starting facing, or the first frame `animate` shows), its `lore` text, that it can be talked to (`talks`), and where and when it was first seen (the level's name and the play time).
+- **Creature, fought:** its blow's damage (`attack`); that its blows poison (`poisonous`), that touching it hurts (`hurts_on_contact`), that one blow can kill (`death_blow`), that it passes the damage it takes back (`mirrors`); the spell it casts, by name; and each defense learned: the weapon class it is vulnerable to, by name (Creation's `weapon_classes`, or else the name of the weapon that class starts with), that it resists fire, lightning, poison or teleporting, and that magic does not hurt it and of weapons only silver does (`physical_only`).
+- **Creature, killed:** its hit points (dice); the experience it is worth (dice); its kills; and its drops, by name.
+- **Item, seen:** its name, its inventory image, its `lore` text, and where and when it was first seen.
+- **Item, handled:** its weight in half kilograms; each strike action, as the hotbar's boxes number them: its damage (dice), and for a second one whether it is slower than the first and the weapon skill it needs (`skill`); a single strike is just its damage; its armor; the slot it is worn in; that it needs two hands (`two_handed`); a container's capacity and largest size, and that its contents weigh nothing; its charges, when more than one.
+- **Item, used:** its `effect` text; the spell it casts, by name.
+- **Scrolls.** Reading a scroll to learn its spell is how the game is played, not something to find out, so an item with `teaches` is not shown by stages: from first sight its entry shows its name, image, `lore` and where it was first seen, then the spell whose gesture its `teaches` is, by name with its school, its cost in magic points, and the spell's `effect` text. When `teaches` is no spell's gesture, it names the gesture's icons instead. A scroll's entry shows no hint.
+
+The book's window opens with J or the hotbar's Book box, and holds the world while open, as the conversation log does. Two tabs, Creatures and Items, each list their entries by name in alphabetical order, with the count found. A filter field beside the tabs, empty when the book opens, narrows both tabs to the entries whose names hold what is typed, ignoring case, and the counts to those shown; Backspace takes a letter off, and a tab with no entry that matches says "Nothing matches.". Escape clears the filter when it holds anything, and otherwise closes the book. Up, Down, the wheel and a click choose an entry, Page Up and Page Down move a page, Left, Right and a click on a tab switch tabs, and a right click or Close shut it. The chosen entry shows on the right with its picture, its lines, and below them, unless it is a creature that can be talked to (`talks`), what the next stage would show: "Fight one to learn more.", "Defeat one to learn more.", "Pick one up to learn more.", "Wear one to learn more." (an item whose power starts worn and that has no use action) or "Use one to learn more.".
+
+**Import.** The importer writes an `effect` text, in its own words, for each item whose power the game's table gives (items.md, Powers), and none for powers that cast spells or start conversations, which the book names itself. It writes an `effect` text for each spell, also in its own words, from what the spell does (spells.md, Effects). It writes no `lore`; the game has none.
+
 ## Starting a new game
 
 The player starts on the level and cell from INIT, with:

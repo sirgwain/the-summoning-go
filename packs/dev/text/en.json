@@ -1,6 +1,8 @@
 {
   "id": "text.en",
   "strings": {
+    "effect.boots": "Makes you faster (speed +2).",
+    "effect.potion": "Heals 5d10 hit points.",
     "item.bag.name": "Bag of Lightness",
     "item.blue_gem.name": "Blue Gem",
     "item.boots.name": "Boots of Speed",
@@ -44,6 +46,7 @@
     "level.cellar.name": "The Cellar",
     "level.hall.name": "The Hall of Mechanisms",
     "level.study.name": "The Study",
+    "lore.brute": "A hulking cellar dweller that guards what it finds.",
     "msg.breaks": "Your {item} breaks.",
     "msg.cannot_cast": "Your hands are wet; you cannot cast.",
     "msg.class.sword": "Sword",
@@ -85,6 +88,7 @@
     "msg.vanishes": "Your {item} vanishes.",
     "msg.wall_failed": "The wall would not form.",
     "msg.wrong_item": "The {item} doesn't fit.",
+    "name.brute": "Brute",
     "rating.school.1": "Beginner mage",
     "rating.school.2": "Novice mage",
     "rating.school.3": "Adept mage",
@@ -99,6 +103,7 @@
     "school.1": "Sorcery",
     "school.2": "Enchantment",
     "school.3": "Healing",
+    "spell.fireball.effect": "Hurls a ball of fire.",
     "spell.fireball.name": "Fireball",
     "spell.flame_arrow.name": "Flame Arrow",
     "spell.gateway.name": "Gateway",

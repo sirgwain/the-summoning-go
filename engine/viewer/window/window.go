@@ -40,7 +40,7 @@ type Window struct {
 	art map[image.Point]*ebiten.Image
 	// talk, said, inv and log are the conversation window, a mouth's message, the inventory
 	// panel and the conversation log, drawn at their own pixels and scaled onto the screen.
-	talk, said, inv, log *ebiten.Image
+	talk, said, inv, log, book *ebiten.Image
 	// tint holds a line of text printed to be drawn in a color.
 	tint *ebiten.Image
 }
@@ -175,6 +175,7 @@ func (s *Window) Draw(screen *ebiten.Image) {
 	s.drawMinimap(screen)
 	s.drawTalk(screen)
 	s.drawLog(screen)
+	s.drawBook(screen)
 	s.drawShowing(screen)
 	s.drawReading(screen)
 	s.drawTools(screen, overlay)

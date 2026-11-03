@@ -26,6 +26,7 @@ var PlayBindings = []Binding{
 	{"F10/R", "spells"},
 	{"I/Tab", "inventory"},
 	{"L", "conversation log"},
+	{"J", "book of creatures and items"},
 	{"M", "level map"},
 	{"Esc", "close / options"},
 	{"O", "options"},

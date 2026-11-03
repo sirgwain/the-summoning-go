@@ -56,6 +56,8 @@ type World struct {
 	shared   map[string]int
 	log      []*Logged
 	heard    map[string]map[string]bool
+	// book is what the player has come across (book.go).
+	book Book
 	// opening is the thing template whose conversation a new game starts on its first update.
 	opening *content.Thing
 	// ended is how play ended, nil while it goes on.
@@ -155,6 +157,7 @@ func (w *World) Update(cmds []input.Command) []Event {
 		w.statusTick()
 	}
 	w.see()
+	w.look()
 	w.updateTheme(w.Current())
 	w.step++
 	events := w.events

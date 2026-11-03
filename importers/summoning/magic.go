@@ -276,6 +276,10 @@ func (im *importer) spells() error {
 			sp.Icon = &content.Image{Sprite: sid, Frame: slot}
 		}
 		strs[sp.Name] = spellNames[n]
+		if text, ok := spellEffects[n]; ok {
+			sp.Effect = id + ".effect"
+			strs[sp.Effect] = text
+		}
 		im.pack.Spells[id] = sp
 	}
 	return im.magicRecord()

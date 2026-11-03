@@ -239,6 +239,11 @@ func (v *verifier) look(l *Look) {
 func (v *verifier) itemRecord(i *Item) {
 	owner := "item " + i.ID
 	v.text(owner, i.Name)
+	for _, key := range []string{i.Effect, i.Lore} {
+		if key != "" {
+			v.text(owner, key)
+		}
+	}
 	if i.Weight < 0 || i.Size < 0 {
 		v.fail("%s: negative weight or size", owner)
 	}
@@ -321,6 +326,9 @@ func (v *verifier) itemRecord(i *Item) {
 func (v *verifier) thing(t *Thing) {
 	owner := "thing " + t.ID
 	v.music(owner+": theme", t.Theme)
+	if t.Lore != "" {
+		v.text(owner, t.Lore)
+	}
 	switch t.Kind {
 	case ThingCreature, ThingBoulder, ThingTrap, ThingPlayer, ThingConjured, ThingPortal:
 	default:

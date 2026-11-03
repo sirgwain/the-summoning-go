@@ -177,6 +177,9 @@ func text(p *content.Pack) {
 	s := map[string]string{
 		"msg.lever_stuck": "The lever won't budge.",
 		"msg.class.sword": "Sword", "msg.school.fire": "Fire",
+		"name.brute": "Brute", "lore.brute": "A hulking cellar dweller that guards what it finds.",
+		"effect.potion":   "Heals 5d10 hit points.",
+		"effect.boots":    "Makes you faster (speed +2).",
 		"msg.wrong_item":  "The {item} doesn't fit.",
 		"msg.slot_stuck":  "Nothing more fits in the {item}'s place.",
 		"msg.no_drop":     "It sinks out of sight.",
@@ -288,8 +291,8 @@ func records(p *content.Pack) {
 		{Kind: content.ActionAttack, Damage: content.Dice{Count: 1, Sides: 10}, Delay: 9, Skill: 2},
 	}
 	p.Items[ItemBoots].Wear, p.Items[ItemBoots].Armor, p.Items[ItemBoots].Power = content.WearFeet, 1, 0x0A
-	p.Items[ItemBoots].PowerWorn = true
-	p.Items[ItemPotion].Power = 0x28
+	p.Items[ItemBoots].PowerWorn, p.Items[ItemBoots].Effect = true, "effect.boots"
+	p.Items[ItemPotion].Power, p.Items[ItemPotion].Effect = 0x28, "effect.potion"
 	p.Items[ItemPotion].Actions = []content.ItemAction{{Kind: content.ActionUseUp, Delay: 9}}
 	p.Items[ItemMail].Wear, p.Items[ItemMail].Armor, p.Items[ItemMail].Durability = content.WearBody, 4, 7500
 	p.Items[ItemMail].Tags = []string{"body_armor"}
@@ -310,7 +313,7 @@ func records(p *content.Pack) {
 		Facing: 3, Speed: 8, IntervalMS: 330, Weight: 100, HitPoints: content.Dice{Count: 2, Sides: 10, Bonus: 4},
 		Behaviors: []string{content.BehaviorHostile, content.BehaviorLeavesCorpse},
 		Attack:    content.Dice{Count: 1, Sides: 6}, Experience: content.Dice{Count: 2, Sides: 10, Bonus: 30},
-		Stats: map[string]int{"accuracy": 12, "bonus": 1, "resistance": 1}}
+		Stats: map[string]int{"accuracy": 12, "bonus": 1, "resistance": 1}, Name: "name.brute", Lore: "lore.brute"}
 	p.Things[ThingBoulder] = &content.Thing{ID: ThingBoulder, Kind: content.ThingBoulder, Sprite: spriteBoulder,
 		Speed: 8, IntervalMS: 110, Weight: 100, Footprint: 16}
 	p.Things[ThingCrate] = &content.Thing{ID: ThingCrate, Kind: content.ThingTrap, Sprite: spriteCrate,

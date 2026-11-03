@@ -435,6 +435,7 @@ func (w *World) useObject(o *Object, a content.ItemAction) {
 		if it.Casts.Power != (content.Dice{}) {
 			power = w.roll(it.Casts.Power)
 		}
+		w.learnItem(o.Item, StageUsed)
 		w.castSpell(w.playerCaster(), sp, power)
 	case it.Conversation != "":
 		tmpl := w.pack.Things[it.Conversation]
@@ -442,6 +443,9 @@ func (w *World) useObject(o *Object, a content.ItemAction) {
 			return
 		}
 		t := w.startTalk(tmpl, nil)
+		if t != nil {
+			w.learnItem(o.Item, StageUsed)
+		}
 		if t == nil || !it.UseResult {
 			return
 		}
@@ -451,19 +455,16 @@ func (w *World) useObject(o *Object, a content.ItemAction) {
 			}
 		}
 		return
-	case it.Power == 0 || !w.usable(it.Power) || !w.startPower(it.Power, 1):
+	case it.Power == 0:
 		return
+	default:
+		// Trying it teaches what it does, even when it refuses (docs/spec/player.md, The book).
+		w.learnItem(o.Item, StageUsed)
+		if !w.usable(it.Power) || !w.startPower(it.Power, 1) {
+			return
+		}
 	}
 	w.usedUp(o, it, a)
-}
-
-// lastingPower reports whether power lasts while worn (docs/spec/items.md, Powers).
-func lastingPower(power int) bool {
-	switch power {
-	case powerSpeed2Lasting, 0x0F, 0x16, 0x17, 0x47, 0x4C:
-		return true
-	}
-	return power >= 0x30 && power <= 0x41
 }
 
 // runDownTimed counts down the timed objects in worn slots: those whose power starts worn and
@@ -477,7 +478,7 @@ func (w *World) runDownTimed() {
 			continue
 		}
 		it := w.pack.Items[o.Item]
-		if it == nil || !it.PowerWorn || !lastingPower(it.Power) {
+		if it == nil || !it.PowerWorn || !content.PowerLasts(it.Power) {
 			continue
 		}
 		left := 0

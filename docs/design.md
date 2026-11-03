@@ -306,6 +306,12 @@ The file formats are in [pack.md](pack.md).
   first, and a search field finds text across all of them, jumping to the line. The world waits
   while it is open. The log is world state, kept in saves (`docs/spec/dialogue.md`, Engine
   model); the transcript file stays as the game's printing option.
+- **Book.** A record of the creatures and items the player has come across, opened with J and
+  from the hotbar's Book box: each by its picture and name, and what the player has learned of it,
+  revealed in stages: a creature seen, fought, then killed, its defenses only once met; an item
+  seen, handled, then used; a scroll's spell from first sight. A field filters it by name. What it
+  says is worked out from the templates, with a pack's optional `lore` and `effect` texts.
+  The book is world state, kept in saves (`docs/spec/player.md`, The book).
 - **Magnify floor objects**, a game setting: objects lying on the floor draw with their larger
   inventory image instead of their small floor image, so they are easier to see and to click.
   An item template carries both images (`docs/spec/items.md`). Presentation only.

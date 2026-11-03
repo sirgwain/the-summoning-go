@@ -261,6 +261,7 @@ func magicRecords(p *content.Pack) {
 			sp.Effects = []content.Action{{Missile: &content.MissileSpell{Hurts: content.HurtsFire, Sprite: spriteArrowBolt, Directional: true, Cloud: spriteCloud}}}
 		case SpellFireball:
 			sp.Effects = []content.Action{{Missile: &content.MissileSpell{Hurts: content.HurtsFire, Sprite: spriteBolt}}}
+			sp.Effect, s[sp.ID+".effect"] = sp.ID+".effect", "Hurls a ball of fire."
 		case SpellKano:
 			sp.Effects = []content.Action{{Missile: &content.MissileSpell{Opens: true, Sprite: spriteBolt}}}
 		case SpellSwiftness:

@@ -233,6 +233,7 @@ func (im *importer) items() error {
 	for i, id := range im.itemIDs {
 		im.specialItem(i, im.pack.Items[id])
 	}
+	im.powerTexts()
 	return nil
 }
 

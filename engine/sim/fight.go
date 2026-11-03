@@ -79,6 +79,10 @@ func (w *World) hurtThing(l *Level, t *Thing, d int, k combat.Kind) int {
 	if !alive(t) {
 		return 0
 	}
+	if l == w.Current() {
+		w.learnCreature(t, StageFought)
+		w.meetKind(l, t, k)
+	}
 	d = w.rules.HurtCreature(d, k, creatureDefense(t))
 	if d <= 0 {
 		return 0
@@ -106,6 +110,13 @@ func (w *World) creatureDies(l *Level, t *Thing) {
 	t.Hostile, t.Poisoned, t.Pose = false, false, ""
 	if w.player != nil {
 		w.gainExperience(w.roll(t.Template.Experience))
+	}
+	if l == w.Current() {
+		var drops []*Object
+		if t.Template.Has(content.BehaviorLeavesCorpse) {
+			drops = t.Items
+		}
+		w.killed(t, drops)
 	}
 	if !t.Template.Has(content.BehaviorLeavesCorpse) {
 		w.removeThing(l, t, "removed")
@@ -267,6 +278,7 @@ func behind(d, facing int) bool { return d&^1 == facing&^1 }
 func (w *World) creatureStrikes(l *Level, t *Thing) {
 	p := w.player
 	t.Pose = PoseAttack
+	w.learnCreature(t, StageFought)
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "strikes"})
 	if t.Template.Has(content.BehaviorDeathBlow) && !p.Status.DeathBlowWard {
 		w.playerEffect(w.pack.Effect(content.EffectDeathBlow))
@@ -499,6 +511,13 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 		w.cue(p.Cell(), content.CueMiss)
 		return
 	}
+	if s.Vulnerable {
+		w.meetDefense(l, t, DefenseVulnerable)
+	}
+	w.meetDefense(l, t, content.BehaviorPhysicalOnly)
+	if it != nil && it.Poisons {
+		w.meetDefense(l, t, content.BehaviorResistsPoison)
+	}
 	w.messageNumbers(l, p.Cell(), content.MsgHit, r.Score, r.Damage)
 	w.turnHostile(t)
 	if r.Damage == 0 {
@@ -649,6 +668,7 @@ const (
 // it starts worn (docs/spec/items.md, Inventory).
 func (w *World) putOn(o *Object) {
 	if it := w.pack.Items[o.Item]; it != nil && it.PowerWorn && it.Power != 0 {
+		w.learnItem(o.Item, StageUsed)
 		w.startPower(it.Power, 1)
 	}
 	w.wornChanged()

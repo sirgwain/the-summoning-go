@@ -288,6 +288,7 @@ func (w *World) travel(to *content.Destination) {
 // hurtPlayer hurts the player by n of kind k through its defenses, saying what hurt it; worn body
 // armor wears, and at 0 hit points the player dies (docs/spec/combat.md, Hurting the player).
 func (w *World) hurtPlayer(n int, k combat.Kind, by string) {
+	w.foughtBy(by)
 	p := w.player
 	if p == nil || n <= 0 || p.Dead {
 		return

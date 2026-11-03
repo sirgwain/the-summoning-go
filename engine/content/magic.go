@@ -32,6 +32,8 @@ type Spell struct {
 	Practice int `json:"practice,omitempty"`
 	// Effects run when the spell takes effect.
 	Effects []Action `json:"effects"`
+	// Effect is a text key saying what it does, for the book.
+	Effect string `json:"effect,omitempty"`
 }
 
 // SpellNeeds is a spell's condition: one of its fields is set.

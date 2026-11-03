@@ -150,6 +150,15 @@ type Viewer struct {
 		scroll   int     // how far its pane is scrolled
 		focus    *[2]int // the line a match chose
 	}
+	// BookOpen shows the book (book.go) and BookTyped is the filter typed in it; bookView is the tab open, the entry chosen on each tab,
+	// and the first entry its list shows.
+	BookOpen  bool
+	BookTyped string
+	bookView  struct {
+		tab    int
+		chosen [2]string
+		first  int
+	}
 	// Showing is the view effect or sparkle playing, nil when none is; shows are the effect and
 	// sparkle events waiting their turn (showing.go). Flipbooks are the pack's flipbooks and
 	// Flipbook the one the tools play.
@@ -347,6 +356,11 @@ func (v *Viewer) Update(in Input) {
 	// The conversation log holds the world while it is open.
 	if v.LogOpen {
 		v.logInput(in)
+		return
+	}
+	// So does the book.
+	if v.BookOpen {
+		v.bookInput(in)
 		return
 	}
 	if cmds, ok := v.modal(in); ok {
@@ -765,6 +779,8 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 		cmds = append(cmds, input.ShowMap{})
 	case in.pressed("L"):
 		v.OpenLog()
+	case in.pressed("J"):
+		v.OpenBook()
 	case in.pressed(KeyEscape) && v.InventoryOpen:
 		v.InventoryOpen = false
 	case in.pressed("O", KeyEscape):

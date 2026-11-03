@@ -105,10 +105,12 @@ func (s *Window) drawHotbar(screen *ebiten.Image) {
 	}
 	fill(h.Screen(h.Gesture.Rect).Inset(1), slotColor)
 	stroke(h.Screen(h.Gesture.Rect).Inset(1), spellEdgeColor)
-	logBox := h.Screen(h.Log.Rect).Inset(1)
-	fill(logBox, actionColor)
-	stroke(logBox, slotEdgeColor)
-	ebitenutil.DebugPrintAt(screen, h.Log.Label, logBox.Min.X+(logBox.Dx()-len(h.Log.Label)*viewer.CharWidth)/2, logBox.Min.Y+(logBox.Dy()-viewer.LineHeight)/2)
+	for _, b := range []viewer.PanelButton{h.Log, h.Book} {
+		box := h.Screen(b.Rect).Inset(1)
+		fill(box, actionColor)
+		stroke(box, slotEdgeColor)
+		ebitenutil.DebugPrintAt(screen, b.Label, box.Min.X+(box.Dx()-len(b.Label)*viewer.CharWidth)/2, box.Min.Y+(box.Dy()-viewer.LineHeight)/2)
+	}
 	for _, a := range h.Actions {
 		r := h.Screen(a.Rect).Inset(1)
 		fill(r, actionColor)

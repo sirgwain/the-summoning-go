@@ -17,5 +17,7 @@
     "resistance": 1
   },
   "attack": "1d6",
-  "experience": "2d10+30"
+  "experience": "2d10+30",
+  "name": "name.brute",
+  "lore": "lore.brute"
 }

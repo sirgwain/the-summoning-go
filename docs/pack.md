@@ -305,6 +305,9 @@ leaves out shows nothing. Later milestones add keys.
   `power`.
 - `teaches` are the gesture icons reading a scroll teaches (`"EIB"`), `picture` the image shown
   when it is read.
+- `effect` is a text key saying what the item's power does, shown in the book once the player has
+  used one (`docs/spec/player.md`, The book). `lore` is a text key the book shows from first sight.
+  Both are optional, and only words for the player: the engine never reads them as rules.
 - `doll` is how the item shows on the inventory's figure when worn: `{ "image", "at" }`, `at` the
   pixel of the figure its image's top-left goes on (mirrored for the right hand). An action's
   `icon` is the image its box shows.
@@ -397,6 +400,8 @@ leaves out shows nothing. Later milestones add keys.
 - `name` (creatures) is a text key, shown when the player's blow kills it unless it has a
   conversation; `kill_practice` is the practice that blow gives. The behavior `mirrors` passes
   the damage it takes to the player.
+- `lore` (creatures) is a text key the book shows from first sight (`docs/spec/player.md`, The
+  book).
 - `animate` changes an animated creature's frame on each of its updates:
   `{ "kind": "flicker" | "toggle" | "random" | "cycle", "frames": [...], "random": bool }`
   (`docs/spec/creatures.md`, Animated objects); for `flicker` the first frame is the rest frame.
@@ -459,6 +464,8 @@ leaves out shows nothing. Later milestones add keys.
   does not hold.
 - `practice` is how much more a cast practices its school than the 1 every cast does.
 - `effects` are actions (Procedures, below) run when the spell takes effect, with the cast's power.
+- `effect` is a text key saying what the spell does, for the book (`docs/spec/player.md`, The book);
+  optional, and only words for the player.
 
 ## Magic
 

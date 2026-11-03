@@ -238,6 +238,14 @@ box opens it as the pack where it lies; resting the pointer on one lists what it
     in saves, filtering a restored log the same way (`TestConversationLog`); L or the hotbar's Log box opens a window of the people talked
     with, their conversations newest first, and a search that jumps to the line
     (`TestConversationLogWindow`). Saves imported from the game start with an empty log.
+  - Done: the book (player.md, The book). The world enters each creature and item template the
+    player comes across, in stages (seen, fought or handled, killed or used), with the kills and
+    drops, and each defense once it works on one, kept in saves (`TestBookCreatures`,
+    `TestBookItems`, `TestBookDefenses`). J or the hotbar's Book box opens it: Creatures and Items
+    tabs filtered by a name field, the entries by name, and the chosen one's picture and what its
+    stage shows, with a hint of the next; scrolls show their spell from first sight
+    (`TestBookWindow`, `TestBookFilter`, `TestBookStages`). Items' and spells' `effect` texts are
+    the importer's own words; `lore` is for packs to write.
   - Done: the viewer's link overlay over the pack's own links (`inspect.Links`, `TestLinks`,
     `TestSelectionLinksAndMarks`). Selecting a cell shows what its feature's hooks do, what a
     set_hook would make them do (dashed), where a teleporter sends things and where an exit, pit

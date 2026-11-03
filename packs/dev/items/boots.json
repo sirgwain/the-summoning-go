@@ -15,6 +15,7 @@
   "wear": "feet",
   "power": 10,
   "power_worn": true,
+  "effect": "effect.boots",
   "doll": {
     "image": {
       "sprite": "sprite.doll.parts",

@@ -120,6 +120,9 @@ func (v *verifier) magic() {
 func (v *verifier) spell(s *Spell) {
 	owner := "spell " + s.ID
 	v.text(owner, s.Name)
+	if s.Effect != "" {
+		v.text(owner, s.Effect)
+	}
 	if s.School < 0 || s.School >= Schools {
 		v.fail("%s: school %d", owner, s.School)
 	}

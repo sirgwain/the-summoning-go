@@ -47,6 +47,9 @@ type Item struct {
 	// Teaches are the gesture icons reading it teaches; Picture what reading it shows.
 	Teaches string `json:"teaches,omitempty"`
 	Picture *Image `json:"picture,omitempty"`
+	// Effect is a text key saying what its power does, and Lore one about it, both for the book.
+	Effect string `json:"effect,omitempty"`
+	Lore   string `json:"lore,omitempty"`
 	// Doll is how it shows on the inventory's figure when worn.
 	Doll *DollImage `json:"doll,omitempty"`
 	// Looks are the looks it puts on the player's figure layers while worn, by layer name.
@@ -60,6 +63,16 @@ type Item struct {
 	Levels  *Levels  `json:"levels,omitempty"`
 	OnBreak []Action `json:"on_break,omitempty"`
 	Flying  *Flying  `json:"flying,omitempty"`
+}
+
+// PowerLasts reports whether power lasts while worn, ending when taken off (docs/spec/items.md,
+// Powers).
+func PowerLasts(power int) bool {
+	switch power {
+	case 0x0B, 0x0F, 0x16, 0x17, 0x47, 0x4C:
+		return true
+	}
+	return power >= 0x30 && power <= 0x41
 }
 
 // Fill is how a container looks as it fills: step k, for k from 1, is shown while it holds more
@@ -284,6 +297,8 @@ type Thing struct {
 	Name         string   `json:"name,omitempty"`
 	KillPractice int      `json:"kill_practice,omitempty"`
 	Animate      *Animate `json:"animate,omitempty"`
+	// Lore is a text key about a creature, for the book.
+	Lore string `json:"lore,omitempty"`
 	// Inventory is what a player starts with.
 	Inventory []InventoryObject `json:"inventory,omitempty"`
 	// Portrait is a player's portrait, which also gives its figure's colors.

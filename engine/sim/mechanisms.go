@@ -393,10 +393,16 @@ func (w *World) moveThing(l *Level, t *Thing, to content.Cell, depth int) {
 // entered runs the effects of the cell thing t stands in: teleporters move it and pits take it,
 // unless it resists (docs/spec/rules.md, Teleporters and exits).
 func (w *World) entered(l *Level, t *Thing, depth int) {
-	if depth >= maxDepth || t.Template.Has(content.BehaviorResistsTeleport) {
+	if depth >= maxDepth {
 		return
 	}
 	f := l.byCell[t.Cell()]
+	if t.Template.Has(content.BehaviorResistsTeleport) {
+		if f != nil && (f.Kind == content.FeatureTeleporter && f.Armed || f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor && f.Open) {
+			w.meetDefense(l, t, content.BehaviorResistsTeleport)
+		}
+		return
+	}
 	switch {
 	case f == nil:
 	case f.Kind == content.FeatureTeleporter && f.Armed:
