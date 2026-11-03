@@ -33,6 +33,9 @@ const (
 	bookWinButton    = 60
 	bookWinField     = 220
 	bookWinToggle    = 90
+	// BookPictureScale is how many times their size the pane's pictures show; the list's icons
+	// show at their own.
+	BookPictureScale = 2
 )
 
 // Hints for what the next stage would show.
@@ -67,7 +70,8 @@ type BookView struct {
 	First    int
 	Count    int
 	Selected int
-	// Pane is the right pane. Picture shows at PictureAt when HasPicture; Lines are its text,
+	// Pane is the right pane. Picture shows at PictureAt when HasPicture, at BookPictureScale
+	// times its size as all the pane's pictures do; Lines are its text,
 	// laid out below the picture.
 	Pane       image.Rectangle
 	Picture    content.Image
@@ -532,7 +536,7 @@ func (v *Viewer) Book() *BookView {
 	y := bv.Pane.Min.Y
 	if bv.HasPicture {
 		if s := v.Pack.Sprites[bv.Picture.Sprite]; s != nil {
-			y += s.FrameSize[1] + bookWinPad
+			y += BookPictureScale*s.FrameSize[1] + bookWinPad
 		}
 	}
 	add := func(it paneItem, heading, hint bool) {
@@ -547,15 +551,16 @@ func (v *Viewer) Book() *BookView {
 		x, tall := bv.Pane.Min.X+2*CharWidth, 0
 		for _, img := range it.pictures {
 			sp := v.Pack.Sprites[img.Sprite]
-			if sp == nil {
+			if sp == nil || img.Frame < 0 || img.Frame >= sp.Frames {
 				continue
 			}
-			if x > bv.Pane.Min.X+2*CharWidth && x+sp.FrameSize[0] > bv.Pane.Max.X {
+			w, h := BookPictureScale*sp.FrameSize[0], BookPictureScale*sp.FrameSize[1]
+			if x > bv.Pane.Min.X+2*CharWidth && x+w > bv.Pane.Max.X {
 				x, y, tall = bv.Pane.Min.X+2*CharWidth, y+tall+2, 0
 			}
 			line.Pictures = append(line.Pictures, BookPicture{Image: img, At: image.Pt(x, y+2)})
-			x += sp.FrameSize[0] + bookWinPad
-			tall = max(tall, sp.FrameSize[1]+4)
+			x += w + bookWinPad
+			tall = max(tall, h+4)
 		}
 		y += tall
 		if y <= bv.Pane.Max.Y {

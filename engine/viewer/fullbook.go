@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
@@ -153,8 +156,10 @@ func (v *Viewer) fullBookLines(tab int, id string) []paneItem {
 }
 
 // recordItems returns record r's fields as its JSON has them, a line each in the JSON's order:
-// an image, or an object holding one, as its picture, and the actions of an item in words.
+// an image, or an object holding one, as its picture, the actions of an item in words, and a
+// creature's animations as their frames.
 func (v *Viewer) recordItems(r any) []paneItem {
+	thing, _ := r.(*content.Thing)
 	b, err := json.Marshal(r)
 	if err != nil {
 		return []paneItem{{text: err.Error()}}
@@ -176,6 +181,15 @@ func (v *Viewer) recordItems(r any) []paneItem {
 		key := fmt.Sprint(k)
 		switch {
 		case key == "id":
+		case key == "animations" && thing != nil:
+			// The template's and its sprite's together, below.
+		case key == "animate" && thing != nil && thing.Animate != nil:
+			a := thing.Animate
+			text := "  animate: " + a.Kind
+			if a.Random {
+				text += ", random"
+			}
+			out = append(out, paneItem{text: text, pictures: frames(thing.Sprite, a.Frames)})
 		case key == "actions":
 			var acts []content.ItemAction
 			if json.Unmarshal(raw, &acts) == nil {
@@ -201,6 +215,84 @@ func (v *Viewer) recordItems(r any) []paneItem {
 			}
 			out = append(out, paneItem{text: "  " + key + ": " + string(raw)})
 		}
+	}
+	if thing != nil {
+		out = append(out, v.animationItems(thing)...)
+	}
+	return out
+}
+
+// animationDir is the direction whose animations the full book shows of those that have one for
+// each direction: 2, down and right on the screen (docs/spec/README.md, Directions).
+const animationDir = 2
+
+// animationItems returns creature template t's animations, its own and its sprite's, a line each
+// with its frames as pictures: of the animations named for directions ("walk.0" to "walk.6"),
+// only animationDir's, or the first direction's when it has none for animationDir.
+func (v *Viewer) animationItems(t *content.Thing) []paneItem {
+	all := map[string]content.Animation{}
+	if sp := v.Pack.Sprites[t.Sprite]; sp != nil {
+		maps.Copy(all, sp.Animations)
+	}
+	maps.Copy(all, t.Animations)
+	if len(all) == 0 {
+		return nil
+	}
+	// The animations by base name, and for each its directions.
+	dirs := map[string][]int{}
+	var bases []string
+	for name := range all {
+		base, dir := name, -1
+		if i := strings.LastIndexByte(name, '.'); i >= 0 {
+			if d, err := strconv.Atoi(name[i+1:]); err == nil {
+				base, dir = name[:i], d
+			}
+		}
+		if _, ok := dirs[base]; !ok {
+			bases = append(bases, base)
+		}
+		dirs[base] = append(dirs[base], dir)
+	}
+	slices.Sort(bases)
+	out := []paneItem{{text: "  animations:"}}
+	for _, base := range bases {
+		ds := dirs[base]
+		slices.Sort(ds)
+		name, label := base, base
+		if ds[0] >= 0 {
+			d := ds[0]
+			if slices.Contains(ds, animationDir) {
+				d = animationDir
+			}
+			name = fmt.Sprintf("%s.%d", base, d)
+			label = fmt.Sprintf("%s (direction %d", base, d)
+			if d == animationDir {
+				label += ", down-right"
+			}
+			label += fmt.Sprintf("; %d directions)", len(ds))
+		}
+		a := all[name]
+		text := "    " + label
+		if a.MS != (content.Duration{}) {
+			if a.MS.Min == a.MS.Max {
+				text += fmt.Sprintf(", %d ms a frame", a.MS.Min)
+			} else {
+				text += fmt.Sprintf(", %d-%d ms a frame", a.MS.Min, a.MS.Max)
+			}
+		}
+		if a.Mode != "" {
+			text += ", " + a.Mode
+		}
+		out = append(out, paneItem{text: text, pictures: frames(t.Sprite, a.Frames)})
+	}
+	return out
+}
+
+// frames returns frames of sprite as images.
+func frames(sprite string, fs []int) []content.Image {
+	out := make([]content.Image, len(fs))
+	for i, f := range fs {
+		out[i] = content.Image{Sprite: sprite, Frame: f}
 	}
 	return out
 }

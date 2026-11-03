@@ -428,7 +428,9 @@ writes the same pack format.
   defense known, then where it is on the current level (a creature's things; an item on the floor,
   in a container, carried, taken by a slot, made or shot by a procedure, given or taken by a
   conversation of a creature there) and its whole record, a line a field: an image (an icon, a
-  floor image, a doll) as its picture at its own size, an item's actions in words. Clicking where
+  floor image, a doll) as its picture, an item's actions in words, a creature's animations as
+  their frames (of those made for each direction, the down-right one's), at twice their size as
+  the book's pane shows its pictures. Clicking where
   it is closes the book and selects it there, the view centered on it. The pane scrolls with the
   wheel. It lists the current level's entries alone until Tab, or its toggle, lists them all;
   the current level's are marked in green either way.

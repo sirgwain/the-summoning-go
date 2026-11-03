@@ -89,12 +89,26 @@ func (s *Window) drawBook(screen *ebiten.Image) {
 			draw(r.Icon, box.Min.Add(image.Pt((box.Dx()-b.FrameSize[0])/2, (box.Dy()-b.FrameSize[1])/2)))
 		}
 	}
+	// The pane's pictures show larger than the list's icons.
+	big := func(img content.Image, at image.Point) {
+		f, err := s.sprites.Frame(img.Sprite, img.Frame)
+		if err != nil {
+			if s.err == nil {
+				s.err = err
+			}
+			return
+		}
+		var op ebiten.DrawImageOptions
+		op.GeoM.Scale(viewer.BookPictureScale, viewer.BookPictureScale)
+		op.GeoM.Translate(float64(at.X), float64(at.Y))
+		art.DrawImage(f, &op)
+	}
 	if bv.HasPicture {
-		draw(bv.Picture, bv.PictureAt)
+		big(bv.Picture, bv.PictureAt)
 	}
 	for _, l := range bv.Lines {
 		for _, p := range l.Pictures {
-			draw(p.Image, p.At)
+			big(p.Image, p.At)
 		}
 	}
 	s.presenter.PresentAt(win, art, 1, image.Point{})
