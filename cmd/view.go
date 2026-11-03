@@ -452,7 +452,7 @@ func (s *shell) drawTools(screen *ebiten.Image, o viewer.Overlay) {
 		vector.FillRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), panelColor, false)
 		for i, line := range lines {
 			x, y := r.Min.X+viewer.Margin/2, r.Min.Y+i*viewer.LineHeight
-			if c, ok := markColors[string(line.Kind)]; ok && line.Kind != "" {
+			if c, ok := markColors[line.Kind]; ok && line.Kind != "" {
 				s.printColored(screen, line.Text, x, y, c)
 			} else {
 				ebitenutil.DebugPrintAt(screen, line.Text, x, y)
@@ -510,18 +510,18 @@ func (s *shell) printColored(screen *ebiten.Image, text string, x, y int, c colo
 }
 
 // markColors are the colors of the glow and the links for the selection and each kind of link.
-var markColors = map[string]color.RGBA{
-	viewer.MarkSelected:        selectionColor,
-	viewer.MarkHover:           hoverColor,
-	string(inspect.LinkOn):     {90, 220, 110, 255},
-	string(inspect.LinkOff):    {240, 80, 70, 255},
-	string(inspect.LinkToggle): {255, 150, 40, 255},
-	string(inspect.LinkHook):   {220, 110, 255, 255},
-	string(inspect.LinkSet):    {100, 180, 255, 255},
-	string(inspect.LinkCell):   {120, 240, 230, 255},
-	string(inspect.LinkShoot):  {255, 90, 160, 255},
-	string(inspect.LinkRoll):   {210, 170, 110, 255},
-	string(inspect.LinkTravel): {160, 140, 255, 255},
+var markColors = map[inspect.LinkKind]color.RGBA{
+	viewer.MarkSelected: selectionColor,
+	viewer.MarkHover:    hoverColor,
+	inspect.LinkOn:      {90, 220, 110, 255},
+	inspect.LinkOff:     {240, 80, 70, 255},
+	inspect.LinkToggle:  {255, 150, 40, 255},
+	inspect.LinkHook:    {220, 110, 255, 255},
+	inspect.LinkSet:     {100, 180, 255, 255},
+	inspect.LinkCell:    {120, 240, 230, 255},
+	inspect.LinkShoot:   {255, 90, 160, 255},
+	inspect.LinkRoll:    {210, 170, 110, 255},
+	inspect.LinkTravel:  {160, 140, 255, 255},
 }
 
 // drawGlow outlines the selection and what its links act on or come from with a glow.
@@ -562,10 +562,10 @@ func (s *shell) drawLinks(screen *ebiten.Image, links []viewer.SelectionLink) {
 				if labels[end] == nil {
 					order = append(order, end)
 				}
-				labels[end] = append(labels[end], line{text, markColors[string(lk.Kind)]})
+				labels[end] = append(labels[end], line{text, markColors[lk.Kind]})
 			}
 		}
-		c := markColors[string(lk.Kind)]
+		c := markColors[lk.Kind]
 		if lk.Feature == "" && lk.Thing == "" {
 			s.diamond(screen, lk.To, c)
 		}

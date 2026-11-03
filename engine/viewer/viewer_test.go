@@ -686,7 +686,7 @@ func TestSelectionLinksAndMarks(t *testing.T) {
 	kinds := map[string]string{}
 	for _, m := range v.Marks(links) {
 		c := v.Cmds[m.Cmd]
-		kinds[c.Feature] += m.Kind + " "
+		kinds[c.Feature] += string(m.Kind) + " "
 	}
 	if kinds["lever.a"] != "selected " || kinds["door.a"] != "on off " {
 		t.Errorf("marks by feature: %q", kinds)

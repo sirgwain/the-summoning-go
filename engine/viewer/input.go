@@ -49,7 +49,7 @@ var Keys = func() []Key {
 	keys := []Key{
 		KeyArrowLeft, KeyArrowRight, KeyArrowUp, KeyArrowDown, KeyShift, KeyPageUp, KeyPageDown,
 		KeyBracketLeft, KeyBracketRight, KeyEqual, KeyMinus, KeyNumpadAdd, KeyNumpadSubtract,
-		KeyHome, KeySpace, KeyTab, KeyBackquote, KeyEnd, KeyEnter, KeyControl, KeyF8, KeyF9, KeyF10, KeyF12,
+		KeyHome, KeySpace, KeyTab, KeyBackquote, KeyEnd, KeyEnter, KeyControl, KeyF9, KeyF10, KeyF12,
 		KeyEscape, KeyBackspace,
 	}
 	for _, c := range "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {

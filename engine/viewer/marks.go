@@ -7,14 +7,14 @@ import (
 // The kinds of mark of the selection and of what is under the mouse; other marks are of a link's
 // kind.
 const (
-	MarkSelected = "selected"
-	MarkHover    = "hover"
+	MarkSelected inspect.LinkKind = "selected"
+	MarkHover    inspect.LinkKind = "hover"
 )
 
 // Mark is a draw command of Cmds the shell outlines, for the selection or a link of its kind.
 type Mark struct {
 	Cmd  int
-	Kind string
+	Kind inspect.LinkKind
 }
 
 // SelectionLink is a link of the selection: Out when the selected cell's feature acts, else the
@@ -61,36 +61,47 @@ func (v *Viewer) Marks(links []SelectionLink) []Mark {
 	if v.HideDebug {
 		return nil
 	}
-	var marks []Mark
-	mark := func(thing, feature, kind string) {
-		for i, c := range v.Cmds {
-			if thing != "" && c.Thing == thing || feature != "" && c.Feature == feature {
-				marks = append(marks, Mark{Cmd: i, Kind: kind})
-			}
-		}
+	// What to mark, in order: a command's later marks win.
+	type target struct {
+		thing, feature string
+		kind           inspect.LinkKind
 	}
+	var targets []target
 	l := v.World.Current()
 	if v.HoverThing != "" {
-		mark(v.HoverThing, "", MarkHover)
+		targets = append(targets, target{v.HoverThing, "", MarkHover})
 	} else if v.Hover != nil {
 		if f := l.FeatureAt(*v.Hover); f != nil {
-			mark("", f.ID, MarkHover)
+			targets = append(targets, target{"", f.ID, MarkHover})
 		}
 	}
-	if v.Selected == nil {
-		return marks
-	}
-	for _, lk := range links {
-		if lk.Out {
-			mark(lk.Thing, lk.Feature, string(lk.Kind))
-		} else {
-			mark("", lk.From, string(lk.Kind))
+	if v.Selected != nil {
+		for _, lk := range links {
+			if lk.Out {
+				targets = append(targets, target{lk.Thing, lk.Feature, lk.Kind})
+			} else {
+				targets = append(targets, target{"", lk.From, lk.Kind})
+			}
+		}
+		if v.Thing != "" {
+			targets = append(targets, target{v.Thing, "", MarkSelected})
+		} else if f := l.FeatureAt(*v.Selected); f != nil {
+			targets = append(targets, target{"", f.ID, MarkSelected})
 		}
 	}
-	if v.Thing != "" {
-		mark(v.Thing, "", MarkSelected)
-	} else if f := l.FeatureAt(*v.Selected); f != nil {
-		mark("", f.ID, MarkSelected)
+	if len(targets) == 0 {
+		return nil
+	}
+	var marks []Mark
+	for i, c := range v.Cmds {
+		if c.Thing == "" && c.Feature == "" {
+			continue
+		}
+		for _, t := range targets {
+			if t.thing != "" && c.Thing == t.thing || t.feature != "" && c.Feature == t.feature {
+				marks = append(marks, Mark{Cmd: i, Kind: t.kind})
+			}
+		}
 	}
 	return marks
 }

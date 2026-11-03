@@ -288,7 +288,10 @@ func (v *Viewer) CellPoint(c content.Cell) image.Point {
 }
 
 // Update applies one update's input: moves the camera, changes the selection and tools, and
-// advances the world with the commands the input makes.
+// advances the world with the commands the input makes. The first of these that is showing
+// takes the input: the frontend, a flipbook playing, play's pause, the conversation log, then a
+// conversation, the full map or the spell panel (modal). Otherwise the camera, the mouse and the
+// keys all read it.
 func (v *Viewer) Update(in Input) {
 	v.Ticks++
 	v.Cursor = in.Cursor
@@ -477,27 +480,16 @@ func (v *Viewer) pan(in Input) {
 	}
 }
 
-// mouse tracks the cell under the cursor, drags the view, and turns clicks into commands. A
-// left click selects a cell or a thing, or with Shift moves the selected thing to the clicked
-// cell. While playing, clicks on the hotbar and on the player work objects with the hand instead
-// (slots.go), and a right click puts the hand's object on a shelf. A click is a release near its
-// press; a press and release between two updates (a tap) counts too.
+// mouse tracks the cell under the cursor, drags the view, and turns clicks into commands
+// (click). A click is a release near its press; a press and release between two updates (a tap)
+// counts too.
 func (v *Viewer) mouse(in Input) []input.Command {
 	cursor := in.Cursor
-	bar := v.Hotbar()
-	inv := v.Inventory()
+	bar, inv := v.Hotbar(), v.Inventory()
 	onInv := inv != nil && cursor.In(inv.Rect)
 	onBar := bar != nil && cursor.In(bar.Rect) || onInv
 	onPanel := cursor.In(v.PanelRect())
-	if cursor.In(image.Rectangle{Max: v.Screen}) && !onPanel && !onBar {
-		pt := v.ViewPoint(cursor)
-		c := drawlist.CellAt(pt)
-		v.Hover = &c
-		v.HoverThing, _, _ = drawlist.ThingAt(v.Pack, v.Cmds, pt)
-	} else {
-		v.Hover, v.HoverThing = nil, ""
-	}
-
+	v.hover(cursor, !onPanel && !onBar)
 	if in.Left.Pressed || in.Right.Pressed {
 		v.press, v.drag = &cursor, &cursor
 		if onBar {
@@ -505,47 +497,76 @@ func (v *Viewer) mouse(in Input) []input.Command {
 		}
 	}
 	if v.drag != nil && (in.Left.Held || in.Right.Held) {
-		v.Origin = v.Origin.Sub(cursor.Sub(*v.drag).Div(v.Scale))
-		moved := cursor.Sub(*v.drag).Div(v.Scale).Mul(v.Scale)
-		next := v.drag.Add(moved)
-		v.drag = &next
+		v.dragTo(cursor)
 	}
-	clicked := func() bool {
-		press := cursor
-		if v.press != nil {
-			press = *v.press
-		}
-		v.press, v.drag = nil, nil
-		d := cursor.Sub(press)
-		return d.X*d.X+d.Y*d.Y <= clickSlop*clickSlop && !onPanel
-	}
-	if in.Right.Released {
-		switch {
-		case !clicked() || !v.Play || bar == nil:
-			return nil
-		case onInv:
-			return v.inventoryClick(inv, cursor, true, false)
-		case onBar:
-			return bar.click(v, cursor, true)
-		}
-		return v.rightClick(true)
-	}
-	if !in.Left.Released || !clicked() {
+	if !in.Left.Released && !in.Right.Released {
 		return nil
 	}
-	if onInv {
-		return v.inventoryClick(inv, cursor, false, in.held(KeyShift))
+	press := cursor
+	if v.press != nil {
+		press = *v.press
 	}
-	if onBar {
-		if cursor.In(bar.Screen(bar.PortraitRect)) {
-			v.ToggleInventory()
-			return nil
-		}
-		if b, ok := slotAt(bar.Slots, bar.at(cursor)); ok && in.held(KeyShift) {
-			return []input.Command{input.Read{Slot: b.Slot}}
-		}
-		return bar.click(v, cursor, false)
+	v.press, v.drag = nil, nil
+	if d := cursor.Sub(press); d.X*d.X+d.Y*d.Y > clickSlop*clickSlop || onPanel {
+		return nil
 	}
+	switch {
+	case in.Right.Released && (!v.Play || bar == nil):
+		return nil
+	case onInv:
+		return v.inventoryClick(inv, cursor, in.Right.Released, !in.Right.Released && in.held(KeyShift))
+	case onBar:
+		return v.barClick(bar, in)
+	case in.Right.Released:
+		return v.rightClick(true)
+	}
+	return v.click(in)
+}
+
+// hover sets what is under the cursor, nothing when the cursor is off the view, or over the panel
+// or the hotbar (over is false).
+func (v *Viewer) hover(cursor image.Point, over bool) {
+	if !over || !cursor.In(image.Rectangle{Max: v.Screen}) {
+		v.Hover, v.HoverThing = nil, ""
+		return
+	}
+	pt := v.ViewPoint(cursor)
+	c := drawlist.CellAt(pt)
+	v.Hover = &c
+	v.HoverThing, _, _ = drawlist.ThingAt(v.Pack, v.Cmds, pt)
+}
+
+// dragTo moves the view by how far the cursor went since the drag was last moved, in whole view
+// pixels, keeping the rest for the next update.
+func (v *Viewer) dragTo(cursor image.Point) {
+	moved := cursor.Sub(*v.drag).Div(v.Scale)
+	v.Origin = v.Origin.Sub(moved)
+	next := v.drag.Add(moved.Mul(v.Scale))
+	v.drag = &next
+}
+
+// barClick handles a click on the hotbar: the portrait opens the inventory, Shift and a click
+// reads a box's object, and the boxes work with the hand (slots.go).
+func (v *Viewer) barClick(bar *Hotbar, in Input) []input.Command {
+	cursor := in.Cursor
+	if in.Right.Released {
+		return bar.click(v, cursor, true)
+	}
+	if cursor.In(bar.Screen(bar.PortraitRect)) {
+		v.ToggleInventory()
+		return nil
+	}
+	if b, ok := slotAt(bar.Slots, bar.at(cursor)); ok && in.held(KeyShift) {
+		return []input.Command{input.Read{Slot: b.Slot}}
+	}
+	return bar.click(v, cursor, false)
+}
+
+// click handles a left click on the view: talking to what talks under the cursor, working the
+// player with the hand while playing, or selecting a cell or a thing, which with Shift instead
+// moves the selected thing to the clicked cell.
+func (v *Viewer) click(in Input) []input.Command {
+	cursor := in.Cursor
 	if id, ok := v.TalkTarget(cursor); ok && v.World.Player().Hand == nil {
 		return []input.Command{input.Talk{Thing: id}}
 	}
@@ -798,11 +819,11 @@ func (v *Viewer) levelKeys(in Input) []input.Command {
 // −1, 0 or 1 and not both 0: the player's facing p, clockwise from screen up, walks table
 // direction (p + 7) mod 8 (docs/spec/player.md, Facing and walking).
 func screenDirection(x, y int) int {
-	facings := map[[2]int]int{
-		{0, -1}: 0, {1, -1}: 1, {1, 0}: 2, {1, 1}: 3, {0, 1}: 4, {-1, 1}: 5, {-1, 0}: 6, {-1, -1}: 7,
-	}
-	return (facings[[2]int{x, y}] + 7) % 8
+	return (screenFacings[y+1][x+1] + 7) % 8
 }
+
+// screenFacings are the facings toward each screen direction, by y + 1 and x + 1.
+var screenFacings = [3][3]int{{7, 0, 1}, {6, 0, 2}, {5, 4, 3}}
 
 // log adds what happened to the event log, leaving out sounds and music.
 func (v *Viewer) log(events []sim.Event) {
