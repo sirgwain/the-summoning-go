@@ -477,12 +477,15 @@ leaves out shows nothing. Later milestones add keys.
   "id": "magic",
   "icons": [{ "sprite": "sprite.res.54", "frame": 1 }, "…twelve, for A–L…"],
   "panel": { "sprite": "sprite.res.54", "frame": 0 },
-  "schools": ["msg.42", "msg.43", "msg.44", "msg.45"]
+  "schools": ["msg.42", "msg.43", "msg.44", "msg.45"],
+  "holds": { "A": "BDEIJK", "C": "" }
 }
 ```
 
 `icons[i]` is the icon of letter `A + i`; `panel` the empty gesture panel; `schools` the text keys of
-the schools' names.
+the schools' names. `holds` gives, for an icon, the icons after which a gesture playing shows the
+empty panel before it (`docs/spec/spells.md`, The gesture playing); without it each icon follows
+the last at once.
 
 ## Pointers
 

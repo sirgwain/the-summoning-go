@@ -326,8 +326,16 @@ func (im *importer) magicRecord() error {
 	for s := range SpellSchools {
 		m.Schools = append(m.Schools, msgID(msgFirstSchool+s))
 	}
+	m.Holds = gestureHolds
 	im.pack.Magic = m
 	return nil
+}
+
+// gestureHolds are the icons after which the gesture panel shows empty before each icon
+// (spells.md, The gesture playing).
+var gestureHolds = map[string]string{
+	"A": "BDEIJK", "B": "AJL", "D": "AL", "E": "AFGHKL", "F": "E", "G": "BDEI",
+	"H": "L", "I": "AGJKL", "J": "ABI", "K": "EL", "L": "BDEHIK",
 }
 
 // msgFirstSchool is the TEXT record of school 0's name.

@@ -32,7 +32,24 @@ Spells 36–39 are the halves of the gestures of 25 and 26 (their X stands for t
 
 ## Casting
 
-Casting a school's selected spell needs, in order: water below depth 3 unless levitating (else message 71h), the spell memorized (else 46h), no gesture already playing, the spell's condition (below), and the magic points for its cost (else 29h). The cost is paid and one memorization used at once; the gesture then plays on the gesture panel, one icon per player update, and the spell takes effect after the last. When the school has no memorization of the spell left, its next memorized spell is selected.
+Casting a school's selected spell needs, in order: water below depth 3 unless levitating (else message 71h), the spell memorized (else 46h), no gesture already playing, the spell's condition (below), and the magic points for its cost (else 29h). The cost is paid and one memorization used at once; the gesture then plays on the gesture panel (below), the spell taking effect as its last icon shows. When the gesture has ended, and the school has no memorization of the spell left, its next memorized spell is selected.
+
+**The gesture playing.** Each picture on the gesture panel holds for two player updates. The panel first shows empty, then each icon of the gesture in turn. Between two icons it shows empty again when the second icon holds the first, by the table below; otherwise the second follows the first at once. The spell takes effect at the player update that first shows the last icon, which then stays for four player updates in all; the gesture ends at the update after them. So a gesture of `n` icons with `h` holds between them lasts `2 + 2n + 2h + 2` updates, and its spell takes effect at update `2n + 2h + 1`.
+
+| Icon | Holds (shows empty after these, before it) |
+|---|---|
+| A | B, D, E, I, J, K |
+| B | A, J, L |
+| C | none |
+| D | A, L |
+| E | A, F, G, H, K, L |
+| F | E |
+| G | B, D, E, I |
+| H | L |
+| I | A, G, J, K, L |
+| J | A, B, I |
+| K | E, L |
+| L | B, D, E, H, I, K |
 
 **Power.** Unless the caster supplies a power:
 
@@ -153,5 +170,4 @@ Commands: **learn** (enter a gesture of icons), **memorize** (a spell in the spe
 ## Unknowns
 
 - Whether anything besides scrolls, conversations and the starting school teaches icons.
-- Exactly how long each gesture icon shows: the game holds some icons over two player updates, by a table of which icon may follow which.
 - What a magic wall weighs on a plate; the importer gives it a creature's weight.

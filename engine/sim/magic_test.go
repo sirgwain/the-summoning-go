@@ -2,6 +2,7 @@ package sim
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/sirgwain/the-summoning-go/devpack"
@@ -352,6 +353,27 @@ func TestFindKeyword(t *testing.T) {
 		k, ok := FindKeyword(p, text, word)
 		if ok != (want != "") || k.ID != want {
 			t.Errorf("%q matched %q (%v), want %q", word, k.ID, ok, want)
+		}
+	}
+}
+
+// A gesture plays two updates a picture: the empty panel, then each icon, with the empty panel
+// between two icons when the second holds the first; the spell takes effect as the last icon
+// first shows, which stays four updates.
+func TestGesturePictures(t *testing.T) {
+	holds := &content.Magic{Holds: map[string]string{"B": "A"}}
+	for _, c := range []struct {
+		gesture, want string
+		effect         int
+	}{
+		{"AB", "..AA..BBBB", 7},
+		{"BA", "..BBAAAA", 5},
+		{"C", "..CCCC", 3},
+	} {
+		pictures, effect := gesturePictures(c.gesture, holds)
+		got := strings.ReplaceAll(string(pictures), "\x00", ".")
+		if got != c.want || effect != c.effect {
+			t.Errorf("%s: %q, effect %d; want %q, %d", c.gesture, got, effect, c.want, c.effect)
 		}
 	}
 }

@@ -30,24 +30,49 @@ type Magic struct {
 	Gesture *Gesture `json:"gesture,omitempty"`
 }
 
-// Gesture is a cast's gesture playing on the gesture panel before the spell takes effect.
+// Gesture is a cast's gesture playing on the gesture panel (docs/spec/spells.md, The gesture
+// playing).
 type Gesture struct {
 	Spell string `json:"spell"`
-	// Shown is how many of the gesture's icons have shown; the spell takes effect after the last.
+	// Shown is how many player updates the gesture has played.
 	Shown int `json:"shown"`
 }
 
-// Icon returns the icon showing, as a letter, and false between casts.
+// gesturePictures are the gesture panel's pictures, one a player update, as gesture plays with
+// holds: 0 for the empty panel, else the icon's letter. The spell takes effect at the update
+// effect (counting from 1); the gesture ends at the update after the last picture.
+func gesturePictures(gesture string, holds *content.Magic) (pictures []byte, effect int) {
+	pictures = []byte{0, 0}
+	for i := 0; i < len(gesture); i++ {
+		c := gesture[i]
+		pictures = append(pictures, c, c)
+		if i+1 < len(gesture) && holds.Hold(c, gesture[i+1]) {
+			pictures = append(pictures, 0, 0)
+		}
+	}
+	effect = len(pictures) - 1
+	if n := len(gesture); n > 0 {
+		pictures = append(pictures, gesture[n-1], gesture[n-1])
+	}
+	return pictures, effect
+}
+
+// Icon returns the icon showing, as a letter, and false between casts and while the panel shows
+// empty.
 func (m *Magic) Icon(p *content.Pack) (byte, bool) {
 	g := m.Gesture
 	if g == nil || g.Shown == 0 {
 		return 0, false
 	}
 	sp := p.Spells[g.Spell]
-	if sp == nil || g.Shown > len(sp.Gesture) {
+	if sp == nil {
 		return 0, false
 	}
-	return sp.Gesture[g.Shown-1], true
+	pictures, _ := gesturePictures(sp.Gesture, p.Magic)
+	if g.Shown > len(pictures) || pictures[g.Shown-1] == 0 {
+		return 0, false
+	}
+	return pictures[g.Shown-1], true
 }
 
 // Knows reports whether the player knows icon c.
@@ -237,25 +262,31 @@ func (w *World) cast(school int) {
 		delete(m.Memorized, id)
 	}
 	m.Gesture = &Gesture{Spell: id}
-	p.gesture = w.begin(len(sp.Gesture) + 1)
+	pictures, _ := gesturePictures(sp.Gesture, w.pack.Magic)
+	p.gesture = w.begin(len(pictures) + 1)
 	w.emit(Event{Kind: EventMagic, Level: l.ID, Cell: p.Cell(), Item: id, Detail: "casting"})
 }
 
-// playGesture shows the next icon of the gesture playing, or after the last casts its spell; with
-// none of the spell memorized any more, the school's next is selected (docs/spec/spells.md).
+// playGesture plays the gesture playing on by a player update: the spell takes effect as its
+// last icon first shows, and when the gesture has ended, with none of the spell memorized any
+// more, the school's next is selected (docs/spec/spells.md, The gesture playing).
 func (w *World) playGesture() {
 	p := w.player
 	m := &p.Magic
 	g := m.Gesture
 	sp := w.pack.Spells[g.Spell]
-	if sp != nil && g.Shown < len(sp.Gesture) {
-		g.Shown++
+	if sp == nil {
+		m.Gesture = nil
+		return
+	}
+	pictures, effect := gesturePictures(sp.Gesture, w.pack.Magic)
+	if g.Shown < len(pictures) {
+		if g.Shown++; g.Shown == effect {
+			w.castSpell(w.playerCaster(), sp, noPower)
+		}
 		return
 	}
 	m.Gesture = nil
-	if sp == nil {
-		return
-	}
 	if m.Memorized[sp.ID] == 0 {
 		for _, id := range m.Spellbook {
 			if s := w.pack.Spells[id]; s != nil && s.School == sp.School && m.Memorized[id] > 0 {
@@ -264,7 +295,6 @@ func (w *World) playGesture() {
 			}
 		}
 	}
-	w.castSpell(w.playerCaster(), sp, noPower)
 }
 
 // caster is what casts a spell: the player, a creature, or a cell's shooter.

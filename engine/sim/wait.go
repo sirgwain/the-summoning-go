@@ -69,6 +69,7 @@ func (w *World) GestureWait() float64 {
 	if sp == nil {
 		return 0
 	}
-	// Each update shows one more icon; the update after the last casts the spell.
-	return w.left(p.gesture, len(sp.Gesture)+1-g.Shown)
+	// Each update plays one more picture; the update after the last ends the gesture.
+	pictures, _ := gesturePictures(sp.Gesture, w.pack.Magic)
+	return w.left(p.gesture, len(pictures)+1-g.Shown)
 }

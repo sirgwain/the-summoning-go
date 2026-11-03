@@ -3,6 +3,8 @@ package content
 // Spells, the spell UI's art, keywords and conversations (docs/pack.md; docs/spec/spells.md,
 // docs/spec/dialogue.md).
 
+import "strings"
+
 // Schools is the number of schools of magic.
 const Schools = 4
 
@@ -64,6 +66,14 @@ type Magic struct {
 	Panel *Image `json:"panel,omitempty"`
 	// Schools are the text keys of the schools' names.
 	Schools []string `json:"schools"`
+	// Holds gives, by icon letter, the icons after which a gesture playing shows the empty panel
+	// before that icon.
+	Holds map[string]string `json:"holds,omitempty"`
+}
+
+// Hold reports whether a gesture playing shows the empty panel between icon prev and icon next.
+func (m *Magic) Hold(prev, next byte) bool {
+	return m != nil && strings.IndexByte(m.Holds[string(next)], prev) >= 0
 }
 
 // Pointers are the pointer's images, each drawn with its top-left pixel at the mouse.
