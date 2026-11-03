@@ -190,7 +190,7 @@ func New(p *content.Pack, seed uint64, level string, scale int, magnify bool, sc
 	if level != "" && level != w.Current().ID {
 		w.Update([]input.Command{input.GoTo{Level: level}})
 		if w.Current().ID != level {
-			return nil, fmt.Errorf("no level %q", level)
+			return nil, fmt.Errorf("no level %q (--level takes a level's id, like %q)", level, w.Current().ID)
 		}
 	}
 	v.rebuild()

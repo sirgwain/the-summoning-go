@@ -123,7 +123,8 @@ sparkles play the same way.
 
 --script runs a script of input, screenshots and state dumps (docs/design.md, Testing) in place
 of live input, and exits when it ends. Its files are written under --out.`,
-		Args: cobra.MaximumNArgs(1),
+		Example: viewExamples(play),
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := "packs/summoning"
 			if len(args) > 0 {
@@ -211,7 +212,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 			return nil
 		},
 	}
-	viewCmd.Flags().StringVar(&level, "level", "", "level id to open (default: the start level)")
+	viewCmd.Flags().StringVar(&level, "level", "", "id of the level to open, as in its level.json, e.g. level.05 for packs/summoning/levels/05 (default: the start level)")
 	viewCmd.Flags().IntVar(&scale, "scale", 2, "pixels per art pixel")
 	viewCmd.Flags().IntSliceVar(&at, "at", nil, "center the view on this cell, as x,y")
 	viewCmd.Flags().IntSliceVar(&sel, "select", nil, "select this cell, as x,y")
@@ -231,6 +232,32 @@ of live input, and exits when it ends. Its files are written under --out.`,
 }
 
 const windowWidth, windowHeight = 1280, 800
+
+// viewExamples returns the examples of the view command, or with play of the play command.
+func viewExamples(play bool) string {
+	if play {
+		return `  # Play the imported game from the main menu
+  summoning play packs/summoning
+
+  # Skip the menu and start on the fifth level (packs/summoning/levels/05/level.json, id "level.05")
+  summoning play packs/summoning --menu=false --level level.05
+
+  # Restore a saved game
+  summoning play packs/summoning --load quick.sav`
+	}
+	return `  # Look around the imported game's start level
+  summoning view packs/summoning
+
+  # Open another level: --level takes the level's id, the "id" in its level.json,
+  # so packs/summoning/levels/05/level.json is level.05
+  summoning view packs/summoning --level level.05
+
+  # Open level 12 centered on cell 30,20, with that cell selected
+  summoning view packs/summoning --level level.12 --select 30,20
+
+  # Screenshot level 05 after 60 updates and exit
+  summoning view packs/summoning --level level.05 --screenshot level05.png --screenshot-ticks 60`
+}
 
 // savePath returns path when a file is there, or else the file of that name in the saves
 // directory dir when one is there, so --load takes a bare save name like quick.sav.
