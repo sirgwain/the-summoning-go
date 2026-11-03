@@ -152,3 +152,23 @@ func TestRightClickDrinks(t *testing.T) {
 		t.Errorf("right-clicking the potion: shelf %+v, %d hit points, hand %+v", p.Slots[4], p.HitPoints, p.Hand)
 	}
 }
+
+// TestBlockedHandBoxes: a two-handed sword's hand, with the other hand full, shows its boxes not
+// ready and with no wait running; the other hand's stay ready.
+func TestBlockedHandBoxes(t *testing.T) {
+	v := newViewer(t)
+	v.SetPlay(true)
+	v.Pack.Items[devpack.ItemSword].Tags = append(v.Pack.Items[devpack.ItemSword].Tags, "two_handed")
+	p := v.World.Player()
+	p.Slots[sim.SlotRightHand] = &sim.Object{Item: devpack.ItemSword}
+	p.Slots[sim.SlotLeftHand] = &sim.Object{Item: devpack.ItemKey}
+	for _, b := range v.actionButtons(p, 0) {
+		if b.Ready || b.Wait != 0 {
+			t.Errorf("blocked hand's %s box: %+v", b.Label, b)
+		}
+	}
+	p.Slots[sim.SlotLeftHand] = nil
+	if b := v.actionButtons(p, 0); len(b) == 0 || !b[0].Ready {
+		t.Errorf("the freed hand's boxes: %+v", b)
+	}
+}

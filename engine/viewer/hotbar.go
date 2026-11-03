@@ -186,6 +186,10 @@ func (v *Viewer) actionButtons(p *sim.Player, hand int) []ActionButton {
 		inv = &content.Inventory{}
 	}
 	ready, wait := p.Delays[hand] == 0 && !p.Dead, v.World.HandWait(hand)
+	// A blocked hand cannot act at all, so its boxes show no wait running out.
+	if v.World.HandBlocked(hand) {
+		ready, wait = false, 0
+	}
 	o := p.Slots[sim.SlotRightHand+hand]
 	if o == nil {
 		return []ActionButton{{Hand: hand, Action: 0, Label: "strike", Ready: ready, Wait: wait, Icon: inv.StrikeIcon}}

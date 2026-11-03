@@ -679,12 +679,12 @@ the engine draws, so a pack chooses its look without art:
   new view at once.
 - `style` is `iris`, `slide`, `squeeze`, `ripple`, `fade`, `curtains` or `cut` (scenes.md says what each does),
   and `ms` how long the whole of it takes.
-- `hold_ms` is how long an iris or curtains stay closed, within `ms`; `color` what an iris closes
-  to, a fade passes through and curtains are, `#rrggbb`, black by default.
+- `hold_ms` is how long an iris or curtains stay closed, within `ms`; `color` what an iris or
+  curtains close to and a fade passes through, `#rrggbb`, black by default.
 - `from` is the side a slide or squeeze comes in from: `left`, `right` (a slide's default), `top`
   or `bottom` (a squeeze's). `steps`, above 0, moves it in that many even steps.
 - `size` is a ripple's largest shift in view pixels (8 by default), and `rows` how many rows each
-  zag takes (16); for curtains, `size` is a pleat's width in view pixels (12).
+  zag takes (16).
 - `item_lost` is how an object lost from a slot goes: `shatter` (its box flashes and its image
   breaks into pieces that fly apart, fall and fade), `fade` or `none`, over `ms`. With
   `"inventory": true` the inventory panel opens for it and the world waits until it has gone;

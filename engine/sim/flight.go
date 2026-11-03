@@ -207,6 +207,9 @@ func (w *World) throwFrom(hand int) {
 	case p.Delays[hand] > 0:
 		w.refuse("the hand is not ready")
 		return
+	case w.HandBlocked(hand):
+		w.refuse("the hand is blocked")
+		return
 	case w.deepWater():
 		w.message(l, p.Cell(), content.MsgCannotThrow, "")
 		return

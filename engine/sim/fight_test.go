@@ -651,9 +651,10 @@ func TestTimedObjects(t *testing.T) {
 	}
 }
 
-// TestTwoHandedNeedsAnEmptyHand: a two-handed sword strikes only with the other hand empty; with
-// something there it is refused with needs_both_hands, taking no time.
-func TestTwoHandedNeedsAnEmptyHand(t *testing.T) {
+// TestTwoHandedBlocksItsHand: a hand holding a two-handed sword while the other hand holds
+// anything is blocked: it neither strikes nor throws, and says nothing; the other hand still
+// acts, and emptying it frees the sword's hand.
+func TestTwoHandedBlocksItsHand(t *testing.T) {
 	w := fightWorld(t, func(p *content.Pack) { p.Items["item.sword"].Tags = []string{"weapon", "two_handed"} },
 		"#####",
 		"#@G.#",
@@ -661,14 +662,29 @@ func TestTwoHandedNeedsAnEmptyHand(t *testing.T) {
 	p := w.Player()
 	p.Facing = 2
 	besideGuard(w)
-	p.Slots[SlotRightHand] = w.newObject("item.sword")
-	p.Slots[SlotRightHand+1] = w.newObject("item.sword")
+	sword := w.newObject("item.sword")
+	p.Slots[SlotRightHand] = sword
+	p.Slots[SlotRightHand+1] = w.newObject("item.boots")
+	if !w.HandBlocked(0) || w.HandBlocked(1) {
+		t.Fatalf("blocked: right %v, left %v", w.HandBlocked(0), w.HandBlocked(1))
+	}
 	ev := strike(w, 0, 0)
-	if !has(ev, EventMessage, content.MsgNeedsBothHands) || p.Delays[0] != 0 || p.Delays[1] != 0 {
-		t.Fatalf("struck with the other hand full: %v, delays %v", ev, p.Delays)
+	if !has(ev, EventRefused, "the hand is blocked") || p.Delays[0] != 0 {
+		t.Fatalf("struck with a blocked hand: %v, delays %v", ev, p.Delays)
+	}
+	for _, e := range ev {
+		if e.Kind == EventMessage {
+			t.Errorf("a blocked hand said %v", e)
+		}
+	}
+	if ev := w.Update([]input.Command{input.Throw{Hand: 0}}); !has(ev, EventRefused, "the hand is blocked") || p.Slots[SlotRightHand] != sword {
+		t.Errorf("threw from a blocked hand: %v", ev)
+	}
+	if ev := strike(w, 1, 0); has(ev, EventRefused, "the hand is blocked") {
+		t.Errorf("the other hand is blocked too: %v", ev)
 	}
 	p.Slots[SlotRightHand+1] = nil
-	if ev := strike(w, 0, 0); has(ev, EventMessage, content.MsgNeedsBothHands) {
-		t.Errorf("refused with the other hand empty: %v", ev)
+	if ev := strike(w, 0, 0); has(ev, EventRefused, "the hand is blocked") || w.HandBlocked(0) {
+		t.Errorf("still blocked with the other hand empty: %v", ev)
 	}
 }

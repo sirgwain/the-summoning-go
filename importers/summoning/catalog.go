@@ -149,10 +149,6 @@ func (im *importer) text(strs []string) {
 	// Taking an object names it, with no record of its own (items.md, Inventory).
 	t.Strings["msg."+content.MsgTaken] = "{item}"
 	m.Messages[content.MsgTaken] = "msg." + content.MsgTaken
-	// A two-handed weapon used with the other hand full has none either (items.md, Hands and
-	// actions).
-	t.Strings["msg."+content.MsgNeedsBothHands] = "The {item} needs both hands."
-	m.Messages[content.MsgNeedsBothHands] = "msg." + content.MsgNeedsBothHands
 	im.pack.Messages = m
 }
 

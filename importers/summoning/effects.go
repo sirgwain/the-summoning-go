@@ -37,8 +37,8 @@ var effectCues = map[string]string{
 
 // transitions are how the level transitions and teleports show (scenes.md, Level transitions):
 // the teleporter closes on the player and opens again, scroll slides in from the right, rise and
-// descend squeeze in five steps, and the ripple zigzags. Loading a game, the engine's own, draws
-// red curtains closed and parts them.
+// descend squeeze in five steps, and the ripple zigzags. Loading a game, the engine's own, closes
+// to black from the sides, as the teleporter does about the player, and parts again.
 func transitions() map[string]*content.Transition {
 	scroll := &content.Transition{Style: content.StyleSlide, From: content.SideRight, MS: 350}
 	return map[string]*content.Transition{
@@ -48,7 +48,7 @@ func transitions() map[string]*content.Transition {
 		content.TransitionTravel:     scroll,
 		content.TransitionFall:       {Style: content.StyleSqueeze, From: content.SideBottom, MS: 300, Steps: 5},
 		content.TransitionExitFloor:  {Style: content.StyleSqueeze, From: content.SideTop, MS: 300, Steps: 5},
-		content.TransitionLoad:       {Style: content.StyleCurtains, MS: 900, HoldMS: 150, Color: "#5c1418", Size: 12},
+		content.TransitionLoad:       {Style: content.StyleCurtains, MS: 700, HoldMS: 150},
 	}
 }
 

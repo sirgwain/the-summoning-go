@@ -111,12 +111,11 @@ func TestTransitionFrames(t *testing.T) {
 	if f = at(content.Transition{Style: content.StyleFade, MS: 100}, 25); f.Amount != 0.5 || f.New {
 		t.Errorf("fade at a quarter: %+v", f)
 	}
-	// Curtains of 100 ms holding 20: halfway closing (eased) they cover a quarter of the screen
-	// each side over the old view; held, nothing shows; halfway opening, the new view between.
-	curtains := content.Transition{Style: content.StyleCurtains, MS: 100, HoldMS: 20, Size: 5}
+	// Curtains of 100 ms holding 20: halfway closing (eased) the color covers a quarter of the
+	// screen each side over the old view; held, nothing shows; halfway opening, the new view between.
+	curtains := content.Transition{Style: content.StyleCurtains, MS: 100, HoldMS: 20}
 	f = at(curtains, 20)
-	if !f.Panels || f.OldDst != image.Rect(25, 0, 75, 60) || f.OldSrc != f.OldDst || !f.NewDst.Empty() ||
-		f.Pleats != 10 || f.LeftEdge != 25 || f.RightEdge != 75 {
+	if !f.Panels || f.OldDst != image.Rect(25, 0, 75, 60) || f.OldSrc != f.OldDst || !f.NewDst.Empty() {
 		t.Errorf("curtains closing: %+v", f)
 	}
 	if f = at(curtains, 50); !f.OldDst.Empty() || !f.NewDst.Empty() {

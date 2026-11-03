@@ -47,8 +47,8 @@ const (
 	StyleRipple = "ripple"
 	// StyleFade fades the old view to the color and the color to the new view.
 	StyleFade = "fade"
-	// StyleCurtains draws two pleated curtains of the color in from the sides over the old view,
-	// holds them closed, and parts them on the new.
+	// StyleCurtains closes the color in from the left and right over the old view to the middle,
+	// holds it closed, and parts it from the middle on the new.
 	StyleCurtains = "curtains"
 )
 
@@ -78,11 +78,11 @@ type Transition struct {
 	From string `json:"from,omitempty"`
 	// Steps, when above 0, moves the transition in that many even steps instead of smoothly.
 	Steps int `json:"steps,omitempty"`
-	// Color is what an iris closes to, a fade passes through and curtains are, "#rrggbb"; black
+	// Color is what an iris or curtains close to and a fade passes through, "#rrggbb"; black
 	// when empty.
 	Color string `json:"color,omitempty"`
 	// Size is a ripple's largest sideways shift, in view pixels, and Rows how many rows each
-	// zag of it takes. For curtains, Size is the width of a pleat, in view pixels.
+	// zag of it takes.
 	Size int `json:"size,omitempty"`
 	Rows int `json:"rows,omitempty"`
 }

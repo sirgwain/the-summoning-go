@@ -334,6 +334,9 @@ func (w *World) strike(hand, action int) {
 	case p.Delays[hand] > 0:
 		refuse("the hand is not ready")
 		return
+	case w.HandBlocked(hand):
+		refuse("the hand is blocked")
+		return
 	}
 	o := p.Slots[SlotRightHand+hand]
 	if o == nil {
@@ -382,6 +385,22 @@ func (w *World) useSlot(slot int) {
 	}
 }
 
+// HandBlocked reports whether hand (0 right, 1 left) is blocked: it holds a two-handed object
+// while the other hand holds anything, and then none of its actions can be taken
+// (docs/spec/items.md, Hands and actions).
+func (w *World) HandBlocked(hand int) bool {
+	p := w.player
+	if p == nil || hand < 0 || hand > 1 {
+		return false
+	}
+	o := p.Slots[SlotRightHand+hand]
+	if o == nil || p.Slots[SlotRightHand+1-hand] == nil {
+		return false
+	}
+	it := w.pack.Items[o.Item]
+	return it != nil && hasTag(it, "two_handed")
+}
+
 // handAct carries out action of object o as hand's (docs/spec/items.md, Hands and actions).
 func (w *World) handAct(hand int, o *Object, action int) {
 	p, l := w.player, w.Current()
@@ -400,11 +419,6 @@ func (w *World) handAct(hand int, o *Object, action int) {
 	}
 	if a.Kind != content.ActionFire && w.deepWater() {
 		w.message(l, p.Cell(), content.MsgCannotAct, "")
-		return
-	}
-	// A two-handed weapon strikes or shoots only with the other hand empty.
-	if a.Attack() && hasTag(it, "two_handed") && p.Slots[SlotRightHand+1-hand] != nil {
-		w.message(l, p.Cell(), content.MsgNeedsBothHands, o.Item)
 		return
 	}
 	switch a.Kind {

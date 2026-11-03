@@ -53,18 +53,12 @@ type TransitionFrame struct {
 	Center      image.Point
 	Radius      float64
 	Color       color.RGBA
-	// Pleats, when above 0, shades the Color outside the panels as curtains: folds Pleats pixels
-	// wide, hanging from the left curtain's edge at LeftEdge left of the middle and from the right
-	// one's at RightEdge right of it.
-	Pleats              float64
-	LeftEdge, RightEdge float64
 }
 
-// Ripple defaults, and the curtains' pleat, in view pixels.
+// Ripple defaults, in view pixels.
 const (
 	rippleSize = 8
 	rippleRows = 16
-	pleatSize  = 12
 )
 
 // Frame is what the transition shows now on a screen of size, at scale screen pixels per view
@@ -125,7 +119,7 @@ func (t *Transition) Frame(size image.Point, scale int) TransitionFrame {
 		f.Panels = true
 		hold := float64(d.HoldMS) / float64(d.MS)
 		half := (1 - hold) / 2
-		// How far each curtain has come across its half of the screen, 0 to 1.
+		// How far each side has closed across its half of the screen, 0 to 1.
 		shut := 1.0
 		switch {
 		case p < half:
@@ -141,12 +135,6 @@ func (t *Transition) Frame(size image.Point, scale int) TransitionFrame {
 		} else {
 			f.NewDst, f.NewSrc = gap, gap
 		}
-		pleat := d.Size
-		if pleat == 0 {
-			pleat = pleatSize
-		}
-		f.Pleats = float64(pleat * scale)
-		f.LeftEdge, f.RightEdge = float64(in), float64(w-in)
 	default:
 		f.New = true
 	}

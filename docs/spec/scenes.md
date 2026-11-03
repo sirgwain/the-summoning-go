@@ -207,10 +207,10 @@ Within a level:
 - `squeeze`: the new view comes in from a side (bottom by default) squeezed into the part it has taken, and the old one squeezes into the rest. Rise is from the bottom and descend from the top, in 5 steps: with `steps` n the transition moves in n even steps, the part taken going 1/(n+1), 2/(n+1), … n/(n+1).
 - `ripple`: the view's rows shift sideways by a triangle wave, zigzagging over `rows` rows each way, whose size grows to `size` view pixels at the middle and shrinks back as a half sine; the old view shows until the middle, and the new view from it.
 - `fade`: the old view fades to the color, and the color to the new view, each over half the time.
-- `curtains`: two curtains of the color, hung in vertical pleats `size` view pixels wide (12 by default) and shaded along their leading edges, draw in from the left and right over the old view until they meet in the middle, hold closed for `hold_ms`, and part again on the new view. Each half of what is left eases in and out.
+- `curtains`: the color closes in from the left and right over the old view until the two sides meet in the middle, holds closed for `hold_ms`, and parts again from the middle on the new view. Closing and parting each take half of what is left, easing in and out.
 - `cut`: the new view at once.
 
-The importer gives the teleporter an iris of 700 ms holding 150 ms in black; the ripple 750 ms, size 8, rows 16; exits in walls and travel a slide from the right of 350 ms; falls a squeeze from the bottom, and exit markers one from the top, of 300 ms in 5 steps; and loading curtains of 900 ms holding 150 ms, in dark red (`#5c1418`), pleats 12.
+The importer gives the teleporter an iris of 700 ms holding 150 ms in black; the ripple 750 ms, size 8, rows 16; exits in walls and travel a slide from the right of 350 ms; falls a squeeze from the bottom, and exit markers one from the top, of 300 ms in 5 steps; and loading curtains of 700 ms holding 150 ms in black, as the teleporter's iris.
 
 ## The game screen
 

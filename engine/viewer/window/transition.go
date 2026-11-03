@@ -32,9 +32,6 @@ var Amount float
 var Center vec2
 var Radius float
 var Tint vec4
-var Pleats float
-var LeftEdge float
-var RightEdge float
 
 func inside(p vec2, r vec4) bool {
 	return p.x >= r.x && p.y >= r.y && p.x < r.z && p.y < r.w
@@ -52,17 +49,6 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 		}
 		if inside(p, OldDst) {
 			return imageSrc0At(imageSrc0Origin() + stretch(p, OldDst, OldSrc))
-		}
-		if Pleats > 0 {
-			// Curtains: folds hanging from each curtain's leading edge, which is shaded.
-			edge := LeftEdge
-			if p.x >= (LeftEdge+RightEdge)/2 {
-				edge = RightEdge
-			}
-			d := abs(p.x - edge)
-			fold := 0.72 + 0.28*cos(6.2831853*d/Pleats)
-			lip := 0.6 + 0.4*clamp(d/(Pleats/2), 0, 1)
-			return vec4(Tint.rgb*fold*lip, 1)
 		}
 		return Tint
 	}
@@ -149,8 +135,7 @@ func (tr *transitions) draw(screen *ebiten.Image, t *viewer.Transition, scale in
 		"NewDst": rect(f.NewDst), "NewSrc": rect(f.NewSrc), "New": flag(f.New),
 		"Shift": float32(f.Shift), "Rows": float32(max(1, f.Rows)), "Amount": float32(f.Amount),
 		"Center": []float32{float32(f.Center.X), float32(f.Center.Y)}, "Radius": float32(f.Radius),
-		"Tint":   []float32{float32(c.R) / 255, float32(c.G) / 255, float32(c.B) / 255, 1},
-		"Pleats": float32(f.Pleats), "LeftEdge": float32(f.LeftEdge), "RightEdge": float32(f.RightEdge),
+		"Tint": []float32{float32(c.R) / 255, float32(c.G) / 255, float32(c.B) / 255, 1},
 	}
 	screen.DrawRectShader(size.X, size.Y, tr.shader, &op)
 }
