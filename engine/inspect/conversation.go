@@ -8,7 +8,25 @@ import (
 	"strings"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
+
+// ConversationActions calls fn with each action conversation conv's clauses run, clause by
+// clause in order, with the clause's index: a run action as the actions of the procedure of level
+// l it runs, with proc naming the procedure, or as itself when l is nil.
+func ConversationActions(l *sim.Level, conv *content.Conversation, fn func(clause int, c content.Clause, a content.Action, proc string)) {
+	for i, c := range conv.Clauses {
+		for _, a := range c.Do {
+			if a.Run == nil || l == nil {
+				fn(i, c, a, "")
+				continue
+			}
+			for _, pa := range l.Def.Procedures[*a.Run] {
+				fn(i, c, pa, *a.Run)
+			}
+		}
+	}
+}
 
 // KeywordWord returns keyword id's word, or the id when the pack has no such keyword.
 func KeywordWord(p *content.Pack, id string) string {
@@ -168,15 +186,15 @@ func ConversationLines(p *content.Pack, id, name string, talked bool, counters m
 			names = append(names, c)
 		}
 	}
-	for i, c := range conv.Clauses {
-		for _, a := range c.Do {
-			if a.SetCounter != nil {
-				count(a.SetCounter.Counter)
-			}
-			if a.AddCounter != nil {
-				count(*a.AddCounter)
-			}
+	ConversationActions(nil, conv, func(_ int, _ content.Clause, a content.Action, _ string) {
+		if a.SetCounter != nil {
+			count(a.SetCounter.Counter)
 		}
+		if a.AddCounter != nil {
+			count(*a.AddCounter)
+		}
+	})
+	for i, c := range conv.Clauses {
 		if t := c.If.Counter; t != nil {
 			count(t.Counter)
 		}

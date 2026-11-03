@@ -256,6 +256,9 @@ var behaviors = map[string]bool{
 	BehaviorTalks: true, BehaviorMirrors: true,
 }
 
+// Behaviors returns the behaviors the engine knows, sorted.
+func Behaviors() []string { return sortedKeys(behaviors) }
+
 // ArrowClass is the weapon class of bows; arrows hurt creatures vulnerable to it more.
 const ArrowClass = 3
 

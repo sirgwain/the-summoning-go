@@ -118,7 +118,7 @@ func (v *Viewer) bookList() []bookRow {
 // OpenSpells opens the spell panel, when playing.
 func (v *Viewer) OpenSpells() {
 	if v.Play && v.World.Player() != nil {
-		v.SpellsOpen, v.Entered, v.book.wheel = true, "", 0
+		v.SpellsOpen, v.Entered, v.spellbook.wheel = true, "", 0
 		v.cue(content.CueGesture)
 	}
 }
@@ -161,7 +161,7 @@ func (v *Viewer) SpellPanel() *SpellPanel {
 	rows := v.bookList()
 	shown := max(1, min(len(rows), bookRows))
 	sp.Rows = len(rows)
-	sp.Scroll = max(0, min(v.book.scroll, len(rows)-shown))
+	sp.Scroll = max(0, min(v.spellbook.scroll, len(rows)-shown))
 	sp.List = image.Rect(panelPad, y, panelPad+bookWidth, y+shown*rowHeight)
 	if len(rows) > shown {
 		sp.Bar = image.Rect(sp.List.Max.X+2, y, sp.List.Max.X+2+barWidth, sp.List.Max.Y)
@@ -242,7 +242,7 @@ func (v *Viewer) learnEntered() []input.Command {
 // scrollBook scrolls the spellbook list by n rows, no further than its ends.
 func (v *Viewer) scrollBook(n int) {
 	rows := len(v.bookList())
-	v.book.scroll = max(0, min(v.book.scroll+n, rows-min(rows, bookRows)))
+	v.spellbook.scroll = max(0, min(v.spellbook.scroll+n, rows-min(rows, bookRows)))
 }
 
 // spellKeys are the keys while the spell panel is open: A–L enter icons, Backspace takes the last
@@ -322,11 +322,11 @@ func (v *Viewer) spellWheel(sp *SpellPanel, in Input) {
 	if in.Wheel == 0 || !in.Cursor.In(sp.Rect) {
 		return
 	}
-	v.book.wheel += in.Wheel
-	for ; v.book.wheel >= 1; v.book.wheel-- {
+	v.spellbook.wheel += in.Wheel
+	for ; v.spellbook.wheel >= 1; v.spellbook.wheel-- {
 		v.scrollBook(-1)
 	}
-	for ; v.book.wheel <= -1; v.book.wheel++ {
+	for ; v.spellbook.wheel <= -1; v.spellbook.wheel++ {
 		v.scrollBook(1)
 	}
 }

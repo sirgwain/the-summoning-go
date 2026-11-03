@@ -8,6 +8,7 @@ import (
 
 	"github.com/sirgwain/the-summoning-go/devpack"
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/input"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
@@ -43,7 +44,7 @@ func TestBookWindow(t *testing.T) {
 		t.Errorf("the brute's picture: %+v", bv.Picture)
 	}
 	text := strings.Join(bookText(bv), "|")
-	for _, want := range []string{"Brute|", "A hulking cellar dweller", "First seen: ", hintFight} {
+	for _, want := range []string{"Brute|", "A hulking cellar dweller", "First seen: ", inspect.HintFight} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the pane lacks %q: %q", want, text)
 		}
@@ -81,12 +82,12 @@ func TestBookWindow(t *testing.T) {
 func TestBookStages(t *testing.T) {
 	v := playIn(t, devpack.Cellar, content.Cell{3, 3})
 	at := &sim.Entry{Stage: sim.StageFought, Level: devpack.Cellar}
-	lines, hint := v.CreatureLines(devpack.ThingBrute, at)
-	if hint != hintDefeat || !slices.Contains(lines, "Strikes for 1d6.") || slices.Contains(lines, "Hit points: 2d10+4") {
+	lines, hint := inspect.CreatureLines(v.Pack, devpack.ThingBrute, at)
+	if hint != inspect.HintDefeat || !slices.Contains(lines, "Strikes for 1d6.") || slices.Contains(lines, "Hit points: 2d10+4") {
 		t.Errorf("fought: %q, %q", lines, hint)
 	}
 	at = &sim.Entry{Stage: sim.StageKilled, Level: devpack.Cellar, Kills: 2, Drops: []string{devpack.ItemKey}}
-	lines, hint = v.CreatureLines(devpack.ThingBrute, at)
+	lines, hint = inspect.CreatureLines(v.Pack, devpack.ThingBrute, at)
 	all := strings.Join(lines, "|")
 	for _, want := range []string{"Hit points: 2d10+4", "Worth 2d10+30 experience.", "Defeated: 2", "Drops: "} {
 		if !strings.Contains(all, want) {
@@ -98,41 +99,41 @@ func TestBookStages(t *testing.T) {
 	}
 
 	// A creature that can be talked to has no hint to fight it.
-	if lines, hint := v.CreatureLines(devpack.ThingSage, &sim.Entry{Stage: sim.StageSeen}); hint != "" || !slices.Contains(lines, "Can be talked to.") {
+	if lines, hint := inspect.CreatureLines(v.Pack, devpack.ThingSage, &sim.Entry{Stage: sim.StageSeen}); hint != "" || !slices.Contains(lines, "Can be talked to.") {
 		t.Errorf("the sage: %q, hint %q", lines, hint)
 	}
 
 	// A defense shows only once learned.
 	sword := 0
 	v.Pack.Things[devpack.ThingBrute].Vulnerability = &sword
-	if lines, _ := v.CreatureLines(devpack.ThingBrute, at); slices.ContainsFunc(lines, func(s string) bool { return strings.HasPrefix(s, "Vulnerable") }) {
+	if lines, _ := inspect.CreatureLines(v.Pack, devpack.ThingBrute, at); slices.ContainsFunc(lines, func(s string) bool { return strings.HasPrefix(s, "Vulnerable") }) {
 		t.Errorf("a vulnerability not learned shows: %q", lines)
 	}
 	at.Defenses = []string{sim.DefenseVulnerable}
-	if lines, _ := v.CreatureLines(devpack.ThingBrute, at); !slices.Contains(lines, "Vulnerable to: "+v.weaponClassName(0)) {
+	if lines, _ := inspect.CreatureLines(v.Pack, devpack.ThingBrute, at); !slices.Contains(lines, "Vulnerable to: "+inspect.WeaponClassName(v.Pack, 0)) {
 		t.Errorf("a vulnerability learned: %q", lines)
 	}
 
-	lines, hint = v.ItemLines(devpack.ItemPotion, &sim.Entry{Stage: sim.StageSeen})
+	lines, hint = inspect.ItemLines(v.Pack, devpack.ItemPotion, &sim.Entry{Stage: sim.StageSeen})
 	if hint == "" || strings.Contains(strings.Join(lines, "|"), "Weight") {
 		t.Errorf("a potion seen: %q, %q", lines, hint)
 	}
-	lines, hint = v.ItemLines(devpack.ItemPotion, &sim.Entry{Stage: sim.StageHandled})
-	if hint != hintUse || slices.Contains(lines, "Heals 5d10 hit points.") {
+	lines, hint = inspect.ItemLines(v.Pack, devpack.ItemPotion, &sim.Entry{Stage: sim.StageHandled})
+	if hint != inspect.HintUse || slices.Contains(lines, "Heals 5d10 hit points.") {
 		t.Errorf("a potion handled: %q, %q", lines, hint)
 	}
-	lines, hint = v.ItemLines(devpack.ItemPotion, &sim.Entry{Stage: sim.StageUsed})
+	lines, hint = inspect.ItemLines(v.Pack, devpack.ItemPotion, &sim.Entry{Stage: sim.StageUsed})
 	if hint != "" || !slices.Contains(lines, "Heals 5d10 hit points.") {
 		t.Errorf("a potion used: %q, %q", lines, hint)
 	}
 	// A scroll says what it teaches from first sight, with no hint.
-	lines, hint = v.ItemLines(devpack.ItemScroll, &sim.Entry{Stage: sim.StageSeen})
+	lines, hint = inspect.ItemLines(v.Pack, devpack.ItemScroll, &sim.Entry{Stage: sim.StageSeen})
 	if hint != "" || !slices.Contains(lines, "Teaches Fireball (Wizardry).") || !slices.Contains(lines, "Costs 15 magic points.") ||
 		!slices.Contains(lines, "Hurls a ball of fire.") || slices.ContainsFunc(lines, func(s string) bool { return strings.HasPrefix(s, "Weight") }) {
 		t.Errorf("a scroll seen: %q, %q", lines, hint)
 	}
 	v.Pack.Items[devpack.ItemScroll].Teaches = "AB"
-	if lines, _ := v.ItemLines(devpack.ItemScroll, &sim.Entry{Stage: sim.StageSeen}); !slices.Contains(lines, "Teaches the gesture A B.") {
+	if lines, _ := inspect.ItemLines(v.Pack, devpack.ItemScroll, &sim.Entry{Stage: sim.StageSeen}); !slices.Contains(lines, "Teaches the gesture A B.") {
 		t.Errorf("a scroll of no spell: %q", lines)
 	}
 
@@ -141,20 +142,20 @@ func TestBookStages(t *testing.T) {
 		{Kind: content.ActionAttack, Damage: content.Dice{Count: 1, Sides: 6}, Delay: 12},
 		{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 6}, Delay: 18, Skill: 2},
 	}}
-	lines, _ = v.ItemLines("item.blade", &sim.Entry{Stage: sim.StageHandled})
+	lines, _ = inspect.ItemLines(v.Pack, "item.blade", &sim.Entry{Stage: sim.StageHandled})
 	if !slices.Contains(lines, "Strike 1: 1d6 damage.") || !slices.Contains(lines, "Strike 2: 2d6 damage, slower, needs skill 2.") ||
 		slices.ContainsFunc(lines, func(s string) bool { return strings.HasPrefix(s, "Charges") }) {
 		t.Errorf("a blade with two strikes: %q", lines)
 	}
-	lines, hint = v.ItemLines(devpack.ItemBoots, &sim.Entry{Stage: sim.StageHandled})
-	if hint != hintWear || slices.Contains(lines, "Makes you faster (speed +2).") {
+	lines, hint = inspect.ItemLines(v.Pack, devpack.ItemBoots, &sim.Entry{Stage: sim.StageHandled})
+	if hint != inspect.HintWear || slices.Contains(lines, "Makes you faster (speed +2).") {
 		t.Errorf("boots handled: %q, %q", lines, hint)
 	}
-	lines, hint = v.ItemLines(devpack.ItemBoots, &sim.Entry{Stage: sim.StageUsed})
+	lines, hint = inspect.ItemLines(v.Pack, devpack.ItemBoots, &sim.Entry{Stage: sim.StageUsed})
 	if hint != "" || !slices.Contains(lines, "Makes you faster (speed +2).") {
 		t.Errorf("boots worn: %q, %q", lines, hint)
 	}
-	lines, hint = v.ItemLines(devpack.ItemMail, &sim.Entry{Stage: sim.StageHandled})
+	lines, hint = inspect.ItemLines(v.Pack, devpack.ItemMail, &sim.Entry{Stage: sim.StageHandled})
 	if hint != "" || !slices.Contains(lines, "Worn on the body.") {
 		t.Errorf("mail handled: %q, %q", lines, hint)
 	}
@@ -239,7 +240,7 @@ func TestFullBook(t *testing.T) {
 			t.Errorf("the brute's pane lacks %q: %q", want, text)
 		}
 	}
-	if strings.Contains(text, hintFight) {
+	if strings.Contains(text, inspect.HintFight) {
 		t.Errorf("the full book hints: %q", text)
 	}
 	pressKey(v, KeyEscape)
@@ -259,7 +260,7 @@ func TestFullBook(t *testing.T) {
 		t.Errorf("no creature is unmarked among all: %+v", bv.Rows)
 	}
 	// The ghost haunts another level: the player has not come across it.
-	typeText(v, v.logName(devpack.ThingGhost))
+	typeText(v, inspect.ThingName(v.Pack, devpack.ThingGhost))
 	if text := strings.Join(bookText(v.Book()), "|"); !strings.Contains(text, "Not come across yet.") || strings.Contains(text, "On "+devpack.Cellar) {
 		t.Errorf("the ghost's pane: %q", text)
 	}
@@ -284,7 +285,7 @@ func TestFullBook(t *testing.T) {
 	}
 	pressKey(v, KeyEscape)
 	pressKey(v, KeyEscape)
-	if v.BookOpen || v.BookFull {
+	if v.book.open || v.book.full {
 		t.Error("Escape did not close the full book")
 	}
 
@@ -299,36 +300,28 @@ func TestFullBook(t *testing.T) {
 	}
 	v.Origin = image.Point{}
 	tapAt(v, bv.Rect.Min.Add(bv.Lines[i].Rect().Min.Add(image.Pt(2, 2)).Mul(bv.Scale)))
-	if v.BookOpen || v.Thing != "brute" || v.Selected == nil || *v.Selected != v.World.Current().Thing("brute").Cell() || v.Origin == (image.Point{}) {
-		t.Errorf("after the click: open %v, thing %q, selected %v, origin %v", v.BookOpen, v.Thing, v.Selected, v.Origin)
+	if v.book.open || v.Thing != "brute" || v.Selected == nil || *v.Selected != v.World.Current().Thing("brute").Cell() || v.Origin == (image.Point{}) {
+		t.Errorf("after the click: open %v, thing %q, selected %v, origin %v", v.book.open, v.Thing, v.Selected, v.Origin)
 	}
 }
 
-// TestFullBookAnimations shows a creature's animations as their frames: of those named for
-// directions, the down-right one's, else the first direction's; the rest as they are.
-func TestFullBookAnimations(t *testing.T) {
-	v := newViewer(t)
-	th := &content.Thing{ID: "thing.test", Kind: content.ThingCreature, Sprite: "sprite.none", Animations: map[string]content.Animation{
-		"walk.0": {Frames: []int{0, 4}}, "walk.2": {Frames: []int{1, 5}, MS: content.Fixed(330)}, "walk.4": {Frames: []int{2, 6}},
-		"attack.4": {Frames: []int{6}}, "attack.6": {Frames: []int{7}}, "dead": {Frames: []int{8}},
-	}}
-	got := map[string][]content.Image{}
-	for _, it := range v.animationItems(th) {
-		got[strings.TrimSpace(it.text)] = it.pictures
+// TestFullBookFollowsTheWorld keeps what the full book works out only while the world stands
+// still: going to another level lists that level's creatures.
+func TestFullBookFollowsTheWorld(t *testing.T) {
+	v, err := New(devpack.Build(), 1, devpack.Cellar, 2, false, image.Pt(1280, 800))
+	if err != nil {
+		t.Fatal(err)
 	}
-	img := func(fs ...int) []content.Image { return frames("sprite.none", fs) }
-	want := map[string][]content.Image{
-		"animations:":                        nil,
-		"attack (direction 4; 2 directions)": img(6),
-		"dead":                               img(8),
-		"walk (direction 2, down-right; 3 directions), 330 ms a frame": img(1, 5),
+	v.OpenFullBook()
+	listed := func() bool {
+		return slices.ContainsFunc(v.Book().Rows, func(r BookRow) bool { return r.Label == "Brute" })
 	}
-	if len(got) != len(want) {
-		t.Errorf("got %v", got)
+	if !listed() {
+		t.Fatal("the cellar's brute is not listed")
 	}
-	for k, w := range want {
-		if g, ok := got[k]; !ok || !slices.Equal(g, w) {
-			t.Errorf("%q: %v, want %v (all %v)", k, g, w, got)
-		}
+	start := v.Pack.Manifest.Start.Level
+	v.World.Update([]input.Command{input.GoTo{Level: start}})
+	if v.World.Current().ID != start || listed() {
+		t.Errorf("on %s the brute is still listed", v.World.Current().ID)
 	}
 }

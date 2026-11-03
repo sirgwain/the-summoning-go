@@ -129,8 +129,8 @@ type Viewer struct {
 	// SpellsOpen shows the spell panel (magic.go), and Entered is the gesture entered on it.
 	SpellsOpen bool
 	Entered    string
-	// book is how far the spell panel's spellbook is scrolled.
-	book struct {
+	// spellbook is how far the spell panel's spellbook is scrolled.
+	spellbook struct {
 		scroll int     // the first row shown
 		wheel  float64 // the wheel's scrolling not yet turned into rows
 	}
@@ -150,21 +150,8 @@ type Viewer struct {
 		scroll   int     // how far its pane is scrolled
 		focus    *[2]int // the line a match chose
 	}
-	// BookOpen shows the book (book.go) and BookTyped is the filter typed in it; bookView is the tab open, the entry chosen on each tab,
-	// and the first entry its list shows.
-	// BookFull makes it the tools' full book (fullbook.go), and BookAll lists the whole pack in
-	// it rather than the current level's; bookView's scroll is how many lines the full book's pane
-	// is scrolled.
-	BookOpen  bool
-	BookTyped string
-	BookFull  bool
-	BookAll   bool
-	bookView  struct {
-		tab    int
-		chosen [2]string
-		first  int
-		scroll int
-	}
+	// book is the book's window (book.go), the player's or the tools' full book.
+	book bookState
 	// Showing is the view effect or sparkle playing, nil when none is; shows are the effect and
 	// sparkle events waiting their turn (showing.go). Flipbooks are the pack's flipbooks and
 	// Flipbook the one the tools play.
@@ -366,7 +353,7 @@ func (v *Viewer) Update(in Input) {
 		return
 	}
 	// So does the book.
-	if v.BookOpen {
+	if v.book.open {
 		v.bookInput(in)
 		return
 	}

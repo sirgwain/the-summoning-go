@@ -104,7 +104,7 @@ func (v *Viewer) Talk() *TalkView {
 			if k == "" {
 				continue
 			}
-			label := v.keywordWord(k)
+			label := inspect.KeywordWord(v.Pack, k)
 			bw := len(label)*CharWidth + 2*talkPad
 			if x+bw > at.X+w-talkPad {
 				x, y = at.X+talkPad, y+LineHeight+talkPad
@@ -151,18 +151,6 @@ func (v *Viewer) playerName() string {
 		return p.Name
 	}
 	return DefaultName
-}
-
-// keywordWord returns keyword id's word.
-func (v *Viewer) keywordWord(id string) string {
-	if k := v.Pack.Keywords; k != nil {
-		for _, kw := range k.Keywords {
-			if kw.ID == id {
-				return inspect.Text(v.Pack, kw.Word)
-			}
-		}
-	}
-	return id
 }
 
 // layoutWords lays text's words out from (x, y), wrapping before right. A word marked with a

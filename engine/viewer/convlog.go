@@ -1,7 +1,6 @@
 package viewer
 
 import (
-	"fmt"
 	"image"
 	"slices"
 	"strings"
@@ -125,19 +124,6 @@ func (v *Viewer) logPeople() []logPerson {
 	return out
 }
 
-// logName returns template id's name, as the log shows it.
-func (v *Viewer) logName(id string) string {
-	if t := v.Pack.Things[id]; t != nil {
-		if t.Name != "" {
-			return inspect.Text(v.Pack, t.Name)
-		}
-		if c := v.Pack.Conversations[t.Conversation]; c != nil && c.Name != "" {
-			return c.Name
-		}
-	}
-	return id
-}
-
 // logEntryText returns entry e of conversation c as the log shows it: who says it, then the text
 // with the player's name for @ and its keywords marked *.
 func (v *Viewer) logEntryText(c *sim.Logged, e sim.LogEntry) string {
@@ -149,15 +135,9 @@ func (v *Viewer) logEntryText(c *sim.Logged, e sim.LogEntry) string {
 	}
 	who := v.playerName()
 	if e.Portrait != "" {
-		who = v.logName(c.Template)
+		who = inspect.ThingName(v.Pack, c.Template)
 	}
 	return who + ": " + v.lineText(e.Text)
-}
-
-// LogTime returns step as play time: hours, minutes and seconds.
-func LogTime(step int64) string {
-	s := step / sim.StepsPerSecond
-	return fmt.Sprintf("%d:%02d:%02d", s/3600, s/60%60, s%60)
 }
 
 // logHeading returns conversation c's heading: its level's name and when it began.
@@ -166,7 +146,7 @@ func (v *Viewer) logHeading(c *sim.Logged) string {
 	if l := v.Pack.Levels[c.Level]; l != nil && l.Name != "" {
 		name = inspect.Text(v.Pack, l.Name)
 	}
-	return name + ", " + LogTime(c.Step)
+	return name + ", " + inspect.PlayTime(c.Step)
 }
 
 // logMatches returns the lines that hold the text typed, ignoring case, newest first.
@@ -261,7 +241,7 @@ func (v *Viewer) Log() *LogView {
 		}
 	} else {
 		for i, p := range people {
-			labels = append(labels, v.logName(p.template))
+			labels = append(labels, inspect.ThingName(v.Pack, p.template))
 			if p.template == v.logView.chosen {
 				lv.Selected = i
 			}

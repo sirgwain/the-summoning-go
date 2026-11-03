@@ -108,24 +108,12 @@ func Links(p *content.Pack, l *sim.Level) []Link {
 		if conv == nil {
 			continue
 		}
-		for _, c := range conv.Clauses {
-			when := Condition(p, c.If)
-			act := func(a content.Action, proc string) {
-				if lk, ok := actionLink(p, l, a); ok {
-					lk.From, lk.FromCell, lk.Hooks, lk.Procedure, lk.Conversation = t.ID, t.Cell(), []string{when}, proc, conv.ID
-					add(lk)
-				}
+		ConversationActions(l, conv, func(_ int, c content.Clause, a content.Action, proc string) {
+			if lk, ok := actionLink(p, l, a); ok {
+				lk.From, lk.FromCell, lk.Hooks, lk.Procedure, lk.Conversation = t.ID, t.Cell(), []string{Condition(p, c.If)}, proc, conv.ID
+				add(lk)
 			}
-			for _, a := range c.Do {
-				if a.Run == nil {
-					act(a, "")
-					continue
-				}
-				for _, pa := range l.Def.Procedures[*a.Run] {
-					act(pa, *a.Run)
-				}
-			}
-		}
+		})
 	}
 	for _, f := range l.Features {
 		switch f.Kind {

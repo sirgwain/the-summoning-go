@@ -3,6 +3,7 @@ package viewer
 import (
 	"fmt"
 	"image"
+	"slices"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/input"
@@ -200,24 +201,6 @@ func (v *Viewer) dollParts(p *sim.Player, inv *content.Inventory) []DollPart {
 	return parts
 }
 
-// label returns the inventory's label text, or the fallback.
-func (v *Viewer) label(key, fallback string) string {
-	if inv := v.Pack.Inventory; inv != nil {
-		if k, ok := inv.Labels[key]; ok {
-			return inspect.Text(v.Pack, k)
-		}
-	}
-	return fallback
-}
-
-// weight shows a weight in half kilograms (docs/spec/items.md, The inventory panel).
-func weight(halves int) string {
-	if halves%2 != 0 {
-		return fmt.Sprintf("%d.5 kg.", halves/2)
-	}
-	return fmt.Sprintf("%d.0 kg.", halves/2)
-}
-
 // described returns the object the panel describes: the one under the pointer on a panel, or
 // else the one on the pointer; nil for neither.
 func (v *Viewer) described(ip *InventoryPanel) *sim.Object {
@@ -232,20 +215,20 @@ func (v *Viewer) described(ip *InventoryPanel) *sim.Object {
 func (v *Viewer) details(o *sim.Object) []string {
 	p := v.World.Player()
 	if o == nil {
-		return []string{v.playerName(), v.levelTitle(p.Level), v.label(content.LabelWeight, "Weight: ") + weight(p.Carried(v.Pack))}
+		return []string{v.playerName(), v.levelTitle(p.Level), inspect.Label(v.Pack, content.LabelWeight, "Weight: ") + inspect.Weight(p.Carried(v.Pack))}
 	}
 	it := v.Pack.Items[o.Item]
 	if it == nil {
 		return nil
 	}
-	lines := []string{inspect.ItemName(v.Pack, o.Item), v.label(content.LabelWeight, "Weight: ") + weight(o.Weight(v.Pack))}
-	if hasTag(it, "weapon") {
+	lines := []string{inspect.ItemName(v.Pack, o.Item), inspect.Label(v.Pack, content.LabelWeight, "Weight: ") + inspect.Weight(o.Weight(v.Pack))}
+	if slices.Contains(it.Tags, "weapon") {
 		most := 0
 		for _, a := range it.Actions {
 			most = max(most, a.Damage.Max())
 		}
 		if most > 1 {
-			lines = append(lines, v.label(content.LabelDamage, "Can do ")+fmt.Sprint(most)+v.label(content.LabelDamageAfter, " damage points"))
+			lines = append(lines, inspect.Label(v.Pack, content.LabelDamage, "Can do ")+fmt.Sprint(most)+inspect.Label(v.Pack, content.LabelDamageAfter, " damage points"))
 		}
 	}
 	if it.Armor > 0 {
@@ -254,21 +237,12 @@ func (v *Viewer) details(o *sim.Object) []string {
 			eff := max(it.Armor-(it.Durability-o.Value)/500, it.Armor/2)
 			armor = fmt.Sprintf("%d (%d)", eff, it.Armor)
 		}
-		lines = append(lines, v.label(content.LabelArmor, "AC bonus of ")+armor)
+		lines = append(lines, inspect.Label(v.Pack, content.LabelArmor, "AC bonus of ")+armor)
 	}
-	if hasTag(it, "two_handed") {
-		lines = append(lines, v.label(content.LabelTwoHanded, "Requires two hands"))
+	if slices.Contains(it.Tags, "two_handed") {
+		lines = append(lines, inspect.Label(v.Pack, content.LabelTwoHanded, "Requires two hands"))
 	}
 	return lines
-}
-
-func hasTag(it *content.Item, tag string) bool {
-	for _, t := range it.Tags {
-		if t == tag {
-			return true
-		}
-	}
-	return false
 }
 
 // levelTitle returns the title of the player's level, or "level n" without one.
