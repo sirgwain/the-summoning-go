@@ -332,8 +332,9 @@ func (im *importer) storyScene() *content.Scene {
 			arms = append(arms, id)
 		}
 	}
-	if !ok1 || !ok2 || !ok3 || !ok4 || !ok5 || len(arms) != len(storyGifts) {
-		im.report.addf("the story scene: its pictures are missing; left out")
+	_, ok6 := im.pack.Portraits[rowenaID]
+	if !ok1 || !ok2 || !ok3 || !ok4 || !ok5 || !ok6 || len(arms) != len(storyGifts) {
+		im.report.addf("the story scene: its pictures or Rowena's portrait are missing; left out")
 		return nil
 	}
 	text := func(key, words string) string {
@@ -382,19 +383,10 @@ func (im *importer) storyScene() *content.Scene {
 		gift = append(gift, column(fmt.Sprintf("story.gift.%d", class), words))
 	}
 	s.Steps = append(s.Steps, content.SceneStep{ByWeapon: gift})
-	_, hasRowena := im.pack.Portraits[rowenaID]
 	for i, l := range storyLines {
 		say := &content.SceneSay{Side: content.SayBottom, Text: text(fmt.Sprintf("story.say.%d", i+1), l.text)}
 		if l.rowena {
-			say.Side = content.SayTop
-			if hasRowena {
-				say.Portrait = rowenaID
-			}
-		}
-		if l.rowena && !hasRowena {
-			// Without her portrait, her lines show as words on the picture.
-			s.Steps = append(s.Steps, column(say.Text, l.text))
-			continue
+			say.Side, say.Portrait = content.SayTop, rowenaID
 		}
 		s.Steps = append(s.Steps, content.SceneStep{Say: say, MS: readingMS(l.text)})
 	}

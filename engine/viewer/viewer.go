@@ -408,9 +408,9 @@ func (v *Viewer) Update(in Input) {
 	case in.pressed("V"):
 		v.SeeAll = !v.SeeAll
 		v.rebuild()
-	case in.pressed("B"):
+	case in.pressed("B") && !v.Play:
 		v.Flipbook = cycle(in, v.Flipbook, len(v.Flipbooks))
-	case in.pressed("K") && len(v.Flipbooks) > 0:
+	case in.pressed("K") && !v.Play && len(v.Flipbooks) > 0:
 		v.PlayFlipbook(v.Flipbooks[v.Flipbook])
 		return
 	}

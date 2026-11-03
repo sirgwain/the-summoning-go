@@ -133,9 +133,16 @@ func TestShowingPlacement(t *testing.T) {
 	}
 }
 
-// The tools' keys choose a flipbook and play it.
+// The tools' keys choose a flipbook and play it; in play they do nothing.
 func TestFlipbookKeys(t *testing.T) {
 	v := showingViewer(t)
+	v.SetPlay(true)
+	v.Update(Input{Pressed: map[Key]bool{"B": true}})
+	v.Update(Input{Pressed: map[Key]bool{"K": true}})
+	if v.Flipbook != 0 || v.Holding() {
+		t.Fatalf("B and K in play: flipbook %d, holding %v", v.Flipbook, v.Holding())
+	}
+	v.SetPlay(false)
 	v.Update(Input{Pressed: map[Key]bool{"B": true}})
 	if v.Flipbooks[v.Flipbook] == "" {
 		t.Fatal("no flipbook chosen")

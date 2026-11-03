@@ -1,6 +1,9 @@
 # Scenes plan
 
-Status: 2026-11-01. Nothing started. This plan covers writing the spec for the frontend's
+Status: 2026-11-03. The new character's story plays in short (spec/scenes.md, The story, in
+short): an engine summary, then part 7, Rowena's farewell, with words of the engine's own; the
+story's track plays. Scenes have gained a tall size, pages of words, speech panels and steps by
+weapon class. The intro and parts 1–6 are deferred; the end scenes are next. This plan covers writing the spec for the frontend's
 cinematics: the intro, the new character's story and the end scenes. It also says how they fit
 the scene and flipbook model of [spec/scenes.md](spec/scenes.md). Update this file as each phase
 lands, fold what's settled into the spec, and delete it once the frontend's scenes are specified.
@@ -58,10 +61,14 @@ spec: steps, layering, palette, captions, choices ──────────
   in a framed box.
 - **Layers.** A scene step draws on a layer: a picture under, flipbooks over it, captions on top.
   Several flipbooks can run at once.
+- **Palette shifts are baked at import.** The end scenes' colors shifted by 70h are drawn into
+  their frames, so a scene needs no palette field for them; only cycling the palette by the clock
+  would need one, and it too can be baked into frames if the flipbooks stay small enough.
 - **Randomness is baked at import** with a fixed seed, as for the view effects. That covers the
   wandering targets, the twinkles and the portrait's blinking.
 - **Captions are slots.** The spec gives each caption's place, box, alignment, timing and fades,
-  and an id. The words come from the pack (Open questions).
+  and an id. The words are the engine's own, written for each slot, as the story in short's are;
+  nothing is read from the game's program.
 
 ## Phases
 
@@ -122,9 +129,8 @@ code plan.
 
 ## Open questions
 
-- **Where captions come from.** Either the pack gives its own text for each slot (a game or mod
-  writes them), or the importer reads them from the user's copy of the game's program, which today
-  it does not read. Either way, no original text goes into the repository.
+- **Where captions come from.** Settled: the importer writes words of the engine's own for each
+  slot, as for the story in short, and does not read the game's program (CODE.1).
 - **Frames with no wait.** As for the view effects, their speed was the machine's. The view effects
   use 1/60 s, and the frontend should match unless it looks wrong next to the game.
 - **The character in the story.** Parts after the choices show the chosen weapon. Whether anything

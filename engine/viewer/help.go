@@ -61,14 +61,14 @@ var ToolBindings = []Binding{
 	{"Space", "pause"},
 	{"N", "step"},
 	{"J", "the full book"},
+	{"B/Shift+B", "choose a flipbook"},
+	{"K", "play it"},
 }
 
 // CommonBindings are what the keys do in play and with the tools alike (Update).
 var CommonBindings = []Binding{
 	{"Wheel, + -", "zoom"},
 	{"V", "see all"},
-	{"B/Shift+B", "choose a flipbook"},
-	{"K", "play it"},
 	{"F12", "play / tools"},
 	{"~", "debug overlay"},
 }

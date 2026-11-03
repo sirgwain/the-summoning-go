@@ -295,7 +295,7 @@ Conversation action 21h plays the closing, below, and then the game ends; nothin
 
 **Endings, engine model.** The creation record's `ending` gives the ending power's choices (the item held, the counter's value, a name and an optional scene), the counter, the conversation that runs before play ends, and the closing scene of the `ending` action. When play ends the simulation stops and reports the ending's name and scene; the presentation plays the scene and returns to the main menu. Ending G's changes to the world and its save are not done.
 
-**Scenes, engine model.** A scene is a record of steps the presentation plays in order: show a picture, part or close a picture's halves over a background in a number of steps, show a caption, fade to a color, wait. A key or a click skips to the end. The importer writes the new-game door and the ending as scenes; the end scenes and the intro, whose captions are in the game's program, are left out.
+**Scenes, engine model.** A scene is a record of steps the presentation plays in order on a picture of 320 × 200, or of 320 × 400 shown with half-height rows: show a picture, part or close a picture's halves over a background in a number of steps, show a caption, fade to a color, wait, show a page of words in a box, show a line in a speaker's panel, or play the step chosen by the character's weapon class. Escape skips the scene; another key or a click ends a page of words or a line early, and skips the scene from any other step. The importer writes the new-game door, the closing and the story in short as scenes; the end scenes and the intro, whose captions are in the game's program, are left out.
 
 ## Unknowns
 
