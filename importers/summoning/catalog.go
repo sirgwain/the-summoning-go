@@ -502,11 +502,13 @@ func (im *importer) creature(n int) (string, error) {
 			t.SpellPower = content.Dice{Count: 15, Sides: 10}
 		}
 	}
+	// Only a record that talks holds a conversation (creatures.md): the others' byte 0 is 0, which
+	// would name the disk menu's script.
 	if rec.Behavior()&behaviorTalks != 0 {
 		t.Behaviors = append(t.Behaviors, content.BehaviorTalks)
-	}
-	if id := conversationID(rec.Conversation()); im.pack.Conversations[id] != nil {
-		t.Conversation = id
+		if id := conversationID(rec.Conversation()); im.pack.Conversations[id] != nil {
+			t.Conversation = id
+		}
 	}
 	if p := im.npcPortrait(rec.Portrait()); p != "" {
 		t.TalkPortrait = p

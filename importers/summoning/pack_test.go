@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image/color"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -702,5 +703,33 @@ func TestSharedChargesImport(t *testing.T) {
 	(&importer{}).fighting(firstSharedTemplate-1, &tm, it)
 	if it.SharedCharges || it.Charges != 0 || it.Durability != 6000 {
 		t.Errorf("a weapon: %+v", it)
+	}
+}
+
+// TestImportConversationOnlyWhenTalks imports NPC record 0, whose script byte is 0, with INTERACT
+// holding script 0: the hostile record holds no conversation, and once it talks it holds script 0's.
+func TestImportConversationOnlyWhenTalks(t *testing.T) {
+	for _, talks := range []bool{false, true} {
+		src := importFixture()
+		src.Interact = scriptFixture(-2, 7, -4, -3, 0x15, -4, -1) // never: end
+		if talks {
+			npc := slices.Clone(src.NPC)
+			binary.LittleEndian.PutUint16(npc[2+14:], behaviorHostile|behaviorCorpse|behaviorTalks)
+			src.NPC = npc
+		}
+		p, _, err := Import(src, Options{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if p.Conversations["conversation.0"] == nil {
+			t.Fatal("script 0 not imported")
+		}
+		want := ""
+		if talks {
+			want = "conversation.0"
+		}
+		if got := p.Things["thing.npc.0"].Conversation; got != want {
+			t.Errorf("talks %v: conversation %q, want %q", talks, got, want)
+		}
 	}
 }
