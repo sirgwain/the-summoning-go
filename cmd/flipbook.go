@@ -66,6 +66,7 @@ in play; Q quits. A finished flipbook starts again after a second.`,
 			if !mute {
 				p.mixer = audio.New(speaker.New(), pack)
 			}
+			setWindowIcon()
 			ebiten.SetWindowTitle("Flipbooks: " + pack.Manifest.Name)
 			ebiten.SetWindowSize(windowWidth, windowHeight)
 			ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)

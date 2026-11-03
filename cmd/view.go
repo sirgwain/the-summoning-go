@@ -206,6 +206,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 			if steps != nil {
 				w.SetScript(viewer.NewRunner(steps, out))
 			}
+			setWindowIcon()
 			ebiten.SetWindowTitle("The Summoning: " + pack.Manifest.Name)
 			ebiten.SetWindowSize(windowWidth, windowHeight)
 			ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
