@@ -14,9 +14,9 @@ func idle(v *Viewer, n int) {
 	}
 }
 
-// TestPanelsHoldTheWorld opens the spell panel and the inventory panel in turn: while either is
-// open no step passes, though a gesture entered on the spell panel is still learned; closed, the
-// world runs again.
+// TestPanelsHoldTheWorld opens the spell panel and the inventory panel in turn: while the spell
+// panel is open no step passes, though a gesture entered on it is still learned; closed, the world
+// runs again. The inventory panel does not hold the world.
 func TestPanelsHoldTheWorld(t *testing.T) {
 	v := playIn(t, devpack.Study, devpack.StudyStart)
 	step := v.World.Step()
@@ -47,12 +47,7 @@ func TestPanelsHoldTheWorld(t *testing.T) {
 		t.Fatal("I did not open the inventory panel")
 	}
 	idle(v, 20)
-	if got := v.World.Step(); got != step {
-		t.Errorf("with the inventory panel open the step went %d to %d", step, got)
-	}
-	pressKey(v, KeyEscape)
-	idle(v, 5)
 	if got := v.World.Step(); got <= step {
-		t.Errorf("with the inventory panel closed the step stayed %d", got)
+		t.Errorf("with the inventory panel open the step stayed %d", got)
 	}
 }

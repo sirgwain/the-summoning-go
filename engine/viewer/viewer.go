@@ -458,11 +458,12 @@ func (v *Viewer) updateWorld(cmds []input.Command) []sim.Event {
 	return v.took(v.World.Update(cmds))
 }
 
-// holdsWorld reports whether a window open in play holds the world: the spell panel or the
-// inventory panel (docs/spec/items.md, Holding the world). The conversation log and the book
-// hold it too, and take no world commands at all.
+// holdsWorld reports whether a window open in play holds the world: the spell panel
+// (docs/spec/items.md, Holding the world). The inventory panel does not: the world runs while it
+// is open, as the game's does. The conversation log and the book hold it too, and take no world
+// commands at all.
 func (v *Viewer) holdsWorld() bool {
-	return v.Play && (v.SpellsOpen || v.InventoryOpen)
+	return v.Play && v.SpellsOpen
 }
 
 // holdWorld applies cmds to the held world, no time passing, and brings the view up to date.
