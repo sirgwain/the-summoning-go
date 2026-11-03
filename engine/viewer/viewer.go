@@ -322,7 +322,8 @@ func (v *Viewer) CellPoint(c content.Cell) image.Point {
 // advances the world with the commands the input makes. The first of these that is showing
 // takes the input: the frontend, a flipbook playing, play's pause, the conversation log, then a
 // conversation, the full map or the spell panel (modal). Otherwise the camera, the mouse and the
-// keys all read it.
+// keys all read it. The spell and inventory panels hold the world: their commands act, but no
+// time passes.
 func (v *Viewer) Update(in Input) {
 	v.Ticks++
 	v.Cursor = in.Cursor
@@ -364,7 +365,11 @@ func (v *Viewer) Update(in Input) {
 		return
 	}
 	if cmds, ok := v.modal(in); ok {
-		v.updateWorld(cmds)
+		if v.holdsWorld() {
+			v.holdWorld(cmds)
+		} else {
+			v.updateWorld(cmds)
+		}
 		return
 	}
 	v.pan(in)
@@ -399,6 +404,11 @@ func (v *Viewer) Update(in Input) {
 		cmds = append(cmds, v.keys(in)...)
 	}
 
+	// Read after the keys, so the update that opens a panel holds the world too.
+	if v.holdsWorld() {
+		v.holdWorld(cmds)
+		return
+	}
 	if v.nap(in, cmds) {
 		return
 	}
@@ -441,7 +451,23 @@ func (v *Viewer) modal(in Input) ([]input.Command, bool) {
 
 // updateWorld runs the world's update with cmds and brings the view up to date.
 func (v *Viewer) updateWorld(cmds []input.Command) []sim.Event {
-	events := v.World.Update(cmds)
+	return v.took(v.World.Update(cmds))
+}
+
+// holdsWorld reports whether a window open in play holds the world: the spell panel or the
+// inventory panel (docs/spec/items.md, Holding the world). The conversation log and the book
+// hold it too, and take no world commands at all.
+func (v *Viewer) holdsWorld() bool {
+	return v.Play && (v.SpellsOpen || v.InventoryOpen)
+}
+
+// holdWorld applies cmds to the held world, no time passing, and brings the view up to date.
+func (v *Viewer) holdWorld(cmds []input.Command) []sim.Event {
+	return v.took(v.World.Hold(cmds))
+}
+
+// took brings the view up to date with what an update or a held world's commands did.
+func (v *Viewer) took(events []sim.Event) []sim.Event {
 	v.queueShows(events)
 	v.log(events)
 	v.hear(events)

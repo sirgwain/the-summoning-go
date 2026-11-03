@@ -12,7 +12,7 @@ A gesture is a string of up to nine icons, the letters A–L. The player **knows
 
 The engine keeps a **spellbook**: the spells the player has learned. A new character's spellbook is empty.
 
-The player memorizes on the memorization screen, which F10 opens and closes (the engine also opens and closes it with R, and closes it with Esc).
+The player memorizes on the memorization screen, which F10 opens and closes (the engine also opens and closes it with R, and closes it with Esc). The screen pauses the game: while it is open nothing else moves and no time passes. **Engine model.** The spell panel holds the world while open (items.md, Holding the world).
 
 - **Learning.** The player enters a gesture of known icons, at most eight, with the letters A–L or by clicking the icons; the same icon cannot be entered twice in a row, and Backspace takes the last one off. Entering it then checks it. A gesture that matches a spell of any school puts that spell in the spellbook (if not already there), then memorizes it once and selects it. Reading the scroll first is not required: knowing the icons is enough to discover a spell. A gesture that matches nothing costs 1 magic point per icon.
 - **Memorizing from the spellbook.** Choosing a learned spell memorizes it once more and selects it, exactly as entering its gesture would, with no gesture to enter.

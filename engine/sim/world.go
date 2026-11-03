@@ -105,6 +105,44 @@ func (w *World) Current() *Level { return w.levels[w.current] }
 // Level returns a level the world has entered, or nil.
 func (w *World) Level(id string) *Level { return w.levels[id] }
 
+// Hold applies the commands a held world takes, those that only handle the player's objects
+// and spells, without time passing: nothing else moves and the step does not advance. It
+// refuses any other command. A conversation, and one about to open, are as Update has them,
+// which takes only their own commands and passes no time either (docs/spec/items.md, Holding
+// the world).
+func (w *World) Hold(cmds []input.Command) []Event {
+	if w.ended != nil || w.talk != nil || w.opening != nil {
+		return w.Update(cmds)
+	}
+	w.events = nil
+	w.runAfter()
+	for _, c := range cmds {
+		if !heldCommand(c) {
+			w.emit(Event{Kind: EventRefused, Level: w.current, Detail: "the world is held"})
+			continue
+		}
+		w.apply(c)
+		if w.talk != nil {
+			break
+		}
+	}
+	w.see()
+	w.look()
+	events := w.events
+	w.events = nil
+	return events
+}
+
+// heldCommand reports whether a held world takes cmd.
+func heldCommand(cmd input.Command) bool {
+	switch cmd.(type) {
+	case input.PickUp, input.PutDown, input.Swap, input.Open, input.PutOn, input.UseSlot, input.Read,
+		input.Learn, input.Memorize, input.NextSpell:
+		return true
+	}
+	return false
+}
+
 // Update applies cmds, advances one step and returns what happened.
 func (w *World) Update(cmds []input.Command) []Event {
 	w.events = nil

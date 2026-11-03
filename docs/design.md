@@ -287,7 +287,8 @@ The file formats are in [pack.md](pack.md).
 - **Inventory panel.** Opened on demand: the figure (a mannequin) with its worn slots, the pack of
   the bag in the left hand, the player's stats and the chosen object's details. It shares the
   hotbar's slot boxes and the code that moves objects between the pointer, slots and floor; the
-  hotbar leaves out the mannequin and the stats.
+  hotbar leaves out the mannequin and the stats. While it, or the spell panel, is open the world
+  is held: their commands act, but no time passes (`docs/spec/items.md`, Holding the world).
 - Collapsible character, inventory and spell panels; the world view takes the freed space.
 - Number keys for the hotbar's usable objects.
 - Spell gestures with the mouse, plus hotkeys and a spell list.

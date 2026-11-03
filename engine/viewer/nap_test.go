@@ -32,7 +32,7 @@ func TestNap(t *testing.T) {
 	}
 	// Another key stops it, and holding N on does not start it again.
 	in := napInput(false)
-	in.Pressed["I"] = true
+	in.Pressed["Y"] = true
 	v.Update(in)
 	step = v.World.Step()
 	v.Update(napInput(false))
