@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -483,6 +484,13 @@ func TestTalkPointer(t *testing.T) {
 	if img, _, ok := v.Pointer(); !ok || img != *v.Pack.Pointers.Talk {
 		t.Fatalf("the pointer over the sage is %+v (%v)", img, ok)
 	}
+	// Over the full map the sage below does not show the bubble.
+	v.openFullMap()
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: at})
+	if img, _, _ := v.Pointer(); img != v.Pack.Pointers.Arrow {
+		t.Errorf("the pointer over the map is %+v", img)
+	}
+	v.closeFullMap()
 	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: image.Pt(5, 5)})
 	if img, _, _ := v.Pointer(); img != v.Pack.Pointers.Arrow {
 		t.Errorf("the pointer away from the sage is %+v", img)
@@ -546,39 +554,48 @@ func TestQuickSaveAndLoad(t *testing.T) {
 }
 
 // TestLevelMap opens the map with M in the hall: it shows the seen cells and the player, and
-// closes on the next key. The cellar refuses it with its message and hides the minimap.
+// closes with M or Esc. The cellar refuses it with its message and hides the minimap.
 func TestLevelMap(t *testing.T) {
 	v := playIn(t, devpack.Hall, devpack.HallStart)
 	press := func(k Key) {
 		v.Update(Input{Held: map[Key]bool{k: true}, Pressed: map[Key]bool{k: true}, Cursor: image.Pt(-1, -1)})
 	}
-	if !v.MinimapShown() {
+	if v.Minimap() == nil {
 		t.Error("no minimap in the hall")
 	}
 	press("M")
 	m := v.Map()
-	if !v.MapOpen || m == nil || len(m.Cells) == 0 || m.Name != "The Hall of Mechanisms" || m.Player != devpack.HallStart {
+	if !v.MapOpen || m == nil || len(m.Cells) == 0 || m.Name != "The Hall of Mechanisms" || !m.HasPlayer ||
+		(content.Cell{int(m.Player[0]), int(m.Player[1])}) != devpack.HallStart {
 		t.Fatalf("map open %v: %+v", v.MapOpen, m)
+	}
+	if v.Minimap() != nil {
+		t.Error("the minimap shows under the full map")
 	}
 	// The game's kinds show where seen, each named in the legend: a plate, a closed trapdoor, a
 	// rune mark and a gem socket.
-	kinds := map[content.Cell]int{}
-	for _, c := range m.Cells {
-		kinds[c.Cell] = c.Kind
-	}
 	for c, want := range map[content.Cell]int{devpack.PlateB: MapPlate, devpack.Trapdoor: MapTrapdoor, devpack.Mark: MapMark, devpack.Socket: MapSocket} {
-		got, seen := kinds[c]
+		got, seen := m.At(c)
 		if !seen {
 			t.Errorf("%s at %v not seen", MapKindNames[want], c)
 			continue
 		}
-		if got != want || !slices.Contains(m.Legend, want) {
-			t.Errorf("%v shows %s, want %s; legend %v", c, MapKindNames[got], MapKindNames[want], m.Legend)
+		if got.Symbol != want || !slices.Contains(m.Legend, want) {
+			t.Errorf("%v shows %d, want %s; legend %v", c, got.Symbol, MapKindNames[want], m.Legend)
 		}
 	}
 	press(KeySpace)
+	if !v.MapOpen {
+		t.Error("Space closed the map")
+	}
+	press("M")
 	if v.MapOpen {
-		t.Error("a key did not close the map")
+		t.Error("M did not close the map")
+	}
+	press("M")
+	press(KeyEscape)
+	if v.MapOpen {
+		t.Error("Esc did not close the map")
 	}
 	v.World.Update([]input.Command{input.GoTo{Level: devpack.Cellar}})
 	v.rebuild()
@@ -588,6 +605,178 @@ func TestLevelMap(t *testing.T) {
 	press("M")
 	if v.MapOpen || !slices.ContainsFunc(v.Events, func(s string) bool { return strings.Contains(s, "confuses") }) {
 		t.Errorf("the cellar's refusal: open %v, events %v", v.MapOpen, v.Events)
+	}
+}
+
+// TestMapLinks goes through the hall's teleporter and its pit, then reads where they lead on the
+// full map: hovering shows the notes and arrows, right-clicking follows, Backspace comes back,
+// and the map opens anew each time (docs/spec/world.md, The engine's map).
+func TestMapLinks(t *testing.T) {
+	v := playIn(t, devpack.Hall, content.Cell{devpack.Teleporter[0], devpack.Teleporter[1] - 1})
+	// The cellar shows its map here, so the pit can be followed to it.
+	v.Pack.Levels[devpack.Cellar].Map = nil
+	walkUntil := func(what string, done func() bool) {
+		for range 600 {
+			if done() {
+				return
+			}
+			v.World.Update([]input.Command{input.Walk{Direction: 2}})
+		}
+		t.Fatalf("never %s", what)
+	}
+	walkUntil("teleported", func() bool { return len(v.World.Links()) == 1 })
+	arrived := v.World.Links()[0].To.Cell
+	v.World.Update([]input.Command{input.PlacePlayer{Cell: content.Cell{devpack.Pit[0], devpack.Pit[1] - 1}}})
+	walkUntil("fell", func() bool { return v.World.Current().ID == devpack.Cellar })
+	v.World.Update([]input.Command{input.GoTo{Level: devpack.Hall}})
+	v.rebuild()
+
+	at := func(pt image.Point) Input { return Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: pt} }
+	key := func(k Key) {
+		in := at(v.Cursor)
+		in.Held[k], in.Pressed[k] = true, true
+		v.Update(in)
+	}
+	point := func(c content.Cell) image.Point {
+		x, y := v.FullMap().CellPoint(c)
+		return image.Pt(int(x), int(y))
+	}
+	key("M")
+	fv := v.FullMap()
+	if fv == nil || fv.Level != devpack.Hall || fv.Focus != nil {
+		t.Fatalf("the map opened as %+v", fv)
+	}
+	if mc, _ := fv.At(devpack.Teleporter); !mc.Known {
+		t.Error("the teleporter travelled is not marked known")
+	}
+
+	// Hovering the teleporter: its note and an arrow to where it led.
+	v.Update(at(point(devpack.Teleporter)))
+	fv = v.FullMap()
+	if fv.Focus == nil || *fv.Focus != devpack.Teleporter || len(fv.Arrows) != 1 || fv.Arrows[0].To != arrived {
+		t.Fatalf("hovering the teleporter: focus %v, arrows %+v", fv.Focus, fv.Arrows)
+	}
+	if len(fv.Note) < 2 || fv.Note[0].Text != "Teleporter" || !strings.HasPrefix(fv.Note[1].Text, "To here, ") {
+		t.Errorf("the teleporter's note: %+v", fv.Note)
+	}
+	// The trapdoor has not been travelled.
+	v.Update(at(point(devpack.Trapdoor)))
+	if fv = v.FullMap(); len(fv.Note) != 2 || fv.Note[1].Text != "Where it leads is not known" {
+		t.Errorf("the trapdoor's note: %+v", fv.Note)
+	}
+	// The pit's label names the cellar, and is a button.
+	v.Update(at(point(devpack.Pit)))
+	fv = v.FullMap()
+	if len(fv.Labels) != 1 || fv.Labels[0].Text != "The Cellar (3, 3)" || !fv.Labels[0].Button {
+		t.Errorf("the pit's labels: %+v", fv.Labels)
+	}
+
+	// The world holds while the map is open.
+	step := v.World.Step()
+	v.Update(at(v.Cursor))
+	if v.World.Step() != step {
+		t.Error("the world ran under the map")
+	}
+
+	// Right-clicking the teleporter follows it, and Backspace comes back.
+	pt := point(devpack.Teleporter)
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: pt, Right: Button{Released: true}})
+	fv = v.FullMap()
+	if fv.Selected == nil || *fv.Selected != arrived || fv.Arrival == nil || fv.Center != cellMiddle(arrived) {
+		t.Fatalf("following the teleporter: selected %v, center %v", fv.Selected, fv.Center)
+	}
+	key(KeyBackspace)
+	if fv = v.FullMap(); fv.Selected != nil || fv.Arrival != nil {
+		t.Errorf("back: selected %v", fv.Selected)
+	}
+	// Following the pit shows the cellar, visited.
+	pt = point(devpack.Pit)
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: pt, Right: Button{Released: true}})
+	fv = v.FullMap()
+	if fv.Level != devpack.Cellar || fv.HasPlayer || !strings.HasSuffix(fv.Title, "visited") || *fv.Selected != (content.Cell{3, 3}) {
+		t.Fatalf("following the pit: level %s, title %q, selected %v", fv.Level, fv.Title, fv.Selected)
+	}
+	// The pit's arrival names where it was come to from.
+	v.Update(at(point(content.Cell{3, 3})))
+	if fv = v.FullMap(); len(fv.Note) == 0 || !slices.ContainsFunc(fv.Note, func(l NoteLine) bool { return l.Text == "From The Hall of Mechanisms" }) {
+		t.Errorf("the arrival's note: %+v", fv.Note)
+	}
+
+	// Closing and opening again starts on the current level, fitted, nothing selected.
+	key("M")
+	key("M")
+	if fv = v.FullMap(); fv == nil || fv.Level != devpack.Hall || fv.Selected != nil || v.mapView.zoom != 0 || len(v.mapView.back) != 0 {
+		t.Errorf("reopened: %+v", v.mapView)
+	}
+	// Clicking a feature selects it; clicking bare parchment clears it.
+	pt = point(devpack.PlateB)
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: pt, Left: Button{Pressed: true, Held: true}})
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: pt, Left: Button{Released: true}})
+	if fv = v.FullMap(); fv.Selected == nil || *fv.Selected != devpack.PlateB {
+		t.Errorf("clicking the plate selected %v", fv.Selected)
+	}
+	corner := fv.Area.Min.Add(image.Pt(2, 2))
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: corner, Left: Button{Pressed: true, Released: true}})
+	if fv = v.FullMap(); fv.Selected != nil {
+		t.Errorf("clicking nothing kept %v", fv.Selected)
+	}
+	// Dragging pans; the wheel zooms about the pointer.
+	from := fv.Center
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: corner, Left: Button{Pressed: true, Held: true}})
+	v.Update(Input{Held: map[Key]bool{}, Pressed: map[Key]bool{}, Cursor: corner.Add(image.Pt(40, 0)), Left: Button{Held: true}})
+	if fv = v.FullMap(); fv.Center[0] >= from[0] {
+		t.Errorf("dragging right moved the center from %v to %v", from, fv.Center)
+	}
+	zoom := fv.Zoom
+	in := at(point(devpack.HallStart))
+	in.Wheel = 2
+	v.Update(in)
+	if fv = v.FullMap(); fv.Zoom <= zoom {
+		t.Errorf("the wheel zoomed from %v to %v", zoom, fv.Zoom)
+	}
+}
+
+// TestMapFeatures shows a heard mouth's words, a lever, a rune mark by its rune and a creature
+// that talks on the full map, with their notes.
+func TestMapFeatures(t *testing.T) {
+	v := playIn(t, devpack.Hall, devpack.HallStart)
+	v.World.Current().Feature("mark").Rune = "3"
+	m := v.Map()
+	if mc, _ := m.At(devpack.Mouth); mc.Known || len(mc.Heard) != 0 {
+		t.Errorf("an unheard mouth: %+v", mc)
+	}
+	if mc, _ := m.At(devpack.Mark); mc.Symbol != MapRaido {
+		t.Errorf("rune 3 shows %d, want Raido", mc.Symbol)
+	}
+	if mc, _ := m.At(devpack.LeverA); mc.Symbol != MapLever || mc.Open {
+		t.Errorf("the lever: %+v", mc)
+	}
+	v.World.Update([]input.Command{input.Talk{Thing: "mouth"}})
+	v.openFullMap()
+	fv := v.fullMap(image.Pt(-1, -1))
+	x, y := fv.CellPoint(devpack.Mouth)
+	fv = v.fullMap(image.Pt(int(x), int(y)))
+	if mc, _ := fv.At(devpack.Mouth); !mc.Known || len(fv.Note) < 2 || fv.Note[0].Text != "Mouth" ||
+		!fv.Note[1].Said || !strings.Contains(fv.Note[1].Text, "Welcome") {
+		t.Errorf("the heard mouth's note: %+v", fv.Note)
+	}
+	v.closeFullMap()
+
+	s := playIn(t, devpack.Study, devpack.StudyStart)
+	sm := s.Map()
+	if len(sm.Talkers) != 1 || sm.Talkers[0].Cell != devpack.SageCell || !slices.Contains(sm.Legend, MapNPC) {
+		t.Errorf("the sage on the map: %+v, legend %v", sm.Talkers, sm.Legend)
+	}
+}
+
+// TestMapGeometry finds a cell from its middle on the screen, at any zoom.
+func TestMapGeometry(t *testing.T) {
+	f := MapFrame{Area: image.Rect(0, 0, 400, 300), Center: [2]float64{3.5, 7.25}, Zoom: 13}
+	for _, c := range []content.Cell{{0, 0}, {5, 9}, {12, 3}, {30, 30}} {
+		x, y := f.CellPoint(c)
+		if got := f.CellAt(image.Pt(int(math.Round(x)), int(math.Round(y)))); got != c {
+			t.Errorf("cell %v: found %v", c, got)
+		}
 	}
 }
 

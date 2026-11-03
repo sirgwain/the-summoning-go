@@ -131,6 +131,10 @@ type Viewer struct {
 	// InventoryOpen shows the inventory panel (inventory.go); MapOpen the full level map
 	// (levelmap.go).
 	InventoryOpen, MapOpen bool
+	// mapView is the full map's own state while it is open; MinimapHidden is set when the player
+	// has hidden the minimap (Shift+M).
+	mapView       mapState
+	MinimapHidden bool
 	// SpellsOpen shows the spell panel (magic.go), and Entered is the gesture entered on it.
 	SpellsOpen bool
 	Entered    string
@@ -379,6 +383,11 @@ func (v *Viewer) Update(in Input) {
 		v.bookInput(in)
 		return
 	}
+	// And the full map, unless a conversation started over it.
+	if v.MapOpen && v.World.Talk() == nil {
+		v.mapInput(in)
+		return
+	}
 	if cmds, ok := v.modal(in); ok {
 		if v.holdsWorld() {
 			v.holdWorld(cmds)
@@ -446,11 +455,6 @@ func (v *Viewer) modal(in Input) ([]input.Command, bool) {
 			return nil, true
 		}
 		return v.talkInput(in), true
-	case v.MapOpen:
-		if in.anyPressed() || in.Left.Released || in.Right.Released {
-			v.MapOpen = false
-		}
-		return nil, true
 	case v.SpellsOpen:
 		cmds := v.spellKeys(in)
 		sp := v.SpellPanel()
@@ -831,6 +835,8 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 	switch {
 	case in.pressed("I", KeyTab):
 		v.ToggleInventory()
+	case in.pressed("M") && in.held(KeyShift):
+		v.MinimapHidden = !v.MinimapHidden
 	case in.pressed("M"):
 		cmds = append(cmds, input.ShowMap{})
 	case in.pressed("L"):

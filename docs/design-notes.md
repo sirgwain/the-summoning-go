@@ -112,9 +112,9 @@ track 3 are in; F9 cycles music and effects, effects only and silence.
 Checked by ear against the game. What is left is in [audio-plan.md](audio-plan.md) phase 6.
 
 **Done (the level map).** Levels have names (TEXT 129h + level) and a map setting; levels 13h and
-21h–23h refuse the map with a message or conversation 7Dh. M shows the full map (the seen cells
-by kind, the player, the level's name) and the minimap shows it small in the top-left corner,
-unless the level refuses it. Power 22h (the Palimpsest) shows the map too and is never used up.
+21h–23h refuse the map with a message or conversation 7Dh. M shows the full map and the minimap
+shows the level about the player in the top-left corner, unless the level refuses it (Remaster
+UI, below, for their look and the links). Power 22h (the Palimpsest) shows the map too and is never used up.
 
 **Done (character creation, in the simulation).** The pack's creation record (`creation.json`):
 portraits, the three attribute methods, the weapon classes and schools with what each adds, the
@@ -225,9 +225,17 @@ Change's frame by facing, and the hostile speed of records 23h and 2Bh (`hostile
 - Done: the remake's own panel frames (iron and sapphire, runic slate for the spell panel) and
   outline font (`engine/font`). The game's panel art is not used, by choice.
 - Hotkeys for the hotbar's objects.
-- The map in the engine's own style, with the links the player has travelled
-  (`docs/spec/world.md`, The engine's map): specified, not built. The minimap now shrinks the
-  whole level into a plain box.
+- Done: the map in the engine's own style (`docs/spec/world.md`, The engine's map): ink on a
+  parchment made from noise (`frame.Parchment`, `frame.Roll`) that unrolls, raised walls,
+  glowing symbols, the minimap in iron following the player. The world records the links the
+  player travels, an exit's way back when one is beside the arrival, and the order levels are
+  visited, what each mouth has said and where each creature that talks was last seen, kept in
+  saves (`TestLinksRecorded`, `TestExitTeachesTheWayBack`, `TestMouthsAndTalkersRecorded`); the
+  map draws levers, the game's three rune marks by their runes, and those creatures, and quotes a
+  heard mouth's words in its note (`TestMapFeatures`); the full
+  map shows them on hover and selection, follows them with a right-click, steps back with
+  Backspace and shows other visited levels, and opens anew each time (`TestMapLinks`). The
+  unrolling is timed by the clock, so scripts' screenshots show the map open.
 - Quality of life, designed in [design.md](design.md) (UI; Editor, Links):
   - Done: the spellbook as a scrollable list by school. Each school is headed by its name and its
     memorizations of its limit, each spell a row of icon, name, gesture, cost and memorizations

@@ -33,9 +33,16 @@ type State struct {
 	// Log is the conversation log.
 	Log []*Logged `json:"log,omitempty"`
 	// Book is the book (book.go).
-	Book   *Book         `json:"book,omitempty"`
-	Player *PlayerState  `json:"player,omitempty"`
-	Levels []*LevelState `json:"levels"`
+	Book *Book `json:"book,omitempty"`
+	// Links are the links the player has travelled, Visited the levels it has been on in the
+	// order first visited (links.go).
+	Links   []Link   `json:"links,omitempty"`
+	Visited []string `json:"visited,omitempty"`
+	// Mouths are the mouths the player has heard, Talkers the creatures that talk it has seen.
+	Mouths  []HeardMouth  `json:"mouths,omitempty"`
+	Talkers []SeenTalker  `json:"talkers,omitempty"`
+	Player  *PlayerState  `json:"player,omitempty"`
+	Levels  []*LevelState `json:"levels"`
 }
 
 // PlayerState is the player with its template's id and what it keeps to itself.
@@ -111,7 +118,8 @@ func (w *World) State() (*State, error) {
 		return nil, err
 	}
 	s := &State{Format: StateFormat, Pack: w.pack.Manifest.ID, Version: w.pack.Manifest.Version,
-		Step: w.step, Current: w.current, Status: w.status, RNG: rng, Counters: w.counters, Shared: maps.Clone(w.shared), Records: w.records, Log: w.log, Book: w.bookState()}
+		Step: w.step, Current: w.current, Status: w.status, RNG: rng, Counters: w.counters, Shared: maps.Clone(w.shared), Records: w.records, Log: w.log, Book: w.bookState(),
+		Links: w.links, Visited: w.visited, Mouths: w.mouths, Talkers: w.talkers}
 	if p := w.player; p != nil {
 		s.Player = &PlayerState{Player: *p, Template: p.Template.ID, Want: p.want, Next: p.next, Vision: p.vision,
 			StatusTicks: p.statusTicks, PoseLeft: p.poseLeft}
@@ -235,6 +243,8 @@ func Restore(p *content.Pack, s *State) (*World, error) {
 	if w.levels[w.current] == nil {
 		return nil, fmt.Errorf("the current level %q was not saved", w.current)
 	}
+	w.links, w.visited = slices.Clone(s.Links), w.restoreVisited(s.Visited)
+	w.mouths, w.talkers = slices.Clone(s.Mouths), slices.Clone(s.Talkers)
 	if ps := s.Player; ps != nil {
 		tm, err := thing(ps.Template)
 		if err != nil {

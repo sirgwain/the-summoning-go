@@ -55,8 +55,14 @@ magic points back, until N is released, the magic points are full, a creature co
 player is hurt, a message or conversation starts, or another key or a click comes; it will not
 start with full magic points or a creature near. Changing level saves the game too (the
 autosave). The options menu saves under a name, restores, deletes or renames a save, leaves for
-the main menu, or quits. The level map has a legend (a key or click closes it); the minimap in
-the top-left corner shows it small. Some levels refuse the map.
+the main menu, or quits. Some levels refuse the map.
+
+M unrolls the level map, drawn on parchment, and M or Esc rolls it up; the world waits while it is
+open. The wheel zooms and dragging pans. Resting the pointer on a teleporter, stairs, a pit or a
+trapdoor the player has been through shows where it led; right-clicking follows it, to its level
+if it is another, and Backspace comes back. Clicking a feature keeps it selected. PgUp and PgDn
+show the other levels visited, Home this one. The map opens anew each time. The minimap in the
+top-left corner shows the level about the player; Shift+M hides or shows it.
 
 F1-F4 cast the selected spell of Wizardry, Sorcery, Enchantment and Healing. In the spell
 panel, type the letters A-L of a gesture (or click its icons), Backspace takes one off, Enter or

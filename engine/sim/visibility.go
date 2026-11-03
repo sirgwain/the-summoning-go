@@ -36,6 +36,7 @@ func (w *World) see() {
 	}
 	l.computeVisibility(p.vision)
 	l.takeShapes(w.pack.Walls[l.Def.Walls])
+	w.seeTalkers(l)
 }
 
 // takeShapes finds the shape each visible wall is taken as while walls beside it cannot be seen

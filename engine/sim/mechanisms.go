@@ -229,6 +229,7 @@ func (w *World) use(l *Level, c content.Cell) {
 		w.run(l, hook, 0)
 	case f.Kind == content.FeatureMouth:
 		w.emit(Event{Kind: EventMessage, Level: l.ID, Cell: c, Feature: f.ID, Text: f.Message})
+		w.heardMouth(l, f, f.Message)
 	default:
 		w.emit(Event{Kind: EventRefused, Level: l.ID, Cell: c, Feature: f.ID, Detail: "a " + f.Kind + " is not used"})
 	}

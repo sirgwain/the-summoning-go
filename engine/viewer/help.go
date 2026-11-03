@@ -27,7 +27,7 @@ var PlayBindings = []Binding{
 	{"I/Tab", "inventory"},
 	{"L", "conversation log"},
 	{"J", "book of creatures and items"},
-	{"M", "level map"},
+	{"M", "level map (Shift: hide the minimap)"},
 	{"Esc", "close / options"},
 	{"O", "options"},
 	{"F5", "quick save"},

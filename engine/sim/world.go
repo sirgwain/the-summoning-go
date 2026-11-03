@@ -66,6 +66,13 @@ type World struct {
 	// run at the start of the next (effects.go).
 	effectPlayed bool
 	after        []func()
+	// links are the links the player has travelled, visited the levels it has been on in the
+	// order first visited (links.go).
+	links   []Link
+	visited []string
+	// mouths are the mouths the player has heard, talkers the creatures that talk it has seen.
+	mouths  []HeardMouth
+	talkers []SeenTalker
 }
 
 var summoningRules combat.Rules = summoning.Rules{}
@@ -211,6 +218,7 @@ func (w *World) enter(id string) error {
 	if w.current != id {
 		changed := w.current != ""
 		w.current = id
+		w.visit(id)
 		w.emit(Event{Kind: EventLevelChanged, Level: id})
 		if changed {
 			w.stopMusic()

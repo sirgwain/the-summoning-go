@@ -182,50 +182,72 @@ Some levels refuse the map:
 
 ### The engine's map
 
-The map belongs to the interface, not to an item: a minimap and a full map are always available, with no Palimpsest needed. Both show the same thing, the level as the player has seen it, and differ in size and in what the mouse can do. The engine draws them in its own style, not with the game's icons.
+The map belongs to the interface, not to an item: a minimap and a full map are always available, with no Palimpsest needed. Both show the same thing, the level as the player has seen it, and differ in size and in what the mouse can do. The engine draws them in its own style, not with the game's icons: ink on a sheet of parchment, as if the Palimpsest had been unrolled and the level had written itself on it.
 
 **Refusing.** Each level has a map setting: shown, or refused with a message or a conversation. While the current level refuses its map the minimap is hidden, and trying to open the full map shows the message or runs the conversation. The importer sets levels 13h, 21h, 22h and 23h from the table above and every other level to shown. Power 22h imports as "open the map", following the same rule. The full map can still show another visited level that does not refuse its map (Other levels, below).
 
-**What a cell shows.** Only seen cells are drawn; the rest is the map's background. A seen cell is a tile in the view's projection, its rows and columns turned as the view turns them, so the map has the view's shape and north. Each cell is drawn by what it is, in this order, the first that applies:
+**The parchment.** Both maps are drawn on parchment: a warm tan sheet mottled with lighter and darker patches and a few faint stains, darkening toward its edges, its top and bottom edges ragged and singed. It is the remake's own, made from noise, not art from the game.
+
+**What a cell shows.** Only seen cells are drawn; the rest is bare parchment. A seen cell is a tile in the view's projection, its rows and columns turned as the view turns them, so the map has the view's shape and north. Each cell is drawn in ink by what it is, in this order, the first that applies:
 
 | Cell | Drawn as |
 | --- | --- |
-| A wall (any shape), or a closed door's frame | A raised block: the cell's diamond in the wall color, lit on its top-left edges and shaded on its bottom-right ones, standing a quarter of the cell's height above the floor |
+| A wall (any shape), or a closed door's frame | A raised block: the cell's diamond in dark brown ink, lit on its top-left edges and shaded on its bottom-right ones, standing a quarter of the cell's height above the floor; walls side by side join into one block, their sides and edges drawn only where a wall meets a cell that is not a wall |
 | A door | Floor, with a bar in the door color along the line of its wall, drawn open (a gap in the middle) while the door is open |
-| Water (a floor of depth above 0) | The cell in the water color, a lighter line where it meets a floor that is not water |
-| Any other floor | The cell in the floor color, its edges a little darker, so the tiles read as a grid |
+| Water (a floor of depth above 0) | The cell in a blue wash, a lighter line where it meets a floor that is not water |
+| Any other floor | The cell in a pale brown wash, its edges a little darker, so the tiles read as a grid |
 
 Over its floor, a feature draws a symbol of its own, about half the cell's width, centered on the cell:
 
 | Feature | Symbol |
 | --- | --- |
-| Exit marker, exit or teleporter in a wall | An arrowhead pointing out of the level, in the exit color |
+| Exit marker, exit or teleporter in a wall | Stairs: three stepped bars, in the exit color |
 | Armed teleporter | A ring in the teleporter color |
 | Pit, open trapdoor | A dark hole with a lighter rim |
 | Closed trapdoor | A square outline in the trapdoor color |
 | Weight plate | A small square in the plate color, drawn sunk while pressed |
-| Rune mark | A dot in the mark color with a ring round it |
+| Lever | A lever in the plate color: a short bar for its base and a handle with a knob, leaning left while off and right while on |
+| Rune mark 1 (the Thurisaz rune's) | The rune Thurisaz, a stem with a thorn to its right, in green |
+| Rune mark 2 (the Gebo rune's) | The rune Gebo, an X, in yellow-orange |
+| Rune mark 3 (the Raido rune's) | The rune Raido, an R, in red |
+| Any other rune mark | A dot in the mark color with a ring round it |
 | Gem socket | A small diamond in the socket color, filled with each gem set in it |
-| Mouth | A speech dot in the mouth color |
+| Mouth | A speech dot in the mouth color, white |
 
-A teleporter not armed draws no symbol. Each kind has one color, the same in the legend.
+Over the symbols, **the creatures that talk** the player has seen (alive, not hostile, not mute, with a conversation) draw a small figure, a head over a body, in teal, unlike the mouths' white, on the cell where the player last saw each. The world keeps that place, for each level, and forgets it when the player can see the cell and the creature is no longer there, or sees the creature dead, hostile or silent. A teleporter not armed draws no symbol. Each kind has one color, the same in the legend. **The symbols glow**: each sits in a soft halo of its own color, about its own size again, that breathes slowly (a cycle of two seconds, from two thirds to full brightness), so the features stand out from the ink of the walls.
 
 **The player** is a marker on its cell: a filled circle with a pointer showing its facing, in the player's color with a dark outline, its brightness pulsing once a second so it can be found at a glance.
 
-**The minimap** sits in the top-left corner of the view, in a frame of the panels' style (the inventory's iron), 25% of the screen's width and half as tall, within the margin. Unlike the full map it does not fit the whole level: each cell is 12 screen pixels wide at the hotbar's scale (6 panel pixels at its scale), and the map is centered on the player and follows it as the view does. Cells cut by the frame are clipped by it. Under the frame a plaque names the level. The minimap is hidden while the full map, a conversation, the inventory panel, the spell panel or the book is open, and the player can hide or show it with Shift+M; that choice is a setting of the presentation, not of the world. The minimap takes no clicks: they go to the view under it.
+**The minimap** sits in the top-left corner of the view, in a frame of the panels' style (the inventory's iron) with the parchment inside, 25% of the screen's width and half as tall, within the margin. Unlike the full map it does not fit the whole level: each cell is 12 screen pixels wide at the hotbar's scale (6 panel pixels at its scale), and the map is centered on the player and follows it as the view does. Cells cut by the frame are clipped by it. Under the frame a plaque names the level. The minimap is hidden while the full map, a conversation, the inventory panel, the spell panel or the book is open, and the player can hide or show it with Shift+M; that choice belongs to the presentation, not to the world, and lasts while the program runs. The minimap takes no clicks: they go to the view under it.
 
-**The full map** opens with M (or power 22h) over the view, which shows darkened behind it, in the same frame, filling the screen within the margin. It fits the level's seen cells, with a margin of two cells, as large as fits, then can be zoomed with the mouse wheel (from that size to 32 screen pixels a cell, about the pointer) and panned by dragging with the left button. The level's name is its title. Down its left side a legend shows a swatch and a name for the player and for each kind the map shows. Esc or M closes it; other keys and clicks do what the map's own controls say, and are otherwise ignored while it is open. The world holds while the full map is open.
+**The full map** opens with M (or power 22h) over the view, which shows darkened behind it. The parchment fills the screen within the margin, held at its left and right by two rolled ends, and **unrolls**: it opens from a roll in the middle of the screen, the two rolled ends moving apart to the sides over 0.4 s, slowing as they go, and what the map shows appears as the sheet uncovers it. Closing rolls it up again the same way in 0.2 s, the world going on at once. The map fits the level's seen cells, with a margin of two cells, as large as fits, then can be zoomed with the mouse wheel (from that size to 32 screen pixels a cell, or to twice that size for a level small enough to fit larger, about the pointer) and panned by dragging with the left button. The level's name is its title, inked at the top. Down its left side a legend, headed Key, shows each kind the map shows by its symbol and its name, and the player's marker first when the player is on the level shown. Esc or M closes it; other keys and clicks do what the map's own controls say, and are otherwise ignored while it is open. The world holds while the full map is open.
 
-**Links the player has been through.** The world records, for the player, each link it has travelled: a teleporter (by its feature), an exit marker or an exit in a wall, a pit or an open trapdoor. A record is the link's level and cell, and the level and cell the player arrived at; travelling the same link to the same place again adds nothing, and a teleporter that sent the player to several places keeps each. Travel by a conversation, a portal, a rune mark or a spell is not a link and is not recorded. The records are world state, kept in saves; a save imported from the game starts with none, since the game keeps none.
+**Opening resets it.** Each time the full map opens it starts the same way: on the current level, fitted, with nothing selected and no path followed. What the player zoomed, panned, selected or followed is forgotten when it closes.
 
-On both maps a cell with a recorded link draws a small bright dot at its symbol's corner, so the player can see which ways it knows. On the full map, resting the pointer on such a cell shows where it leads:
+**What the mouths have said.** The world records, for each mouth, each message the player has heard it say, in the order first heard: a mouth whose message a hook changes keeps both. The records are world state, kept in saves.
 
-- **On the same level**, a curved arrow from the cell to each place it led, in the link's color, ending in a small ring on the arrival cell, with the place's distance in cells beside it when the arrow is long.
-- **To another level**, a label by the cell naming the level (its name, or "Level n" without one) and the arrival cell's coordinates, with a short arrow from the cell to the label. A label for a level the full map can show is a button: clicking it switches the map to that level, centered on the arrival cell, with the arrival cell marked.
+**Links the player has been through.** The world records, for the player, each link it has travelled: a teleporter (by its feature), an exit marker or an exit in a wall, a pit or an open trapdoor. A record is the link's kind, its level and cell, and the level and cell the player arrived at; travelling the same link to the same place again adds nothing, and a teleporter that sent the player to several places keeps each, in the order travelled. Going through an exit also teaches the way back, when there is one beside the player: an exit on the level arrived at, on the arrival cell or next to it (one cell in any of the eight directions), that leads to the level left, to the exit taken or a cell next to it. That exit is recorded as if travelled, to where it leads. Many exits have no such way back (they are one-way, or the exit beside the arrival leads somewhere else), and then only the exit taken is recorded. A pit, a trapdoor or a teleporter teaches no way back. Travel by a conversation, a portal, a rune mark, a spell or the tools is not a link and is not recorded. The records are world state, kept in saves; a save imported from the game starts with none, since the game keeps none. A link the player has not travelled is not known: the map shows its symbol, but not where it leads.
 
-The same arrows and labels show for the links leading to the cell under the pointer, drawn dashed, so the player can also see where they came from. With the pointer on nothing, the full map shows no arrows.
+On both maps a cell with a recorded link, or a mouth the player has heard, draws a small bright dot at its symbol's corner, so the player can see what it knows.
 
-**Other levels.** The full map can show any level the player has visited whose map setting is shown, with its seen cells as they were last seen (each level keeps its own). Page Up and Page Down step through the visited levels in the order they were first visited, and clicking a link's label goes to its level, as above; Home comes back to the current level. On a level other than the current one there is no player marker, and the title says it is not the current level ("Level name — visited"). The minimap always shows the current level.
+**Hovering and selecting.** On the full map, the cell under the pointer that has a feature, a recorded link or a creature that talks is the **focus**; with none, the focus is the selected cell, if any. Clicking (pressing and releasing the left button without dragging) such a cell selects it, and clicking anywhere else clears the selection. The focus is outlined, and beside it a note names what it is (Door, open or closed; Teleporter; Stairs; Pit; Trapdoor; Plate; Rune; Gem socket, with how many of its gems are set; Lever, on or off; Mouth; the rune's name for a rune mark; the name of each creature that talks seen there) and then, one line each:
+
+- for a mouth, what it has said, each message in quotes, wrapped to lines of at most 48 letters, or "What it says is not known" before it has been heard;
+
+- where it leads, for each recorded link from the cell: "To here, n cells" on the same level, or "To *level name* (x, y)" on another, with "Right-click to follow" after them;
+- "Where it leads is not known" for a teleporter, exit, pit or trapdoor with no record;
+- where the player has come to it from, for each recorded link that arrived at the cell: "From here, n cells" or "From *level name*".
+
+With the focus on a cell, its links also show on the map:
+
+- **On the same level**, a curved arrow from the cell to each place it led, in the link's color, ending in a small ring on the arrival cell.
+- **To another level**, a label by the cell naming the level and the arrival cell's coordinates, with a short arrow from the cell to the label. A label for a level the full map can show is a button: clicking it goes to that level, as following does.
+
+The links that arrived at the focus show the same way, drawn dashed, so the player can also see where they came from. With no focus, the full map shows no arrows.
+
+**Following.** Right-clicking a cell with a recorded link follows it: the map goes to where it led, switching to its level if it is another, centered on the arrival cell at the zoom shown, and selects the arrival cell, marked with a ring, so its notes and arrows show. A cell with several recorded links goes to the next of them each time it is followed, in the order they were travelled. Backspace goes back to where the map was before the last follow, one step a press. Following a link the map cannot show (its level refuses its map) does nothing.
+
+**Other levels.** The full map can show any level the player has visited whose map setting is shown, with its seen cells as they were last seen (each level keeps its own). Page Up and Page Down step through the visited levels in the order they were first visited, and following a link or clicking its label goes to its level, as above; Home comes back to the current level. On a level other than the current one there is no player marker, and the title says it is not the current level ("Level name — visited"). The minimap always shows the current level. The world keeps the order levels were first visited in its saves; a save without it takes the levels it holds that have seen cells, in the order of their ids.
 
 ## Liquids
 

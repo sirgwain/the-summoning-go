@@ -86,7 +86,8 @@ func (v *Viewer) Pointer() (img content.Image, centered, ok bool) {
 	if !v.Play || pt == nil || v.World.Player() == nil {
 		return content.Image{}, false, false
 	}
-	if v.World.Talk() == nil && !v.SpellsOpen && pt.Talk != nil {
+	// The bubble is for the world under the pointer; a window over the world hides it.
+	if v.World.Talk() == nil && !v.SpellsOpen && !v.MapOpen && !v.LogOpen && !v.book.open && pt.Talk != nil {
 		if _, ok := v.TalkTarget(v.Cursor); ok {
 			return *pt.Talk, false, true
 		}

@@ -69,3 +69,23 @@ func TestPulseStaysInRange(t *testing.T) {
 		}
 	}
 }
+
+func TestParchmentIsTornOnlyWhenRagged(t *testing.T) {
+	p := Parchment(80, 60, true)
+	if p.RGBAAt(40, 0).A != 0 || p.RGBAAt(40, 59).A != 0 {
+		t.Error("a ragged sheet's top and bottom rows are not clear")
+	}
+	if p.RGBAAt(40, 30).A != 255 || p.RGBAAt(0, 30).A != 255 {
+		t.Error("a ragged sheet is not whole in the middle and at its sides")
+	}
+	q := Parchment(80, 60, false)
+	for _, pt := range []image.Point{{0, 0}, {79, 59}, {40, 30}} {
+		if q.RGBAAt(pt.X, pt.Y).A != 255 {
+			t.Errorf("a plain sheet is clear at %v", pt)
+		}
+	}
+	r := Roll(12, 100)
+	if r.RGBAAt(6, 50).A != 255 || r.RGBAAt(0, 0).A != 0 {
+		t.Error("the roll is not a cylinder with rounded ends")
+	}
+}

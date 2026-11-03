@@ -54,6 +54,8 @@ type Window struct {
 	// clock.
 	frames map[frameKey]*framePics
 	drawn  int64
+	// maps are the level map's pictures and its unrolling (levelmap.go).
+	maps mapPics
 }
 
 // New returns a window drawing viewer v.

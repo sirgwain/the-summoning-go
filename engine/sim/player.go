@@ -272,19 +272,20 @@ func (w *World) place(c content.Cell, quiet bool) {
 
 // travel takes the player to a level and cell: it leaves its plate, the level changes, and it
 // arrives (docs/spec/rules.md, The player and the features). Cue is the transition that shows it,
-// "" for none.
-func (w *World) travel(to *content.Destination, cue string) {
+// "" for none. It reports whether the player arrived.
+func (w *World) travel(to *content.Destination, cue string) bool {
 	p, l := w.player, w.Current()
 	if _, err := w.load(to.Level); err != nil {
 		w.emit(Event{Kind: EventRefused, Level: l.ID, Detail: err.Error()})
-		return
+		return false
 	}
 	w.weigh(l, p.Cell(), -p.weight(), 0)
 	if err := w.enter(to.Level); err != nil {
-		return
+		return false
 	}
 	w.place(to.Cell, false)
 	w.transition(cue)
+	return true
 }
 
 // transition reports that the player moved by transition cue, "" for none.
@@ -648,7 +649,7 @@ func (w *World) takeFeature(f *Feature, d int) {
 		w.fallPlayer(f, d)
 		return
 	}
-	w.goThrough(f.Effect, f.To, content.TransitionExitWall)
+	w.goThrough(f.Effect, f, content.TransitionExitWall)
 }
 
 // fallPlayer drops the player through pit or trapdoor f, hurting it 4d5 unless it steps down
@@ -659,14 +660,23 @@ func (w *World) fallPlayer(f *Feature, d int) {
 		cue = content.EffectFall
 		w.hurtPlayer(w.roll(content.Dice{Count: 4, Sides: 5}), combat.Physical, "falling")
 	}
-	w.goThrough(w.pack.Effect(cue), f.To, content.TransitionFall)
+	w.goThrough(w.pack.Effect(cue), f, content.TransitionFall)
 }
 
-// goThrough plays view effect id at the player, then takes the player to a destination once it
-// ends, shown by transition cue.
-func (w *World) goThrough(id string, to *content.Destination, cue string) {
+// goThrough plays view effect id at the player, then takes the player through exit, pit or
+// trapdoor f of the current level once it ends, shown by transition cue, and records the link,
+// and for an exit the way back beside the arrival.
+func (w *World) goThrough(id string, f *Feature, cue string) {
+	l := w.Current()
 	w.playerEffect(id)
-	w.afterEffect(func() { w.travel(to, cue) })
+	w.afterEffect(func() {
+		if w.travel(f.To, cue) {
+			w.recordLink(l, f)
+			if f.Kind == content.FeatureExit {
+				w.recordReturn(l, f)
+			}
+		}
+	})
 }
 
 // movePlayerBy moves the player by (du, dv) and runs what its new cell does.
@@ -702,7 +712,7 @@ func (w *World) playerEntered(l *Level, c content.Cell, depth int) {
 	switch {
 	case f == nil:
 	case f.Kind == content.FeatureExit && f.To != nil:
-		w.goThrough(f.Effect, f.To, content.TransitionExitFloor)
+		w.goThrough(f.Effect, f, content.TransitionExitFloor)
 	case f.Kind == content.FeatureTeleporter && f.Armed:
 		w.teleportPlayer(l, f, depth)
 	case (f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor && f.Open) && !w.player.Status.Levitating:
@@ -718,6 +728,7 @@ func (w *World) teleportPlayer(l *Level, f *Feature, depth int) {
 	w.emit(Event{Kind: EventSound, Level: l.ID, Cell: f.Cell, Detail: soundTeleport})
 	p.U, p.V = CellUnits*to[0]+p.U-CellUnits*from[0], CellUnits*to[1]+p.V-CellUnits*from[1]
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: to, Thing: PlayerID, Detail: "teleported"})
+	w.recordLink(l, f)
 	w.transition(content.TransitionTeleporter)
 	w.weigh(l, from, -p.weight(), depth)
 	w.weigh(l, to, p.weight(), depth)

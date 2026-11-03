@@ -48,7 +48,7 @@ type Step struct {
 	// Tap taps a named part of the play UI (TapPoint): "spell.0" a school's box, "gesture" the
 	// gesture box, "icon.A" an icon of the spell panel, "learn", "back" and "close" its buttons,
 	// "book.0" the Memorize button of the first spell row of the spellbook showing, "offer.0" a
-	// conversation's offered keyword (by place), "bye", "word.<text>" a marked word of the line
+	// conversation's offered keyword (by place), "map.x,y" a cell of the full map, "bye", "word.<text>" a marked word of the line
 	// shown, and "talk.<id>" the middle of the box where the pointer talks to a creature or mouth
 	// of the shown level.
 	Tap string `json:"tap,omitempty"`
@@ -246,6 +246,17 @@ func (v *Viewer) TapPoint(name string) (image.Point, error) {
 	kind, arg, _ := strings.Cut(name, ".")
 	n, _ := strconv.Atoi(arg)
 	switch kind {
+	case "map":
+		fv := v.FullMap()
+		var c content.Cell
+		if fv == nil {
+			return image.Point{}, fmt.Errorf("the full map is closed")
+		}
+		if _, err := fmt.Sscanf(arg, "%d,%d", &c[0], &c[1]); err != nil {
+			return image.Point{}, fmt.Errorf("map cell %q: want x,y", arg)
+		}
+		x, y := fv.CellPoint(c)
+		return image.Pt(int(x), int(y)), nil
 	case "spell", "gesture":
 		h := v.Hotbar()
 		if h == nil {
