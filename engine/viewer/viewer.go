@@ -488,7 +488,8 @@ func (v *Viewer) mouse(in Input) []input.Command {
 	inv := v.Inventory()
 	onInv := inv != nil && cursor.In(inv.Rect)
 	onBar := bar != nil && cursor.In(bar.Rect) || onInv
-	if cursor.In(image.Rectangle{Max: v.Screen}) && !cursor.In(v.PanelRect()) && !onBar {
+	onPanel := cursor.In(v.PanelRect())
+	if cursor.In(image.Rectangle{Max: v.Screen}) && !onPanel && !onBar {
 		pt := v.ViewPoint(cursor)
 		c := drawlist.CellAt(pt)
 		v.Hover = &c
@@ -516,7 +517,7 @@ func (v *Viewer) mouse(in Input) []input.Command {
 		}
 		v.press, v.drag = nil, nil
 		d := cursor.Sub(press)
-		return d.X*d.X+d.Y*d.Y <= clickSlop*clickSlop && !cursor.In(v.PanelRect())
+		return d.X*d.X+d.Y*d.Y <= clickSlop*clickSlop && !onPanel
 	}
 	if in.Right.Released {
 		switch {
@@ -831,8 +832,37 @@ func (v *Viewer) PanelRect() image.Rectangle {
 	if v.HideDebug {
 		return image.Rectangle{}
 	}
-	w := v.panelWidth()
-	return image.Rect(v.Screen.X-w, 0, v.Screen.X, len(v.PanelLines())*LineHeight+Margin)
+	return v.panelRect(len(v.Panel()))
+}
+
+// panelRect is where an inspector panel of n lines is drawn.
+func (v *Viewer) panelRect(n int) image.Rectangle {
+	return image.Rect(v.Screen.X-v.panelWidth(), 0, v.Screen.X, n*LineHeight+Margin)
+}
+
+// Overlay is the debug overlay as a draw shows it, worked out once: the selection's links, the
+// draw commands to outline, the inspector panel and the event log, each with where it goes. All
+// are empty while the overlay is hidden.
+type Overlay struct {
+	Links     []SelectionLink
+	Marks     []Mark
+	Panel     []inspect.Line
+	PanelRect image.Rectangle
+	Log       []string
+	LogRect   image.Rectangle
+}
+
+// Overlay returns the debug overlay.
+func (v *Viewer) Overlay() Overlay {
+	if v.HideDebug {
+		return Overlay{}
+	}
+	links := v.Links()
+	panel := v.panel(links)
+	return Overlay{
+		Links: links, Marks: v.Marks(links), Panel: panel, PanelRect: v.panelRect(len(panel)),
+		Log: v.LogLines(), LogRect: v.LogRect(),
+	}
 }
 
 // LogRect is where the event log is drawn, empty when there are no events.
@@ -864,7 +894,10 @@ func (v *Viewer) PanelLines() []string { return inspect.Texts(v.Panel()) }
 // Panel is the inspector panel's lines, clipped to its width, with the kind of link each
 // describes, if any: the selected feature's actions and destinations, and what acts on the
 // selection.
-func (v *Viewer) Panel() []inspect.Line {
+func (v *Viewer) Panel() []inspect.Line { return v.panel(v.Links()) }
+
+// panel is the inspector panel's lines, given the selection's links.
+func (v *Viewer) panel(links []SelectionLink) []inspect.Line {
 	l := v.World.Current()
 	n := v.panelWidth()/CharWidth - 1
 	status := fmt.Sprintf("%s (%d/%d)  step %d  scale %d", l.ID, v.levelIndex()+1, len(v.Levels), v.World.Step(), v.Scale)
@@ -905,7 +938,7 @@ func (v *Viewer) Panel() []inspect.Line {
 				lines = append(lines, inspect.ThingLines(v.Pack, t)...)
 			}
 			first := true
-			for _, lk := range v.Links() {
+			for _, lk := range links {
 				if lk.Out {
 					continue
 				}

@@ -408,9 +408,9 @@ func (s *shell) Draw(screen *ebiten.Image) {
 	s.view.Draw(s.buffer, v.Origin)
 	s.presenter.SetColors(s.palette.At(v.Ticks*1000/int64(ebiten.TPS())), v.FixedColors(s.palette))
 	s.presenter.Present(screen, s.buffer, v.Scale)
-	links := v.Links()
-	s.drawGlow(screen, links)
-	s.drawLinks(screen, links)
+	overlay := v.Overlay()
+	s.drawGlow(screen, overlay.Marks)
+	s.drawLinks(screen, overlay.Links)
 	s.drawLabels(screen)
 	s.drawHotbar(screen)
 	s.drawSpellPanel(screen)
@@ -421,7 +421,7 @@ func (s *shell) Draw(screen *ebiten.Image) {
 	s.drawLog(screen)
 	s.drawShowing(screen)
 	s.drawReading(screen)
-	s.drawTools(screen)
+	s.drawTools(screen, overlay)
 	s.drawNotice(screen)
 	s.drawFullMap(screen)
 	s.drawPointer(screen)
@@ -439,7 +439,7 @@ func (s *shell) takeShots(screen *ebiten.Image) {
 }
 
 // drawTools draws the selection, the inspector panel and the event log over the view.
-func (s *shell) drawTools(screen *ebiten.Image) {
+func (s *shell) drawTools(screen *ebiten.Image, o viewer.Overlay) {
 	v := s.v
 	if v.HideDebug {
 		return
@@ -462,13 +462,13 @@ func (s *shell) drawTools(screen *ebiten.Image) {
 			}
 		}
 	}
-	text(v.PanelRect(), v.Panel())
-	if r := v.LogRect(); !r.Empty() {
+	text(o.PanelRect, o.Panel)
+	if !o.LogRect.Empty() {
 		var lines []inspect.Line
-		for _, l := range v.LogLines() {
+		for _, l := range o.Log {
 			lines = append(lines, inspect.Line{Text: l})
 		}
-		text(r, lines)
+		text(o.LogRect, lines)
 	}
 }
 
@@ -525,9 +525,8 @@ var markColors = map[string]color.RGBA{
 }
 
 // drawGlow outlines the selection and what its links act on or come from with a glow.
-func (s *shell) drawGlow(screen *ebiten.Image, links []viewer.SelectionLink) {
+func (s *shell) drawGlow(screen *ebiten.Image, vm []viewer.Mark) {
 	v := s.v
-	vm := v.Marks(links)
 	if len(vm) == 0 {
 		return
 	}
