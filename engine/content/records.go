@@ -50,8 +50,11 @@ type Item struct {
 	// Effect is a text key saying what its power does, and Lore one about it, both for the book.
 	Effect string `json:"effect,omitempty"`
 	Lore   string `json:"lore,omitempty"`
-	// Doll is how it shows on the inventory's figure when worn.
-	Doll *DollImage `json:"doll,omitempty"`
+	// Doll is how it shows on the inventory's figure when worn, and DollLeft in the left hand if
+	// that differs; DollOver draws it in a hand after both hands' other objects.
+	Doll     *DollImage `json:"doll,omitempty"`
+	DollLeft *DollImage `json:"doll_left,omitempty"`
+	DollOver bool       `json:"doll_over,omitempty"`
 	// Looks are the looks it puts on the player's figure layers while worn, by layer name.
 	Looks map[string]FigureLook `json:"looks,omitempty"`
 	// Fill gives a container a look for how full it is.

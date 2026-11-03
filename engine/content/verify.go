@@ -283,6 +283,9 @@ func (v *verifier) itemRecord(i *Item) {
 	v.frame(owner+" icon", i.Icon.Sprite, i.Icon.Frame)
 	v.frame(owner+" floor", i.Floor.Sprite, i.Floor.Frame)
 	v.itemFight(owner, i)
+	if i.DollLeft != nil {
+		v.frame(owner+" left doll", i.DollLeft.Image.Sprite, i.DollLeft.Image.Frame)
+	}
 	if i.Doll != nil {
 		v.frame(owner+" doll", i.Doll.Image.Sprite, i.Doll.Image.Frame)
 	}

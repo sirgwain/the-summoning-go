@@ -88,6 +88,10 @@ func (im *importer) inventory() {
 			look = wornQuiver
 		}
 		it.Doll = im.wornLook(look)
+		if i == templateChest {
+			it.DollLeft = im.wornLook(look + 1)
+		}
+		it.DollOver = tm.Category() == categoryOverHands && tm.Armor() > 0
 		if it.Fill != nil {
 			for k := range it.Fill.Icons {
 				if d := im.wornLook(look + k + 1); d != nil {
@@ -113,6 +117,13 @@ func (im *importer) inventory() {
 		}
 	}
 }
+
+// templateChest shows a look of its own in the left hand; objects of categoryOverHands with
+// armor are drawn over both hands' others (items.md, The inventory panel).
+const (
+	templateChest     = 3
+	categoryOverHands = 10
+)
 
 // wornLook returns worn image n placed at its offset on the doll, or nil when there is none.
 func (im *importer) wornLook(n int) *content.DollImage {

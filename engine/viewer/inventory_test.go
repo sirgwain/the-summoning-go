@@ -241,3 +241,55 @@ func TestShiftClickMoves(t *testing.T) {
 		t.Fatalf("shift click in the sack: sack %+v, first shelf %+v", sack.Contents, p.Slots[0])
 	}
 }
+
+// A click on the figure picks a worn slot by its region; with an object on the pointer, the slot
+// the object is worn in.
+func TestDollSlot(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	p := v.World.Player()
+	for i := sim.Shelves; i < sim.SlotCount; i++ {
+		p.Slots[i] = nil
+	}
+	p.Hand = nil
+	for _, c := range []struct {
+		col, row, want int
+	}{
+		{10, 10, sim.SlotQuiver}, {60, 10, sim.SlotHead}, {45, 40, sim.SlotBody},
+		{40, 110, sim.SlotFeet}, {40, 90, sim.SlotBody}, {20, 60, sim.SlotBody},
+	} {
+		if got := v.dollSlot(p, c.col, c.row); got != c.want {
+			t.Errorf("empty, (%d, %d): slot %d, want %d", c.col, c.row, got, c.want)
+		}
+	}
+	p.Slots[sim.SlotRightHand] = &sim.Object{Item: devpack.ItemSword}
+	p.Slots[sim.SlotNeck] = &sim.Object{Item: devpack.ItemRock}
+	for _, c := range []struct {
+		col, row, want int
+	}{
+		{20, 60, sim.SlotRightHand}, {20, 40, sim.SlotRightHand}, {60, 60, sim.SlotBody},
+		{45, 40, sim.SlotNeck},
+	} {
+		if got := v.dollSlot(p, c.col, c.row); got != c.want {
+			t.Errorf("holding, (%d, %d): slot %d, want %d", c.col, c.row, got, c.want)
+		}
+	}
+	// The mail on the pointer goes to the body wherever it is clicked; the sword to a hand by the
+	// side clicked.
+	p.Hand = &sim.Object{Item: devpack.ItemMail}
+	if got := v.dollSlot(p, 60, 10); got != sim.SlotBody {
+		t.Errorf("mail on the pointer: slot %d", got)
+	}
+	p.Hand = &sim.Object{Item: devpack.ItemSword}
+	if l, r := v.dollSlot(p, 60, 100), v.dollSlot(p, 20, 10); l != sim.SlotLeftHand || r != sim.SlotRightHand {
+		t.Errorf("sword on the pointer: %d and %d", l, r)
+	}
+}
+
+// The armor gauge's armor part grows with the armor class, never quite full or empty between.
+func TestArmorGauge(t *testing.T) {
+	for ac, want := range map[int]int{0: 0, 1: 2, 15: 21, 29: 40, 30: 41, 40: 41, -3: 0} {
+		if got := armorGauge(ac); got != want {
+			t.Errorf("armor class %d: %d cells, want %d", ac, got, want)
+		}
+	}
+}

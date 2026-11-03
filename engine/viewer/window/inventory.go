@@ -2,12 +2,21 @@ package window
 
 import (
 	"image"
+	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
+	"github.com/sirgwain/the-summoning-go/engine/viewer"
+)
+
+// The armor gauge's color, and the colors of an attribute below and above its maximum.
+var (
+	armorColor    = color.RGBA{0x9a, 0xb4, 0xd0, 0xff}
+	lowToneColor  = color.RGBA{0xe0, 0x6a, 0x5a, 0xff}
+	highToneColor = color.RGBA{0x8c, 0xd8, 0x7a, 0xff}
 )
 
 // drawInventory draws the inventory panel: the figure with what it wears, the worn slots' and
@@ -70,8 +79,23 @@ func (s *Window) drawInventory(screen *ebiten.Image) {
 		}
 	}
 	s.presenter.PresentAt(win, art, 1, image.Point{})
+	if g := ip.Armor; g.Max > 0 {
+		r := g.Rect
+		vector.FillRect(win, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), slotColor, false)
+		full := r
+		full.Max.X = r.Min.X + r.Dx()*g.Value/g.Max
+		vector.FillRect(win, float32(full.Min.X), float32(full.Min.Y), float32(full.Dx()), float32(full.Dy()), armorColor, false)
+		vector.StrokeRect(win, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx()-1), float32(r.Dy()-1), 1, slotEdgeColor, false)
+	}
 	for i, l := range ip.Lines {
-		s.print(win, l.Text, l.At.X+textAt[i], l.At.Y)
+		switch l.Tone {
+		case viewer.ToneLow:
+			s.printIn(win, l.Text, l.At.X+textAt[i], l.At.Y, lowToneColor)
+		case viewer.ToneHigh:
+			s.printIn(win, l.Text, l.At.X+textAt[i], l.At.Y, highToneColor)
+		default:
+			s.print(win, l.Text, l.At.X+textAt[i], l.At.Y)
+		}
 	}
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(float64(ip.Scale), float64(ip.Scale))

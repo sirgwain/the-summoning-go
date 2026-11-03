@@ -309,14 +309,16 @@ leaves out shows nothing. Later milestones add keys.
   used one (`docs/spec/player.md`, The book). `lore` is a text key the book shows from first sight.
   Both are optional, and only words for the player: the engine never reads them as rules.
 - `doll` is how the item shows on the inventory's figure when worn: `{ "image", "at" }`, `at` the
-  pixel of the figure its image's top-left goes on (mirrored for the right hand). An action's
-  `icon` is the image its box shows.
+  pixel of the figure its image's top-left goes on (mirrored for the right hand); `doll_left`, if
+  given, is how it shows in the left hand instead. `doll_over` draws it in a hand after both
+  hands' other objects. An action's `icon` is the image its box shows.
 - `held` is how the item looks in the player's hands:
   `{ "right": { "behind": sprite, "front": sprite }, "left": { … } }`. Each sprite has a frame for
   every frame of the player's sprite, drawn with it (an empty frame for none), and its own anchor
   at the player's ground point.
 - `fill` gives a container a look for how full it is: `{ "per", "icons", "dolls" }`, step `k`
-  (from 1) shown while it holds more than `(k − 1) × per` objects, its own icon and doll empty.
+  (from 1) shown while it holds more than `(k − 1) × per` objects, its own icon and doll empty;
+  the figure shows the fill's dolls only in the left hand.
 - `looks` are the looks the item puts on the player's figure layers while worn (not in a hand),
   by layer name: `{ "body": { "sprite", "female" }, … }`, `female` the sprite for a female player
   when it differs.

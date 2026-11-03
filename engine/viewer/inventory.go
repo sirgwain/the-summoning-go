@@ -44,11 +44,41 @@ type DollPart struct {
 	Mirrored bool
 }
 
-// TextLine is a line of text on a panel, with an icon before it if it has one.
+// TextLine is a line of text on a panel, with an icon before it if it has one, in the tone Tone
+// gives: "" plain, ToneLow or ToneHigh.
 type TextLine struct {
 	At   image.Point
 	Text string
 	Icon *content.Image
+	Tone string
+}
+
+// Tones of a panel's text: an attribute below or above its maximum.
+const (
+	ToneLow  = "low"
+	ToneHigh = "high"
+)
+
+// armorCells and armorFull are the armor gauge's length and the armor class that fills it.
+const (
+	armorCells = 41
+	armorFull  = 30
+)
+
+// armorGauge returns how many of the armor gauge's cells show armor class ac: the game fills
+// `cells × (30 − ac) / 30` of them with the empty part, at least one while ac is below 30 and one
+// short of all while ac is above 0, and the rest show the armor (docs/spec/items.md, The
+// inventory panel).
+func armorGauge(ac int) int {
+	value := min(armorFull, max(0, armorFull-ac))
+	empty := armorCells * value / armorFull
+	if value > 0 && empty == 0 {
+		empty = 1
+	}
+	if value < armorFull && empty == armorCells {
+		empty = armorCells - 1
+	}
+	return armorCells - empty
 }
 
 // InventoryPanel is the inventory panel laid out on the screen. Rect is on the screen and Scale
@@ -65,6 +95,8 @@ type InventoryPanel struct {
 	// Slots are the worn slots' boxes and the pack's.
 	Slots []SlotBox
 	Lines []TextLine
+	// Armor is the armor gauge, filled from the left, Value of Max cells.
+	Armor Gauge
 }
 
 // ToggleInventory opens or closes the inventory panel, when playing.
@@ -120,6 +152,8 @@ func (v *Viewer) Inventory() *InventoryPanel {
 	// The stats under the figure, across the panel.
 	y = max(y, invPad+dollH) + invGap
 	stats := v.stats(p, inv)
+	ip.Armor = Gauge{Rect: image.Rect(invPad+6*CharWidth, y+2*LineHeight+4, invPad+6*CharWidth+2*armorCells, y+3*LineHeight-4),
+		Value: armorGauge(p.ArmorClass), Max: armorCells}
 	for _, l := range stats {
 		l.At = l.At.Add(image.Pt(invPad, y))
 		ip.Lines = append(ip.Lines, l)
@@ -167,7 +201,8 @@ func (ip *InventoryPanel) SlotRect(slot int) (image.Rectangle, bool) {
 }
 
 // dollParts are what the figure wears, in the order they are drawn: quiver, body, head, feet,
-// neck, arms, then the hands, those with armor last (docs/spec/items.md, The inventory panel).
+// neck, arms, then the hands, those drawn over the rest last (docs/spec/items.md, The inventory
+// panel).
 func (v *Viewer) dollParts(p *sim.Player, inv *content.Inventory) []DollPart {
 	var parts []DollPart
 	add := func(slot int, armor bool) {
@@ -176,10 +211,17 @@ func (v *Viewer) dollParts(p *sim.Player, inv *content.Inventory) []DollPart {
 			return
 		}
 		it := v.Pack.Items[o.Item]
-		if it == nil || (slot == sim.SlotRightHand || slot == sim.SlotLeftHand) && (it.Armor > 0) != armor {
+		if it == nil || (slot == sim.SlotRightHand || slot == sim.SlotLeftHand) && it.DollOver != armor {
 			return
 		}
-		look := it.DollFor(len(o.Contents))
+		look := it.Doll
+		if slot == sim.SlotLeftHand {
+			// In the left hand a container shows how full it is, and some objects a look of
+			// their own.
+			if look = it.DollFor(len(o.Contents)); it.DollLeft != nil {
+				look = it.DollLeft
+			}
+		}
 		if slot == sim.SlotQuiver && inv.QuiverSlot != nil {
 			look = inv.QuiverSlot
 		}
@@ -263,19 +305,26 @@ func (v *Viewer) levelTitle(level int) string {
 func (v *Viewer) stats(p *sim.Player, inv *content.Inventory) []TextLine {
 	short := []string{"STR", "AGI", "END", "ACC", "TAL", "POW"}
 	names := []string{sim.AttrStrength, sim.AttrAgility, sim.AttrEndurance, sim.AttrAccuracy, sim.AttrTalent, sim.AttrPower}
-	attrs := ""
+	// Each attribute, in its tone when below or above its maximum, which then follows it.
+	var lines []TextLine
+	x := 0
 	for i, n := range names {
-		s := fmt.Sprintf("%s:%d", short[i], p.Attributes[n])
+		l := TextLine{Text: fmt.Sprintf("%s:%d", short[i], p.Attributes[n]), At: image.Pt(x, 0)}
 		if m, ok := p.MaxAttributes[n]; ok && m != p.Attributes[n] {
-			s += fmt.Sprintf("/%d", m)
+			l.Text += fmt.Sprintf("/%d", m)
+			if l.Tone = ToneLow; p.Attributes[n] > m {
+				l.Tone = ToneHigh
+			}
 		}
-		attrs += s + "  "
+		lines = append(lines, l)
+		x += (len(l.Text) + 2) * CharWidth
 	}
-	lines := []TextLine{
-		{Text: attrs},
-		{Text: fmt.Sprintf("HP %d/%d  MP %d/%d  AC %d  %s  EXP %d/%d", p.HitPoints, p.MaxHitPoints, p.MagicPoints, p.MaxMagicPoints,
-			p.ArmorClass, v.levelTitle(p.Level), p.Experience, p.NextLevel), At: image.Pt(0, LineHeight)},
-	}
+	lines = append(lines,
+		TextLine{Text: fmt.Sprintf("HP %d/%d  MP %d/%d  %s  EXP %d/%d", p.HitPoints, p.MaxHitPoints, p.MagicPoints, p.MaxMagicPoints,
+			v.levelTitle(p.Level), p.Experience, p.NextLevel), At: image.Pt(0, LineHeight)},
+		// The armor gauge goes between the label and the number.
+		TextLine{Text: "Armor", At: image.Pt(0, 2*LineHeight)},
+		TextLine{Text: fmt.Sprint(p.ArmorClass), At: image.Pt(7*CharWidth+2*armorCells, 2*LineHeight)})
 	// The skills with a level, two to a line.
 	n := 0
 	for i, sk := range p.Skills {
@@ -291,7 +340,7 @@ func (v *Viewer) stats(p *sim.Player, inv *content.Inventory) []TextLine {
 			text = inspect.Text(v.Pack, ratings[r-1])
 		}
 		l := TextLine{Text: fmt.Sprintf("%s %d (%d/%d)", text, sk.Level, sk.Practice, sk.Threshold),
-			At: image.Pt((n%2)*(invTextW/2+3*SlotSize), (2+n/2)*LineHeight)}
+			At: image.Pt((n%2)*(invTextW/2+3*SlotSize), (3+n/2)*LineHeight)}
 		if k < len(icons) {
 			l.Icon = &icons[k]
 		}
@@ -318,11 +367,88 @@ func (v *Viewer) objectUnder(ip *InventoryPanel, pt image.Point) *sim.Object {
 	return nil
 }
 
-// inventoryClick is a click on the inventory panel at screen point pt: a box swaps with the hand
-// (with Shift, moves its object: moveClick); the right button opens a container or uses a usable object in
-// a box, or sends the hand to a shelf.
+// dollSlot returns the slot a click on the figure at doll pixel (col, row) picks: by the region
+// it falls in, or with an object on the pointer the slot it is worn in (docs/spec/items.md, The
+// inventory panel).
+func (v *Viewer) dollSlot(p *sim.Player, col, row int) int {
+	hand := func(s int) bool { return p.Slots[s] != nil }
+	slot := sim.SlotBody
+	switch {
+	case row < 38 && col < 38:
+		slot = sim.SlotQuiver
+	case row < 32:
+		slot = sim.SlotHead
+	case row >= 31 && row <= 45 && col >= 39 && col <= 54 && hand(sim.SlotNeck):
+		slot = sim.SlotNeck
+	case row >= 102:
+		slot = sim.SlotFeet
+	case row >= 79:
+	case row >= 53 && col < 44, row >= 39 && col < 44 && hand(sim.SlotRightHand):
+		slot = sim.SlotRightHand
+	case row >= 53, row >= 39 && hand(sim.SlotLeftHand):
+		slot = sim.SlotLeftHand
+	}
+	if (slot == sim.SlotRightHand || slot == sim.SlotLeftHand) && !hand(slot) {
+		slot = sim.SlotArms
+	}
+	if slot == sim.SlotArms && !hand(sim.SlotArms) {
+		slot = sim.SlotBody
+	}
+	o := p.Hand
+	if o == nil {
+		return slot
+	}
+	it := v.Pack.Items[o.Item]
+	if it == nil {
+		return slot
+	}
+	arrows := slices.Contains(it.Tags, "arrows")
+	if slot == sim.SlotQuiver && it.Size == 0 && !(arrows && !hand(sim.SlotQuiver)) {
+		return slot
+	}
+	switch it.Wear {
+	case content.WearHead:
+		slot = sim.SlotHead
+	case content.WearBody:
+		slot = sim.SlotBody
+	case content.WearFeet:
+		slot = sim.SlotFeet
+	case content.WearArms:
+		slot = sim.SlotArms
+	case content.WearNeck:
+		slot = sim.SlotNeck
+	case content.WearQuiver:
+		slot = sim.SlotQuiver
+		if row > 48 {
+			slot = sim.SlotRightHand
+		}
+	default:
+		slot = sim.SlotRightHand
+	}
+	if slot == sim.SlotRightHand && col >= 44 {
+		slot = sim.SlotLeftHand
+	}
+	return slot
+}
+
+// panelSlot returns the slot of the box or the figure's region under screen point pt.
+func (v *Viewer) panelSlot(ip *InventoryPanel, pt image.Point) (int, bool) {
+	at := ip.at(pt)
+	if b, ok := slotAt(ip.Slots, at); ok {
+		return b.Slot, true
+	}
+	if d := at.Sub(ip.DollAt); ip.HasDoll && d.In(image.Rect(0, 0, dollW, dollH)) {
+		return v.dollSlot(v.World.Player(), d.X, d.Y), true
+	}
+	return 0, false
+}
+
+// inventoryClick is a click on the inventory panel at screen point pt: a box, or the figure's
+// region, swaps with the hand (with Shift, moves its object: moveClick); the right button opens a
+// container or uses a usable object in a box, or sends the hand to a shelf.
 func (v *Viewer) inventoryClick(ip *InventoryPanel, pt image.Point, right, shift bool) []input.Command {
-	b, ok := slotAt(ip.Slots, ip.at(pt))
+	slot, ok := v.panelSlot(ip, pt)
+	b := SlotBox{Slot: slot}
 	if right {
 		if ok {
 			return v.boxRightClick(b.Slot)
