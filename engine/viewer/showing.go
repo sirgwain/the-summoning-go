@@ -199,5 +199,5 @@ func (v *Viewer) flipbookLine() string {
 	if len(v.Flipbooks) == 0 {
 		return "no flipbooks"
 	}
-	return "B flipbook: " + strings.TrimPrefix(v.Flipbooks[v.Flipbook], content.FlipbookPrefix) + "  K play it"
+	return "flipbook: " + strings.TrimPrefix(v.Flipbooks[v.Flipbook], content.FlipbookPrefix)
 }

@@ -595,7 +595,8 @@ func cycle(in Input, i, n int) int {
 	return (i + 1) % n
 }
 
-// keys turns the tool keys into commands on the selection.
+// keys turns the tool keys into commands on the selection (ToolBindings, which the help shows:
+// change both together).
 func (v *Viewer) keys(in Input) []input.Command {
 	if in.pressed(KeySpace) {
 		v.Paused = !v.Paused
@@ -666,19 +667,9 @@ func (v *Viewer) pressPlate(f *sim.Feature) []input.Command {
 // functionKeys are the function keys the viewer reads, F1 on.
 const functionKeys = 8
 
-// playKeys turns the keys into the player's commands, laid out as the game's are:
-//
-//   - WASD or the arrows walk, two held for a diagonal; Home, PgUp, End and PgDn walk the
-//     diagonals. A single key waits a moment before walking straight, in case it is half of a
-//     diagonal (walkNow).
-//   - Space acts with the right hand (Shift+Space its second action) and X throws from it; Q acts
-//     with the left hand (Shift+Q) and Z throws from it.
-//   - F takes from the floor, G puts down, Enter pulls the lever underfoot or uses a key on the
-//     keyhole underfoot, E talks, H recenters the view, P pauses until the next key or click.
-//   - I or Tab opens and closes the inventory panel, as clicking the portrait does.
-//   - Esc closes the inventory panel; with it closed, Esc or O opens the options menu.
-//   - F5 saves to the quick save and F8 loads it; F9 cycles the sound; M shows the level map.
-//   - L opens the conversation log, as the hotbar's Log box does.
+// playKeys turns the keys into the player's commands, laid out as the game's (PlayBindings, which
+// the help shows: change both together). A single walk key waits a moment before walking
+// straight, in case it is half of a diagonal (walkNow).
 func (v *Viewer) playKeys(in Input) []input.Command {
 	if in.held(KeyControl) {
 		return nil
@@ -875,6 +866,7 @@ func (v *Viewer) PanelLines() []string { return inspect.Texts(v.Panel()) }
 // selection.
 func (v *Viewer) Panel() []inspect.Line {
 	l := v.World.Current()
+	n := v.panelWidth()/CharWidth - 1
 	status := fmt.Sprintf("%s (%d/%d)  step %d  scale %d", l.ID, v.levelIndex()+1, len(v.Levels), v.World.Step(), v.Scale)
 	if v.Paused {
 		status += "  PAUSED"
@@ -882,79 +874,57 @@ func (v *Viewer) Panel() []inspect.Line {
 	if v.Play {
 		status += "  PLAYING"
 	}
-	lines := []string{status}
-	kinds := map[int]inspect.LinkKind{}
-	items := map[int]string{}
-	cell := func(cl []inspect.Line) {
-		for _, x := range cl {
-			kinds[len(lines)], items[len(lines)] = x.Kind, x.Item
-			lines = append(lines, x.Text)
+	var lines []inspect.Line
+	text := func(ss ...string) {
+		for _, s := range ss {
+			lines = append(lines, inspect.Line{Text: s})
 		}
 	}
-	panel := func() []inspect.Line {
-		n := v.panelWidth()/CharWidth - 1
-		out := make([]inspect.Line, len(lines))
-		for i, s := range lines {
-			out[i] = inspect.Line{Text: Clip(s, n), Kind: kinds[i], Item: items[i]}
-		}
-		return out
-	}
+	text(status)
 	if p := v.World.Player(); v.Play && p != nil {
-		lines = append(lines, inspect.Player(v.Pack, p)...)
-		lines = append(lines, "", "WASD/arrows walk (two: diagonal), Home PgUp End PgDn",
-			"Space right hand (Shift: 2nd)  X throw right",
-			"Q left hand (Shift: 2nd)  Z throw left",
-			"F take  G put down  Enter lever/key  E/C talk",
-			"F1-F4 cast (Shift: next spell)  F10/R spells",
-			"Shift+click read",
-			"Click the player: take / put down; click a slot:",
-			"swap with the hand; right click: hand to a shelf",
-			"I/Tab or click the portrait: inventory",
-			"Esc close / options  O options",
-			"H recenter  P pause  N step  M magnify",
-			"V see all  F12 tools  ~ debug",
-			v.flipbookLine())
+		text(inspect.Player(v.Pack, p)...)
+		text("")
+		text(helpLines(PlayBindings, n)...)
+		text(helpLines(CommonBindings, n)...)
+		text(v.flipbookLine())
 		if v.Selected != nil {
-			lines = append(lines, "")
-			cell(inspect.CellLines(v.Pack, l, *v.Selected))
+			text("")
+			lines = append(lines, inspect.CellLines(v.Pack, l, *v.Selected)...)
 		}
-		return panel()
-	}
-	if v.Hover != nil {
-		lines = append(lines, fmt.Sprintf("under the mouse: (%d, %d)", v.Hover[0], v.Hover[1]))
-	}
-	lines = append(lines, "")
-	switch {
-	case v.Selected == nil:
-		lines = append(lines, "Click a cell or a thing to inspect it.")
-	default:
-		cell(inspect.CellLines(v.Pack, l, *v.Selected))
-		if t := l.Thing(v.Thing); t != nil {
-			lines = append(lines, "")
-			cell(inspect.ThingLines(v.Pack, t))
+	} else {
+		if v.Hover != nil {
+			text(fmt.Sprintf("under the mouse: (%d, %d)", v.Hover[0], v.Hover[1]))
 		}
-		first := true
-		for _, lk := range v.Links() {
-			if lk.Out {
-				continue
+		text("")
+		if v.Selected == nil {
+			text("Click a cell or a thing to inspect it.")
+		} else {
+			lines = append(lines, inspect.CellLines(v.Pack, l, *v.Selected)...)
+			if t := l.Thing(v.Thing); t != nil {
+				text("")
+				lines = append(lines, inspect.ThingLines(v.Pack, t)...)
 			}
-			if first {
-				lines = append(lines, "", "Acted on by:")
-				first = false
+			first := true
+			for _, lk := range v.Links() {
+				if lk.Out {
+					continue
+				}
+				if first {
+					text("", "Acted on by:")
+					first = false
+				}
+				lines = append(lines, inspect.Line{Text: fmt.Sprintf("  %s %s", lk.From, lk.Text()), Kind: lk.Kind, Item: lk.Item})
 			}
-			kinds[len(lines)], items[len(lines)] = lk.Kind, lk.Item
-			lines = append(lines, fmt.Sprintf("  %s %s", lk.From, lk.Text()))
 		}
+		text("")
+		text(helpLines(ToolBindings, n)...)
+		text(helpLines(CommonBindings, n)...)
+		text(v.flipbookLine())
 	}
-	lines = append(lines, "",
-		"U/Enter use (plate: press/lift; slot: fill)",
-		"T toggle  R reset  1-9 run hook  E follow exit",
-		"X take object",
-		"Shift+click move thing  Space pause  N step",
-		"[ ] level  M magnify  Home recenter  V see all",
-		"F12 play  ~ hide the debug overlay",
-		v.flipbookLine())
-	return panel()
+	for i := range lines {
+		lines[i].Text = Clip(lines[i].Text, n)
+	}
+	return lines
 }
 
 // Clip shortens s to n characters, ending it with "..." when it is cut.
