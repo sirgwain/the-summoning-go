@@ -91,6 +91,8 @@ type Thing struct {
 	Frame  *int
 	Portal *content.Destination
 	Mute   bool
+	// Speed replaces the template's speed when set: a creature a conversation turned hostile.
+	Speed int
 	// casting counts a stationary caster's updates to its next cast; animCount and animStep an
 	// animated creature's frame changes; spin the ticks a teleported creature still spins.
 	casting             int

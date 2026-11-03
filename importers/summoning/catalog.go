@@ -428,6 +428,7 @@ const (
 	slowBank              = 0x12
 	slowSpeed             = 2
 	creatureSpeed         = 8
+	hostileSpeed          = 16
 	creatureWeight        = 100
 	creatureFootprint     = 16
 	trapFootprint         = 20
@@ -494,6 +495,9 @@ func (im *importer) creature(n int) (string, error) {
 	}
 	if rec.Bank() == slowBank {
 		t.Speed = slowSpeed
+	}
+	if n == 0x23 || n == 0x2B {
+		t.HostileSpeed = hostileSpeed
 	}
 	if sp, ok := spellID(rec.Spell()); ok && rec.Spell() != 0 {
 		t.Spell, t.SpellPower = sp, content.Dice{Count: 5, Sides: 5}

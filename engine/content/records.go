@@ -268,9 +268,11 @@ type Thing struct {
 	Kind   string `json:"kind"`
 	Sprite string `json:"sprite"`
 	Facing int    `json:"facing"`
-	// Speed is the step in world units.
-	Speed      int `json:"speed,omitempty"`
-	IntervalMS int `json:"interval_ms,omitempty"`
+	// Speed is the step in world units; HostileSpeed, if set, replaces it once a conversation
+	// turns the creature hostile.
+	Speed        int `json:"speed,omitempty"`
+	HostileSpeed int `json:"hostile_speed,omitempty"`
+	IntervalMS   int `json:"interval_ms,omitempty"`
 	// Footprint is the side of the square, in world units around the ground point, the thing
 	// takes up; 0 means DefaultFootprint.
 	Footprint int `json:"footprint,omitempty"`

@@ -196,6 +196,9 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 	d := 2 * t.walkDir
 	t.Facing = d
 	speed := t.Template.Speed
+	if t.Speed > 0 {
+		speed = t.Speed
+	}
 	if speed == 0 {
 		speed = 8
 	}

@@ -3,9 +3,11 @@ package sim
 import (
 	"encoding/json"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/sirgwain/the-summoning-go/devpack"
+	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 )
 
@@ -97,5 +99,27 @@ func TestConversationLog(t *testing.T) {
 	}
 	if !reflect.DeepEqual(r.Log(), w.Log()) {
 		t.Errorf("restored a doubled log\n %+v\nwant\n %+v", r.Log(), w.Log())
+	}
+}
+
+// A conversation that turns its speaker hostile gives it its template's hostile speed, and it
+// walks at that speed.
+func TestHostileSpeed(t *testing.T) {
+	w := studyWorld(t, devpack.StudyStart, 2, func(p *content.Pack) {
+		sage := p.Things[devpack.ThingSage]
+		sage.HostileSpeed = 16
+		sage.Behaviors = slices.DeleteFunc(slices.Clone(sage.Behaviors), func(b string) bool {
+			return b == content.BehaviorNeverHostile || b == content.BehaviorInvulnerable
+		})
+		c := p.Conversations[devpack.ConversationSage]
+		c.Clauses = []content.Clause{{If: content.Condition{Greeting: true}, Do: []content.Action{{Hostile: true}}}}
+	})
+	do(w, input.Talk{Thing: "sage"})
+	for w.Talk() != nil {
+		do(w, input.Leave{})
+	}
+	sage := w.Current().Thing("sage")
+	if sage == nil || !sage.Hostile || sage.Speed != 16 {
+		t.Fatalf("sage: %+v", sage)
 	}
 }

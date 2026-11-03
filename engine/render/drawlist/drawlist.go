@@ -476,7 +476,9 @@ func thingCmd(p *content.Pack, t Thing) (Cmd, content.Cell, bool) {
 			frame = *t.Frame
 		}
 	case t.Sprite != "":
-		// A look taken from another sprite shows its first frame.
+		// A look taken from a creature's sprite (Shape Change) shows a frame by the facing:
+		// the game's facing (the table direction's next) halved (docs/spec/spells.md).
+		frame = (t.Facing + 1) % 8 / 2 % max(1, sprite.Frames)
 	default:
 		if a, ok := p.Animation(tmpl, t.Anim); ok && t.Anim != "" && len(a.Frames) > 0 {
 			frame = a.Frames[t.Phase%len(a.Frames)]

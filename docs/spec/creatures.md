@@ -117,7 +117,7 @@ xp = (byte 3)d10 + 4 × byte 2 + 13 × byte 5 + byte 10 + byte 4
 
 Each NPC record `n` becomes a thing template `thing.npc.n` of kind creature:
 
-- **Sprite**: NPC base + byte 7, with the creature anchor (entities.md). **Speed** as under Spawning, 0 for animated objects. **Interval**: byte 11 in milliseconds (`ticks × 1000 / 18.2`, rounded). **Weight** 100.
+- **Sprite**: NPC base + byte 7, with the creature anchor (entities.md). **Speed** as under Spawning, 0 for animated objects; records 23h and 2Bh have a hostile speed of 16 (Hostility). **Interval**: byte 11 in milliseconds (`ticks × 1000 / 18.2`, rounded). **Weight** 100.
 - **Hit points**: `(byte 3)d10 + 4 × byte 2`.
 - **Facing**: for walkers, direction table entry `2 × byte 6`; for stationary casters, 2.
 - **Behaviors**: `hostile` (0100h), `never_hostile` (0004h or 1000h), `leaves_corpse` (0010h), `resists_teleport` (0200h), `invulnerable` (1000h), `talks` (0008h).

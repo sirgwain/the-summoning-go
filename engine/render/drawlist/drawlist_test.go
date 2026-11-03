@@ -370,3 +370,16 @@ func TestTakenShape(t *testing.T) {
 		t.Errorf("floor %v, want %v", floor, want)
 	}
 }
+
+// A player in a creature's look shows the creature's frame for its facing: the game's facing,
+// one past the table direction, halved, modulo the sprite's frames.
+func TestShapeChangeFrame(t *testing.T) {
+	p, _ := testPack()
+	p.Things["hero"] = &content.Thing{ID: "hero", Kind: content.ThingPlayer, Sprite: "tiny"}
+	for facing, want := range []int{0, 1, 1, 2, 2, 0, 0, 0} {
+		cmd, _, ok := thingCmd(p, Thing{ID: "player", Template: "hero", Facing: facing, Sprite: "npc"})
+		if !ok || cmd.Frame != want || cmd.Sprite != "npc" {
+			t.Errorf("facing %d: %+v, want frame %d of npc", facing, cmd, want)
+		}
+	}
+}

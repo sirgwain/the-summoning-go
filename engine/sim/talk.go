@@ -579,6 +579,9 @@ func (w *World) talkAction(a content.Action) {
 				if x.Template == t.Speaker.Template {
 					w.turnHostile(x)
 					x.Mute = true
+					if x.Hostile && x.Template.HostileSpeed > 0 {
+						x.Speed = x.Template.HostileSpeed
+					}
 				}
 			}
 		}

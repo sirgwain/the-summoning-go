@@ -111,7 +111,7 @@ Only the player's missiles practice, and a creature hit by one turns hostile. Ty
 | 22 | Fire Shield | Practices Enchantment 1 more. Fire shield for `power` ticks (message 37h) |
 | 23 | Weapon Skill | Each weapon class +1 for `power` ticks (message 62h); if already active, message 63h and the time extends |
 | 24 | Magic Skill | Each school +1 for `power` ticks (message 65h); if active, message 66h |
-| 25 | Shape Change | The player takes the look of the nearest creature within 128 (transformed); message 89h if none. Taking the look of NPC bank +4Dh sets interaction variable 14 |
+| 25 | Shape Change | The player takes the look of the nearest creature within 128 (transformed); message 89h if none. Taking the look of NPC bank +4Dh sets interaction variable 14. The transformed figure is that creature's sprite alone, frame `p >> 1` for the player's facing `p` (player.md), modulo its frames: no held objects and no armor. It lasts until the player's next step that moves it |
 | 26 | Alteration | Missile type 1Ah |
 | 30 | Liquify | Healing 1 more. With an Empty Bottle in one hand, the other hand's object fills it: Amethyst (ABh) → 80h, Emerald (ACh) → 82h, Ruby (ADh) → 83h, Diamond (AEh) → DDh, NightShade Leftovers (0Bh) → 82h, using the object up; anything else, or nothing, makes a Jera potion (81h) whose value is the power, and stays. The bottle's hand holds the result; message 6Eh names it |
 | 31 | Cure Poison | Practices Healing 3 more. Cures poison (message 7Ah) |
@@ -154,5 +154,4 @@ Commands: **learn** (enter a gesture of icons), **memorize** (a spell in the spe
 
 - Whether anything besides scrolls, conversations and the starting school teaches icons.
 - Exactly how long each gesture icon shows: the game holds some icons over two player updates, by a table of which icon may follow which.
-- Where a Shape Change look is drawn from, frame by frame; the engine shows the creature's first frame.
 - What a magic wall weighs on a plate; the importer gives it a creature's weight.

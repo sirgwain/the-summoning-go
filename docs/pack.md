@@ -364,7 +364,8 @@ leaves out shows nothing. Later milestones add keys.
   missing animation falls back to `idle.d`, then `idle`, then frame 0. `walk.d` and `roll.d` step
   one frame per move the thing makes, not by time.
 - `facing` is the starting direction, `speed` the step in world units, `interval_ms` the time
-  between updates.
+  between updates. `hostile_speed`, if set, is a creature's speed once a conversation turns it
+  hostile.
 - `footprint` is the side, in world units, of the square around the ground point the thing takes
   up: two things whose footprints overlap collide. Boulders and traps also test the footprint's
   corners against the terrain. 0 means 16.
