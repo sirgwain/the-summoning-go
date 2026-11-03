@@ -1021,6 +1021,11 @@ func (v *Viewer) panel(links []SelectionLink) []inspect.Line {
 			if t := l.Thing(v.Thing); t != nil {
 				text("")
 				lines = append(lines, inspect.ThingLines(v.Pack, t)...)
+				if c := t.Template.Conversation; c != "" {
+					r := v.World.Records()[t.Template.ID]
+					lines = append(lines, inspect.ConversationLines(v.Pack, c, inspect.Text(v.Pack, t.Template.Name),
+						r != nil && r.Talked, v.World.Counters())...)
+				}
 			}
 			first := true
 			for _, lk := range links {

@@ -417,6 +417,12 @@ writes the same pack format.
   editor and the viewer's tools these come from the pack (every link, observed or not); the game's
   map shows the same overlay limited to what the player has observed (UI). The viewer gets it
   first, as the tools already list a feature's hooks and procedures.
+- **Conversations.** A creature's conversation reaches the level too: what its clauses do,
+  directly or through the procedures they `run`, is a link from the creature, dashed (it happens
+  only in talk) and labeled with the conditions of the clauses that do it. Selecting a feature
+  lists the creatures that act on it; selecting a creature shows its conversation a line per
+  clause (the condition, then the actions, numbered as jumps number them), whether the player has
+  talked to it, and the counters its clauses test or set with their values.
 - **Play-test.** Start the simulation from the level being edited.
 - It runs `verify` continuously and shows broken references where they are.
 

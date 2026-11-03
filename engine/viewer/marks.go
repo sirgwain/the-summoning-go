@@ -24,8 +24,9 @@ type SelectionLink struct {
 	Out bool
 }
 
-// Links are the selection's links: what the selected cell's feature does, and what acts on that
-// feature, on the selected thing or on the selected cell, but for where something sends things.
+// Links are the selection's links: what the selected cell's feature, or the selected creature's
+// conversation, does, and what acts on that feature, on the selected thing or on the selected
+// cell, but for where something sends things.
 // None while the debug overlay is hidden.
 func (v *Viewer) Links() []SelectionLink {
 	if v.HideDebug || v.Selected == nil {
@@ -39,7 +40,8 @@ func (v *Viewer) Links() []SelectionLink {
 	var out []SelectionLink
 	for _, lk := range inspect.Links(v.Pack, l) {
 		switch {
-		case feature != "" && lk.From == feature:
+		case lk.Conversation == "" && feature != "" && lk.From == feature,
+			lk.Conversation != "" && v.Thing != "" && lk.From == v.Thing:
 			out = append(out, SelectionLink{lk, true})
 		case lk.Kind == inspect.LinkTravel:
 			// Where a teleporter, exit, pit or trapdoor sends things shows only from it: nothing
@@ -79,6 +81,8 @@ func (v *Viewer) Marks(links []SelectionLink) []Mark {
 		for _, lk := range links {
 			if lk.Out {
 				targets = append(targets, target{lk.Thing, lk.Feature, lk.Kind})
+			} else if lk.Conversation != "" {
+				targets = append(targets, target{lk.From, "", lk.Kind})
 			} else {
 				targets = append(targets, target{"", lk.From, lk.Kind})
 			}

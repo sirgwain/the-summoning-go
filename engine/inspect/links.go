@@ -26,20 +26,26 @@ const (
 	LinkTravel LinkKind = "travel" // a teleporter's destination, or where an exit, pit or trapdoor leads on the level
 )
 
-// Link is one way a feature reaches a place on its level: an action of a procedure one of its
-// hooks runs, or where it sends what goes through it.
+// Link is one way a feature or a creature reaches a place on its level: an action of a procedure
+// one of a feature's hooks runs, or a creature's conversation does, or where a feature sends what
+// goes through it.
 type Link struct {
 	Kind LinkKind
-	// From is the feature acting and its cell; To the cell acted on, and Feature or Thing the
-	// feature or thing there acted on, if any.
+	// From is the feature or the creature (a thing, with Conversation set) acting and its cell; To
+	// the cell acted on, and Feature or Thing the feature or thing there acted on, if any.
 	From         string
 	FromCell, To content.Cell
 	Feature      string
 	Thing        string
 	Direction    int    // the direction shot or rolled; -1 for none
 	Item         string // the item it makes, shoots or has a slot take
-	Hooks        []string
-	Procedure    string
+	// Hooks are the hooks that run it, or for a conversation's link the conditions of the clauses
+	// that do, in words.
+	Hooks     []string
+	Procedure string
+	// Conversation is the conversation of the creature From whose clauses run it, if one does:
+	// it happens only when the player talks to the creature.
+	Conversation string
 	Label        string
 	// Potential marks a link through a hook a procedure's set_hook action would point at the
 	// procedure, rather than the hook as it is now.
@@ -53,7 +59,8 @@ func Links(p *content.Pack, l *sim.Level) []Link {
 		for i := range links {
 			o := &links[i]
 			if o.Kind == lk.Kind && o.From == lk.From && o.To == lk.To && o.Feature == lk.Feature &&
-				o.Thing == lk.Thing && o.Label == lk.Label && o.Potential == lk.Potential && o.Direction == lk.Direction {
+				o.Thing == lk.Thing && o.Label == lk.Label && o.Potential == lk.Potential && o.Direction == lk.Direction &&
+				o.Conversation == lk.Conversation {
 				for _, h := range lk.Hooks {
 					if !slices.Contains(o.Hooks, h) {
 						o.Hooks = append(o.Hooks, h)
@@ -92,6 +99,31 @@ func Links(p *content.Pack, l *sim.Level) []Link {
 			}
 			if hp := f.Hook(sh.Hook); hp != nil && *hp != *sh.Procedure {
 				run(f, sh.Hook, *sh.Procedure, true)
+			}
+		}
+	}
+	// What the level's creatures' conversations do to it.
+	for _, t := range l.Things {
+		conv := p.Conversations[t.Template.Conversation]
+		if conv == nil {
+			continue
+		}
+		for _, c := range conv.Clauses {
+			when := Condition(p, c.If)
+			act := func(a content.Action, proc string) {
+				if lk, ok := actionLink(p, l, a); ok {
+					lk.From, lk.FromCell, lk.Hooks, lk.Procedure, lk.Conversation = t.ID, t.Cell(), []string{when}, proc, conv.ID
+					add(lk)
+				}
+			}
+			for _, a := range c.Do {
+				if a.Run == nil {
+					act(a, "")
+					continue
+				}
+				for _, pa := range l.Def.Procedures[*a.Run] {
+					act(pa, *a.Run)
+				}
 			}
 		}
 	}
@@ -215,10 +247,18 @@ func actionTarget(p *content.Pack, l *sim.Level, a content.Action) (Link, bool) 
 // shortHook is a hook's name without its "on_".
 func shortHook(h string) string { return strings.TrimPrefix(h, "on_") }
 
-// Text is the link in words, for a label: the hooks that run it, then what it does.
+// Text is the link in words, for a label: the hooks that run it, then what it does. A
+// conversation's link starts with "talk" and the conditions of the clauses that run it.
 func (lk Link) Text() string {
 	if len(lk.Hooks) == 0 {
 		return lk.Label
+	}
+	if lk.Conversation != "" {
+		s := "talk, " + strings.Join(lk.Hooks, " / ")
+		if lk.Procedure != "" {
+			s += " (" + lk.Procedure + ")"
+		}
+		return s + ": " + lk.Label
 	}
 	hooks := make([]string, len(lk.Hooks))
 	for i, h := range lk.Hooks {

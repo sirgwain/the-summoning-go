@@ -117,8 +117,9 @@ func (s *Window) drawGlow(screen *ebiten.Image, vm []viewer.Mark) {
 	s.glow.Draw(screen, s.view, marks, v.Origin, v.BufferSize(), v.Scale, float64(v.Ticks)/float64(ebiten.TPS()))
 }
 
-// drawLinks draws the selection's links as arrows from the feature acting to what it acts on,
-// dashed for a link through a hook a set_hook would point at the procedure. What each does is
+// drawLinks draws the selection's links as arrows from the feature or creature acting to what it
+// acts on, dashed for a link through a hook a set_hook would point at the procedure, or through a
+// conversation. What each does is
 // labeled at its far end from the selection, the labels of a cell stacked. A cell acted on has
 // its ground outlined, and a direction shot or rolled in is an arrow from it.
 func (s *Window) drawLinks(screen *ebiten.Image, links []viewer.SelectionLink) {
@@ -169,7 +170,7 @@ func (s *Window) drawLinks(screen *ebiten.Image, links []viewer.SelectionLink) {
 		dx, dy := float64(to.X-from.X), float64(to.Y-from.Y)
 		length := math.Hypot(dx, dy)
 		off := image.Pt(int(math.Round(-dy/length*float64(6*n))), int(math.Round(dx/length*float64(6*n))))
-		arrow(screen, from.Add(off), to.Add(off), c, lk.Potential)
+		arrow(screen, from.Add(off), to.Add(off), c, lk.Potential || lk.Conversation != "")
 	}
 	for _, cell := range order {
 		lines := labels[cell]
