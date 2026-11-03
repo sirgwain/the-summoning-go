@@ -174,6 +174,8 @@ type Viewer struct {
 	lostOpened bool
 	// autosaveDue is whether a change of level waits to be autosaved (saves.go).
 	autosaveDue bool
+	// anims plays the animations that run on time, as the world runs.
+	anims *drawlist.Animator
 
 	// The frontend.
 
@@ -221,6 +223,10 @@ func (v *Viewer) rebuild() {
 	if v.SeeAll {
 		scene.Visible, scene.Taken = nil, nil
 	}
+	if v.anims == nil {
+		v.anims = drawlist.NewAnimator(v.Seed)
+	}
+	v.anims.Apply(v.Pack, &scene)
 	v.magnified = v.World.Magnified()
 	v.Cmds = drawlist.Build(v.Pack, scene, drawlist.Options{Magnify: v.Magnify || v.magnified})
 	v.Labels = drawlist.Labels(v.Pack, scene)
@@ -462,7 +468,11 @@ func (v *Viewer) modal(in Input) ([]input.Command, bool) {
 
 // updateWorld runs the world's update with cmds and brings the view up to date.
 func (v *Viewer) updateWorld(cmds []input.Command) []sim.Event {
-	return v.took(v.World.Update(cmds))
+	events := v.World.Update(cmds)
+	if v.anims != nil && v.anims.Advance(1000/sim.StepsPerSecond) && len(events) == 0 {
+		v.rebuild()
+	}
+	return v.took(events)
 }
 
 // holdsWorld reports whether a window open in play holds the world: the spell panel
