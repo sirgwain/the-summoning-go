@@ -747,3 +747,69 @@ func TestStrikePastCorpse(t *testing.T) {
 		t.Errorf("the swing met the corpse: %v, the guard at %d hit points", ev, g.HitPoints)
 	}
 }
+
+// windUpWorld is a wolf beside the player whose blow winds up for 500 ms, run until it starts.
+func windUpWorld(t *testing.T) (*World, *Thing) {
+	t.Helper()
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Levels["level.walk"].Things[0].Thing = "thing.wolf"
+		p.Things["thing.wolf"].WindUpMS = 500
+	},
+		"#######",
+		"#@.W..#",
+		"#######")
+	wolf := w.Current().Things[0]
+	for range 600 {
+		w.Update(nil)
+		if wolf.WindUpUntil > 0 {
+			break
+		}
+	}
+	if wolf.WindUpUntil != wolf.WindUpFrom+stepsMS(500) {
+		t.Fatalf("the wolf did not wind up: from %d until %d", wolf.WindUpFrom, wolf.WindUpUntil)
+	}
+	if p := w.Player(); p.HitPoints != p.MaxHitPoints {
+		t.Fatalf("the wolf struck before its wind-up: %d hit points", p.HitPoints)
+	}
+	return w, wolf
+}
+
+func TestWindUpLands(t *testing.T) {
+	w, wolf := windUpWorld(t)
+	p := w.Player()
+	u, v := wolf.U, wolf.V
+	var struck bool
+	until := wolf.WindUpUntil
+	for wolf.WindUpUntil > 0 && w.Step() <= until {
+		struck = has(w.Update(nil), EventThing, "strikes") || struck
+		if wolf.U != u || wolf.V != v {
+			t.Fatal("the wolf moved while winding up")
+		}
+	}
+	if w.Step() < until {
+		t.Errorf("the blow landed at step %d, before %d", w.Step(), until)
+	}
+	if !struck || p.HitPoints != p.MaxHitPoints-3 {
+		t.Errorf("the wound-up blow did not land: struck %v, %d hit points", struck, p.HitPoints)
+	}
+	if wolf.WindUpUntil != 0 || wolf.Pose != PoseAttack {
+		t.Errorf("after the blow: until %d, pose %q", wolf.WindUpUntil, wolf.Pose)
+	}
+}
+
+func TestWindUpDodged(t *testing.T) {
+	w, wolf := windUpWorld(t)
+	p := w.Player()
+	p.V += 64
+	var missed bool
+	until := wolf.WindUpUntil
+	for wolf.WindUpUntil > 0 && w.Step() <= until {
+		missed = has(w.Update(nil), EventThing, "strikes nothing") || missed
+	}
+	if !missed || p.HitPoints != p.MaxHitPoints {
+		t.Errorf("the dodged blow: missed %v, %d hit points", missed, p.HitPoints)
+	}
+	if wolf.walkDir != restDir {
+		t.Errorf("the wolf does not rest after its blow: walk %d", wolf.walkDir)
+	}
+}

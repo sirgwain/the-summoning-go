@@ -149,6 +149,10 @@ func (w *World) updateCreatures(l *Level) {
 			w.wearConjured(l, t)
 			continue
 		}
+		if t.WindUpUntil > 0 {
+			w.windingUp(l, t)
+			continue
+		}
 		if !alive(t) || w.step < t.next || l.Thing(t.ID) != t {
 			continue
 		}
@@ -196,13 +200,7 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 	}
 	d := 2 * t.walkDir
 	t.Facing = d
-	speed := t.Template.Speed
-	if t.Speed > 0 {
-		speed = t.Speed
-	}
-	if speed == 0 {
-		speed = 8
-	}
+	speed := stepOf(t)
 	du, dv := Dirs[d][0]*speed, Dirs[d][1]*speed
 	for ; du != 0 && !w.creatureAccepts(l, t, t.U+du, t.V); du -= sign(du) {
 	}
@@ -227,6 +225,10 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 		hit = w.blocker(l, t, false, t.U+Dirs[d][0]*speed, t.V+Dirs[d][1]*speed, t.Template.Bounds(), nil)
 	}
 	switch {
+	case hit != nil && hit.thing == nil && t.Hostile && !p.Dead && t.Template.WindUpMS > 0:
+		t.Facing = 2 * towards(t.U, t.V, p.U, p.V)
+		t.WindUpFrom, t.WindUpUntil = w.step, w.step+stepsMS(t.Template.WindUpMS)
+		w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "winds up"})
 	case hit != nil && hit.thing == nil && t.Hostile && !p.Dead:
 		t.Facing = 2 * towards(t.U, t.V, p.U, p.V)
 		w.creatureStrikes(l, t)
@@ -241,6 +243,57 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 	default:
 		t.walkDir, t.walkCount = (t.walkDir+2)%4, 5+w.rng.IntN(5)
 	}
+}
+
+// windingUp runs creature t's wind-up: when its time has passed the blow lands on the player if
+// the player is still a step ahead, else meets nothing (docs/spec/combat.md, Wind-up).
+func (w *World) windingUp(l *Level, t *Thing) {
+	p := w.player
+	if !alive(t) || l.Thing(t.ID) != t {
+		t.WindUpFrom, t.WindUpUntil = 0, 0
+		return
+	}
+	if w.step < t.WindUpUntil {
+		return
+	}
+	t.WindUpFrom, t.WindUpUntil = 0, 0
+	t.next = w.step + stepsMS(t.Template.IntervalMS)
+	t.glide.start(t.U, t.V, w.step, t.next)
+	t.Moving = false
+	if p == nil || p.Dead || w.current != l.ID {
+		return
+	}
+	t.walkDir, t.walkCount = restDir, 10+w.rng.IntN(5)
+	if w.playerAhead(l, t) {
+		w.creatureStrikes(l, t)
+		return
+	}
+	t.Pose = PoseAttack
+	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "strikes nothing"})
+}
+
+// stepOf is how far creature t steps: its own speed, else its template's, else 8.
+func stepOf(t *Thing) int {
+	switch {
+	case t.Speed > 0:
+		return t.Speed
+	case t.Template.Speed > 0:
+		return t.Template.Speed
+	}
+	return 8
+}
+
+// playerAhead reports whether the player's box overlaps creature t's moved one full step along
+// its facing.
+func (w *World) playerAhead(l *Level, t *Thing) bool {
+	speed := stepOf(t)
+	u, v := t.U+Dirs[t.Facing][0]*speed, t.V+Dirs[t.Facing][1]*speed
+	for _, b := range w.bodies(l) {
+		if b.thing == nil && overlaps(u, v, t.Template.Bounds(), b.u, b.v, b.box) {
+			return true
+		}
+	}
+	return false
 }
 
 // creatureAccepts reports whether creature t's ground point may stand at (u, v).

@@ -1,6 +1,8 @@
 package viewer
 
 import (
+	"math"
+
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
 )
 
@@ -108,4 +110,42 @@ func (v *Viewer) Marks(links []SelectionLink) []Mark {
 		}
 	}
 	return marks
+}
+
+// windUpPulses is how many times a winding-up creature's glow pulses before its blow lands
+// (docs/spec/combat.md, Wind-up).
+const windUpPulses = 2.5
+
+// WindUp is a draw command of a creature winding up, and how bright its glow is now, 0 to 1.
+type WindUp struct {
+	Cmd      int
+	Strength float64
+}
+
+// WindUps are the draw commands of the creatures winding up a blow, with their glows' strength:
+// windUpPulses pulses over the wind-up, dark at its start and brightest as the blow lands.
+func (v *Viewer) WindUps() []WindUp {
+	l := v.World.Current()
+	if l == nil {
+		return nil
+	}
+	step := v.World.Step()
+	strength := map[string]float64{}
+	for _, t := range l.Things {
+		if t.WindUpUntil <= t.WindUpFrom {
+			continue
+		}
+		f := float64(step-t.WindUpFrom) / float64(t.WindUpUntil-t.WindUpFrom)
+		strength[t.ID] = 0.5 - 0.5*math.Cos(2*math.Pi*windUpPulses*min(1, max(0, f)))
+	}
+	if len(strength) == 0 {
+		return nil
+	}
+	var out []WindUp
+	for i, c := range v.Cmds {
+		if k, ok := strength[c.Thing]; ok && c.Thing != "" {
+			out = append(out, WindUp{Cmd: i, Strength: k})
+		}
+	}
+	return out
 }

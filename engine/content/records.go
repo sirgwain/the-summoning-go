@@ -277,6 +277,8 @@ type Thing struct {
 	Speed        int `json:"speed,omitempty"`
 	HostileSpeed int `json:"hostile_speed,omitempty"`
 	IntervalMS   int `json:"interval_ms,omitempty"`
+	// WindUpMS is how long a creature gathers itself before its blow lands; 0 strikes at once.
+	WindUpMS int `json:"wind_up_ms,omitempty"`
 	// Footprint is the side of the square, in world units around the ground point, whose corners
 	// boulders and traps test against the terrain, and which sizes the shadow; 0 means
 	// DefaultFootprint.

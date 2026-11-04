@@ -75,6 +75,17 @@ On a hit, damage is its attack damage code rolled; less a quarter under blow pro
 
 Messages about combat are hidden while interaction variable "quiet combat" is set (dialogue.md).
 
+## Wind-up
+
+The wind-up is the engine's own addition, so that a creature's blow can be seen coming and stepped away from. The game's creatures strike the moment their step is blocked by the player. In the engine, a creature with a wind-up gathers itself first.
+
+- **Starting.** When a hostile creature's step is blocked by the player and its template has a wind-up (`wind_up_ms` above 0), the creature turns to face the player and starts its wind-up instead of attacking. While it winds up it does not walk, turn or cast.
+- **Landing.** Once the wind-up time has passed, counted in world time rather than the creature's updates, the blow lands. If the player's box overlaps the creature's box moved one full step (its speed) along its facing, the creature attacks as in Creatures attack. Otherwise the blow meets nothing, and no message is shown. Either way the creature shows its attack pose for its next update, as after any attack, and rests 10–14 steps. Its next update comes one interval after the blow.
+- **Ending early.** A wind-up ends without a blow when the creature dies, or when its time passes while the player is dead or on another level.
+- **Showing.** While a creature winds up, a red glow pulses around its outline: 2½ pulses over the wind-up, from dark at the start to brightest as the blow lands, so a shorter wind-up pulses faster. The glow is part of the game's picture, not of the debug overlay.
+- **Saving.** A creature's wind-up is saved with it.
+- **Import.** The importer gives each creature `wind_up_ms = (800 − 50 × hit dice) × interval / 6`, rounded down and kept within 300..800 (creatures.md, NPC record bytes 3 and 11, the interval in ticks): stronger creatures strike sooner, and so do faster ones, in proportion to their interval. A creature without hit dice updating every 6 ticks winds up 800 ms; one updating every 3 ticks, 400 ms; at 10 hit dice and more, or at the quickest intervals, 300 ms. A template without `wind_up_ms` strikes at once, as the game's creatures do.
+
 ## Hurting the player
 
 For damage `d` of kind `k`:

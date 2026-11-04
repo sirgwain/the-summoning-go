@@ -478,10 +478,16 @@ const (
 	behaviorResistsFire   = 0x2000
 	behaviorResistsLight  = 0x4000
 	behaviorResistsPoison = 0x8000
-	boulderSpeed          = 8
-	boulderInterval       = 4
-	trapInterval          = 128
-	boulderRollFrames     = 10
+	// A creature's wind-up is windUpMS less windUpPerDie for each hit die, scaled by its interval
+	// over windUpInterval, kept within windUpLeastMS..windUpMS (combat.md, Wind-up).
+	windUpMS          = 800
+	windUpPerDie      = 50
+	windUpLeastMS     = 300
+	windUpInterval    = 6
+	boulderSpeed      = 8
+	boulderInterval   = 4
+	trapInterval      = 128
+	boulderRollFrames = 10
 )
 
 // creature returns the thing template of NPC record n, adding it the first time.
@@ -513,6 +519,7 @@ func (im *importer) creature(n int) (string, error) {
 		Experience: content.Dice{Count: rec.HitDice(), Sides: 10, Bonus: expBonus},
 		ID:         id, Kind: content.ThingCreature, Sprite: sid, Speed: creatureSpeed,
 		IntervalMS: ms(rec.Interval()), Weight: creatureWeight, Footprint: creatureFootprint, Box: boxOf(creatureBox),
+		WindUpMS:  windUp(rec.HitDice(), rec.Interval()),
 		HitPoints: content.Dice{Count: rec.HitDice(), Sides: 10, Bonus: 4 * rec.HitBonus()},
 		Stats:     map[string]int{"resistance": rec.Resistance(), "bonus": rec.Bonus(), "accuracy": rec.Accuracy()},
 	}
@@ -609,6 +616,12 @@ func (im *importer) creature(n int) (string, error) {
 	im.specialCreature(n, rec, t)
 	im.pack.Things[id] = t
 	return id, nil
+}
+
+// windUp is the wind-up in ms of a creature with hitDice hit dice updating every interval ticks:
+// fewer for stronger and for faster creatures (docs/spec/combat.md, Wind-up).
+func windUp(hitDice, interval int) int {
+	return min(windUpMS, max(windUpLeastMS, (windUpMS-windUpPerDie*hitDice)*interval/windUpInterval))
 }
 
 // fitAnimations drops, and reports, animations using frames the sprite does not have.

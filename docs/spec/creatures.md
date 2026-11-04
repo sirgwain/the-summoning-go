@@ -76,7 +76,7 @@ Each update a creature counts down its current walk. When the count runs out it 
 Then, if it is not resting, it steps 8 units in its direction:
 
 - **The step succeeds.** With a magic attack, 1 in 10 steps it casts it: a hostile creature turns to the player first and casts only if it is chasing the player this very step; others face a random direction; the spell's power is 5d5. Otherwise it advances its walk frame.
-- **Blocked by the player, while hostile:** it attacks (combat.md), facing the player.
+- **Blocked by the player, while hostile:** it attacks (combat.md), facing the player. In the engine, a creature with a wind-up starts it instead and strikes when it ends (combat.md, Wind-up).
 - **Blocked by the player, when it hurts on contact:** 1 damage, poisoning if the creature is poisonous.
 - **Blocked otherwise:** it turns around and rests 5–9 steps (a hostile one picks a random direction instead).
 

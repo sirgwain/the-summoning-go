@@ -205,6 +205,7 @@ func (s *Window) Draw(screen *ebiten.Image) {
 	overlay := v.Overlay()
 	// What is drawn over the world belongs to the new view, so waits for a transition to end.
 	if !v.Transitioning() {
+		s.drawWindUps(screen)
 		s.drawGlow(screen, overlay.Marks)
 		s.drawLinks(screen, overlay.Links)
 		s.drawLabels(screen)

@@ -91,6 +91,26 @@ var markColors = map[inspect.LinkKind]color.RGBA{
 	inspect.LinkTravel:  {160, 140, 255, 255},
 }
 
+// windUpColor is the glow of a creature winding up a blow.
+var windUpColor = color.RGBA{255, 50, 30, 255}
+
+// drawWindUps glows around the creatures winding up a blow (docs/spec/combat.md, Wind-up).
+func (s *Window) drawWindUps(screen *ebiten.Image) {
+	v := s.v
+	ws := v.WindUps()
+	if len(ws) == 0 {
+		return
+	}
+	marks := make([]render.Mark, 0, len(ws))
+	for _, w := range ws {
+		if w.Strength < 0.02 {
+			continue
+		}
+		marks = append(marks, render.Mark{Cmd: w.Cmd, Color: windUpColor, Strength: w.Strength})
+	}
+	s.glow.DrawSteady(screen, s.view, marks, v.Origin, v.BufferSize(), v.Scale)
+}
+
 // drawGlow outlines the selection and what its links act on or come from with a glow.
 func (s *Window) drawGlow(screen *ebiten.Image, vm []viewer.Mark) {
 	v := s.v

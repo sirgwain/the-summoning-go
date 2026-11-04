@@ -370,7 +370,8 @@ leaves out shows nothing. Later milestones add keys.
   one frame per move the thing makes, not by time.
 - `facing` is the starting direction, `speed` the step in world units, `interval_ms` the time
   between updates. `hostile_speed`, if set, is a creature's speed once a conversation turns it
-  hostile.
+  hostile. `wind_up_ms`, if set, is how long a creature gathers itself, glowing, before its blow
+  lands (docs/spec/combat.md, Wind-up); without it a creature strikes at once.
 - `box` is the rectangle the thing collides by, `[x, y, w, h]` in view pixels from where its
   ground point is drawn: its left edge, its top, its width and its height. Two things whose boxes
   overlap collide. Without one, a thing collides by `[-n/2, -n/4, n, n/2]` for its footprint `n`.

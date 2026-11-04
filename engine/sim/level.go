@@ -93,6 +93,10 @@ type Thing struct {
 	Mute   bool
 	// Speed replaces the template's speed when set: a creature a conversation turned hostile.
 	Speed int
+	// WindUpFrom and WindUpUntil are the steps a creature's wind-up started and lands at; 0 while
+	// it is not winding up.
+	WindUpFrom  int64 `json:",omitempty"`
+	WindUpUntil int64 `json:",omitempty"`
 	// casting counts a stationary caster's updates to its next cast; animCount and animStep an
 	// animated creature's frame changes; spin the ticks a teleported creature still spins.
 	casting             int
