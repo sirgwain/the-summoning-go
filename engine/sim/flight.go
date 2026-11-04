@@ -95,14 +95,30 @@ func (w *World) flightHits(l *Level, f *Flight, b *body) {
 	if it := w.pack.Items[f.Object.Item]; it != nil && hasTag(it, "arrows") {
 		k = combat.Arrow
 	}
+	it := w.pack.Items[f.Object.Item]
+	poisons := it != nil && it.PoisonsThrown
 	if b.thing == nil {
+		w.learnItem(f.Object.Item, StageUsed)
 		w.hurtPlayer(f.Damage, k, f.Object.Item)
+		if poisons {
+			w.poisonPlayer()
+		}
 		return
 	}
+	t := b.thing
 	if f.ByPlayer {
-		w.turnHostile(b.thing)
+		w.turnHostile(t)
 	}
-	w.hurtThing(l, b.thing, f.Damage, k)
+	if t.Template.Kind == content.ThingCreature && l == w.Current() {
+		w.learnItem(f.Object.Item, StageUsed)
+		if poisons {
+			w.meetDefense(l, t, content.BehaviorResistsPoison)
+		}
+	}
+	w.hurtThing(l, t, f.Damage, k)
+	if poisons && alive(t) && !t.Template.Has(content.BehaviorResistsPoison) {
+		t.Poisoned = true
+	}
 }
 
 // updateFlights moves level l's things in flight whose tick has come.

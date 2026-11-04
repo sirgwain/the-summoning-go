@@ -18,7 +18,10 @@ const (
 	HintDefeat = "Defeat one to learn more."
 	HintPickUp = "Pick one up to learn more."
 	HintUse    = "Use one to learn more."
-	HintWear   = "Wear one to learn more."
+	// HintUseOrThrow and HintThrow are for items that poison when thrown.
+	HintUseOrThrow = "Use or throw one to learn more."
+	HintThrow      = "Throw one to learn more."
+	HintWear       = "Wear one to learn more."
 )
 
 // ThingName returns thing template id's name: its own, else its conversation's, else its id.
@@ -242,13 +245,22 @@ func ItemLines(p *content.Pack, id string, e *sim.Entry) (lines []string, hint s
 	if it.Casts != nil {
 		lines = append(lines, "Casts "+SpellName(p, it.Casts.Spell)+".")
 	}
+	if it.PoisonsThrown {
+		lines = append(lines, "Thrown, it poisons what it hits.")
+	}
 	return lines, ""
 }
 
 // useHint returns the hint for an item not yet used: to wear one whose power starts worn and that
 // has no use action, to use one with a power, spell or conversation, and none for anything else.
 func useHint(it *content.Item) string {
-	if it.Power == 0 && it.Casts == nil && it.Conversation == "" {
+	usable := it.Power != 0 || it.Casts != nil || it.Conversation != ""
+	switch {
+	case it.PoisonsThrown && usable:
+		return HintUseOrThrow
+	case it.PoisonsThrown:
+		return HintThrow
+	case !usable:
 		return ""
 	}
 	used := slices.ContainsFunc(it.Actions, func(a content.ItemAction) bool {

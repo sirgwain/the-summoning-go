@@ -14,6 +14,7 @@ const (
 	resSchoolIcons2 = 0x13
 	resActionIcons  = 0x30
 	resBareHands    = 0x32
+	resStatusIcons  = 0x52
 	wornQuiverSlot  = 0x35
 	wornQuiver      = 0x36
 	iconStrike      = 8
@@ -53,6 +54,13 @@ func (im *importer) inventory() {
 		in.StrikeIcon, in.ThrowIcon = &icons[0], &icons[1]
 	}
 	in.WeaponIcons = frames(resWeaponIcons, 0, 1, 2, 3)
+	// The status icons, in the game's order from the right (scenes.md, The game screen).
+	for f, st := range []string{content.StatusConfused, content.StatusLightningShield, content.StatusBattleRage,
+		content.StatusPoisoned, content.StatusFireShield} {
+		if icon := frames(resStatusIcons, f); len(icon) == 1 {
+			in.StatusIcons = append(in.StatusIcons, content.StatusIcon{Status: st, Image: icon[0]})
+		}
+	}
 	in.SchoolIcons = frames(resSchoolIcons2, 0, 1, 2, 3)
 	text := func(n int) (string, bool) {
 		id := msgID(n)

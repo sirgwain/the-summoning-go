@@ -22,6 +22,41 @@ type Inventory struct {
 	LevelTitles   []string `json:"level_titles,omitempty"`
 	// Labels are text keys of the details' words, by the Label constants.
 	Labels map[string]string `json:"labels,omitempty"`
+	// StatusIcons are drawn, in order from the right, for each status that holds.
+	StatusIcons []StatusIcon `json:"status_icons,omitempty"`
+}
+
+// StatusIcon shows a status of the player while it holds; Name, a text key, names it under the
+// pointer in place of the engine's own name.
+type StatusIcon struct {
+	Status string `json:"status"`
+	Image  Image  `json:"image"`
+	Name   string `json:"name,omitempty"`
+}
+
+// The player's statuses a status icon can show (docs/spec/scenes.md, The game screen).
+const (
+	StatusConfused         = "confused"
+	StatusPoisoned         = "poisoned"
+	StatusFireShield       = "fire_shield"
+	StatusLightningShield  = "lightning_shield"
+	StatusBattleRage       = "battle_rage"
+	StatusHaste            = "haste"
+	StatusInvisible        = "invisible"
+	StatusSight            = "sight"
+	StatusRegenerating     = "regenerating"
+	StatusManaRegenerating = "mana_regenerating"
+	StatusLevitating       = "levitating"
+	StatusDeathProtection  = "death_protection"
+)
+
+// StatusNames are the engine's own names of the statuses.
+var StatusNames = map[string]string{
+	StatusConfused: "Confused", StatusPoisoned: "Poisoned", StatusFireShield: "Fire shield",
+	StatusLightningShield: "Lightning shield", StatusBattleRage: "Battle rage", StatusHaste: "Haste",
+	StatusInvisible: "Invisible", StatusSight: "Sight", StatusRegenerating: "Regenerating",
+	StatusManaRegenerating: "Regenerating magic", StatusLevitating: "Levitating",
+	StatusDeathProtection: "Protected from dying",
 }
 
 // Labels of an object's details.
@@ -73,5 +108,19 @@ func (v *verifier) inventory() {
 			v.fail("%s: unknown label %q", owner, k)
 		}
 		v.text(owner, in.Labels[k])
+	}
+	seen := map[string]bool{}
+	for _, si := range in.StatusIcons {
+		switch {
+		case StatusNames[si.Status] == "":
+			v.fail("%s: unknown status %q", owner, si.Status)
+		case seen[si.Status]:
+			v.fail("%s: status %q listed twice", owner, si.Status)
+		}
+		seen[si.Status] = true
+		img(&si.Image)
+		if si.Name != "" {
+			v.text(owner, si.Name)
+		}
 	}
 }

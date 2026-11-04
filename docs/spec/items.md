@@ -191,7 +191,7 @@ An object's power starts when it is worn (if it lasts while worn) or used. Some 
 | 01h | Magic points +2d6 | |
 | 02h | Magic points +4d6 | |
 | 03h | Magic points +3000 | |
-| 04h | Confusion +75 and 2d8 damage | |
+| 04h | Confusion +75 (player.md); 2d8 hit points lost, past every defense and the armor; poisoned | |
 | 05h–08h | School 0–3 skill +1 | |
 | 09h | Interval −1 | |
 | 0Ah | Interval −2 | |
@@ -204,7 +204,7 @@ An object's power starts when it is worn (if it lasts while worn) or used. Some 
 | 11h, 26h, 1Ah | Teleport to the level's rune mark 21h, 22h or 23h; refused (message 43h) when the level has none | |
 | 12h | 2000 damage to every creature near the player; refused (88h) when none | |
 | 13h | Cast spell 3 at power 20 | |
-| 14h | Half the time, change sex; otherwise a random attribute and its maximum ±1 | |
+| 14h | Half the time, change sex (message 35h, confusion +50, player.md); otherwise a random attribute and its maximum ±1 | |
 | 15h | Cure poison and confusion; refused (41h) unless poisoned or confused over 25 | |
 | 16h | Nothing | yes |
 | 17h | Status: regenerating | yes |
@@ -275,13 +275,13 @@ A flagged template thrown rather than fired flies showing its tiny image instead
 
 They roll their action-1 damage, or 1 when a flagged one is thrown rather than fired. Anything else does `weight / 10 + 1`. The player's arrows add `(ACC − 10) / 2`, at least 1 in all. A thrower touching its target hits at once.
 
-**Hitting.** A thrown object that meets an entity hurts it (arrows as damage kind 3, everything else 0) and lands. Only the player's throws land; a creature's vanish.
+**Hitting.** A thrown object that meets an entity hurts it (arrows as damage kind 3, everything else 0) and lands. Only the player's throws land; a creature's vanish. The Isa Potion (82h) and the Poison Arrow (97h), thrown or fired, also poison what they hurt: a creature unless it resists poison (combat.md, Hurting a creature), the player as a poisoning wound does. A thrown Isa Potion does not confuse: creatures have no confusion.
 
 **Landing.** On a door it may open it (rules.md). An arrow breaks 1 time in 25. A bottle breaks into Broken Glass. If the **Decanter (90h)** breaks, every creature of record 2Eh is removed, conversation 2Eh starts, and the player gains 72903 experience.
 
 Throwing is not possible in water of depth 3 or more.
 
-**Engine model.** The player throws the object in a hand (that hand then waits a delay of 5 points, 15 updates) or, with a `fire` action, the first arrow of the quiver worn in slot 25 (message 48h `no_quiver` without one, 49h `no_arrows` when it is empty; 96h `no_room_to_shoot` when something stands a step ahead). Throwing practices weapon class 3 by 1; firing does too, and shows the both-hands strike pose. In deep water of depth 3 or more throwing gives 70h (`cannot_throw`) and other actions 73h (`cannot_act`). A thing in flight (entities.md) carries the object; how far it flies and its damage are as above, the damage from the item's `missile` (its dice, and whether only firing rolls them). A landing bottle becomes the item's `breaks_into`.
+**Engine model.** The player throws the object in a hand (that hand then waits a delay of 5 points, 15 updates) or, with a `fire` action, the first arrow of the quiver worn in slot 25 (message 48h `no_quiver` without one, 49h `no_arrows` when it is empty; 96h `no_room_to_shoot` when something stands a step ahead). Throwing practices weapon class 3 by 1; firing does too, and shows the both-hands strike pose. In deep water of depth 3 or more throwing gives 70h (`cannot_throw`) and other actions 73h (`cannot_act`). A thing in flight (entities.md) carries the object; how far it flies and its damage are as above, the damage from the item's `missile` (its dice, and whether only firing rolls them). A landing bottle becomes the item's `breaks_into`. An item's `poisons_thrown` makes it poison what it hurts in flight; the importer gives it to 82h and 97h.
 
 Arrows taken up go into a worn quiver when it has room; putting arrows on (in slot 25) with a quiver worn adds them to it.
 

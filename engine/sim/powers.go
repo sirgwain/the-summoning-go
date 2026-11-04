@@ -50,17 +50,21 @@ var attributeNames = [6]string{AttrStrength, AttrAgility, AttrEndurance, AttrAcc
 // Status and effect constants (docs/spec/player.md, items.md).
 const (
 	// powerShowMap shows the level map.
-	powerShowMap     = 0x22
-	maxTimed         = 255
-	confusedOver     = 25
-	confusionBump    = 6
-	regenerateChance = 30
-	boostAmount      = 2
-	boostTicks       = 10
-	shieldTicks      = 10
-	freezeTicks      = 100
-	nearCreatures    = wakeDistance
-	smiteDamage      = 2000
+	powerShowMap  = 0x22
+	maxTimed      = 255
+	confusedOver  = 25
+	confusionBump = 6
+	// The confusion a teleporter, a ripple teleport and a change of sex add.
+	teleporterConfusion = 30
+	rippleConfusion     = 40
+	sexChangeConfusion  = 50
+	regenerateChance    = 30
+	boostAmount         = 2
+	boostTicks          = 10
+	shieldTicks         = 10
+	freezeTicks         = 100
+	nearCreatures       = wakeDistance
+	smiteDamage         = 2000
 )
 
 // combatStatus is what the player's statuses do to a fight.
@@ -333,7 +337,8 @@ func (w *World) startPower(power, sign int) bool {
 		p.MagicPoints = p.MaxMagicPoints
 	case 0x04:
 		p.Confusion += 75
-		w.hurtPlayer(w.roll(content.Dice{Count: 2, Sides: 8}), combat.Physical, "confusion")
+		w.loseHitPoints(w.roll(content.Dice{Count: 2, Sides: 8}), true, "confusion")
+		w.poisonPlayer()
 	case 0x0C:
 		p.Status.ResistQuarter = true
 	case 0x0D:
@@ -349,6 +354,7 @@ func (w *World) startPower(power, sign int) bool {
 		w.place(w.mark(runeOf(power)).Cell, false)
 		w.emit(Event{Kind: EventSound, Level: l.ID, Cell: p.Cell(), Detail: soundTeleport})
 		w.transition(content.TransitionRipple)
+		w.addConfusion(rippleConfusion)
 	case 0x12:
 		for _, t := range w.creaturesNear() {
 			w.hurtThing(l, t, smiteDamage, combat.Physical)
@@ -356,6 +362,8 @@ func (w *World) startPower(power, sign int) bool {
 	case 0x14:
 		if w.chance(1, 2) {
 			w.changeSex()
+			w.message(l, p.Cell(), content.MsgSexChanged, "")
+			p.Confusion += sexChangeConfusion
 		} else {
 			n := 1
 			if w.chance(1, 2) {
@@ -407,7 +415,7 @@ func (w *World) startPower(power, sign int) bool {
 		p.Status.FireImmune = true
 		p.IntervalBonus -= 2
 	case 0x50:
-		p.Confusion += 150
+		w.addConfusion(150)
 	case 0x5B:
 		p.Status.DeathBlowWard = true
 	case 0x0F, 0x17, 0x4C, 0x47, 0x16, powerSpeed1, powerSpeed2, powerSpeed2Lasting:
@@ -555,6 +563,68 @@ func (p *Player) slotOf(pk *content.Pack, o *Object) int {
 		}
 	}
 	return -1
+}
+
+// Confused reports whether the player is confused: its confusion over 25.
+func (p *Player) Confused() bool { return p.Confusion > confusedOver }
+
+// HasStatus reports whether status (content.Status…) holds for the player, as its status icon
+// shows it (docs/spec/scenes.md, The game screen).
+func (p *Player) HasStatus(status string) bool {
+	switch status {
+	case content.StatusConfused:
+		return p.Confused()
+	case content.StatusPoisoned:
+		return p.Poisoned
+	case content.StatusFireShield:
+		return p.Timed[TimedFireShield] > 0
+	case content.StatusLightningShield:
+		return p.Timed[TimedLightningShield] > 0
+	case content.StatusBattleRage:
+		return p.Timed[TimedBattleRage] > 0
+	case content.StatusHaste:
+		return p.Timed[TimedHaste] > 0
+	case content.StatusInvisible:
+		return p.Timed[TimedInvisibility] > 0
+	case content.StatusSight:
+		return p.Timed[TimedSight] > 0
+	case content.StatusRegenerating:
+		return p.Status.Regenerating
+	case content.StatusManaRegenerating:
+		return p.Status.ManaRegenerating
+	case content.StatusLevitating:
+		return p.Status.Levitating
+	case content.StatusDeathProtection:
+		return p.Status.DeathProtection
+	}
+	return false
+}
+
+// addConfusion adds n to the player's confusion, saying so when it makes the player confused
+// (docs/spec/player.md, Confusion).
+func (w *World) addConfusion(n int) {
+	p := w.player
+	was := p.Confused()
+	p.Confusion += n
+	if !was && p.Confused() {
+		w.message(w.Current(), p.Cell(), content.MsgConfused, "")
+	}
+}
+
+// poisonPlayer poisons the player, saying so when it was not poisoned already.
+func (w *World) poisonPlayer() {
+	p := w.player
+	if p == nil || p.Dead || p.Poisoned {
+		return
+	}
+	p.Poisoned = true
+	w.message(w.Current(), p.Cell(), content.MsgPoisoned, "")
+}
+
+// newGameCounted reports whether the pack's new-game counter is set.
+func (w *World) newGameCounted() bool {
+	cr := w.pack.Creation
+	return cr != nil && cr.Counter != "" && w.counters[cr.Counter] != 0
 }
 
 // changeSex changes the player's sex, and its portrait to its portrait's other-sex one.

@@ -218,6 +218,20 @@ The view sits in a frame of panels: the character's portrait and gauges, the han
 
 The message line shows the game's messages: what the player takes, refusals, combat, spells. A new message replaces the last. In memorizing past the limit the game shows messages 68h and 69h together, as two lines of one sentence. The pause key stops the game with message 79h ("Pausing, press a key ...") on the line until the next key or click.
 
+**Status icons.** The right end of the message line holds a row of icons, frames of RESOURCE 52h (16 × 12), one for each of these conditions that holds, laid from the right in this order, 13 pixels apart, the first with its left edge at column 299 and row 1:
+
+| Frame | Condition |
+| --- | --- |
+| 0 | Confused (confusion over 25, player.md) |
+| 1 | Lightning shield (its timed effect running) |
+| 2 | Battle rage (its timed effect running) |
+| 3 | Poisoned |
+| 4 | Fire shield (its timed effect running) |
+
+The game draws them only when it redraws the line, at each message and when confusion ends.
+
+**Engine model.** The pack's inventory record lists the status icons in order, each a status and an image (pack.md, Inventory). The presentation draws those whose status holds, every frame, in a row from the screen's top-right corner leftward within the margin, at the hotbar's scale, one pixel of that scale between them; below the debug panel while it shows. The pointer resting on one names its status beside the pointer: the icon's `name` text, or the engine's own name of the status. The statuses: `confused`, `poisoned`, `fire_shield`, `lightning_shield`, `battle_rage`, `haste`, `invisible`, `sight` (the timed ones while their effect runs), `regenerating`, `mana_regenerating`, `levitating`, `death_protection`. The importer gives the five above, in the game's order, from RESOURCE 52h.
+
 **Engine model.** The presentation shows each message on one line centered just above the hotbar (and above a panel open over it) for three seconds; messages of the same update are joined on the line. A mouth's message is shown beside the mouth instead (dialogue.md). The presentation's own notices (saved, loaded, the sound setting) use the same line.
 
 ## The frontend

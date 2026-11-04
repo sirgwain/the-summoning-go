@@ -215,6 +215,7 @@ func (s *Window) Draw(screen *ebiten.Image) {
 	s.drawLost(screen)
 	s.drawSaid(screen)
 	s.drawMinimap(screen)
+	s.drawStatusIcons(screen)
 	s.drawTalk(screen)
 	s.drawLog(screen)
 	s.drawBook(screen)

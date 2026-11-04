@@ -11,19 +11,25 @@ import (
 const (
 	templateSerpentStaff = 0x8A
 	templateDecanter     = 0x90
-	rustedBladeGrowsAt   = 250
-	warMongerEvery       = 1000
-	warMongerMaxLevel    = 9
-	npcFirstHit          = 0x45
-	npcGrown             = 0x46
-	npcDecanter          = 0x2E
-	npcMirrors           = 0x79
-	decanterExperience   = 72903
-	msgFirstName         = 0xAA
-	killPracticeFrom     = 50
-	varWarMonger         = 27
-	varDecanter          = 18
-	varQuietCombat       = 96
+	templateIsaPotion    = 0x82
+	templatePoisonArrow  = 0x97
+	// quietTeleporterLevel is the level whose teleporters add only quietTeleporterConfusion
+	// (player.md, Confusion).
+	quietTeleporterLevel     = 19
+	quietTeleporterConfusion = 5
+	rustedBladeGrowsAt       = 250
+	warMongerEvery           = 1000
+	warMongerMaxLevel        = 9
+	npcFirstHit              = 0x45
+	npcGrown                 = 0x46
+	npcDecanter              = 0x2E
+	npcMirrors               = 0x79
+	decanterExperience       = 72903
+	msgFirstName             = 0xAA
+	killPracticeFrom         = 50
+	varWarMonger             = 27
+	varDecanter              = 18
+	varQuietCombat           = 96
 )
 
 // thrownLookOffsets are the offsets from the held-item base of the thrown looks (items.md,
@@ -41,6 +47,8 @@ func (im *importer) specialItem(i int, it *content.Item) {
 	switch i {
 	case templateSerpentStaff:
 		it.Poisons = true
+	case templateIsaPotion, templatePoisonArrow:
+		it.PoisonsThrown = true
 	case templateRustedBlade:
 		if templateWarMonger < len(im.itemIDs) {
 			it.Grows = &content.Grows{Into: im.itemIDs[templateWarMonger], At: rustedBladeGrowsAt,

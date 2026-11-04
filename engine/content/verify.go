@@ -398,6 +398,9 @@ func (v *verifier) level(l *Level) {
 	if l.Footsteps != "" && v.p.Sounds[l.Footsteps] == nil {
 		v.fail("level %s: footsteps %q is not a sound", l.ID, l.Footsteps)
 	}
+	if c := l.TeleporterConfusion; c != nil && *c < 0 {
+		v.fail("level %s: teleporter confusion %d", l.ID, *c)
+	}
 	lv := &levelVerifier{verifier: v, l: l}
 	lv.verify()
 }

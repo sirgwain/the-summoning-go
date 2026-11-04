@@ -125,8 +125,9 @@ type Player struct {
 	held bool
 	// wantRun is whether the walk asked for since the last update runs.
 	wantRun bool
-	// walked is whether the player's last update walked.
-	walked bool
+	// walked is whether the player's last update walked; confusedAtStart whether the player was
+	// confused as its update began.
+	walked, confusedAtStart bool
 	// last and next are the steps of the player's last update and its next; glide where it was
 	// at its last, to draw it gliding.
 	last, next int64
@@ -331,8 +332,18 @@ func (w *World) hurtPlayer(n int, k combat.Kind, by string) {
 		armor.Value = max(0, armor.Value-wear)
 		w.wornChanged()
 	}
+	w.loseHitPoints(d, !absorbed, by)
+}
+
+// loseHitPoints takes d hit points off the player, past every defense, showing the amount when
+// shown; at 0 death protection revives it, or it dies.
+func (w *World) loseHitPoints(d int, shown bool, by string) {
+	p := w.player
+	if p == nil || d < 0 || p.Dead {
+		return
+	}
 	p.HitPoints = max(0, p.HitPoints-d)
-	if !absorbed {
+	if shown {
 		p.Shown, p.ShownUntil = min(d, maxShown), w.step+6*w.PlayerInterval()
 	}
 	w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "hurt by " + by, Damage: d})
@@ -357,6 +368,7 @@ func (w *World) updatePlayer() {
 	if p.Dead {
 		return
 	}
+	p.confusedAtStart = p.Confused()
 	for i := range p.Delays {
 		p.Delays[i] = max(0, p.Delays[i]-1)
 	}
@@ -607,7 +619,7 @@ func (w *World) walk(d int) bool {
 		case alive(t) && t.Template.Has(content.BehaviorHurtsOnContact):
 			w.hurtPlayer(1, combat.Physical, t.ID)
 			if t.Template.Has(content.BehaviorPoisonous) {
-				w.player.Poisoned = true
+				w.poisonPlayer()
 			}
 		case t.Template.Kind == content.ThingBoulder:
 			if t.Rolling != nil && t.Rolling.Direction != d {
@@ -624,6 +636,9 @@ func (w *World) walk(d int) bool {
 	if su == 0 && sv == 0 {
 		if hit == nil {
 			p.Confusion += confusionBump
+			if !p.confusedAtStart && p.Confused() {
+				w.message(l, p.Cell(), content.MsgConfused, "")
+			}
 		}
 		return false
 	}
@@ -781,6 +796,13 @@ func (w *World) teleportPlayer(l *Level, f *Feature, depth int) {
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: to, Thing: PlayerID, Detail: "teleported"})
 	w.recordLink(l, f)
 	w.transition(content.TransitionTeleporter)
+	if !w.newGameCounted() {
+		n := teleporterConfusion
+		if c := l.Def.TeleporterConfusion; c != nil {
+			n = *c
+		}
+		w.addConfusion(n)
+	}
 	w.weigh(l, from, -p.weight(), depth)
 	w.weigh(l, to, p.weight(), depth)
 	w.playerEntered(l, to, depth+1)

@@ -104,7 +104,20 @@ Leather Boots have look 0, so they leave the legs' own colors; bare feet take se
 
 **Engine model.** Each of F's rows becomes a portrait `portrait.<i>`: its image (the strip stacked into one frame), whether it is mirrored, its `figure_colors`, its sex, and its other-sex and talk portraits (pack.md). The player template names its `portrait`; the player keeps its own, which the presenter reads to look the figure's colors 224–227 up in the figure colors. Until character creation the importer gives the player portrait 0.
 
-**Confusion.** A count; over 25 the player is confused, and each step has a `count`% chance to veer 45° to either side. Walking into a wall adds 6. The count falls by 1 each move.
+**Confusion.** A count, 0 at first. While it is over 25 the player is confused: each step asked for has a `count`% chance to turn 45° to one side or the other, either side as likely. The count falls by 1 at every one of the player's updates while it is above 0, whether the player steps, stands, acts or is posed, so confusion wears off with time, not with steps: at an interval of 2 ticks a count of 75 falls to 25 in 50 updates, about 5½ seconds. It rises by:
+
+| Cause | Adds | Says |
+| --- | --- | --- |
+| A blocked step that meets no entity and is not into a pit (walking into a wall) | 6 | |
+| Power 04h (items.md) | 75 | nothing of it |
+| Power 50h | 150 | |
+| A change of sex (power 14h) | 50 | message 35h only |
+| A ripple teleport (spells.md) | 40 | |
+| An armed teleporter (world.md), unless interaction variable 34 is set | 30, or 5 on level 19 | |
+
+When the count goes from 25 or less to over 25, message 36h ("You are confused") shows, except by power 04h and a change of sex. A wall bump is judged at the end of its update, after the fall: a count of 20 bumped ends the update at 25, not confused, and says nothing. When it falls back to 25 the game clears its message line. The status icons show the condition (scenes.md, The game screen).
+
+**Engine model.** The teleporter's 30 is the level's `teleporter_confusion` when the level gives one (pack.md, Levels); the importer gives level 19 5. Variable 34 is the pack's new-game `counter` (pack.md, Creation). Message 36h is the engine message `confused` and 35h `sex_changed`. The engine's messages leave the line on their own, so nothing is cleared at 25.
 
 When a step is blocked, the player pushes what can be pushed (entities.md), enters a level exit marker or a Gateway, or touches a creature, which hurts the player if it hurts on contact (creatures.md). A boulder rolling across the step hurts 2d3. Moving ends a Shape Change.
 
@@ -153,7 +166,7 @@ Lasting conditions:
 
 | Status | Effect |
 | --- | --- |
-| Poisoned | 1–2 damage, 1 in 40 moves. Set by poisoning wounds (message 59h) |
+| Poisoned | 1–2 damage, 1 in 40 moves. Set by poisoning wounds and power 04h, with message 59h when not poisoned already |
 | Regenerating | 2d2 hit points, 1 in 30 moves |
 | Mana regenerating | 2d2 magic points, 1 in 30 moves |
 | Resist quarter | Damage − 1/4 |
@@ -208,7 +221,7 @@ The book is the engine's own addition: a record of the creatures and objects the
 | --- | --- | --- |
 | 1, seen | stands in a cell visible to the player at the end of an update | lies uppermost in a cell visible to the player at the end of an update (contents of what lies there are not seen) |
 | 2, fought or handled | strikes at the player, hit or miss; hurts the player by touch or by any blow it is named for; or is hurt, on the current level | is on the pointer, in any inventory slot, or inside a container there at any depth, at the end of an update |
-| 3, killed or used | dies on the current level, by any cause | is used, or put on, with a power, even when the power refuses (a refusal tells what it does); is in a worn slot (the hands included) at the end of an update, with a power that starts worn (`power_worn`); casts its spell; or starts its conversation |
+| 3, killed or used | dies on the current level, by any cause | is used, or put on, with a power, even when the power refuses (a refusal tells what it does); is in a worn slot (the hands included) at the end of an update, with a power that starts worn (`power_worn`); casts its spell; starts its conversation; or, thrown or fired, hurts a creature or the player |
 
 A creature's defenses are learned only by meeting them, each at the moment it works on one of the template's creatures on the current level, which also reaches stage 2:
 
@@ -219,7 +232,7 @@ A creature's defenses are learned only by meeting them, each at the moment it wo
 | `physical_only` | the player's blow hits it, or it is hurt by anything but a physical blow |
 | `resists_teleport` | it stands on an armed teleporter, a pit or an open trapdoor and is not taken |
 
-Each death on the current level adds one to its template's kills. The items of the objects a dying creature drops are added to its entry's drops, each once, in the order first dropped. An item with nothing to use (no power, spell or conversation) has nothing more to learn after stage 2.
+Each death on the current level adds one to its template's kills. The items of the objects a dying creature drops are added to its entry's drops, each once, in the order first dropped. An item with nothing to use (no power, spell or conversation) and no `poisons_thrown` has nothing more to learn after stage 2.
 
 What an entry shows, stage by stage, each stage adding to the last:
 
@@ -228,10 +241,10 @@ What an entry shows, stage by stage, each stage adding to the last:
 - **Creature, killed:** its hit points (dice); the experience it is worth (dice); its kills; and its drops, by name.
 - **Item, seen:** its name, its inventory image, its `lore` text, and where and when it was first seen.
 - **Item, handled:** its weight in half kilograms; each strike action, as the hotbar's boxes number them: its damage (dice), and for a second one whether it is slower than the first and the weapon skill it needs (`skill`); a single strike is just its damage; its armor; the slot it is worn in; that it needs two hands (`two_handed`); a container's capacity and largest size, and that its contents weigh nothing; its charges, when more than one.
-- **Item, used:** its `effect` text; the spell it casts, by name.
+- **Item, used:** its `effect` text; the spell it casts, by name; that it poisons what it hits when thrown (`poisons_thrown`).
 - **Scrolls.** Reading a scroll to learn its spell is how the game is played, not something to find out, so an item with `teaches` is not shown by stages: from first sight its entry shows its name, image, `lore` and where it was first seen, then the spell whose gesture its `teaches` is, by name with its school, its cost in magic points, and the spell's `effect` text. When `teaches` is no spell's gesture, it names the gesture's icons instead. A scroll's entry shows no hint.
 
-The book's window opens with J or the hotbar's Book box, and holds the world while open, as the conversation log does. Two tabs, Creatures and Items, each list their entries by name in alphabetical order, with the count found. A filter field beside the tabs, empty when the book opens, narrows both tabs to the entries whose names hold what is typed, ignoring case, and the counts to those shown; Backspace takes a letter off, and a tab with no entry that matches says "Nothing matches.". Escape clears the filter when it holds anything, and otherwise closes the book. Up, Down, the wheel and a click choose an entry, Page Up and Page Down move a page, Left, Right and a click on a tab switch tabs, and a right click or Close shut it. The chosen entry shows on the right with its picture, at twice its size, its lines, and below them, unless it is a creature that can be talked to (`talks`), what the next stage would show: "Fight one to learn more.", "Defeat one to learn more.", "Pick one up to learn more.", "Wear one to learn more." (an item whose power starts worn and that has no use action) or "Use one to learn more.".
+The book's window opens with J or the hotbar's Book box, and holds the world while open, as the conversation log does. Two tabs, Creatures and Items, each list their entries by name in alphabetical order, with the count found. A filter field beside the tabs, empty when the book opens, narrows both tabs to the entries whose names hold what is typed, ignoring case, and the counts to those shown; Backspace takes a letter off, and a tab with no entry that matches says "Nothing matches.". Escape clears the filter when it holds anything, and otherwise closes the book. Up, Down, the wheel and a click choose an entry, Page Up and Page Down move a page, Left, Right and a click on a tab switch tabs, and a right click or Close shut it. The chosen entry shows on the right with its picture, at twice its size, its lines, and below them, unless it is a creature that can be talked to (`talks`), what the next stage would show: "Fight one to learn more.", "Defeat one to learn more.", "Pick one up to learn more.", "Wear one to learn more." (an item whose power starts worn and that has no use action), "Use or throw one to learn more." (an item with `poisons_thrown` and something to use), "Throw one to learn more." (with `poisons_thrown` and nothing to use) or "Use one to learn more.".
 
 **Import.** The importer writes an `effect` text, in its own words, for each item whose power the game's table gives (items.md, Powers), and none for powers that cast spells or start conversations, which the book names itself. It writes an `effect` text for each spell, also in its own words, from what the spell does (spells.md, Effects). It writes no `lore`; the game has none.
 

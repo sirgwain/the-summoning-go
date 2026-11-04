@@ -475,6 +475,7 @@ func (w *World) spellEffect(l *Level, c caster, sp *content.Spell, e content.Act
 			w.place(f.Cell, false)
 			w.emit(Event{Kind: EventThing, Level: l.ID, Cell: p.Cell(), Thing: PlayerID, Detail: "rippled"})
 			w.transition(content.TransitionRipple)
+			w.addConfusion(rippleConfusion)
 		}
 	case e.Dispel != nil:
 		for _, f := range w.spellsNear(l, *e.Dispel) {

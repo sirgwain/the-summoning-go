@@ -513,6 +513,10 @@ func (im *importer) level(index int, l *Level) (*content.Level, error) {
 	if id := msgID(msgFirstLevelName + index); im.strings[id] != "" {
 		cl.Name = id
 	}
+	if index == quietTeleporterLevel {
+		n := quietTeleporterConfusion
+		cl.TeleporterConfusion = &n
+	}
 	switch {
 	case index == levelMapMessage:
 		cl.Map = &content.MapRefusal{Message: msgID(msgMapRefused)}

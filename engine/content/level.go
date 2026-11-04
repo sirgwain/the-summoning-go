@@ -50,6 +50,9 @@ type Level struct {
 	Map *MapRefusal `json:"map,omitempty"`
 	// Footsteps is the sound of the player's steps here, in place of the footstep cue.
 	Footsteps string `json:"footsteps,omitempty"`
+	// TeleporterConfusion is what an armed teleporter adds to the player's confusion here, in
+	// place of the usual 30.
+	TeleporterConfusion *int `json:"teleporter_confusion,omitempty"`
 	// Size is the number of rows and columns.
 	Size   [2]int `json:"size"`
 	Floors string `json:"floors"`

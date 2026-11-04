@@ -287,6 +287,17 @@ func TestVerify(t *testing.T) {
 		"weapon step": {func(p *Pack) {
 			p.Scenes["scene.s"] = &Scene{ID: "scene.s", Steps: []SceneStep{{ByWeapon: []SceneStep{{Text: "msg.nope", Box: &[4]int{0, 0, 1, 1}}}}}}
 		}, "not in text.en"},
+		"status icon": {func(p *Pack) {
+			p.Inventory = &Inventory{ID: "inventory", StatusIcons: []StatusIcon{{Status: "sleepy", Image: Image{Sprite: "sprite.npc"}}}}
+		}, `unknown status "sleepy"`},
+		"status twice": {func(p *Pack) {
+			icon := StatusIcon{Status: StatusPoisoned, Image: Image{Sprite: "sprite.npc"}}
+			p.Inventory = &Inventory{ID: "inventory", StatusIcons: []StatusIcon{icon, icon}}
+		}, "listed twice"},
+		"status frame": {func(p *Pack) {
+			p.Inventory = &Inventory{ID: "inventory", StatusIcons: []StatusIcon{{Status: StatusPoisoned, Image: Image{Sprite: "sprite.npc", Frame: 9}}}}
+		}, "frame 9"},
+		"teleporter confusion": {func(p *Pack) { n := -1; p.Levels["level.00"].TeleporterConfusion = &n }, "teleporter confusion"},
 		"two things": {func(p *Pack) {
 			p.Scenes["scene.s"] = &Scene{ID: "scene.s", Steps: []SceneStep{{Fade: "#000000", Say: &SceneSay{Side: SayTop, Text: "msg.stuck"}}}}
 		}, "does 2 things"},

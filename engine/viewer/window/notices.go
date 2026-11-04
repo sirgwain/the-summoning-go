@@ -87,6 +87,21 @@ func (s *Window) drawReading(screen *ebiten.Image) {
 	s.presenter.PresentAt(screen, art, scale, at)
 }
 
+// drawStatusIcons draws the player's status icons in the screen's top-right corner.
+func (s *Window) drawStatusIcons(screen *ebiten.Image) {
+	for _, b := range s.v.StatusIcons() {
+		size := b.Rect.Size().Div(b.Scale)
+		art := s.artImage(size)
+		if err := s.sprites.DrawImage(art, b.Image, 0, 0, false); err != nil {
+			if s.err == nil {
+				s.err = err
+			}
+			continue
+		}
+		s.presenter.PresentAt(screen, art, b.Scale, b.Rect.Min)
+	}
+}
+
 // drawPointer names what the cursor is over on the hotbar, and draws the pointer while playing:
 // the arrow, the speech bubble over something a click talks to, or the object in hand, at the
 // view's scale, in place of the system's pointer.

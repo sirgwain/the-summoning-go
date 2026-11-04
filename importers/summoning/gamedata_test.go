@@ -10,6 +10,7 @@ package summoning
 // happen, and checks what the engine does.
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -489,5 +490,36 @@ func TestGameEndScenes(t *testing.T) {
 	}
 	if pal := p.Palettes[endGreenID]; pal == nil || pal.Colors[0xF0].R != 0 || pal.Colors[0xF0].G == 0 || len(pal.Effects) != 2 {
 		t.Errorf("the green palette: %+v", pal)
+	}
+}
+
+// TestGameStatuses checks what the import gives confusion, poison and the status icons: the five
+// icons in the game's order, the quiet teleporters of level 19, the confused message, and Isa's
+// thrown poison.
+func TestGameStatuses(t *testing.T) {
+	p, _ := gamePack(t)
+	var got []string
+	for _, si := range p.Inventory.StatusIcons {
+		got = append(got, si.Status)
+	}
+	want := []string{content.StatusConfused, content.StatusLightningShield, content.StatusBattleRage, content.StatusPoisoned, content.StatusFireShield}
+	if !slices.Equal(got, want) {
+		t.Errorf("status icons %v, want %v", got, want)
+	}
+	if c := p.Levels[levelID(quietTeleporterLevel)].TeleporterConfusion; c == nil || *c != quietTeleporterConfusion {
+		t.Errorf("level %d teleporter confusion %v", quietTeleporterLevel, c)
+	}
+	if key := p.Messages.Messages[content.MsgConfused]; p.Texts["text.en"].Strings[key] != "You are confused" {
+		t.Errorf("confused message %q", key)
+	}
+	// Only the Isa Potion and the Poison Arrow poison in flight; Fungus drinks as Isa does.
+	var poisons []string
+	for _, id := range slices.Sorted(maps.Keys(p.Items)) {
+		if p.Items[id].PoisonsThrown {
+			poisons = append(poisons, id)
+		}
+	}
+	if len(poisons) != 2 || !slices.Contains(poisons, "item.isa_potion") {
+		t.Errorf("poisoning in flight: %v", poisons)
 	}
 }

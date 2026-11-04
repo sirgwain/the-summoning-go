@@ -252,7 +252,7 @@ The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slo
 `miss`, `hit`, `creature_hits`, `creature_misses`, `weapon_breaks`, `vanishes`, `skill_up`, `level_up`,
 `full_health`, `full_magic`, `not_poisoned`, `not_poisoned_or_confused`, `not_fatigued`,
 `no_destination`, `no_creatures`, `already_have`, `healed` (`{damage}` the amount), `protected`,
-`boost_extended`, `poisoned`, `slowed`, `lost_weapon_skills`, `lost_magic_skills`, `no_quiver`,
+`boost_extended`, `poisoned`, `slowed`, `confused`, `sex_changed`, `lost_weapon_skills`, `lost_magic_skills`, `no_quiver`,
 `no_arrows`, `no_room_to_shoot`, `cannot_throw`, `cannot_act`; for magic `cannot_cast`,
 `not_memorized`, `only_spell`, `no_magic`, `forgot`, `forgot_more`, `no_room_for_wall`, `wall_failed`,
 `no_room_for_portal`, `no_spell_near`, `nothing_to_mend`, `no_creature_near`, `no_bottle`,
@@ -327,7 +327,8 @@ leaves out shows nothing. Later milestones add keys.
   `on_break` actions run when it breaks (`set_counter`, `converse`, `remove_all`, `experience`).
   `flying` is its look in flight, `{ "sprite", "fired_only" }`: a frame for each direction,
   `(direction + 1) mod 8`, shown only when fired with `fired_only`; without it the floor image.
-- `poisons` makes its blows poison what they hit. `grows` makes it a counted weapon:
+- `poisons` makes its blows poison what they hit; `poisons_thrown` makes it poison what it hurts
+  in flight, thrown or fired. `grows` makes it a counted weapon:
   `{ "into", "at", "first", "grown", "counter" }`, and `levels` the grown one:
   `{ "every", "max", "counter", "talk" }` (`docs/spec/combat.md`, Special weapons).
 - `tags` are words that rules and other records test (`body_armor`, `quiver`, `arrows`, `bottle`,
@@ -517,7 +518,10 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
   "weapon_ratings": ["msg.1", "…ten, for levels 1–10…"], "school_ratings": ["msg.11", "…"],
   "level_titles": ["msg.21", "…one for each level from 0…"],
   "labels": { "weight": "msg.129", "damage": "msg.130", "damage_after": "msg.131",
-              "armor": "msg.132", "two_handed": "msg.133" }
+              "armor": "msg.132", "two_handed": "msg.133" },
+  "status_icons": [{ "status": "confused", "image": { "sprite": "sprite.res.82", "frame": 0 } },
+                   { "status": "poisoned", "image": { "sprite": "sprite.res.82", "frame": 3 },
+                     "name": "msg.poisoned_status" }]
 }
 ```
 
@@ -527,6 +531,9 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
   the icons of striking bare-handed and of throwing.
 - The icons, ratings and titles name the skills and levels; `labels` are the details' words.
   Every field is optional.
+- `status_icons` are drawn, in order from the screen's right, for each `status` that holds
+  (`docs/spec/scenes.md`, The game screen, for the statuses); `name`, a text key, names it under the
+  pointer in place of the engine's own name. A status listed twice is refused.
 
 ## Creation
 
@@ -871,6 +878,8 @@ template), `full_health`, `carries_count` (`{ "item", "count" }`), `slot_empty` 
 - `name` is a text key, the level's name. `map` refuses the level map:
   `{ "message": text }` or `{ "conversation": thing }` (`docs/spec/world.md`, Level map).
   `footsteps` is the sound of the player's steps on the level, in place of the `footstep` cue.
+  `teleporter_confusion` is what an armed teleporter adds to the player's confusion on the level,
+  in place of 30 (`docs/spec/player.md`, Confusion).
 
 ### Floor types
 

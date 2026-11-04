@@ -59,13 +59,14 @@ type Item struct {
 	Looks map[string]FigureLook `json:"looks,omitempty"`
 	// Fill gives a container a look for how full it is.
 	Fill *Fill `json:"fill,omitempty"`
-	// Poisons makes its blows poison; Grows and Levels make it a counted weapon; OnBreak runs
-	// when it breaks; Flying is its look in flight.
-	Poisons bool     `json:"poisons,omitempty"`
-	Grows   *Grows   `json:"grows,omitempty"`
-	Levels  *Levels  `json:"levels,omitempty"`
-	OnBreak []Action `json:"on_break,omitempty"`
-	Flying  *Flying  `json:"flying,omitempty"`
+	// Poisons makes its blows poison, PoisonsThrown what it hurts in flight; Grows and Levels
+	// make it a counted weapon; OnBreak runs when it breaks; Flying is its look in flight.
+	Poisons       bool     `json:"poisons,omitempty"`
+	PoisonsThrown bool     `json:"poisons_thrown,omitempty"`
+	Grows         *Grows   `json:"grows,omitempty"`
+	Levels        *Levels  `json:"levels,omitempty"`
+	OnBreak       []Action `json:"on_break,omitempty"`
+	Flying        *Flying  `json:"flying,omitempty"`
 }
 
 // PowerLasts reports whether power lasts while worn, ending when taken off (docs/spec/items.md,
@@ -441,6 +442,8 @@ const (
 	MsgBoostExtended         = "boost_extended"
 	MsgPoisoned              = "poisoned"
 	MsgSlowed                = "slowed"
+	MsgConfused              = "confused"
+	MsgSexChanged            = "sex_changed"
 	MsgLostWeaponSkills      = "lost_weapon_skills"
 	MsgLostMagicSkills       = "lost_magic_skills"
 	MsgNoQuiver              = "no_quiver"
@@ -512,6 +515,8 @@ var messageKeys = map[string]bool{
 	MsgBoostExtended:         true,
 	MsgPoisoned:              true,
 	MsgSlowed:                true,
+	MsgConfused:              true,
+	MsgSexChanged:            true,
 	MsgLostWeaponSkills:      true,
 	MsgLostMagicSkills:       true,
 	MsgNoQuiver:              true,

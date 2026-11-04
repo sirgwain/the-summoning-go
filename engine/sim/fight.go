@@ -234,7 +234,7 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 	case hit != nil && hit.thing == nil && t.Template.Has(content.BehaviorHurtsOnContact):
 		w.hurtPlayer(1, combat.Physical, t.ID)
 		if t.Template.Has(content.BehaviorPoisonous) {
-			p.Poisoned = true
+			w.poisonPlayer()
 		}
 	case t.Hostile:
 		t.walkDir, t.walkCount = w.rng.IntN(4), 5+w.rng.IntN(5)
@@ -301,7 +301,7 @@ func (w *World) creatureStrikes(l *Level, t *Thing) {
 	if r.Damage > 0 {
 		w.hurtPlayerAloud(r.Damage, combat.Physical, t.ID)
 		if t.Template.Has(content.BehaviorPoisonous) && w.chance(2, 8) {
-			p.Poisoned = true
+			w.poisonPlayer()
 		}
 	}
 }
