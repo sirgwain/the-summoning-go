@@ -861,7 +861,7 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 		y++
 	}
 	if v.walkNow(x, y) {
-		cmds = append(cmds, input.Walk{Direction: screenDirection(x, y)})
+		cmds = append(cmds, input.Walk{Direction: screenDirection(x, y), Run: in.held(KeyShift)})
 	}
 	action := 0
 	if in.held(KeyShift) {

@@ -14,6 +14,7 @@ type Binding struct {
 var PlayBindings = []Binding{
 	{"WASD/arrows", "walk (two: diagonal)"},
 	{"Home PgUp End PgDn", "walk the diagonals"},
+	{"Shift+walk", "run (no attacks or spells)"},
 	{"Space", "right hand (Shift: 2nd)"},
 	{"X", "throw right"},
 	{"Q", "left hand (Shift: 2nd)"},

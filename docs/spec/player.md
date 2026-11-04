@@ -117,10 +117,11 @@ interval = 5 + bonus + load
          + (10 − END) / 2 + 1     if END < 10
          − 1                      under haste
          − 1                      under battle rage
+         − 2                      while running (Running)
 interval = max(1, interval)
 ```
 
-`bonus` comes from worn objects and powers (items.md).
+`bonus` comes from worn objects and powers (items.md). Running is the engine's; the game's player only walks.
 
 **Load.** Carried weight `w` (the sum of every carried object's weight, containers' contents included except inside a Bag of Lightness) against the limit `L = 10 × STR`:
 
@@ -135,6 +136,16 @@ The load gauge shows `5w / L` of 5 steps.
 Actions add exertion (at least 1 each). When exertion exceeds `END + 3` (and END is above 1), END drops by 1, fatigue rises by 1, and exertion resets to 2.
 
 On each status tick exertion falls by 1; when it is already 0 and there is fatigue, one point of fatigue returns to END and exertion becomes `END + 3`.
+
+## Running
+
+Running is the engine's own addition. Holding Shift with a walk runs: the player's interval is 2 ticks shorter (Speed), as Boots of Speed make it, and is still at least 1 tick. The player runs at an update that walks with Shift held, while no swing pose holds and no gesture plays (with a gesture playing it walks). A step that does not move, and letting go of Shift or of the walk, end the run at once.
+
+Running tires: each running step that moves adds 1 exertion one time in four (Exertion and fatigue), besides what a push adds.
+
+While running the player cannot attack or cast. Strikes and shots with either hand (bare hands too), throws, casting a school's spell and using an object that casts a spell are refused, and nothing is said. Other uses, such as eating and drinking, are taken as when walking. Shift's other meanings (a hand's second action, the next spell) hold when not walking; selecting the next spell is taken while running.
+
+Running is not saved: a restored game walks until Shift is held again.
 
 ## Status
 

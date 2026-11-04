@@ -345,6 +345,9 @@ func (w *World) strike(hand, action int) {
 			refuse("bare hands have one action")
 			return
 		}
+		if w.refuseRunning() {
+			return
+		}
 		w.setDelay(hand, bareHandsDelay)
 		w.exert(1)
 		w.swing(hand, nil, content.ItemAction{Kind: content.ActionAttack, Damage: content.Dice{Count: 2, Sides: 2}})
@@ -414,6 +417,16 @@ func (w *World) handAct(hand int, o *Object, action int) {
 		return
 	}
 	a := it.Actions[action]
+	switch a.Kind {
+	case content.ActionAttack, content.ActionAttackBoth, content.ActionFire:
+		if w.refuseRunning() {
+			return
+		}
+	default:
+		if it.Casts != nil && w.refuseRunning() {
+			return
+		}
+	}
 	class := -1
 	if it.WeaponClass != nil {
 		class = *it.WeaponClass

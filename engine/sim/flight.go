@@ -215,6 +215,8 @@ func (w *World) throwFrom(hand int) {
 	case p.Delays[hand] > 0:
 		w.refuse("the hand is not ready")
 		return
+	case w.refuseRunning():
+		return
 	case w.HandBlocked(hand):
 		w.refuse("the hand is blocked")
 		return

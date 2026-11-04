@@ -178,6 +178,10 @@ func (w *World) Update(cmds []input.Command) []Event {
 		w.events = nil
 		return events
 	}
+	if p := w.player; p != nil && !runAsked(cmds) {
+		// Letting go of the run ends it at once (docs/spec/player.md, Running).
+		p.Running = false
+	}
 	for _, c := range cmds {
 		w.apply(c)
 		if w.talk != nil {

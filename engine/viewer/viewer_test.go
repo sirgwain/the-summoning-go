@@ -356,6 +356,7 @@ func TestGameKeys(t *testing.T) {
 		{KeyPageUp, nil, input.Walk{Direction: 0}},   // up and right: −u
 		{KeyEnd, nil, input.Walk{Direction: 4}},      // down and left: +u
 		{KeyPageDown, nil, input.Walk{Direction: 2}}, // down and right: +v
+		{KeyPageDown, []Key{KeyShift}, input.Walk{Direction: 2, Run: true}},
 	} {
 		got := press(c.key, c.held...)
 		if len(got) != 1 || got[0] != c.want {

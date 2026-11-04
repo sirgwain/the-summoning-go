@@ -216,7 +216,7 @@ func (w *World) playerCommand(cmd input.Command) {
 	switch c := cmd.(type) {
 	case input.Walk:
 		if c.Direction >= 0 && c.Direction < len(Dirs) {
-			p.want = c.Direction
+			p.want, p.wantRun = c.Direction, c.Run
 		}
 	case input.PickUp:
 		w.pickUp(c.Hand)

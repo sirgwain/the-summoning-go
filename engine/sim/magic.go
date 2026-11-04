@@ -238,6 +238,9 @@ func (w *World) cast(school int) {
 		w.message(l, p.Cell(), content.MsgCannotCast, "")
 		return
 	}
+	if w.refuseRunning() {
+		return
+	}
 	id := m.Selected[school]
 	sp := w.pack.Spells[id]
 	if sp == nil || m.Memorized[id] == 0 {

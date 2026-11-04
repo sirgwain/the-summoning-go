@@ -79,9 +79,12 @@ type SetCounter struct {
 
 // Player commands: what the player does (docs/spec/entities.md, docs/spec/items.md).
 
-// Walk asks the player to walk a step along a direction at its next update. A presentation
-// sends it every update while the walk is held.
-type Walk struct{ Direction int }
+// Walk asks the player to walk a step along a direction at its next update; with Run, to run it
+// (docs/spec/player.md, Running). A presentation sends it every update while the walk is held.
+type Walk struct {
+	Direction int
+	Run       bool
+}
 
 // PickUp takes the top object of the player's cell to the first empty shelf (an arrow into a
 // worn quiver with room), as the take key does; with Hand, onto the pointer when the hand is

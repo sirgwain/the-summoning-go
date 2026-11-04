@@ -846,3 +846,58 @@ func TestPushedGlides(t *testing.T) {
 		t.Errorf("glide span %d, want the push's wait %d", gg.Span, p.next-p.last)
 	}
 }
+
+// TestRunning runs with a walk asked to run: 2 ticks off the interval, exertion as it goes, no
+// attacks, throws or casts, and an end as soon as the run is let go (docs/spec/player.md, Running).
+func TestRunning(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) { p.Things["thing.player"].IntervalMS = 275 },
+		"####################",
+		"#@.................#",
+		"####################")
+	p := w.Player()
+	p.Slots[SlotRightHand] = &Object{Item: "item.sword"}
+	steps := func(ticks int) int64 { return int64(float64(ticks)*1000/ticksPerSecond*StepsPerSecond/1000 + 0.5) }
+	// Agility 60 takes a tick off the base 5.
+	if got := w.PlayerInterval(); got != steps(4) {
+		t.Fatalf("walking: %d steps, want %d", got, steps(4))
+	}
+	run := input.Walk{Direction: 2, Run: true}
+	hold := func(cmd input.Command) {
+		last := p.last
+		for p.last == last {
+			w.Update([]input.Command{cmd})
+		}
+	}
+	hold(run)
+	if !p.Running || w.PlayerInterval() != steps(2) {
+		t.Fatalf("running %v at %d steps, want running at %d", p.Running, w.PlayerInterval(), steps(2))
+	}
+	for _, cmd := range []input.Command{input.Strike{Hand: 0}, input.Strike{Hand: 1}, input.Throw{Hand: 0}, input.Cast{School: 0}} {
+		if ev := w.Update([]input.Command{run, cmd}); !has(ev, EventRefused, "the player is running") {
+			t.Errorf("%T%+v while running was not refused: %v", cmd, cmd, ev)
+		}
+	}
+	from := p.Exertion
+	for range 24 {
+		hold(run)
+	}
+	if !p.Running || p.Exertion <= from && p.Fatigue == 0 {
+		t.Errorf("24 running steps: running %v, exertion %d from %d", p.Running, p.Exertion, from)
+	}
+	// Walking on without Shift ends the run at once: the strike is taken.
+	if ev := w.Update([]input.Command{input.Walk{Direction: 2}, input.Strike{Hand: 0}}); p.Running || has(ev, EventRefused, "") {
+		t.Errorf("walking on, running %v, events %v", p.Running, ev)
+	}
+}
+
+// TestRunEndsAtAWall ends a run at a step that does not move.
+func TestRunEndsAtAWall(t *testing.T) {
+	w := fightWorld(t, nil, "###", "#@#", "###")
+	p := w.Player()
+	for range 4 {
+		w.Update([]input.Command{input.Walk{Direction: 2, Run: true}})
+	}
+	if p.Running {
+		t.Error("running into a wall")
+	}
+}

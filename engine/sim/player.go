@@ -1,6 +1,7 @@
 package sim
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -94,6 +95,9 @@ type Player struct {
 	Boosts         [6]Boost
 	// Exertion, Fatigue and Confusion are counts (docs/spec/player.md).
 	Exertion, Fatigue, Confusion int
+	// Running is whether the player runs: its last update ran a step, and the run is still asked
+	// for (docs/spec/player.md, Running).
+	Running bool
 	// Shown is the damage shown over the player, until the step ShownUntil.
 	Shown      int
 	ShownUntil int64
@@ -119,6 +123,8 @@ type Player struct {
 	// the same walk held on, which letting go drops (docs/spec/entities.md, The player's update).
 	want int
 	held bool
+	// wantRun is whether the walk asked for since the last update runs.
+	wantRun bool
 	// walked is whether the player's last update walked.
 	walked bool
 	// last and next are the steps of the player's last update and its next; glide where it was
@@ -344,6 +350,7 @@ func (w *World) hurtPlayer(n int, k combat.Kind, by string) {
 // The player's update).
 func (w *World) updatePlayer() {
 	p := w.player
+	p.Running = p.wantRun && p.want >= 0 && !p.Dead && p.Pose == "" && p.Magic.Gesture == nil
 	p.last, p.next = w.step, w.step+w.PlayerInterval()
 	p.glide.start(p.U, p.V, w.step, p.next)
 	p.walked = false
@@ -377,7 +384,7 @@ func (w *World) updatePlayer() {
 		}
 	}
 	d := p.want
-	p.want = -1
+	p.want, p.wantRun = -1, false
 	if p.Confusion > 0 {
 		if d >= 0 && p.Confusion > confusedOver && w.rng.IntN(100) < p.Confusion {
 			d = (d + 7 + 2*w.rng.IntN(2)) % 8
@@ -401,6 +408,33 @@ func (w *World) updatePlayer() {
 	if p.walked = w.walk(d); !p.walked && turned {
 		w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "turned"})
 	}
+	switch {
+	case !p.walked:
+		p.Running = false
+	case p.Running && w.rng.IntN(runExertionOdds) == 0:
+		w.exert(1)
+	}
+}
+
+// runTicks is what running takes off the player's interval; a running step that moves adds 1
+// exertion one time in runExertionOdds (docs/spec/player.md, Running).
+const (
+	runTicks        = 2
+	runExertionOdds = 4
+)
+
+// runAsked reports whether cmds ask for the player to run.
+func runAsked(cmds []input.Command) bool {
+	return slices.ContainsFunc(cmds, func(c input.Command) bool { wk, ok := c.(input.Walk); return ok && wk.Run })
+}
+
+// refuseRunning refuses an attack or a cast while the player runs, and reports whether it did.
+func (w *World) refuseRunning() bool {
+	if !w.player.Running {
+		return false
+	}
+	w.refuse("the player is running")
+	return true
 }
 
 // wornLookSlots are the slots whose objects' looks the figure shows: the worn slots but the hands.
@@ -480,6 +514,9 @@ func (p *Player) IntervalTicks(pk *content.Pack) int {
 	if p.Timed[TimedBattleRage] > 0 {
 		n--
 	}
+	if p.Running {
+		n -= runTicks
+	}
 	switch {
 	case agility >= 15:
 		n--
@@ -495,7 +532,10 @@ func (p *Player) IntervalTicks(pk *content.Pack) int {
 // PlayerInterval returns the steps between the player's updates.
 func (w *World) PlayerInterval() int64 {
 	p := w.player
-	ms := float64(p.Template.IntervalMS) + float64(p.IntervalTicks(w.pack))*1000/ticksPerSecond
+	base := float64(p.Template.IntervalMS)
+	// What speeds the player up leaves at least a tick (docs/spec/player.md, Speed); a base
+	// interval shorter than that stays.
+	ms := max(base+float64(p.IntervalTicks(w.pack))*1000/ticksPerSecond, min(base, 1000/ticksPerSecond))
 	return max(1, int64(ms*StepsPerSecond/1000+0.5))
 }
 
