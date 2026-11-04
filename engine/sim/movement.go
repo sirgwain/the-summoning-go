@@ -92,9 +92,12 @@ func (w *World) bodies(l *Level) []body {
 // blocker returns the first body of l other than self (nil self is the player) whose box
 // overlaps box at (u, v), leaving out bodies in skip.
 func (w *World) blocker(l *Level, self *Thing, playerSelf bool, u, v int, box content.Box, skip map[*Thing]bool) *body {
+	overCorpses := self != nil && alive(self)
 	for _, b := range w.bodies(l) {
 		switch {
 		case b.thing == nil && playerSelf, b.thing != nil && b.thing == self, b.thing != nil && skip[b.thing]:
+			continue
+		case overCorpses && b.thing != nil && corpse(b.thing):
 			continue
 		}
 		if overlaps(u, v, box, b.u, b.v, b.box) {
@@ -120,9 +123,12 @@ func (w *World) thingFits(l *Level, t *Thing, u, v int) bool {
 	return !l.Blocked(cellOf(u, v))
 }
 
-// pushable reports whether the player pushes t: a trap or a corpse.
+// corpse reports whether t is a creature with no hit points.
+func corpse(t *Thing) bool { return t.Template.Kind == content.ThingCreature && t.HitPoints <= 0 }
+
+// pushable reports whether the player pushes t: a trap, a corpse or a conjured thing.
 func pushable(t *Thing) bool {
-	return t.Template.Kind == content.ThingTrap || t.Template.Kind == content.ThingConjured || t.Template.Kind == content.ThingCreature && t.HitPoints <= 0
+	return t.Template.Kind == content.ThingTrap || t.Template.Kind == content.ThingConjured || corpse(t)
 }
 
 // push moves thing t by (du, dv), first pushing the pushable things in its way, and reports

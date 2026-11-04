@@ -78,9 +78,9 @@ Movement is free, in world units.
 | 8 conjured | (28, 8, 12, 16) |
 | 9 wall spell | (42, 8, 10, 16) |
 
-Rectangles overlap when their open intervals overlap on both axes. After fitting the terrain, a move that would overlap another entity is shortened by 2 units per axis toward zero until it does not, or to nothing.
+Rectangles overlap when their open intervals overlap on both axes. After fitting the terrain, a move that would overlap another entity is shortened by 2 units per axis toward zero until it does not, or to nothing. A creature with hit points, and a levitating player, pass over corpses: a corpse does not count for their moves.
 
-**Pushing.** When the player walks into a trap block, a creature corpse (a creature with no hit points) or a conjured thing, it pushes it the same distance, recursively through a line of pushable things. A push costs 3 ticks, and with a 3 in 8 chance adds exertion (player.md). A levitating player cannot push corpses.
+**Pushing.** When the player walks into a trap block, a creature corpse (a creature with no hit points) or a conjured thing, it pushes it the same distance, recursively through a line of pushable things. A push costs 3 ticks, and with a 3 in 8 chance adds exertion (player.md). A levitating player passes over corpses instead of pushing them.
 
 **Sliding.** When the player moves diagonally into a diagonal wall (shapes 0, 2, 4, 5), the player slides 4 units along it.
 
@@ -147,7 +147,7 @@ Each thing template also has a **footprint**, a square of world units centered o
 A move by `(du, dv)` is made in this order:
 
 1. **Terrain.** The player and creatures test their ground point. The `u` step shrinks by 1 toward 0 until the ground point moved by it alone is accepted; then the `v` step the same way, from the original `u`. Boulders and traps test the four corners of their footprint, `footprint/2 − 1` from the ground point on each axis, all moved by the whole step; if any is refused the move is refused. A point is accepted when its cell is inside the level, not blocked (a wall, no floor, or a door that is not open) and not refused by its feature (below).
-2. **Things.** While the moved box overlaps another thing's, both steps shrink by 2 toward 0, to nothing at worst. The player and creatures ignore things in flight; what they overlap first is the **blocker**.
+2. **Things.** While the moved box overlaps another thing's, both steps shrink by 2 toward 0, to nothing at worst. The player and creatures ignore things in flight, and a living creature or a levitating player ignores corpses; what they overlap first is the **blocker**.
 3. **Push.** If the player's step shrank to nothing against a blocker that can be pushed, the player pushes it (below).
 4. **Slide.** If the player moved nothing, met no thing, and walked along one axis (an even direction) into a diagonal wall whose filled corner (world.md, Import) lies ahead, it slides 4 units along the other axis, away from that corner.
 
@@ -163,7 +163,7 @@ A move that changes the thing's cell runs the effects of the cell it leaves and 
 
 ### Pushing
 
-The player pushes a trap, a corpse (a creature with no hit points) or a conjured thing by moving it the player's whole step, recursively through a line of pushable things; if the line moves, the player then moves as far as the first thing did. A push makes the player wait 3 ticks more before its next update. A levitating player cannot push corpses.
+The player pushes a trap, a corpse (a creature with no hit points) or a conjured thing by moving it the player's whole step, recursively through a line of pushable things; if the line moves, the player then moves as far as the first thing did. A push makes the player wait 3 ticks more before its next update. A levitating player passes over corpses rather than pushing them.
 
 A boulder is not pushed. Walking into a rolling boulder hurts the player 2d3, unless it rolls the way the player walks. Walking into a boulder along an axis (an even direction) then starts it rolling the way the player walks: a resting boulder stops when blocked, and a rolling one only turns.
 

@@ -584,11 +584,11 @@ func (w *World) walk(d int) bool {
 		}
 	}
 
-	// Things: the player walks out of anything it already overlaps.
+	// Things: the player walks out of anything it already overlaps, and levitating over corpses.
 	n := p.Template.Bounds()
 	skip := map[*Thing]bool{}
 	for _, t := range l.Things {
-		if overlaps(p.U, p.V, n, t.U, t.V, t.Template.Bounds()) {
+		if p.Status.Levitating && corpse(t) || overlaps(p.U, p.V, n, t.U, t.V, t.Template.Bounds()) {
 			skip[t] = true
 		}
 	}
@@ -604,7 +604,7 @@ func (w *World) walk(d int) bool {
 	if su == 0 && sv == 0 && hit != nil && hit.thing != nil {
 		t := hit.thing
 		switch {
-		case pushable(t) && !(p.Status.Levitating && t.Template.Kind == content.ThingCreature):
+		case pushable(t):
 			from := [2]int{t.U, t.V}
 			// A push makes the player wait longer; it and what it pushes glide over the wait.
 			end := p.next + Steps(pushTicks)

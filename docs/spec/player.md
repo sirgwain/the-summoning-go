@@ -55,7 +55,7 @@ A walk step moves the player's speed (8 units) in the facing, or half that when 
 
 **Skills and experience** are the player's state: four weapon classes and four schools, each with a level (starting 1 for the chosen class and school, else 0), practice points and a threshold (10); experience, the player's level, and the threshold for the next (500). Practice and levels work as above; the dice per level are the importer's rules for the Summoning, kept in the combat rule set. Until character creation the importer starts the player at weapon class 0 and school 0, level 1.
 
-**Statuses** are the player's state: the lasting conditions above as flags, the timed effects as counts of status ticks (at most 255), and each attribute's timed boost (its amount and its ticks). The combat rule set reads them. Levitating keeps the player off plates and floor effects and over pits and trapdoors, and stops it pushing corpses; fire-immune stops fire floors; invisible and transformed stop creatures chasing; haste and battle rage each take 1 from the interval. Regenerating and mana regenerating roll each player update. Sight and transforming wait for their spells.
+**Statuses** are the player's state: the lasting conditions above as flags, the timed effects as counts of status ticks (at most 255), and each attribute's timed boost (its amount and its ticks). The combat rule set reads them. Levitating keeps the player off plates and floor effects and over pits, trapdoors and corpses; fire-immune stops fire floors; invisible and transformed stop creatures chasing; haste and battle rage each take 1 from the interval. Regenerating and mana regenerating roll each player update. Sight and transforming wait for their spells.
 
 **Exertion and fatigue** are as above: each strike adds `weight / 8` (at least 1), each push 1 three times in eight.
 
@@ -176,7 +176,7 @@ Lasting conditions:
 | Death-blow ward | Creatures' death blows fail |
 | Accurate | +2 to hit and to damage |
 | Blow protection | Creatures' to-hit −4 and damage −1/4 |
-| Levitating | Pits, plates, trapdoors and floor effects are ignored; cannot push corpses |
+| Levitating | Pits, plates, trapdoors and floor effects are ignored; passes over corpses |
 | Invisible | Creatures do not chase; their to-hit −4 |
 | Transformed | Looks like a creature (Shape Change); creatures do not chase; ends on moving |
 | Death protection | Revives once to full hit and magic points |
