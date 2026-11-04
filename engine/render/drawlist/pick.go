@@ -54,7 +54,7 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 	}
 	for _, f := range l.Flights {
 		if f.Spell != nil {
-			s.Flights = append(s.Flights, Flight{Sprite: f.Spell.Sprite, Frame: f.Spell.Frame, U: f.U, V: f.V})
+			s.Flights = append(s.Flights, Flight{Sprite: f.Spell.Sprite, Frame: f.Spell.Frame, U: f.U, V: f.V, Spell: true})
 			continue
 		}
 		fl := Flight{Item: f.Object.Item, U: f.U, V: f.V}

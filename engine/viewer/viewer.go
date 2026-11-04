@@ -62,6 +62,8 @@ type Viewer struct {
 	// magnified them at the last rebuild.
 	Magnify   bool
 	magnified bool
+	// Lit lights the view and shadows its figures (docs/spec/world.md, Light and shadow).
+	Lit bool
 	// Play drives the player with the keys and keeps the view on it, instead of the tools.
 	// SeeAll draws every cell rather than only what the player sees. HideDebug hides the panel and
 	// the event log and the selection's and hover's outlines: the debug overlay.
@@ -211,6 +213,14 @@ func New(p *content.Pack, seed uint64, level string, scale int, magnify bool, sc
 	return v, nil
 }
 
+// SetLit turns the view's light and shadow on or off.
+func (v *Viewer) SetLit(on bool) {
+	if v.Lit != on {
+		v.Lit = on
+		v.rebuild()
+	}
+}
+
 func sortedIDs[V any](m map[string]V) []string {
 	ids := make([]string, 0, len(m))
 	for id := range m {
@@ -232,7 +242,7 @@ func (v *Viewer) rebuild() {
 	}
 	v.anims.Apply(v.Pack, &scene)
 	v.magnified = v.World.Magnified()
-	v.Cmds = drawlist.Build(v.Pack, scene, drawlist.Options{Magnify: v.Magnify || v.magnified})
+	v.Cmds = drawlist.Build(v.Pack, scene, drawlist.Options{Magnify: v.Magnify || v.magnified, Shadows: v.Lit})
 	v.Labels = drawlist.Labels(v.Pack, scene)
 	v.Bounds = drawlist.Bounds(l.Def)
 	v.Version++

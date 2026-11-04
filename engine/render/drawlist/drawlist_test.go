@@ -73,29 +73,29 @@ func TestBuild(t *testing.T) {
 	want := []Cmd{
 		// Floors back to front, row by row and left to right, with the cells past the far edges
 		// blanked.
-		{"floor", 1, 0, 0, Whole, "", "", false},
-		{"floor", 0, -32, 16, Whole, "", "", false},
-		{"floor", 0, 32, 16, Whole, "", "", false},
-		{"", 0, -64, 32, Whole, "", "", false},
-		{"floor", 0, 0, 32, Whole, "", "", false},
-		{"", 0, 64, 32, Whole, "", "", false},
-		{"", 0, -32, 48, Whole, "", "", false},
-		{"", 0, 32, 48, Whole, "", "", false},
-		{"", 0, 0, 64, Whole, "", "", false},
+		{"floor", 1, 0, 0, Whole, "", "", false, NoGlow, 0},
+		{"floor", 0, -32, 16, Whole, "", "", false, NoGlow, 0},
+		{"floor", 0, 32, 16, Whole, "", "", false, NoGlow, 0},
+		{"", 0, -64, 32, Whole, "", "", false, NoGlow, 0},
+		{"floor", 0, 0, 32, Whole, "", "", false, NoGlow, 0},
+		{"", 0, 64, 32, Whole, "", "", false, NoGlow, 0},
+		{"", 0, -32, 48, Whole, "", "", false, NoGlow, 0},
+		{"", 0, 32, 48, Whole, "", "", false, NoGlow, 0},
+		{"", 0, 0, 64, Whole, "", "", false, NoGlow, 0},
 		// Overlays, then floor looks in their state.
-		{"hazard", 2, 0, 32, Whole, "", "", false},
-		{"plate", 1, -16, 40, Whole, "", "plate", false},
+		{"hazard", 2, 0, 32, Whole, "", "", false, NoGlow, 0},
+		{"plate", 1, -16, 40, Whole, "", "plate", false, NoGlow, 0},
 		// The key centered in (0, 0).
-		{"tiny", 0, 12, 13, Whole, "", "", false},
+		{"tiny", 0, 12, 13, Whole, "", "", false, NoGlow, 0},
 		// Row 0: the lever and the door; then row 1: the exit look in place of its wall and
 		// decoration, and the wall with its decoration.
-		{"lever", 1, 4, 2, Whole, "", "lever", false},
-		{"door", 0, -17, -3, Whole, "", "", false},
-		{"exit", 1, -32, 0, Whole, "", "exit", false},
-		{"wall", 1, 32, 8, Whole, "", "", false},
-		{"deco", 4, 40, 24, Whole, "", "", false},
+		{"lever", 1, 4, 2, Whole, "", "lever", false, NoGlow, 0},
+		{"door", 0, -17, -3, Whole, "", "", false, NoGlow, 0},
+		{"exit", 1, -32, 0, Whole, "", "exit", false, NoGlow, 0},
+		{"wall", 1, 32, 8, Whole, "", "", false, NoGlow, 0},
+		{"deco", 4, 40, 24, Whole, "", "", false, GlowDecoration, 0},
 		// Row 2: the guard, facing 4, its anchor at the reference point (34, 51).
-		{"npc", 2, 16, 32, Whole, "guard", "", false},
+		{"npc", 2, 16, 32, Whole, "guard", "", false, NoGlow, 0},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got\n%v\nwant\n%v", got, want)
@@ -107,13 +107,13 @@ func TestBuildFloorHalves(t *testing.T) {
 	l.FloorHalves = content.Grid{{content.HalvesBoth, content.HalfLower}, {0, content.HalvesBoth}}
 	got := Build(p, LevelScene(p, l), Options{})[:5]
 	want := []Cmd{
-		{"floor", 1, 0, 0, Whole, "", "", false},
+		{"floor", 1, 0, 0, Whole, "", "", false, NoGlow, 0},
 		// (1, 0): both halves blanked.
-		{"", 0, -32, 16, UpperHalf, "", "", false},
-		{"", 0, -32, 32, LowerHalf, "", "", false},
+		{"", 0, -32, 16, UpperHalf, "", "", false, NoGlow, 0},
+		{"", 0, -32, 32, LowerHalf, "", "", false, NoGlow, 0},
 		// (0, 1): only the lower half drawn.
-		{"", 0, 32, 16, UpperHalf, "", "", false},
-		{"floor", 0, 32, 32, LowerHalf, "", "", false},
+		{"", 0, 32, 16, UpperHalf, "", "", false, NoGlow, 0},
+		{"floor", 0, 32, 32, LowerHalf, "", "", false, NoGlow, 0},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got\n%v\nwant\n%v", got, want)
@@ -131,10 +131,10 @@ func TestBuildDiamondFloors(t *testing.T) {
 		}
 	}
 	want := []Cmd{
-		{"floor", 1, -16, 0, Whole, "", "", false},
+		{"floor", 1, -16, 0, Whole, "", "", false, NoGlow, 0},
 		// (1, 0) draws nothing; (0, 1) only its lower half; nothing is blanked.
-		{"floor", 0, 16, 32, LowerHalf, "", "", false},
-		{"floor", 0, -16, 32, Whole, "", "", false},
+		{"floor", 0, 16, 32, LowerHalf, "", "", false, NoGlow, 0},
+		{"floor", 0, -16, 32, Whole, "", "", false, NoGlow, 0},
 	}
 	if !reflect.DeepEqual(floors, want) {
 		t.Errorf("got\n%v\nwant\n%v", floors, want)
@@ -381,5 +381,59 @@ func TestShapeChangeFrame(t *testing.T) {
 		if !ok || cmd.Frame != want || cmd.Sprite != "npc" {
 			t.Errorf("facing %d: %+v, want frame %d of npc", facing, cmd, want)
 		}
+	}
+}
+
+// TestShadows puts a shadow under each figure's feet, sized by its footprint, after what lies on
+// the floor and before anything standing.
+func TestShadows(t *testing.T) {
+	p, l := testPack()
+	// The guard's frame 2 draws a head at (0, 5) and feet in rows 28–30, columns 10–19.
+	sheet := image.NewPaletted(image.Rect(0, 0, 96, 32), nil)
+	sheet.Pix[5*96+64] = 1
+	for y := 28; y <= 30; y++ {
+		for x := 74; x <= 83; x++ {
+			sheet.Pix[y*96+x] = 1
+		}
+	}
+	zero := 0
+	npc := p.Sprites["npc"]
+	npc.Columns, npc.Sheet, npc.Transparent = 3, sheet, &zero
+	s := LevelScene(p, l)
+	if got := Build(p, s, Options{}); slices.ContainsFunc(got, func(c Cmd) bool { return c.Shadow > 0 }) {
+		t.Error("drew shadows without Options.Shadows")
+	}
+	got := Build(p, s, Options{Shadows: true})
+	at := slices.IndexFunc(got, func(c Cmd) bool { return c.Shadow > 0 })
+	if at < 0 {
+		t.Fatal("no shadow")
+	}
+	// The guard's frame is drawn at (16, 32): its feet's lowest row is 62, their middle column
+	// 30.5, rounded to 31. Its footprint 16 makes the shadow 32 wide.
+	if want := (Cmd{X: 31, Y: 62, Shadow: 32}); got[at] != want {
+		t.Errorf("shadow %+v, want %+v", got[at], want)
+	}
+	if got[at-1].Sprite != "tiny" || got[at+1].Sprite != "lever" {
+		t.Errorf("shadow drawn between %q and %q, want after the floor object and before the lever", got[at-1].Sprite, got[at+1].Sprite)
+	}
+	s.Things[0].Anim = "dead"
+	if slices.ContainsFunc(Build(p, s, Options{Shadows: true}), func(c Cmd) bool { return c.Shadow > 0 }) {
+		t.Error("a dead creature casts a shadow")
+	}
+}
+
+// TestSpellGlows marks a spell in flight to give light, and an object in flight not.
+func TestSpellGlows(t *testing.T) {
+	p, l := testPack()
+	s := LevelScene(p, l)
+	s.Flights = []Flight{{Sprite: "npc", Frame: 1, U: 40, V: 40, Spell: true}, {Sprite: "npc", Frame: 0, U: 40, V: 40}}
+	glows := map[int]Glow{}
+	for _, c := range Build(p, s, Options{}) {
+		if c.Sprite == "npc" && c.Thing == "" {
+			glows[c.Frame] = c.Glow
+		}
+	}
+	if glows[1] != GlowSpell || glows[0] != NoGlow {
+		t.Errorf("spell glows %d, object %d; want %d and %d", glows[1], glows[0], GlowSpell, NoGlow)
 	}
 }

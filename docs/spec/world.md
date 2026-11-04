@@ -122,6 +122,27 @@ Only visible cells are drawn; the rest of the view is black. Each visible cell i
 
 A cell that is not drawn (off the map, or not visible) has its tile box filled black in its place among the floors. This matters: the floor under a wall sticks out below the wall's art, and the black fill of the cells in front covers it. Walls and things standing are drawn after all floors, so the fill never covers them.
 
+### Light and shadow
+
+The game has no lighting; its fire and glows animate by palette alone. The remake adds soft light around them and a shadow under each figure, its own and not the game's. They are subtle, change no rule, and can be turned off, which draws the view as the game does.
+
+**Steady colors.** A color no palette effect changes is its own steady color. A color an effect animates has as its steady color the mean of the colors it takes over the effect's cycle: for a rotating group, the mean of the group's colors; for a cycled color, the mean of its list.
+
+**Sources.** Two kinds of drawn frame give light, each from its **glowing pixels**:
+
+| Source | Glowing pixels | Strength `s` | Radius `R` | Flicker `k`, speed `w` |
+|---|---|---|---|---|
+| A wall decoration | Those in colors a palette effect animates | 0.30 | 64 | 0.08, 1 |
+| A spell in flight, or the cloud it ends as | Those, and those whose steady color's mean component is at least 60% of full | 0.45 | 48 | 0.15, 3 |
+
+A frame with fewer than 4 glowing pixels gives none. Otherwise its light is centered at the mean position of its glowing pixels, a decoration's moved 8 pixels down, out from its wall's face. Its color is the mean of its glowing pixels' steady colors, scaled so that its largest component is full, and its strength is `s · min(1, n / 16)` for `n` glowing pixels.
+
+**Flicker.** At time `t` seconds a light's strength is multiplied by `1 + k · (sin(2.3·w·t + a) + sin(3.7·w·t + 1.7·a)) / 2`, where `a` is a phase from its center `(x, y)`: `0.37·x + 0.61·y`. Each light flickers on its own; nothing in play depends on it.
+
+**Lighting the view.** At a view pixel `p`, a light centered at `c` reaches `f = (1 − d²)²` for `d < 1`, else 0, where `d = |(pₓ − cₓ, 2·(p_y − c_y))| / R`, so its pool is twice as wide as it is high, lying on the floor. The pixel's color, looked up in the palette, is multiplied by `0.86 + Σ strength · f · color` over the lights, each component of that factor at most 1.25, the result at most full. The rest of the view is thus a little dimmer than the game's, and warmer and brighter near its fires.
+
+**Shadows.** The player, each creature that is not dead, and each boulder casts a shadow: an ellipse under its feet, `w = 2 × footprint` pixels wide and `w / 2` high, the size its footprint covers on the floor. It is centered on the lowest row the figure's frames draw (with what it holds), at the middle, rounded, of the pixels they draw in their lowest three rows. Its ground point, where it stands, is drawn higher than its feet, so it is not used. It darkens the floors, overlays and floor objects beneath it by `0.35 · (1 − d²)` at the point a fraction `d` of the way from its center to its edge. Where shadows overlap, the darker one shows. Everything standing is drawn over shadows, so they darken only the floor.
+
 ## Visibility
 
 Visibility is recomputed whenever the map changes (a door moves, a wall is removed) or the player's vision cell changes. The vision cell is the player's cell, except that it stays where it was while the player stands in a door's cell.

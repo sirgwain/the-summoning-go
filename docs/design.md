@@ -272,6 +272,15 @@ The file formats are in [pack.md](pack.md).
   straight lookup: wall set + shape (+ state) → sprite.
 - **Wall decorations** (torches, banners, carvings) are separate, possibly animated sprites placed on
   a wall face and drawn right after their wall. They are never baked into wall art.
+- **Light and shadow** (docs/spec/world.md, Light and shadow) are the remake's own and presentation
+  only. The draw list marks the commands that may glow (decorations, spells in flight) and adds
+  shadow commands after the floor layer. `engine/render/light`, which needs no display, finds each
+  glowing frame's light from its pixels and the palette's effects and makes it flicker. The palette
+  shader multiplies each looked-up color by the ambient level and the lights, passed as uniform
+  arrays (up to 32, the nearest the view's center). Shadows are drawn into the world buffer's blue
+  channel, which index images leave 0: a shadow takes the darker of what is there, and anything
+  drawn over it writes 0 again, so only what lies under it is darkened, with no depth test. The
+  `--lighting=false` flag turns both off.
 - **View size is free.** A wider window shows more of the level; it does not change the simulation.
 - Optional post shaders (CRT, scanlines) are presentation only.
 

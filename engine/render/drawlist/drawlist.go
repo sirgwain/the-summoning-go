@@ -5,6 +5,7 @@ package drawlist
 import (
 	"fmt"
 	"image"
+	"math"
 	"slices"
 	"sort"
 
@@ -16,7 +17,9 @@ import (
 // or the part of one, at (X, Y) instead. Thing names the thing a Cmd draws, if it draws one, and
 // Feature the feature.
 // Fixed draws with the palette's own colors rather than its effects: the player's figure and
-// what it holds (docs/pack.md, Palettes).
+// what it holds (docs/pack.md, Palettes). Glow says whether, and how, the frame gives light.
+// A Cmd with Shadow set draws a shadow instead: an ellipse Shadow pixels wide and half as high,
+// centered at (X, Y) (docs/spec/world.md, Light and shadow).
 type Cmd struct {
 	Sprite  string
 	Frame   int
@@ -25,7 +28,20 @@ type Cmd struct {
 	Thing   string
 	Feature string
 	Fixed   bool
+	Glow    Glow
+	Shadow  int
 }
+
+// Glow is how a drawn frame gives light (docs/spec/world.md, Light and shadow).
+type Glow int
+
+const (
+	NoGlow Glow = iota
+	// GlowDecoration lights from the pixels in colors the palette animates.
+	GlowDecoration
+	// GlowSpell lights from those and the bright pixels.
+	GlowSpell
+)
 
 // Scene is a level as it is to be drawn: its definition's fixed art, and the grids, features,
 // objects and things as they are now.
@@ -44,13 +60,14 @@ type Scene struct {
 	Taken map[content.Cell]int
 }
 
-// Flight is an object in flight over ground point (U, V), or with Sprite set a spell showing
-// that sprite's Frame.
+// Flight is an object in flight over ground point (U, V), or with Sprite set one showing that
+// sprite's Frame; Spell says it is a spell, which gives light.
 type Flight struct {
 	Item   string
 	Sprite string
 	Frame  int
 	U, V   int
+	Spell  bool
 }
 
 // flightHeight is how high above its ground point an object in flight is drawn, in pixels.
@@ -221,7 +238,12 @@ func TileBox(c content.Cell) image.Point {
 type Options struct {
 	// Magnify draws floor objects with their inventory image.
 	Magnify bool
+	// Shadows draws a shadow under each figure (docs/spec/world.md, Light and shadow).
+	Shadows bool
 }
+
+// shadowScale is a shadow's width per unit of footprint.
+const shadowScale = 2
 
 // maxFloorObjects is how many objects a cell's floor shows (docs/spec/items.md, Floor).
 const maxFloorObjects = 8
@@ -343,7 +365,9 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 			item.cmds = append(item.cmds, Cmd{Sprite: set.Sprite, Frame: set.Shape(shape).Frame, X: box.X + set.Offset[0], Y: box.Y + set.Offset[1]})
 			if shape == own {
 				for _, d := range decorations[c] {
-					item.cmds = append(item.cmds, placed(d))
+					cmd := placed(d)
+					cmd.Glow = GlowDecoration
+					item.cmds = append(item.cmds, cmd)
 				}
 			}
 		}
@@ -352,9 +376,14 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 	for _, f := range looks[content.LayerStand] {
 		items = append(items, standing{depth: f.Cell[0] + f.Cell[1], top: TileBox(f.Cell).Y + 1, cmds: featureCmds(p, f)})
 	}
+	var shadows []Cmd
 	for _, t := range s.Things {
 		if cmd, cell, ok := thingCmd(p, t); ok && s.shows(cell) {
-			items = append(items, standing{depth: cell[0] + cell[1], top: cmd.Y, cmds: heldCmds(p, t, cmd)})
+			drawn := heldCmds(p, t, cmd)
+			items = append(items, standing{depth: cell[0] + cell[1], top: cmd.Y, cmds: drawn})
+			if sh, ok := shadowCmd(p, t, drawn); ok && opts.Shadows {
+				shadows = append(shadows, sh)
+			}
 		}
 	}
 	for _, f := range s.Flights {
@@ -372,7 +401,11 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 			continue
 		}
 		at := RefPoint(f.U, f.V).Sub(image.Pt(sprite.FrameSize[0]/2, sprite.FrameSize[1]/2+flightHeight))
-		items = append(items, standing{depth: cell[0] + cell[1], top: at.Y, cmds: []Cmd{{Sprite: img.Sprite, Frame: img.Frame, X: at.X, Y: at.Y}}})
+		cmd := Cmd{Sprite: img.Sprite, Frame: img.Frame, X: at.X, Y: at.Y}
+		if f.Spell {
+			cmd.Glow = GlowSpell
+		}
+		items = append(items, standing{depth: cell[0] + cell[1], top: at.Y, cmds: []Cmd{cmd}})
 	}
 	for _, pr := range l.Props {
 		if !s.shows(pr.Cell) {
@@ -381,6 +414,7 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 		cmd := placed(pr)
 		items = append(items, standing{depth: pr.Cell[0] + pr.Cell[1], top: TileBox(pr.Cell).Y + 1, cmds: []Cmd{cmd}})
 	}
+	cmds = append(cmds, shadows...)
 	sort.SliceStable(items, func(i, j int) bool {
 		if items[i].depth != items[j].depth {
 			return items[i].depth < items[j].depth
@@ -391,6 +425,53 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 		cmds = append(cmds, it.cmds...)
 	}
 	return cmds
+}
+
+// shadowCmd returns the shadow of thing t, drawn by cmds, if it casts one: the player, a living
+// creature or a boulder. It lies under the thing's feet: centered on the lowest row its frames
+// draw, at the middle of what they draw in their lowest three rows.
+func shadowCmd(p *content.Pack, t Thing, cmds []Cmd) (Cmd, bool) {
+	tmpl, ok := p.Things[t.Template]
+	if !ok || t.Anim == "dead" {
+		return Cmd{}, false
+	}
+	switch tmpl.Kind {
+	case content.ThingPlayer, content.ThingCreature, content.ThingBoulder:
+	default:
+		return Cmd{}, false
+	}
+	type px struct{ x, y int }
+	var drawn []px
+	bottom := math.MinInt / 2
+	for _, c := range cmds {
+		b := p.Sprites[c.Sprite]
+		if b == nil || b.Sheet == nil || c.Frame < 0 || c.Frame >= b.Frames {
+			continue
+		}
+		r := b.FrameRect(c.Frame)
+		for y := r.Max.Y - 1; y >= r.Min.Y; y-- {
+			vy := c.Y + y - r.Min.Y
+			if vy < bottom-2 {
+				break
+			}
+			for x := r.Min.X; x < r.Max.X; x++ {
+				if i := int(b.Sheet.ColorIndexAt(x, y)); b.Transparent == nil || i != *b.Transparent {
+					drawn = append(drawn, px{c.X + x - r.Min.X, vy})
+					bottom = max(bottom, vy)
+				}
+			}
+		}
+	}
+	var sum, n int
+	for _, d := range drawn {
+		if d.y >= bottom-2 {
+			sum, n = sum+d.x, n+1
+		}
+	}
+	if n == 0 {
+		return Cmd{}, false
+	}
+	return Cmd{X: floorDiv(2*sum+n, 2*n), Y: bottom, Shadow: tmpl.Size() * shadowScale}, true
 }
 
 // featureCmds draws feature f's look in its state; a socket adds the look of each filled place.

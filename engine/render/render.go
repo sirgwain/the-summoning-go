@@ -7,17 +7,21 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/colorm"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/render/drawlist"
+	"github.com/sirgwain/the-summoning-go/engine/render/light"
 )
 
 // Index images hold a palette index in the red channel. Alpha is 0 where nothing is drawn and
 // 255 elsewhere, so drawing them with the default blend copies indexes exactly. In the world
 // buffer, green is 255 where a fixed command drew (drawlist.Cmd.Fixed): those indexes are looked
-// up in the palette's own colors, not its animated ones.
+// up in the palette's own colors, not its animated ones. Blue is how deep a shadow lies there
+// (docs/spec/world.md, Light and shadow): a shadow raises it to its own, and anything drawn over
+// it sets it back to 0.
 
 // Sprites holds the pack's sprite banks as index images, one per frame.
 type Sprites struct {
@@ -69,11 +73,13 @@ type LevelView struct {
 	images []*ebiten.Image
 	blank  *ebiten.Image
 	bounds image.Rectangle
+	// shadows are the shadow ellipses, by width.
+	shadows map[int]*ebiten.Image
 }
 
 // NewLevelView returns a view that draws nothing until Set.
 func NewLevelView(s *Sprites) *LevelView {
-	v := &LevelView{sprites: s, blank: ebiten.NewImage(drawlist.TileSize, drawlist.TileSize)}
+	v := &LevelView{sprites: s, blank: ebiten.NewImage(drawlist.TileSize, drawlist.TileSize), shadows: map[int]*ebiten.Image{}}
 	v.blank.Fill(color.White)
 	return v
 }
@@ -84,6 +90,10 @@ func (v *LevelView) Set(cmds []drawlist.Cmd, bounds image.Rectangle) error {
 	images := make([]*ebiten.Image, len(cmds))
 	for i, c := range cmds {
 		img := v.blank
+		if c.Shadow > 0 {
+			images[i] = v.shadow(c.Shadow)
+			continue
+		}
 		if c.Sprite != "" {
 			var err error
 			if img, err = v.sprites.Frame(c.Sprite, c.Frame); err != nil {
@@ -94,6 +104,41 @@ func (v *LevelView) Set(cmds []drawlist.Cmd, bounds image.Rectangle) error {
 	}
 	v.cmds, v.images, v.bounds = cmds, images, bounds
 	return nil
+}
+
+// shadowBlend raises the blue channel to the shadow's, leaving the rest as it is.
+var shadowBlend = ebiten.Blend{
+	BlendFactorSourceRGB: ebiten.BlendFactorOne, BlendFactorDestinationRGB: ebiten.BlendFactorOne,
+	BlendOperationRGB:      ebiten.BlendOperationMax,
+	BlendFactorSourceAlpha: ebiten.BlendFactorZero, BlendFactorDestinationAlpha: ebiten.BlendFactorOne,
+	BlendOperationAlpha: ebiten.BlendOperationAdd,
+}
+
+// shadow returns the shadow ellipse w pixels wide and half as high: its depth in blue, 0
+// outside it.
+func (v *LevelView) shadow(w int) *ebiten.Image {
+	if img, ok := v.shadows[w]; ok {
+		return img
+	}
+	h := max(1, w/2)
+	pix := make([]byte, 4*w*h)
+	for y := range h {
+		for x := range w {
+			dx := (float64(x) + 0.5 - float64(w)/2) / (float64(w) / 2)
+			dy := (float64(y) + 0.5 - float64(h)/2) / (float64(h) / 2)
+			d2 := dx*dx + dy*dy
+			if d2 >= 1 {
+				continue
+			}
+			i := 4 * (y*w + x)
+			pix[i+2] = byte(math.Round(255 * light.ShadowDepth * (1 - d2)))
+			pix[i+3] = 0xFF
+		}
+	}
+	img := ebiten.NewImage(w, h)
+	img.WritePixels(pix)
+	v.shadows[w] = img
+	return img
 }
 
 // part returns the part of img a command draws.
@@ -126,7 +171,17 @@ func (v *LevelView) Draw(dst *ebiten.Image, origin image.Point) {
 	for i, c := range v.cmds {
 		img := v.images[i]
 		r := img.Bounds().Sub(img.Bounds().Min).Add(image.Pt(c.X, c.Y))
+		if c.Shadow > 0 {
+			r = r.Sub(r.Size().Div(2))
+		}
 		if !r.Overlaps(view) {
+			continue
+		}
+		if c.Shadow > 0 {
+			op.GeoM.Reset()
+			op.GeoM.Translate(float64(r.Min.X-origin.X), float64(r.Min.Y-origin.Y))
+			op.Blend = shadowBlend
+			dst.DrawImage(img, &op)
 			continue
 		}
 		if c.Fixed && c.Sprite != "" {
@@ -152,6 +207,13 @@ var Palette [256]vec4
 var Fixed [256]vec4
 var Clear float
 
+// Ambient is the light everywhere; 1 with no Lights draws the colors as they are. Each light is
+// its center and radius in source pixels (x, y, radius, 0) and its color times its strength.
+var Ambient float
+var MaxFactor float
+var Lights [32]vec4
+var LightColors [32]vec4
+
 func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 	c := imageSrc0At(srcPos)
 	if c.a == 0 {
@@ -160,17 +222,44 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 		}
 		return vec4(0, 0, 0, 1)
 	}
+	var out vec4
 	if c.g > 0.5 {
-		return Fixed[int(c.r*255+0.5)]
+		out = Fixed[int(c.r*255+0.5)]
+	} else {
+		out = Palette[int(c.r*255+0.5)]
 	}
-	return Palette[int(c.r*255+0.5)]
+	p := srcPos - imageSrc0Origin()
+	lit := vec3(Ambient)
+	for i := 0; i < 32; i++ {
+		l := Lights[i]
+		if l.z > 0 {
+			d := (p - l.xy) * vec2(1, 2) / l.z
+			d2 := dot(d, d)
+			if d2 < 1 {
+				f := (1 - d2) * (1 - d2)
+				lit += LightColors[i].rgb * f
+			}
+		}
+	}
+	lit = min(lit, vec3(MaxFactor)) * (1 - c.b)
+	return vec4(min(out.rgb*lit, vec3(1)), 1)
 }
 `
+
+// MaxLights is the most lights the view is lit by.
+const MaxLights = 32
+
+// Lighting is how the world buffer is lit: lights in buffer pixels, each with its strength now.
+type Lighting struct {
+	Lights    []light.Light
+	Strengths []float64
+}
 
 // Presenter shows an index image on the screen through a palette.
 type Presenter struct {
 	shader         *ebiten.Shader
 	palette, fixed []float32
+	lights, colors []float32
 }
 
 // NewPresenter compiles the palette shader.
@@ -179,7 +268,8 @@ func NewPresenter() (*Presenter, error) {
 	if err != nil {
 		return nil, fmt.Errorf("palette shader: %w", err)
 	}
-	return &Presenter{shader: sh, palette: make([]float32, 256*4), fixed: make([]float32, 256*4)}, nil
+	return &Presenter{shader: sh, palette: make([]float32, 256*4), fixed: make([]float32, 256*4),
+		lights: make([]float32, MaxLights*4), colors: make([]float32, MaxLights*4)}, nil
 }
 
 // SetColors sets the colors indexes are looked up in: colors, such as a palette's colors at a
@@ -188,6 +278,12 @@ func NewPresenter() (*Presenter, error) {
 func (pr *Presenter) SetColors(colors, fixed [256]color.RGBA) {
 	setUniform(pr.palette, colors)
 	setUniform(pr.fixed, fixed)
+}
+
+func clear32(u []float32) {
+	for i := range u {
+		u[i] = 0
+	}
 }
 
 func setUniform(u []float32, colors [256]color.RGBA) {
@@ -202,29 +298,47 @@ func setUniform(u []float32, colors [256]color.RGBA) {
 // Present draws src onto dst through the palette, scaled by a whole number. What src leaves
 // undrawn shows black.
 func (pr *Presenter) Present(dst, src *ebiten.Image, scale int) {
-	pr.present(dst, src, float64(scale), float64(scale), image.Point{}, false)
+	pr.present(dst, src, float64(scale), float64(scale), image.Point{}, false, nil)
+}
+
+// PresentLit draws src, the world buffer, as Present does, lit by l (docs/spec/world.md, Light
+// and shadow): the first MaxLights of its lights, and its shadows.
+func (pr *Presenter) PresentLit(dst, src *ebiten.Image, scale int, l *Lighting) {
+	pr.present(dst, src, float64(scale), float64(scale), image.Point{}, false, l)
 }
 
 // PresentAt draws src onto dst through the palette at point at, scaled by a whole number. What
 // src leaves undrawn stays as dst has it.
 func (pr *Presenter) PresentAt(dst, src *ebiten.Image, scale int, at image.Point) {
-	pr.present(dst, src, float64(scale), float64(scale), at, true)
+	pr.present(dst, src, float64(scale), float64(scale), at, true, nil)
 }
 
 // PresentScaled draws src onto dst through the palette at point at, each pixel sx × sy screen
 // pixels. What src leaves undrawn stays as dst has it.
 func (pr *Presenter) PresentScaled(dst, src *ebiten.Image, sx, sy float64, at image.Point) {
-	pr.present(dst, src, sx, sy, at, true)
+	pr.present(dst, src, sx, sy, at, true, nil)
 }
 
-func (pr *Presenter) present(dst, src *ebiten.Image, sx, sy float64, at image.Point, clear bool) {
+func (pr *Presenter) present(dst, src *ebiten.Image, sx, sy float64, at image.Point, clear bool, l *Lighting) {
 	var op ebiten.DrawRectShaderOptions
 	op.Images[0] = src
 	c := float32(0)
 	if clear {
 		c = 1
 	}
-	op.Uniforms = map[string]any{"Palette": pr.palette, "Fixed": pr.fixed, "Clear": c}
+	clear32(pr.lights)
+	ambient, most := float32(1), float32(1)
+	if l != nil {
+		ambient, most = light.Ambient, light.MaxFactor
+		for i, li := range l.Lights[:min(len(l.Lights), MaxLights)] {
+			pr.lights[4*i], pr.lights[4*i+1], pr.lights[4*i+2] = float32(li.X), float32(li.Y), float32(li.Radius)
+			for j := range 3 {
+				pr.colors[4*i+j] = float32(li.Color[j] * l.Strengths[i])
+			}
+		}
+	}
+	op.Uniforms = map[string]any{"Palette": pr.palette, "Fixed": pr.fixed, "Clear": c,
+		"Ambient": ambient, "MaxFactor": most, "Lights": pr.lights, "LightColors": pr.colors}
 	op.GeoM.Scale(sx, sy)
 	op.GeoM.Translate(float64(at.X), float64(at.Y))
 	b := src.Bounds()

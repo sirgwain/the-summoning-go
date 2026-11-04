@@ -4,12 +4,15 @@
 package window
 
 import (
+	"cmp"
 	"fmt"
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -17,6 +20,7 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/font"
 	"github.com/sirgwain/the-summoning-go/engine/render"
+	"github.com/sirgwain/the-summoning-go/engine/render/light"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
 
@@ -28,8 +32,12 @@ type Window struct {
 	view      *render.LevelView
 	presenter *render.Presenter
 	glow      *render.Glow
-	tr        *transitions
-	palette   *content.Palette
+	// lights finds the lights of the view's commands; found are those of the commands drawn.
+	lights   *light.Finder
+	found    []light.Light
+	lighting render.Lighting
+	tr       *transitions
+	palette  *content.Palette
 	// version is the viewer's draw commands the view holds.
 	version int
 	buffer  *ebiten.Image
@@ -79,6 +87,7 @@ func New(v *viewer.Viewer) (*Window, error) {
 		fonts: map[*font.Face]*ebiten.Image{},
 	}
 	s.view = render.NewLevelView(s.sprites)
+	s.lights = light.NewFinder(v.Pack, s.palette)
 	names := map[string]ebiten.Key{}
 	for k := ebiten.Key(0); k <= ebiten.KeyMax; k++ {
 		names[k.String()] = k
@@ -105,6 +114,10 @@ func (s *Window) sync() error {
 	s.version = s.v.Version
 	if err := s.view.Set(s.v.Cmds, s.v.Bounds); err != nil {
 		return fmt.Errorf("level %s: %w", s.v.Shown, err)
+	}
+	s.found = nil
+	if s.v.Lit {
+		s.found = s.lights.Find(s.v.Cmds)
 	}
 	return nil
 }
@@ -183,7 +196,11 @@ func (s *Window) Draw(screen *ebiten.Image) {
 	s.view.Draw(s.buffer, v.Origin)
 	s.presenter.SetColors(s.palette.At(v.Ticks*1000/int64(ebiten.TPS())), v.FixedColors(s.palette))
 	world := s.tr.world(screen.Bounds().Size(), v.Transition)
-	s.presenter.Present(world, s.buffer, v.Scale)
+	if v.Lit {
+		s.presenter.PresentLit(world, s.buffer, v.Scale, s.light(size, float64(v.Ticks)/float64(ebiten.TPS())))
+	} else {
+		s.presenter.Present(world, s.buffer, v.Scale)
+	}
 	s.tr.draw(screen, v.Transition, v.Scale)
 	overlay := v.Overlay()
 	// What is drawn over the world belongs to the new view, so waits for a transition to end.
@@ -208,6 +225,30 @@ func (s *Window) Draw(screen *ebiten.Image) {
 	s.drawFullMap(screen)
 	s.drawPointer(screen)
 	s.takeShots(screen)
+}
+
+// light returns how the world buffer, of size size, is lit at time t: the lights reaching it,
+// nearest its center first, in buffer pixels.
+func (s *Window) light(size image.Point, t float64) *render.Lighting {
+	l := &s.lighting
+	l.Lights, l.Strengths = l.Lights[:0], l.Strengths[:0]
+	o := s.v.Origin
+	for _, li := range s.found {
+		li.X, li.Y = li.X-float64(o.X), li.Y-float64(o.Y)
+		if li.X < -li.Radius || li.Y < -li.Radius/2 || li.X > float64(size.X)+li.Radius || li.Y > float64(size.Y)+li.Radius/2 {
+			continue
+		}
+		l.Lights = append(l.Lights, li)
+	}
+	cx, cy := float64(size.X)/2, float64(size.Y)/2
+	slices.SortFunc(l.Lights, func(a, b light.Light) int {
+		return cmp.Compare(math.Hypot(a.X-cx, a.Y-cy), math.Hypot(b.X-cx, b.Y-cy))
+	})
+	l.Lights = l.Lights[:min(len(l.Lights), render.MaxLights)]
+	for _, li := range l.Lights {
+		l.Strengths = append(l.Strengths, li.At(t))
+	}
+	return l
 }
 
 // takeShots saves the screenshots due.

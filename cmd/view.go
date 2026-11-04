@@ -27,7 +27,7 @@ func init() {
 func newViewCmd(play bool) *cobra.Command {
 	var level, screenshot, script, out, saves, load string
 	var scale, shotTicks int
-	var magnify, menu, mute bool
+	var magnify, menu, mute, lighting bool
 	var at, sel []int
 	var seed uint64
 	use, short, long := "view [pack-dir]", "Look around a content pack's levels and work their mechanisms",
@@ -179,6 +179,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 				return err
 			}
 			v.SaveDir = saves
+			v.SetLit(lighting)
 			v.HideDebug = play && !debugEnabled
 			if !mute && script == "" && screenshot == "" {
 				v.Audio = audio.New(speaker.New(), pack)
@@ -232,6 +233,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 	viewCmd.Flags().IntVar(&scale, "scale", 2, "pixels per art pixel")
 	viewCmd.Flags().IntSliceVar(&at, "at", nil, "center the view on this cell, as x,y")
 	viewCmd.Flags().IntSliceVar(&sel, "select", nil, "select this cell, as x,y")
+	viewCmd.Flags().BoolVar(&lighting, "lighting", true, "light the view around fires and spells, and shadow figures (false draws it as the game does)")
 	viewCmd.Flags().BoolVar(&magnify, "magnify", false, "start with objects on the floor magnified")
 	viewCmd.Flags().Uint64Var(&seed, "seed", 1, "seed for the simulation's random choices (default: the clock in live play, 1 for a script or screenshot)")
 	viewCmd.Flags().StringVar(&script, "script", "", "run this script instead of live input, then exit")
