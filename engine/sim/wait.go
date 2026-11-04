@@ -73,3 +73,12 @@ func (w *World) GestureWait() float64 {
 	pictures, _ := gesturePictures(sp.Gesture, w.pack.Magic)
 	return w.left(p.gesture, len(pictures)+1-g.Shown)
 }
+
+// PlayerDue returns how many world updates from now the player's next update runs in: 0 for
+// this one. It is 0 with no player.
+func (w *World) PlayerDue() int64 {
+	if w.player == nil {
+		return 0
+	}
+	return max(0, w.player.next-w.step)
+}

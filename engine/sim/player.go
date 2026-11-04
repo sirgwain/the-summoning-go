@@ -119,6 +119,8 @@ type Player struct {
 	// the same walk held on, which letting go drops (docs/spec/entities.md, The player's update).
 	want int
 	held bool
+	// walked is whether the player's last update walked.
+	walked bool
 	// last and next are the steps of the player's last update and its next; glide where it was
 	// at its last, to draw it gliding.
 	last, next int64
@@ -344,6 +346,7 @@ func (w *World) updatePlayer() {
 	p := w.player
 	p.last, p.next = w.step, w.step+w.PlayerInterval()
 	p.glide.start(p.U, p.V, w.step, p.next)
+	p.walked = false
 	if p.Dead {
 		return
 	}
@@ -395,7 +398,7 @@ func (w *World) updatePlayer() {
 	}
 	turned := p.Facing != d
 	p.Facing = d
-	if !w.walk(d) && turned {
+	if p.walked = w.walk(d); !p.walked && turned {
 		w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "turned"})
 	}
 }
@@ -551,9 +554,11 @@ func (w *World) walk(d int) bool {
 		switch {
 		case pushable(t) && !(p.Status.Levitating && t.Template.Kind == content.ThingCreature):
 			from := [2]int{t.U, t.V}
-			if w.push(l, t, du, dv, 0) {
+			// A push makes the player wait longer; it and what it pushes glide over the wait.
+			end := p.next + Steps(pushTicks)
+			if w.push(l, t, du, dv, 0, end) {
 				su, sv = t.U-from[0], t.V-from[1]
-				p.next += Steps(pushTicks)
+				p.next, p.glide.end = end, end
 				w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "pushed"})
 			}
 		case t.Template.Kind == content.ThingPortal && t.Portal != nil:

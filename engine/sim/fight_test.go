@@ -435,9 +435,9 @@ func TestSkillRiseFanfares(t *testing.T) {
 // playerUpdate runs the world through the player's next update, asking for cmds first.
 func playerUpdate(w *World, cmds ...input.Command) {
 	p := w.Player()
-	next := p.next
+	last := p.last
 	w.Update(cmds)
-	for p.next == next {
+	for p.last == last {
 		w.Update(nil)
 	}
 }

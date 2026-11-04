@@ -198,7 +198,18 @@ func (w *World) Update(cmds []input.Command) []Event {
 			if p.held {
 				p.want, p.held = -1, false
 			}
+			// What the player pushes glides with it, so stops with it.
+			for _, t := range w.Current().Things {
+				if t.glide.set && t.glide.at == p.glide.at && t.glide.end == p.glide.end {
+					t.glide.hurry(t.U, t.V, w.step)
+				}
+			}
 			p.glide.hurry(p.U, p.V, w.step)
+		}
+		// A walk asked for from a stand comes once half the interval has passed (The player's
+		// update).
+		if p.want >= 0 && !p.walked && p.Pose == "" && w.step < p.next {
+			p.next = min(p.next, max(p.last+(w.PlayerInterval()+1)/2, w.step))
 		}
 		if w.step >= p.next {
 			w.updatePlayer()

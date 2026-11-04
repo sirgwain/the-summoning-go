@@ -54,6 +54,11 @@ type PlayerState struct {
 	Vision      content.Cell `json:"vision"`
 	StatusTicks int          `json:"status_ticks"`
 	PoseLeft    int          `json:"pose_left"`
+	// Last is the step of its last update; Walked whether that update walked, and Held whether
+	// a walk was asked for in it.
+	Last   int64 `json:"last,omitempty"`
+	Walked bool  `json:"walked,omitempty"`
+	Held   bool  `json:"held,omitempty"`
 }
 
 // LevelState is a level entered.
@@ -122,7 +127,7 @@ func (w *World) State() (*State, error) {
 		Links: w.links, Visited: w.visited, Mouths: w.mouths, Talkers: w.talkers}
 	if p := w.player; p != nil {
 		s.Player = &PlayerState{Player: *p, Template: p.Template.ID, Want: p.want, Next: p.next, Vision: p.vision,
-			StatusTicks: p.statusTicks, PoseLeft: p.poseLeft}
+			StatusTicks: p.statusTicks, PoseLeft: p.poseLeft, Last: p.last, Walked: p.walked, Held: p.held}
 	}
 	for _, id := range sortedKeys(w.levels) {
 		l := w.levels[id]
@@ -253,6 +258,7 @@ func Restore(p *content.Pack, s *State) (*World, error) {
 		}
 		pl := ps.Player
 		pl.Template, pl.want, pl.next, pl.vision, pl.statusTicks, pl.poseLeft = tm, ps.Want, ps.Next, ps.Vision, ps.StatusTicks, ps.PoseLeft
+		pl.last, pl.walked, pl.held = ps.Last, ps.Walked, ps.Held
 		if pl.Magic.Memorized == nil {
 			pl.Magic.Memorized = map[string]int{}
 		}

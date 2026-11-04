@@ -117,18 +117,20 @@ func pushable(t *Thing) bool {
 }
 
 // push moves thing t by (du, dv), first pushing the pushable things in its way, and reports
-// whether it moved (docs/spec/entities.md, Pushing).
-func (w *World) push(l *Level, t *Thing, du, dv, depth int) bool {
+// whether it moved (docs/spec/entities.md, Pushing). What moves is drawn gliding there by step
+// end, with the player pushing it.
+func (w *World) push(l *Level, t *Thing, du, dv, depth int, end int64) bool {
 	if depth >= maxDepth || !w.thingFits(l, t, t.U+du, t.V+dv) {
 		return false
 	}
 	for range maxDepth {
 		b := w.blocker(l, t, true, t.U+du, t.V+dv, t.Template.Size(), nil)
 		if b == nil {
+			t.glide.start(t.U, t.V, w.step, end)
 			w.moveThingBy(l, t, du, dv)
 			return true
 		}
-		if b.thing == nil || !pushable(b.thing) || !w.push(l, b.thing, du, dv, depth+1) {
+		if b.thing == nil || !pushable(b.thing) || !w.push(l, b.thing, du, dv, depth+1, end) {
 			return false
 		}
 	}

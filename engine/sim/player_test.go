@@ -739,8 +739,8 @@ func TestPlayerGlides(t *testing.T) {
 	walk := input.Walk{Direction: 2}
 	// Holding the key asks for the walk every update, as the viewer does.
 	hold := func() {
-		next := p.next
-		for p.next == next {
+		last := p.last
+		for p.last == last {
 			w.Update([]input.Command{walk})
 		}
 	}
@@ -787,5 +787,62 @@ func TestPlayerGlides(t *testing.T) {
 	w.Update([]input.Command{input.PlacePlayer{Cell: content.Cell{1, 5}}})
 	if g := p.Glide(w.Step()); g.Span != 0 {
 		t.Errorf("placed, glides %+v, want drawn where it is", g)
+	}
+}
+
+// TestWalkFromStandStartsSooner has a walk asked for from a stand come once half the
+// interval has passed since the player's last update, not at the end of it.
+func TestWalkFromStandStartsSooner(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) { p.Things["thing.player"].IntervalMS = 275 },
+		"#######",
+		"#@....#",
+		"#######")
+	p := w.Player()
+	playerUpdate(w)
+	last, next := p.last, p.next
+	w.Update([]input.Command{input.Walk{Direction: 2}})
+	half := last + (next-last+1)/2
+	for w.Step() < half {
+		if p.last != last {
+			t.Fatalf("walked at step %d, before half the interval (%d)", p.last, half)
+		}
+		w.Update([]input.Command{input.Walk{Direction: 2}})
+	}
+	w.Update([]input.Command{input.Walk{Direction: 2}})
+	if p.last != half || p.next != half+(next-last) {
+		t.Errorf("walked at step %d, next %d; want at %d, next %d", p.last, p.next, half, half+next-last)
+	}
+	// Walking on, the next step comes when due.
+	at := p.next
+	for p.last == half {
+		w.Update([]input.Command{input.Walk{Direction: 2}})
+	}
+	if p.last != at {
+		t.Errorf("the second step came at %d, want %d", p.last, at)
+	}
+}
+
+// TestPushedGlides draws a pushed corpse gliding along with the player that pushes it, over the
+// player's longer wait.
+func TestPushedGlides(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) { p.Things["thing.player"].IntervalMS = 275 },
+		"########",
+		"#@G....#",
+		"########")
+	p, g := w.Player(), w.Current().Thing("guard")
+	g.HitPoints = 0
+	v0 := g.V
+	for g.V == v0 && w.Step() < 500 {
+		w.Update([]input.Command{input.Walk{Direction: 2}})
+	}
+	if g.V == v0 {
+		t.Fatal("the corpse was not pushed")
+	}
+	gg, pg := g.Glide(w.Step()), p.Glide(w.Step())
+	if gg.Span == 0 || gg.Left != pg.Left || gg.Span != pg.Span || gg.FromV != v0 {
+		t.Errorf("the corpse glides %+v, the player %+v; want them together, from v %d", gg, pg, v0)
+	}
+	if int64(gg.Span) != p.next-p.last {
+		t.Errorf("glide span %d, want the push's wait %d", gg.Span, p.next-p.last)
 	}
 }

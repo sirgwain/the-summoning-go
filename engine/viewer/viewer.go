@@ -903,13 +903,16 @@ func (v *Viewer) pause() {
 
 // walkGrace is how many updates a straight walk waits when it may be half of a diagonal: the
 // second key of a pair pressed a moment after the first, or one let go a moment before the other.
-const walkGrace = 5
+const walkGrace = 3
 
 // walkNow reports whether to walk toward screen direction (x, y) this update, given the keys
 // held, and remembers the walk. A diagonal walks at once. A straight direction walks at once when
 // it goes on from walking straight that way or turns from another; starting from a stand, or
-// left over from a diagonal it is half of, it walks only once held walkGrace updates, so a pair
-// of keys not pressed or released together walks only along the diagonal.
+// left over from a diagonal it is half of, it may be half of a diagonal, so the player must not
+// take it before it has been held walkGrace updates: it is asked for at once when the player's
+// next update comes after that, since a second key pressed meanwhile asks for the diagonal in its
+// place, and otherwise held back until then. So a pair of keys not pressed or released together
+// walks only along the diagonal, with no wait when the player's update is not near.
 func (v *Viewer) walkNow(x, y int) bool {
 	dir := [2]int{x, y}
 	switch {
@@ -921,7 +924,7 @@ func (v *Viewer) walkNow(x, y int) bool {
 		if v.walk.waiting != dir {
 			v.walk.waiting, v.walk.wait = dir, 0
 		}
-		if v.walk.wait++; v.walk.wait < walkGrace {
+		if v.walk.wait++; v.walk.wait < walkGrace && v.World.PlayerDue() < int64(walkGrace-v.walk.wait) {
 			return false
 		}
 	}
