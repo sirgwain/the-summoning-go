@@ -45,10 +45,36 @@ const DefenseVulnerable = "vulnerable"
 // Knows reports whether the entry has learned defense d.
 func (e *Entry) Knows(d string) bool { return e != nil && slices.Contains(e.Defenses, d) }
 
-// Book is the book's entries: creatures by thing template, items by item template.
+// Book is the book's entries: creatures by thing template, items by item template; and the
+// recipes the player has made, in the order first made.
 type Book struct {
 	Creatures map[string]*Entry `json:"creatures,omitempty"`
 	Items     map[string]*Entry `json:"items,omitempty"`
+	Recipes   []Recipe          `json:"recipes,omitempty"`
+}
+
+// Recipe is a spell filling the item Holder from the item From in the other hand, none when it
+// held nothing the spell turns, making the item Into.
+type Recipe struct {
+	Spell  string `json:"spell"`
+	Holder string `json:"holder"`
+	From   string `json:"from,omitempty"`
+	Into   string `json:"into"`
+}
+
+// learnRecipe records recipe r, once, and enters its items in the book.
+func (w *World) learnRecipe(r Recipe) {
+	if w.player == nil {
+		return
+	}
+	if !slices.Contains(w.book.Recipes, r) {
+		w.book.Recipes = append(w.book.Recipes, r)
+	}
+	for _, id := range []string{r.Holder, r.From, r.Into} {
+		if id != "" {
+			w.learnItem(id, StageSeen)
+		}
+	}
 }
 
 // Book returns the book.
@@ -216,12 +242,18 @@ func (w *World) restoreBook(b *Book) Book {
 			out.Items[id] = e
 		}
 	}
+	known := func(id string) bool { return id == "" || w.pack.Items[id] != nil }
+	for _, r := range b.Recipes {
+		if w.pack.Spells[r.Spell] != nil && known(r.Holder) && known(r.From) && known(r.Into) {
+			out.Recipes = append(out.Recipes, r)
+		}
+	}
 	return out
 }
 
 // bookState returns the book for a save, nil when empty.
 func (w *World) bookState() *Book {
-	if len(w.book.Creatures) == 0 && len(w.book.Items) == 0 {
+	if len(w.book.Creatures) == 0 && len(w.book.Items) == 0 && len(w.book.Recipes) == 0 {
 		return nil
 	}
 	b := w.book

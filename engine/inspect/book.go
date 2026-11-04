@@ -199,9 +199,9 @@ var wornOn = map[string]string{
 	content.WearArms: "Worn on the arms.", content.WearNeck: "Worn about the neck.", content.WearQuiver: "Worn as a quiver.",
 }
 
-// ItemLines returns what the book says of item id, as the entry e stands, and the hint of what
-// the next stage would show.
-func ItemLines(p *content.Pack, id string, e *sim.Entry) (lines []string, hint string) {
+// ItemLines returns what the book says of item id, as the entry e stands, with the recipes it
+// takes part in, and the hint of what the next stage would show.
+func ItemLines(p *content.Pack, id string, e *sim.Entry, recipes ...sim.Recipe) (lines []string, hint string) {
 	it := p.Items[id]
 	if it == nil || e == nil {
 		return nil, ""
@@ -210,6 +210,7 @@ func ItemLines(p *content.Pack, id string, e *sim.Entry) (lines []string, hint s
 		lines = append(lines, Text(p, it.Lore))
 	}
 	lines = append(lines, firstSeen(p, e))
+	lines = append(lines, RecipeLines(p, id, recipes)...)
 	if it.Teaches != "" {
 		return append(lines, scrollLines(p, it.Teaches)...), ""
 	}
@@ -249,6 +250,44 @@ func ItemLines(p *content.Pack, id string, e *sim.Entry) (lines []string, hint s
 		lines = append(lines, "Thrown, it poisons what it hits.")
 	}
 	return lines, ""
+}
+
+// RecipeLines say what the recipes made tell of item id: what it makes, what makes it, and what
+// fills it (docs/spec/player.md, The book).
+func RecipeLines(p *content.Pack, id string, recipes []sim.Recipe) []string {
+	var lines []string
+	for _, r := range recipes {
+		spell, holder, into := SpellName(p, r.Spell), ItemName(p, r.Holder), ItemName(p, r.Into)
+		from := "anything else"
+		if r.From != "" {
+			from = ItemName(p, r.From)
+		}
+		switch id {
+		case r.From:
+			lines = append(lines, fmt.Sprintf("%s, with %s, makes it into %s.", spell, article(holder), into))
+		case r.Into:
+			if r.From == "" {
+				lines = append(lines, fmt.Sprintf("Made by %s in %s from anything else.", spell, article(holder)))
+			} else {
+				lines = append(lines, fmt.Sprintf("Made by %s from %s in %s.", spell, from, article(holder)))
+			}
+		case r.Holder:
+			if r.From == "" {
+				lines = append(lines, fmt.Sprintf("%s fills it with %s from anything else.", spell, into))
+			} else {
+				lines = append(lines, fmt.Sprintf("%s fills it from %s with %s.", spell, from, into))
+			}
+		}
+	}
+	return lines
+}
+
+// article puts "a" or "an" before name.
+func article(name string) string {
+	if name != "" && strings.ContainsRune("AEIOUaeiou", rune(name[0])) {
+		return "an " + name
+	}
+	return "a " + name
 }
 
 // useHint returns the hint for an item not yet used: to wear one whose power starts worn and that

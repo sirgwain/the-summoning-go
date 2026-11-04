@@ -234,6 +234,12 @@ A creature's defenses are learned only by meeting them, each at the moment it wo
 
 Each death on the current level adds one to its template's kills. The items of the objects a dying creature drops are added to its entry's drops, each once, in the order first dropped. An item with nothing to use (no power, spell or conversation) and no `poisons_thrown` has nothing more to learn after stage 2.
 
+**Recipes.** The book also keeps the recipes the player has made, each once, in the order first made: a spell that fills a holder from the other hand (`transmute`, spells.md, Liquify) records the spell, the holder, the object it made from (none when the other hand held nothing it turns, and the result is `otherwise`) and what it made. A recipe reaches the entries of all three items, each at stage 1 at least, and each of them shows it, from first sight, after where it was first seen:
+
+- the object it was made from: "Liquify, with an Empty Bottle, makes it into Teiwaz." — the spell's name, the holder's and the result's;
+- what was made: "Made by Liquify from Amethyst in an Empty Bottle.", or with nothing turned, "Made by Liquify in an Empty Bottle from anything else.";
+- the holder: "Liquify fills it from Amethyst with Teiwaz.", or "Liquify fills it with Jera from anything else.".
+
 What an entry shows, stage by stage, each stage adding to the last:
 
 - **Creature, seen:** its name (the template's `name`, else its conversation's name), its picture (the first frame of its idle animation for its starting facing, or the first frame `animate` shows), its `lore` text, that it can be talked to (`talks`), and where and when it was first seen (the level's name and the play time).

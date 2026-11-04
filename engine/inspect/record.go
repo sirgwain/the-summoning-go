@@ -40,7 +40,7 @@ func FullCreature(p *content.Pack, w *sim.World, ps Places, id string) []PaneIte
 // FullItem returns what the full book says of item id on the current level of world w, whose
 // places are ps.
 func FullItem(p *content.Pack, w *sim.World, ps Places, id string) []PaneItem {
-	lines, _ := ItemLines(p, id, FullEntry(w.Book().Items[id], nil))
+	lines, _ := ItemLines(p, id, FullEntry(w.Book().Items[id], nil), w.Book().Recipes...)
 	var record any
 	if it := p.Items[id]; it != nil {
 		record = it

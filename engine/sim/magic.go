@@ -504,7 +504,7 @@ func (w *World) spellEffect(l *Level, c caster, sp *content.Spell, e content.Act
 			w.shapeChange(t.Template.Sprite)
 		}
 	case e.Transmute != nil:
-		w.transmute(l, e.Transmute, power)
+		w.transmute(l, sp, e.Transmute, power)
 	case e.CurePoison:
 		p.Poisoned = false
 		w.message(l, at, content.MsgCured, "")
@@ -656,7 +656,7 @@ func (w *World) endShapeChange() {
 
 // transmute fills the holder in one hand from the other hand's object (docs/spec/spells.md,
 // Liquify).
-func (w *World) transmute(l *Level, tr *content.Transmute, power int) {
+func (w *World) transmute(l *Level, sp *content.Spell, tr *content.Transmute, power int) {
 	p := w.player
 	hand := w.handHolding(tr.Holder)
 	if hand < 0 {
@@ -665,11 +665,13 @@ func (w *World) transmute(l *Level, tr *content.Transmute, power int) {
 	}
 	other := p.Slots[SlotRightHand+1-hand]
 	made, listed := tr.Otherwise, false
+	from := ""
 	if other != nil {
 		if into, ok := tr.Table[other.Item]; ok {
-			made, listed = into, true
+			made, listed, from = into, true, other.Item
 		}
 	}
+	holder := p.Slots[SlotRightHand+hand].Item
 	o := w.newObject(made)
 	if !listed {
 		o.Value = power
@@ -683,6 +685,9 @@ func (w *World) transmute(l *Level, tr *content.Transmute, power int) {
 		w.takeOff(other)
 	}
 	w.message(l, p.Cell(), content.MsgFilled, made)
+	if sp != nil {
+		w.learnRecipe(Recipe{Spell: sp.ID, Holder: holder, From: from, Into: made})
+	}
 }
 
 // read looks at the object in slot (input.SlotHand for the hand): a scroll teaches its icons.

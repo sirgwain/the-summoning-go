@@ -168,7 +168,7 @@ func (g gameBook) pane(tab int, id string) ([]inspect.PaneItem, string) {
 	if tab == BookCreatures {
 		lines, hint = inspect.CreatureLines(p, id, b.Creatures[id])
 	} else {
-		lines, hint = inspect.ItemLines(p, id, b.Items[id])
+		lines, hint = inspect.ItemLines(p, id, b.Items[id], b.Recipes...)
 	}
 	items := make([]inspect.PaneItem, len(lines))
 	for i, l := range lines {
