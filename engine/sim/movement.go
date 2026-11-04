@@ -168,7 +168,7 @@ func (w *World) rollBoulders(l *Level) {
 			continue
 		}
 		t.next = w.step + stepsMS(t.Template.IntervalMS)
-		t.glide.start(t.U, t.V, w.step)
+		t.glide.start(t.U, t.V, w.step, t.next)
 		d := t.Rolling.Direction
 		speed := t.Template.Speed
 		if speed == 0 {

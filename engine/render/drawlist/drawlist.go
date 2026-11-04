@@ -68,6 +68,8 @@ type Flight struct {
 	Frame  int
 	U, V   int
 	Spell  bool
+	// Back moves it on screen back toward where it was, as it glides (GlideBack).
+	Back image.Point
 }
 
 // flightHeight is how high above its ground point an object in flight is drawn, in pixels.
@@ -180,7 +182,12 @@ type Thing struct {
 	// drawn in place of the template's (a look the thing has taken).
 	Frame  *int
 	Sprite string
+	// Back moves it on screen back toward where it was, as it glides (GlideBack).
+	Back image.Point
 }
+
+// point returns the view pixel thing t's ground point is drawn at.
+func (t Thing) point() image.Point { return RefPoint(t.U, t.V).Add(t.Back) }
 
 // Label is text drawn over the view: damage shown over a thing, at the view pixel At, the top
 // middle of the thing's sprite.
@@ -400,7 +407,7 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 		if !ok || !s.shows(cell) || img.Frame < 0 || img.Frame >= sprite.Frames {
 			continue
 		}
-		at := RefPoint(f.U, f.V).Sub(image.Pt(sprite.FrameSize[0]/2, sprite.FrameSize[1]/2+flightHeight))
+		at := RefPoint(f.U, f.V).Add(f.Back).Sub(image.Pt(sprite.FrameSize[0]/2, sprite.FrameSize[1]/2+flightHeight))
 		cmd := Cmd{Sprite: img.Sprite, Frame: img.Frame, X: at.X, Y: at.Y}
 		if f.Spell {
 			cmd.Glow = GlowSpell
@@ -568,7 +575,7 @@ func thingCmd(p *content.Pack, t Thing) (Cmd, content.Cell, bool) {
 		}
 	}
 	anchor, _ := sprite.AnchorOf(frame)
-	at := RefPoint(t.U, t.V).Sub(image.Pt(anchor[0], anchor[1]))
+	at := t.point().Sub(image.Pt(anchor[0], anchor[1]))
 	cell := content.Cell{floorDiv(t.U, CellUnits), floorDiv(t.V, CellUnits)}
 	return Cmd{Sprite: sid, Frame: frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: tmpl.Kind == content.ThingPlayer && t.Sprite == ""}, cell, true
 }
@@ -595,7 +602,7 @@ func heldCmds(p *content.Pack, t Thing, cmd Cmd) []Cmd {
 				continue
 			}
 			anchor, _ := sprite.AnchorOf(cmd.Frame)
-			at := RefPoint(t.U, t.V).Sub(image.Pt(anchor[0], anchor[1]))
+			at := t.point().Sub(image.Pt(anchor[0], anchor[1]))
 			*layer.into = append(*layer.into, Cmd{Sprite: layer.sprite, Frame: cmd.Frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: cmd.Fixed})
 		}
 	}
@@ -615,7 +622,7 @@ func lookCmds(p *content.Pack, t Thing, cmd Cmd) []Cmd {
 			continue
 		}
 		anchor, _ := sprite.AnchorOf(cmd.Frame)
-		at := RefPoint(t.U, t.V).Sub(image.Pt(anchor[0], anchor[1]))
+		at := t.point().Sub(image.Pt(anchor[0], anchor[1]))
 		out = append(out, Cmd{Sprite: sid, Frame: cmd.Frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: cmd.Fixed})
 	}
 	return out

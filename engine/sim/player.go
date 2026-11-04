@@ -114,8 +114,11 @@ type Player struct {
 	// Name is the character's name, which texts give for @.
 	Name string
 
-	// want is the direction a walk was asked for since the last update, or −1.
+	// want is the direction a walk was asked for since the last update, or −1; held is whether
+	// a walk was asked for in the world update that ran the last, so that one asked for since is
+	// the same walk held on, which letting go drops (docs/spec/entities.md, The player's update).
 	want int
+	held bool
 	// last and next are the steps of the player's last update and its next; glide where it was
 	// at its last, to draw it gliding.
 	last, next int64
@@ -340,7 +343,7 @@ func (w *World) hurtPlayer(n int, k combat.Kind, by string) {
 func (w *World) updatePlayer() {
 	p := w.player
 	p.last, p.next = w.step, w.step+w.PlayerInterval()
-	p.glide.start(p.U, p.V, w.step)
+	p.glide.start(p.U, p.V, w.step, p.next)
 	if p.Dead {
 		return
 	}

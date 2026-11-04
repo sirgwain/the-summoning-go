@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
 
 func TestTileBox(t *testing.T) {
@@ -435,5 +436,20 @@ func TestSpellGlows(t *testing.T) {
 	}
 	if glows[1] != GlowSpell || glows[0] != NoGlow {
 		t.Errorf("spell glows %d, object %d; want %d and %d", glows[1], glows[0], GlowSpell, NoGlow)
+	}
+}
+
+// TestGlideBack draws a glide on screen: a step screen right keeps its row all the way.
+func TestGlideBack(t *testing.T) {
+	// A step along direction 1 goes (−4, +4) in the world: 8 pixels right, the same row.
+	u, v := 77, 85
+	for left := int64(0); left <= 6; left++ {
+		b := GlideBack(u, v, sim.Glide{FromU: u + 4, FromV: v - 4, Left: left, Span: 6})
+		if b.Y != 0 || b.X != -int(8*left/6) {
+			t.Errorf("%d of 6 steps left: drawn back %v, want (%d, 0)", left, b, -int(8*left/6))
+		}
+	}
+	if b := GlideBack(u, v, sim.Glide{}); b != (image.Point{}) {
+		t.Errorf("no glide drawn back %v", b)
 	}
 }

@@ -728,40 +728,64 @@ func TestMoveSlot(t *testing.T) {
 	}
 }
 
-// TestPlayerGlides draws the walking player between where it was and where it is, and a long
-// move such as a placement as a jump.
+// TestPlayerGlides draws the walking player gliding between its places, finishes the glide at
+// once when no walk is asked for, and draws a long move such as a placement as a jump.
 func TestPlayerGlides(t *testing.T) {
-	w := fightWorld(t, func(p *content.Pack) { p.Things["thing.player"].IntervalMS = 110 },
+	w := fightWorld(t, func(p *content.Pack) { p.Things["thing.player"].IntervalMS = 275 },
 		"#######",
 		"#@....#",
 		"#######")
 	p := w.Player()
-	playerUpdate(w, input.Walk{Direction: 2})
-	from := p.V
-	playerUpdate(w, input.Walk{Direction: 2})
-	if w.Step() != p.last+1 {
-		t.Fatal("the step was not just taken")
+	walk := input.Walk{Direction: 2}
+	// Holding the key asks for the walk every update, as the viewer does.
+	hold := func() {
+		next := p.next
+		for p.next == next {
+			w.Update([]input.Command{walk})
+		}
 	}
-	if p.V != from+8 {
+	hold()
+	from := p.V
+	hold()
+	if p.V != from+8 || w.Step() != p.last+1 {
 		t.Fatalf("a step went from v %d to %d, want +8", from, p.V)
 	}
-	seen := map[int]bool{}
-	for w.Step() < p.next {
-		u, v := p.Drawn(w.Step())
-		if u != p.U || v < from || v > p.V {
-			t.Fatalf("step %d: drawn at (%d, %d), want between v %d and %d", w.Step(), u, v, from, p.V)
-		}
-		seen[v] = true
+	g := p.Glide(w.Step())
+	if g.FromV != from || g.Left != g.Span-1 || g.Span < 4 {
+		t.Fatalf("just stepped, glide %+v, want from v %d with a step of its span gone", g, from)
+	}
+	w.Update([]input.Command{walk})
+	if left := p.Glide(w.Step()).Left; left != g.Left-1 {
+		t.Errorf("walking on, %d steps of the glide left, want %d", left, g.Left-1)
+	}
+	// Letting go: the glide finishes within two steps.
+	w.Update(nil)
+	if g := p.Glide(w.Step()); g.Span == 0 || g.Left > hurrySteps {
+		t.Errorf("let go, glide %+v, want at most %d steps left", g, hurrySteps)
+	}
+	w.Update(nil)
+	w.Update(nil)
+	if g := p.Glide(w.Step()); g.Span != 0 || w.Gliding() {
+		t.Errorf("two steps after letting go, still gliding %+v", g)
+	}
+	// Let go before its next update, the held walk takes no further step.
+	stopped := p.V
+	for end := p.next; w.Step() <= end; {
 		w.Update(nil)
 	}
-	if len(seen) < 2 {
-		t.Errorf("drawn at only %v between its updates, want it gliding", seen)
+	if p.V != stopped {
+		t.Errorf("let go, it stepped on from v %d to %d", stopped, p.V)
 	}
-	if u, v := p.Drawn(w.Step()); u != p.U || v != p.V {
-		t.Errorf("at its next update drawn at (%d, %d), want (%d, %d)", u, v, p.U, p.V)
+	// A tap after the update counts, though let go before the next.
+	w.Update([]input.Command{walk})
+	for end := p.next; w.Step() <= end; {
+		w.Update(nil)
+	}
+	if p.V != stopped+8 {
+		t.Errorf("a tap moved it from v %d to %d, want one step", stopped, p.V)
 	}
 	w.Update([]input.Command{input.PlacePlayer{Cell: content.Cell{1, 5}}})
-	if u, v := p.Drawn(w.Step()); u != p.U || v != p.V || w.Gliding() {
-		t.Errorf("placed, drawn at (%d, %d), want where it is (%d, %d)", u, v, p.U, p.V)
+	if g := p.Glide(w.Step()); g.Span != 0 {
+		t.Errorf("placed, glides %+v, want drawn where it is", g)
 	}
 }

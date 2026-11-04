@@ -6,6 +6,7 @@ package sim
 import (
 	"fmt"
 	"math/rand/v2"
+	"slices"
 	"sort"
 
 	"github.com/sirgwain/the-summoning-go/engine/combat"
@@ -188,8 +189,21 @@ func (w *World) Update(cmds []input.Command) []Event {
 		w.events = nil
 		return events
 	}
-	if p := w.player; p != nil && w.step >= p.next {
-		w.updatePlayer()
+	if p := w.player; p != nil {
+		// No walk asked for: the keys were let go. A walk held on from the last update is
+		// dropped (docs/spec/entities.md, The player's update), and the player's glide finishes
+		// at once (Drawn between updates).
+		walking := slices.ContainsFunc(cmds, func(c input.Command) bool { _, ok := c.(input.Walk); return ok })
+		if !walking {
+			if p.held {
+				p.want, p.held = -1, false
+			}
+			p.glide.hurry(p.U, p.V, w.step)
+		}
+		if w.step >= p.next {
+			w.updatePlayer()
+			p.held = walking
+		}
 	}
 	w.rollBoulders(w.Current())
 	w.updateCreatures(w.Current())

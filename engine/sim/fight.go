@@ -153,7 +153,7 @@ func (w *World) updateCreatures(l *Level) {
 			continue
 		}
 		t.next = w.step + stepsMS(t.Template.IntervalMS)
-		t.glide.start(t.U, t.V, w.step)
+		t.glide.start(t.U, t.V, w.step, t.next)
 		t.Moving = false
 		if t.Pose != "" {
 			t.Pose = ""

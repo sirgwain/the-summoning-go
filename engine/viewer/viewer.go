@@ -278,7 +278,7 @@ func (v *Viewer) follow() {
 	if p == nil {
 		return
 	}
-	at := drawlist.RefPoint(p.Drawn(v.World.Step()))
+	at := drawlist.RefPoint(p.U, p.V).Add(drawlist.GlideBack(p.U, p.V, p.Glide(v.World.Step())))
 	moved := at.Sub(v.seen.at)
 	v.seen.at = at
 	buf := v.BufferSize()

@@ -10,6 +10,19 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
 
+// GlideBack returns how far back toward where it was a thing at world point (u, v) gliding by g
+// is drawn, in view pixels: the Left / Span part of the way from where it is to where it was on
+// screen, rounded toward where it is (docs/spec/entities.md, Drawn between updates). Gliding on
+// screen keeps a step along a screen axis on its line.
+func GlideBack(u, v int, g sim.Glide) image.Point {
+	if g.Span <= 0 {
+		return image.Point{}
+	}
+	d := RefPoint(g.FromU, g.FromV).Sub(RefPoint(u, v))
+	part := func(n int) int { return int(int64(n) * g.Left / g.Span) }
+	return image.Pt(part(d.X), part(d.Y))
+}
+
 // SimScene returns a simulated level of world w as it is now, with the player when it is on the
 // level, showing what the player sees when the level has the player's visibility.
 func SimScene(w *sim.World, l *sim.Level) Scene {
@@ -36,8 +49,8 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 		}
 	}
 	for _, t := range l.Things {
-		u, v := t.Drawn(w.Step())
-		th := Thing{ID: t.ID, Template: t.Template.ID, U: u, V: v, Facing: t.Facing, Frame: t.Frame}
+		th := Thing{ID: t.ID, Template: t.Template.ID, U: t.U, V: t.V, Facing: t.Facing, Frame: t.Frame,
+			Back: GlideBack(t.U, t.V, t.Glide(w.Step()))}
 		if w.Step() < t.ShownUntil {
 			th.Shown = t.Shown
 		}
@@ -54,20 +67,20 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 		s.Things = append(s.Things, th)
 	}
 	for _, f := range l.Flights {
-		u, v := f.Drawn(w.Step())
+		back := GlideBack(f.U, f.V, f.Glide(w.Step()))
 		if f.Spell != nil {
-			s.Flights = append(s.Flights, Flight{Sprite: f.Spell.Sprite, Frame: f.Spell.Frame, U: u, V: v, Spell: true})
+			s.Flights = append(s.Flights, Flight{Sprite: f.Spell.Sprite, Frame: f.Spell.Frame, U: f.U, V: f.V, Spell: true, Back: back})
 			continue
 		}
-		fl := Flight{Item: f.Object.Item, U: u, V: v}
+		fl := Flight{Item: f.Object.Item, U: f.U, V: f.V, Back: back}
 		if it := w.Pack().Items[f.Object.Item]; it != nil && it.Flying != nil && (f.Fired || !it.Flying.FiredOnly) {
 			fl.Sprite, fl.Frame = it.Flying.Sprite, (f.Direction+1)%8
 		}
 		s.Flights = append(s.Flights, fl)
 	}
 	if p := w.Player(); p != nil && w.Current() == l {
-		u, v := p.Drawn(w.Step())
-		th := Thing{ID: sim.PlayerID, Template: p.Template.ID, U: u, V: v, Facing: p.Facing, Sprite: p.Look}
+		th := Thing{ID: sim.PlayerID, Template: p.Template.ID, U: p.U, V: p.V, Facing: p.Facing, Sprite: p.Look,
+			Back: GlideBack(p.U, p.V, p.Glide(w.Step()))}
 		if p.Look == "" && !w.DeepWater() {
 			th.Looks = p.FigureLooks(w.Pack())
 		}

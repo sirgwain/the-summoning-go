@@ -689,8 +689,8 @@ func TestTwoHandedBlocksItsHand(t *testing.T) {
 	}
 }
 
-// TestFlightGlides draws a thing in flight between where it was and where it is, never past
-// where the simulation has it, reaching it by its next update.
+// TestFlightGlides draws a thing in flight gliding from where it was to where it is, reaching
+// it by its next update.
 func TestFlightGlides(t *testing.T) {
 	w := fightWorld(t, nil,
 		"############",
@@ -701,8 +701,8 @@ func TestFlightGlides(t *testing.T) {
 	p.Slots[SlotRightHand] = w.newObject("item.rock")
 	w.Update([]input.Command{input.Throw{Hand: 0}})
 	f := l.Flights[0]
-	if u, v := f.Drawn(w.Step()); u != f.U || v != f.V {
-		t.Errorf("a flight just thrown is drawn at (%d, %d), want where it is (%d, %d)", u, v, f.U, f.V)
+	if g := f.Glide(w.Step()); g.Span != 0 {
+		t.Errorf("a flight just thrown glides %+v, want drawn where it is", g)
 	}
 	glided := false
 	for range 30 {
@@ -710,21 +710,19 @@ func TestFlightGlides(t *testing.T) {
 		if len(l.Flights) == 0 {
 			break
 		}
-		u, v := f.Drawn(w.Step())
-		if u != f.glide.u || v != f.glide.v {
-			if u != f.U || v != f.V {
-				glided = true
-			}
+		g := f.Glide(w.Step())
+		if g.Span == 0 {
+			continue
 		}
-		// Along direction 2 only v changes, from fromV up to V.
-		if u != f.U || v < f.glide.v || v > f.V {
-			t.Fatalf("step %d: drawn at (%d, %d), want between (%d, %d) and (%d, %d)", w.Step(), u, v, f.glide.u, f.glide.v, f.U, f.V)
+		glided = true
+		if g.FromU != f.U || f.V-g.FromV != flightSpeed || g.Left <= 0 || g.Left > g.Span {
+			t.Fatalf("step %d: glide %+v to (%d, %d), want 8 along v with some of its span left", w.Step(), g, f.U, f.V)
 		}
-		if u, v := f.Drawn(f.next); u != f.U || v != f.V {
-			t.Fatalf("at its next update it is drawn at (%d, %d), want (%d, %d)", u, v, f.U, f.V)
+		if g := f.Glide(f.next); g.Span != 0 {
+			t.Fatalf("at its next update it still glides: %+v", g)
 		}
 	}
 	if !glided {
-		t.Error("the flight was never drawn between its places")
+		t.Error("the flight never glided")
 	}
 }

@@ -61,7 +61,8 @@ func (w *World) missileDamage(o *Object, fired bool) int {
 // touching something already hits it at once, and the object lands at its feet.
 func (w *World) launch(l *Level, o *Object, u, v, d, rng, damage int, byPlayer, fired bool, thrower *Thing) {
 	f := &Flight{Object: o, U: u, V: v, Direction: d, Range: rng, Damage: damage, ByPlayer: byPlayer, Fired: fired, Thrower: thrower,
-		next: w.step + Steps(flightTicks), glide: glide{u: u, v: v, at: w.step, set: true}}
+		next: w.step + Steps(flightTicks)}
+	f.glide.start(u, v, w.step, f.next)
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: f.Cell(), Item: o.Item, Detail: "thrown"})
 	if b := w.flightBlocker(l, f, u+Dirs[d][0]*touchReach, v+Dirs[d][1]*touchReach, flightFootprint+touchReach); b != nil {
 		w.flightHits(l, f, b)
@@ -111,7 +112,7 @@ func (w *World) updateFlights(l *Level) {
 			continue
 		}
 		f.next = w.step + Steps(flightTicks)
-		f.glide.start(f.U, f.V, w.step)
+		f.glide.start(f.U, f.V, w.step, f.next)
 		if f.Spell != nil {
 			w.updateSpell(l, f)
 			continue
