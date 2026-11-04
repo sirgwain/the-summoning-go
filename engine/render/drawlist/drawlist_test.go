@@ -511,3 +511,38 @@ func TestGlideBack(t *testing.T) {
 		t.Errorf("no glide drawn back %v", b)
 	}
 }
+
+// TestCellsBackToFront checks the cells listed straight in order against the plain way of
+// getting them: every cell, stable-sorted by a + b and then b − a.
+func TestCellsBackToFront(t *testing.T) {
+	sorted := func(rows, columns int) []content.Cell {
+		var cells []content.Cell
+		for a := range rows {
+			for b := range columns {
+				cells = append(cells, content.Cell{a, b})
+			}
+		}
+		slices.SortStableFunc(cells, func(x, y content.Cell) int {
+			if dx, dy := x[0]+x[1], y[0]+y[1]; dx != dy {
+				return dx - dy
+			}
+			return (x[1] - x[0]) - (y[1] - y[0])
+		})
+		return cells
+	}
+	for _, size := range [][2]int{{0, 0}, {1, 1}, {1, 7}, {7, 1}, {3, 5}, {5, 3}, {64, 64}, {41, 97}} {
+		got, want := cellsBackToFront(size[0], size[1]), sorted(size[0], size[1])
+		if len(got) == 0 && len(want) == 0 {
+			continue
+		}
+		if !slices.Equal(got, want) {
+			t.Errorf("%d×%d: the cells come in another order", size[0], size[1])
+		}
+	}
+}
+
+func BenchmarkCellsBackToFront(b *testing.B) {
+	for b.Loop() {
+		cellsBackToFront(64, 64)
+	}
+}

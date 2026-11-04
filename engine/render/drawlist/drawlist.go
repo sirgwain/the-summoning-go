@@ -697,21 +697,21 @@ func placed(pl content.Placed) Cmd {
 }
 
 // cellsBackToFront returns the cells of a rows×columns grid by increasing a + b, then left to
-// right.
+// right (by increasing b − a).
+//
+// Optimization: this lists the cells straight in that order, one diagonal a + b = d at a time,
+// with a falling so b − a rises, rather than sorting them. It runs at every rebuild of the scene,
+// and sorting every cell of the level was most of a rebuild's time. The order is only a function
+// of the grid's size; if the order ever needs to depend on anything else, or this goes wrong,
+// sorting the cells with the comparison above is the plain way back (TestCellsBackToFront keeps
+// it as the reference).
 func cellsBackToFront(rows, columns int) []content.Cell {
 	cells := make([]content.Cell, 0, rows*columns)
-	for a := range rows {
-		for b := range columns {
-			cells = append(cells, content.Cell{a, b})
+	for d := 0; d <= rows+columns-2; d++ {
+		for a := min(d, rows-1); a >= max(0, d-columns+1); a-- {
+			cells = append(cells, content.Cell{a, d - a})
 		}
 	}
-	sort.SliceStable(cells, func(i, j int) bool {
-		di, dj := cells[i][0]+cells[i][1], cells[j][0]+cells[j][1]
-		if di != dj {
-			return di < dj
-		}
-		return cells[i][1]-cells[i][0] < cells[j][1]-cells[j][0]
-	})
 	return cells
 }
 
