@@ -281,7 +281,7 @@ func (v *Viewer) follow() {
 	at := drawlist.RefPoint(p.U, p.V).Add(drawlist.GlideBack(p.U, p.V, p.Glide(v.World.Step())))
 	moved := at.Sub(v.seen.at)
 	v.seen.at = at
-	buf := v.BufferSize()
+	buf := v.seenSize()
 	rel := at.Sub(v.Origin)
 	if v.seen.level != v.Shown || !rel.In(image.Rectangle{Max: buf}) {
 		v.Recenter()
@@ -306,7 +306,7 @@ func (v *Viewer) follow() {
 func (v *Viewer) Recenter() {
 	if p := v.World.Player(); v.Play && p != nil {
 		v.seen.at, v.seen.level = drawlist.RefPoint(p.U, p.V), v.Shown
-		v.Origin = v.seen.at.Sub(v.BufferSize().Div(2))
+		v.Origin = v.seen.at.Sub(v.seenSize().Div(2))
 		return
 	}
 	if s := v.Pack.Manifest.Start; s.Level == v.Shown {
@@ -315,6 +315,17 @@ func (v *Viewer) Recenter() {
 	}
 	center := v.Bounds.Min.Add(v.Bounds.Max).Div(2)
 	v.Origin = center.Sub(v.BufferSize().Div(2))
+}
+
+// seenSize is the size in view pixels of the part of the world buffer the player sees, from its
+// top-left: while playing, the hotbar covers the bottom.
+func (v *Viewer) seenSize() image.Point {
+	buf := v.BufferSize()
+	if p := v.World.Player(); v.Play && p != nil {
+		r, s := v.hotbarRect()
+		buf.Y = max(1, min(buf.Y, framed(r, s).Min.Y/v.Scale))
+	}
+	return buf
 }
 
 // Resize sets the size of the screen. While playing the view centers on the player; otherwise it

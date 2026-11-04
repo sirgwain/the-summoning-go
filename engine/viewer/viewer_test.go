@@ -1119,7 +1119,22 @@ func TestResizeCentersOnThePlayer(t *testing.T) {
 	v.SetPlay(true)
 	v.Resize(image.Pt(1920, 1200))
 	p := v.World.Player()
-	if got, want := v.Origin.Add(v.BufferSize().Div(2)), drawlist.RefPoint(p.U, p.V); got != want {
+	if got, want := v.Origin.Add(v.seenSize().Div(2)), drawlist.RefPoint(p.U, p.V); got != want {
 		t.Errorf("middle %v after resizing, want the player at %v", got, want)
+	}
+}
+
+func TestFollowKeepsThePlayerAboveTheHotbar(t *testing.T) {
+	v := newViewer(t)
+	v.SetPlay(true)
+	v.Recenter()
+	r, s := v.hotbarRect()
+	top := framed(r, s).Min.Y / v.Scale
+	if seen := v.seenSize(); seen.Y != top {
+		t.Fatalf("seen height %d, want the hotbar's top %d", seen.Y, top)
+	}
+	p := v.World.Player()
+	if rel := drawlist.RefPoint(p.U, p.V).Sub(v.Origin); rel.Y != top/2 {
+		t.Errorf("player %d view pixels down, want %d, halfway to the hotbar", rel.Y, top/2)
 	}
 }

@@ -113,6 +113,14 @@ func hotbarSize() image.Point {
 	return image.Pt(w, ShelfRows*SlotSize)
 }
 
+// hotbarRect is where the hotbar is on the screen, inside its frame, and its scale.
+func (v *Viewer) hotbarRect() (image.Rectangle, int) {
+	size := hotbarSize()
+	s := max(1, min(v.Screen.X/hotbarWidthPer, maxHotbarScale, v.Screen.X/(size.X+2*frame.Width)))
+	at := image.Pt((v.Screen.X-size.X*s)/2, v.Screen.Y-(size.Y+frame.Width)*s-Margin)
+	return image.Rectangle{at, at.Add(size.Mul(s))}, s
+}
+
 // Hotbar returns the hotbar as the player stands now, or nil when not playing.
 func (v *Viewer) Hotbar() *Hotbar {
 	p := v.World.Player()
@@ -120,9 +128,8 @@ func (v *Viewer) Hotbar() *Hotbar {
 		return nil
 	}
 	size := hotbarSize()
-	s := max(1, min(v.Screen.X/hotbarWidthPer, maxHotbarScale, v.Screen.X/(size.X+2*frame.Width)))
-	at := image.Pt((v.Screen.X-size.X*s)/2, v.Screen.Y-(size.Y+frame.Width)*s-Margin)
-	h := &Hotbar{Rect: image.Rectangle{at, at.Add(size.Mul(s))}, Scale: s}
+	r, s := v.hotbarRect()
+	h := &Hotbar{Rect: r, Scale: s}
 	h.Frame = framed(h.Rect, s)
 
 	h.PortraitRect = image.Rect(0, 0, portraitSize, portraitSize)
