@@ -299,7 +299,7 @@ func TestImportFeatures(t *testing.T) {
 		"p1": {
 			{Create: &content.Create{Cell: cell(1, 0), Item: dagger}},
 			{SetThreshold: &content.SetThreshold{Feature: "plate.1.2", Value: 99}},
-			{Roll: &content.Roll{Thing: "boulder.1.1", Direction: 4}},
+			{Roll: &content.Roll{Thing: "boulder.1.1", Direction: 4, Shuttle: true}},
 		},
 	}
 	if !reflect.DeepEqual(l.Procedures, wantProcs) {

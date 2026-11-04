@@ -739,7 +739,7 @@ func (lb *levelBuilder) action(n int, in Instruction) (content.Action, bool) {
 		if arg > 7 || arg%2 != 0 {
 			return drop("boulder direction %d", arg)
 		}
-		return content.Action{Roll: &content.Roll{Thing: b, Direction: int(arg), Shuttle: in.Op == 6}}, true
+		return content.Action{Roll: &content.Roll{Thing: b, Direction: int(arg), Shuttle: in.Op == 5}}, true
 	case 8:
 		item, ok := lb.im.item(int(arg), lb.what(c, "procedure %d", n))
 		if !ok || arg2 > 7 {

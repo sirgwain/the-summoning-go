@@ -97,15 +97,15 @@ Procedure `n` is the n-th procedure in the level's script pool (formats.md). Its
 | 2 | x, y | Toggle any of the above |
 | 3 | x, y, which, p | Set the trigger's procedure a (`which` 0) or b (1) to `p` |
 | 4 | x, y, state | Set the state (its message) of the mouth at the cell |
-| 5 | x, y, dir | Start the boulder placed at the cell rolling along direction `dir`, an even direction table entry (0, 2, 4 or 6); it stops when blocked |
-| 6 | x, y, dir | As 5, but the boulder reverses when blocked and keeps rolling |
+| 5 | x, y, dir | Start the boulder placed at the cell rolling along direction `dir`, an even direction table entry (0, 2, 4 or 6); it reverses when blocked and keeps rolling |
+| 6 | x, y, dir | As 5, but the boulder stops when blocked |
 | 7 | x, y | Stop the boulder placed at the cell |
 | 8 | x, y, template, dir | Shoot a new object of the template from the cell along `dir` (arrow traps) |
 | 9 | x, y, spell, dir | Shoot a spell from the cell along `dir`, power 6d10 |
 | 10 | x, y, threshold | Set the trigger's threshold |
 | 11 | x, y, template | Create an object of the template on the cell's floor |
 
-Boulders are found by the cell they were placed on, not where they are now. Conversations run procedures too (dialogue.md).
+Boulders are found by the cell they were placed on, not where they are now. Ops 5 and 6 on a boulder that is already rolling only turn it to `dir`; it keeps stopping or reversing as it did. Conversations run procedures too (dialogue.md).
 
 ## Deep water
 
@@ -176,7 +176,7 @@ Procedure `n` is named `p<n>`. Its ops become actions on the feature or thing at
 | 0, 1, 2 | `on`, `off`, `toggle` |
 | 3 | `set_hook`, procedure a or b as the hook of the feature's kind |
 | 4 | `set_message`, the level message `state` |
-| 5, 6, 7 | `roll` (6 shuttling) and `stop` of the boulder placed at the cell, in direction `dir` |
+| 5, 6, 7 | `roll` (5 shuttling) and `stop` of the boulder placed at the cell, in direction `dir` |
 | 8 | `shoot_item` |
 | 9 | `shoot_spell`, power 6d10 |
 | 10 | `set_threshold` on a plate, `set_accepts` (the template) on a slot |
