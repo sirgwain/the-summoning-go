@@ -486,6 +486,25 @@ func hasTag(it *content.Item, tag string) bool {
 
 // swing strikes with object o (nil for bare hands) by action a, swinging hand (2 for both): at
 // the first creature one step ahead (docs/spec/combat.md, The player attacks).
+// strikeAt returns what a blow at a footprint n wide at (u, v) meets: the first living creature
+// there, past any corpse or object in front of it, else the first thing there, else nil
+// (docs/spec/combat.md, The player attacks).
+func (w *World) strikeAt(l *Level, u, v, n int) *body {
+	var first *body
+	for _, b := range w.bodies(l) {
+		if b.thing == nil || !overlaps(u, v, n, b.u, b.v, b.n) {
+			continue
+		}
+		if alive(b.thing) {
+			return &b
+		}
+		if first == nil {
+			first = &b
+		}
+	}
+	return first
+}
+
 func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 	p, l := w.player, w.Current()
 	w.pose(hand)
@@ -494,7 +513,7 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 		speed = 8
 	}
 	d := p.Facing
-	b := w.blocker(l, nil, true, p.U+Dirs[d][0]*speed, p.V+Dirs[d][1]*speed, p.Template.Size(), nil)
+	b := w.strikeAt(l, p.U+Dirs[d][0]*speed, p.V+Dirs[d][1]*speed, p.Template.Size())
 	switch {
 	case b == nil || b.thing == nil || !alive(b.thing):
 		w.message(l, p.Cell(), content.MsgNotACreature, "")

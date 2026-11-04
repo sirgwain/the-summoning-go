@@ -726,3 +726,24 @@ func TestFlightGlides(t *testing.T) {
 		t.Error("the flight never glided")
 	}
 }
+
+// TestStrikePastCorpse strikes a living creature standing behind a corpse, rather than meeting
+// the corpse and finding nothing to hit.
+func TestStrikePastCorpse(t *testing.T) {
+	w := fightWorld(t, nil,
+		"#######",
+		"#@.G..#",
+		"#######")
+	p, l := w.Player(), w.Current()
+	g := l.Thing("guard")
+	p.Facing = 2
+	besideGuard(w)
+	// A corpse lying between them, first among the level's things.
+	corpse := *g
+	corpse.ID, corpse.HitPoints, corpse.Items, corpse.V = "corpse", 0, nil, g.V-6
+	l.Things = append([]*Thing{&corpse}, l.Things...)
+	ev := strike(w, 0, 0)
+	if has(ev, EventMessage, content.MsgNotACreature) || g.HitPoints >= 20 {
+		t.Errorf("the swing met the corpse: %v, the guard at %d hit points", ev, g.HitPoints)
+	}
+}
