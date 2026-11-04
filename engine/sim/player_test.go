@@ -727,3 +727,41 @@ func TestMoveSlot(t *testing.T) {
 		t.Error("with no empty shelf the chest's object moved, or no message")
 	}
 }
+
+// TestPlayerGlides draws the walking player between where it was and where it is, and a long
+// move such as a placement as a jump.
+func TestPlayerGlides(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) { p.Things["thing.player"].IntervalMS = 110 },
+		"#######",
+		"#@....#",
+		"#######")
+	p := w.Player()
+	playerUpdate(w, input.Walk{Direction: 2})
+	from := p.V
+	playerUpdate(w, input.Walk{Direction: 2})
+	if w.Step() != p.last+1 {
+		t.Fatal("the step was not just taken")
+	}
+	if p.V != from+8 {
+		t.Fatalf("a step went from v %d to %d, want +8", from, p.V)
+	}
+	seen := map[int]bool{}
+	for w.Step() < p.next {
+		u, v := p.Drawn(w.Step())
+		if u != p.U || v < from || v > p.V {
+			t.Fatalf("step %d: drawn at (%d, %d), want between v %d and %d", w.Step(), u, v, from, p.V)
+		}
+		seen[v] = true
+		w.Update(nil)
+	}
+	if len(seen) < 2 {
+		t.Errorf("drawn at only %v between its updates, want it gliding", seen)
+	}
+	if u, v := p.Drawn(w.Step()); u != p.U || v != p.V {
+		t.Errorf("at its next update drawn at (%d, %d), want (%d, %d)", u, v, p.U, p.V)
+	}
+	w.Update([]input.Command{input.PlacePlayer{Cell: content.Cell{1, 5}}})
+	if u, v := p.Drawn(w.Step()); u != p.U || v != p.V || w.Gliding() {
+		t.Errorf("placed, drawn at (%d, %d), want where it is (%d, %d)", u, v, p.U, p.V)
+	}
+}

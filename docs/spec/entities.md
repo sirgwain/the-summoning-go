@@ -26,6 +26,10 @@ Each entity is updated when its next update time arrives, and then rescheduled `
 
 Entities are **active** only while near the player: while their reference point lies within a window around the view, 64 pixels beyond its top and left and the original view's 256×544 extent (rows −64..255, columns −64..543, relative to the view origin). An inactive creature waits an extra 9–17 ticks before its next update. The engine keeps this window fixed in world size, whatever the display size, so creatures wake at the same distance.
 
+## Drawn between updates
+
+The game draws each entity where it is, so a walking figure jumps a step, and a thing in flight 8 units, at each of its updates. The engine draws the player, creatures, boulders and things in flight gliding instead, and this changes nothing in play. At its update, step `m`, an entity notes where it is. Until its next update, step `n`, it is drawn at step `s` the fraction `(s − m) / (n − m)` of the way from there to where it is now, each coordinate rounded toward where it was; from step `n` on, where it is. A move of more than 16 units along either axis since its update (a teleporter, being placed, a level entered) is drawn as a jump, and so is everything until its first update, and after a saved game is restored. Its frames change as they do in the game, at its updates; only its place glides. The view follows the player where the player is drawn.
+
 ## Standing cell
 
 The cell an entity stands on is the cell of its position plus an offset by kind:
@@ -168,7 +172,7 @@ A thing in flight is an object thrown or fired, by the player, a creature or a c
 
 A thrower already touching something when it throws (a thing within 4 units ahead of its footprint) hits it at once, and the object lands at its feet.
 
-**Drawing it.** The game draws a thing in flight where it is, so it jumps 8 units each tick. The engine draws it gliding instead, and this changes nothing in play: between its updates, at step `s`, it is drawn the fraction `(s − m) / (n − m)` of the way from where it was before its last update to where it is, `m` being the step of its last update and `n` that of its next, each coordinate rounded toward where it was. An update that did not move it (its first, one that ended it, an ended spell's frames) leaves it drawn where it is, and so does a teleporter's move, which is drawn as a jump. A flight restored from a save is drawn where it is until its next update. The same holds for spells in flight (spells.md, Missiles).
+**Drawing it.** It glides between its moves, as Drawn between updates says; spells in flight do the same (spells.md, Missiles).
 
 ### The player's update
 

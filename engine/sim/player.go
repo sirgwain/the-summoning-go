@@ -116,8 +116,10 @@ type Player struct {
 
 	// want is the direction a walk was asked for since the last update, or −1.
 	want int
-	// last and next are the steps of the player's last update and its next.
+	// last and next are the steps of the player's last update and its next; glide where it was
+	// at its last, to draw it gliding.
 	last, next int64
+	glide      glide
 	// delays and gesture are the hands' delays and the gesture playing as they began, for
 	// HandWait and GestureWait.
 	delays  [2]wait
@@ -338,6 +340,7 @@ func (w *World) hurtPlayer(n int, k combat.Kind, by string) {
 func (w *World) updatePlayer() {
 	p := w.player
 	p.last, p.next = w.step, w.step+w.PlayerInterval()
+	p.glide.start(p.U, p.V, w.step)
 	if p.Dead {
 		return
 	}

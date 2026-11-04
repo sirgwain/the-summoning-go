@@ -101,8 +101,9 @@ type Thing struct {
 	spinNext            int64
 	// walkDir (0..3, 4 resting) and walkCount are a walker's current walk.
 	walkDir, walkCount int
-	// next is the step of its next update.
-	next int64
+	// next is the step of its next update; glide where it was at its last, to draw it gliding.
+	next  int64
+	glide glide
 }
 
 // Cell returns the cell the thing stands in.

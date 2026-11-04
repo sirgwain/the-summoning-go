@@ -62,6 +62,8 @@ type Viewer struct {
 	// magnified them at the last rebuild.
 	Magnify   bool
 	magnified bool
+	// glided is whether anything was drawn gliding at the last update.
+	glided bool
 	// Lit lights the view and shadows its figures (docs/spec/world.md, Light and shadow).
 	Lit bool
 	// Play drives the player with the keys and keeps the view on it, instead of the tools.
@@ -276,7 +278,7 @@ func (v *Viewer) follow() {
 	if p == nil {
 		return
 	}
-	at := drawlist.RefPoint(p.U, p.V)
+	at := drawlist.RefPoint(p.Drawn(v.World.Step()))
 	moved := at.Sub(v.seen.at)
 	v.seen.at = at
 	buf := v.BufferSize()
@@ -538,11 +540,14 @@ func (v *Viewer) took(events []sim.Event) []sim.Event {
 			}
 		}
 	}
-	// Shown damage runs out without an event, and things in flight glide between their moves
-	// (docs/spec/entities.md, Things in flight), so a view showing either rebuilds each update.
-	if len(events) > 0 || len(v.Labels) > 0 || len(v.World.Current().Flights) > 0 || v.World.Magnified() != v.magnified {
+	// Shown damage runs out without an event, and things glide between their moves
+	// (docs/spec/entities.md, Drawn between updates), so a view showing either rebuilds each
+	// update, and once more when the last glide ends.
+	gliding := v.World.Gliding()
+	if len(events) > 0 || len(v.Labels) > 0 || gliding || v.glided || v.World.Magnified() != v.magnified {
 		v.rebuild()
 	}
+	v.glided = gliding
 	if a := v.arrival; a != nil {
 		if v.Shown == a.Level {
 			v.CenterOn(a.Cell)

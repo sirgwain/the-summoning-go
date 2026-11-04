@@ -711,14 +711,14 @@ func TestFlightGlides(t *testing.T) {
 			break
 		}
 		u, v := f.Drawn(w.Step())
-		if u != f.fromU || v != f.fromV {
+		if u != f.glide.u || v != f.glide.v {
 			if u != f.U || v != f.V {
 				glided = true
 			}
 		}
 		// Along direction 2 only v changes, from fromV up to V.
-		if u != f.U || v < f.fromV || v > f.V {
-			t.Fatalf("step %d: drawn at (%d, %d), want between (%d, %d) and (%d, %d)", w.Step(), u, v, f.fromU, f.fromV, f.U, f.V)
+		if u != f.U || v < f.glide.v || v > f.V {
+			t.Fatalf("step %d: drawn at (%d, %d), want between (%d, %d) and (%d, %d)", w.Step(), u, v, f.glide.u, f.glide.v, f.U, f.V)
 		}
 		if u, v := f.Drawn(f.next); u != f.U || v != f.V {
 			t.Fatalf("at its next update it is drawn at (%d, %d), want (%d, %d)", u, v, f.U, f.V)

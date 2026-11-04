@@ -58,7 +58,7 @@ func flightFrame(d int) int { return (d + 1) % 8 }
 func (w *World) launchSpell(l *Level, c caster, d int, m *content.MissileSpell, power int) {
 	f := &Flight{U: c.u, V: c.v, Direction: d, Range: missileRange, Damage: power, ByPlayer: c.player, Thrower: c.thing,
 		Spell: &SpellFlight{Missile: m, Power: power, Sprite: m.Sprite}, next: w.step + Steps(flightTicks),
-		fromU: c.u, fromV: c.v, moved: w.step}
+		glide: glide{u: c.u, v: c.v, at: w.step, set: true}}
 	if m.Directional {
 		f.Spell.Frame = flightFrame(d)
 	}
