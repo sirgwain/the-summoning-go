@@ -27,7 +27,7 @@ func init() {
 func newViewCmd(play bool) *cobra.Command {
 	var level, screenshot, script, out, saves, load string
 	var scale, shotTicks int
-	var magnify, menu, mute, lighting bool
+	var magnify, menu, mute, lighting, fullscreen bool
 	var at, sel []int
 	var seed uint64
 	use, short, long := "view [pack-dir]", "Look around a content pack's levels and work their mechanisms",
@@ -223,6 +223,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 			ebiten.SetWindowTitle("The Summoning: " + pack.Manifest.Name)
 			ebiten.SetWindowSize(windowWidth, windowHeight)
 			ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
+			ebiten.SetFullscreen(fullscreen)
 			if err := ebiten.RunGame(w); err != nil && !errors.Is(err, ebiten.Termination) {
 				return err
 			}
@@ -243,6 +244,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 	if play {
 		viewCmd.Flags().BoolVar(&menu, "menu", true, "start at the main menu when the pack has character creation (while a script runs, only when given)")
 	}
+	viewCmd.Flags().BoolVar(&fullscreen, "fullscreen", false, "start in full screen")
 	viewCmd.Flags().BoolVar(&mute, "mute", false, "play no music or sound effects (none while a script runs)")
 	viewCmd.Flags().StringVar(&screenshot, "screenshot", "", "save a frame to this PNG file and exit")
 	viewCmd.Flags().IntVar(&shotTicks, "screenshot-ticks", 0, "updates to run before the screenshot")

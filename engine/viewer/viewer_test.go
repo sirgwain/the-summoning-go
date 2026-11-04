@@ -1104,3 +1104,22 @@ func TestFollowExitCentersOnTheEntrance(t *testing.T) {
 		t.Errorf("origin %v, centered on the entrance %v", want, v.Origin)
 	}
 }
+
+func TestResizeKeepsTheMiddle(t *testing.T) {
+	v := newViewer(t)
+	mid := v.Origin.Add(v.BufferSize().Div(2))
+	v.Resize(image.Pt(1920, 1200))
+	if got := v.Origin.Add(v.BufferSize().Div(2)); got != mid {
+		t.Errorf("middle %v after resizing, want %v", got, mid)
+	}
+}
+
+func TestResizeCentersOnThePlayer(t *testing.T) {
+	v := newViewer(t)
+	v.SetPlay(true)
+	v.Resize(image.Pt(1920, 1200))
+	p := v.World.Player()
+	if got, want := v.Origin.Add(v.BufferSize().Div(2)), drawlist.RefPoint(p.U, p.V); got != want {
+		t.Errorf("middle %v after resizing, want the player at %v", got, want)
+	}
+}

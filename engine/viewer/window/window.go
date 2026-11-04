@@ -262,7 +262,7 @@ func (s *Window) takeShots(screen *ebiten.Image) {
 }
 
 func (s *Window) Layout(outsideWidth, outsideHeight int) (int, int) {
-	s.v.Screen = image.Pt(outsideWidth, outsideHeight)
+	s.v.Resize(image.Pt(outsideWidth, outsideHeight))
 	return outsideWidth, outsideHeight
 }
 

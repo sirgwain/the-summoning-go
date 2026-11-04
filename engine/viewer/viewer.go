@@ -317,6 +317,21 @@ func (v *Viewer) Recenter() {
 	v.Origin = center.Sub(v.BufferSize().Div(2))
 }
 
+// Resize sets the size of the screen. While playing the view centers on the player; otherwise it
+// keeps the view pixel at its middle there.
+func (v *Viewer) Resize(size image.Point) {
+	if size == v.Screen {
+		return
+	}
+	mid := v.Origin.Add(v.BufferSize().Div(2))
+	v.Screen = size
+	if p := v.World.Player(); v.Play && p != nil {
+		v.Recenter()
+		return
+	}
+	v.Origin = mid.Sub(v.BufferSize().Div(2))
+}
+
 // CenterOn centers the view on cell c.
 func (v *Viewer) CenterOn(c content.Cell) {
 	v.Origin = cellCenter(c).Sub(v.BufferSize().Div(2))
