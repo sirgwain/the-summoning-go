@@ -231,7 +231,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 		},
 	}
 	viewCmd.Flags().StringVar(&level, "level", "", "id of the level to open, as in its level.json, e.g. level.05 for packs/summoning/levels/05 (default: the start level)")
-	viewCmd.Flags().IntVar(&scale, "scale", 2, "pixels per art pixel")
+	viewCmd.Flags().IntVar(&scale, "scale", 3, "pixels per art pixel")
 	viewCmd.Flags().IntSliceVar(&at, "at", nil, "center the view on this cell, as x,y")
 	viewCmd.Flags().IntSliceVar(&sel, "select", nil, "select this cell, as x,y")
 	viewCmd.Flags().BoolVar(&lighting, "lighting", true, "light the view around fires and spells, and shadow figures (false draws it as the game does)")
