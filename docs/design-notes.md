@@ -138,7 +138,7 @@ then the menu. Scenes play pictures, parts, captions over banners and fades by t
 or click skips. Tested by `TestCreateCharacter`, `TestPremadeAndBack`, `TestDeathAndEndingGoToMenu`
 and `TestSceneRun`. The splash fades its art in, fills its title in from the left and plays the
 opening track; the menus sit over it in the remake's iron frame, lettered in `engine/font`. Seen
-on screen: the splash, the menus and the door. Not yet: the imported ending scene.
+on screen: the splash, the menus and the door.
 
 **Done (the story, in short).** Create Character (or a premade) starts track 1, which plays
 through the creation screens, fades on going back to the menu, and fades as the story ends.
@@ -150,6 +150,18 @@ the second picture as she sends you away. Scenes gained `size`, `text`/`box`, `s
 and `crop`; a key or click ends a page early, Escape skips the story (`TestStory`,
 `TestGameStory`). Scripts can start at the menu with `--menu`. Seen on screen through a script.
 The full seven-part story is still to be specified.
+
+**Done (the end scenes).** Each ending plays its end scene after the closing: the god of Magic
+(E), Chesschantra's return (F) and Borel's farewell (G), on the 320 × 400 screen in palette 7
+with its reds and golds cycling. The importer plays each by spec/scenes.md's rules at a fixed
+seed (`importers/summoning/endscenes.go`): what stays is the scene's pictures, and what moves (the
+glow, figures called up and growing, sparkles, the blast's trail, the world's end's battles and
+flights, Abighael's walk, the two shrinking into the portal) is a frame of pictures over them,
+one an update. Scenes gained `over`, `palette`, `mirror`, captions in a box and `no_caption`,
+fades in from and over a color and of some palette colors, `cancel` runs, `escape_only`, and
+music steps. The captions are the engine's own words. `summoning play --scene` plays a scene
+first. Tested by `TestSceneOver`, `TestEndScenes` and `TestGameEndScenes`; seen frame by frame
+through the pack.
 
 **Done (the disk menu).** O opens the pack's menu conversation (NPC record 0's; the dev pack's
 offers each menu by keyword). Its `menu` actions open frontend screens over play: save under a

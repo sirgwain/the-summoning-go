@@ -274,6 +274,7 @@ func Import(src *Source, opt Options) (*content.Pack, *Report, error) {
 	// After the audio, so the flipbooks name only sounds the pack has.
 	im.effects()
 	im.sparkles()
+	im.endScenes()
 	im.linkFlipbooks()
 	if err := im.pack.Verify(); err != nil {
 		return nil, nil, fmt.Errorf("imported pack: %w", err)

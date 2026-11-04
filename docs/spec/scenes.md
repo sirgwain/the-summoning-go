@@ -292,16 +292,164 @@ Power 5Eh (items.md) chooses an ending by the first of these the player holds in
 
 The record's number is stored in interaction variable 32, conversation 79h runs, and when it ends play ends and the frontend plays the chosen ending's end scene. Ending G first takes the objects from both hands, runs level procedure 27h, drops the Shadow Weaver's Cloak, Mask and the Black Boots at (15h, 1Fh), awards 600000 experience and saves the game so it can go on after the ending.
 
-Conversation action 21h plays the closing, below, and then the game ends; nothing after it in the conversation runs. The closing shows the closing picture spread in (the door closing: RESOURCE 54h's halves coming together over the view, then 3Eh), a fade to white, the final scene (RESOURCE 5Ah, then frames 0–4 of 5Bh), and the closing texts (TEXT records 157h–170h), each shown for 2Dh ticks on the banner RESOURCE 5Ch. Then the frontend plays the chosen end scene. End-scene art starts at RESOURCE `end-scene base` (INIT).
+Conversation action 21h plays the closing, below, and then the game ends; nothing after it in the conversation runs. The closing shows the closing picture spread in (the door closing: RESOURCE 54h's halves coming together over the view, then 3Eh), a fade to white, the final scene (RESOURCE 5Ah, then frames 0–4 of 5Bh), and the closing texts (TEXT records 157h–170h), each shown for 2Dh ticks on the banner RESOURCE 5Ch. Then the frontend plays the chosen end scene (End scenes).
 
 **Endings, engine model.** The creation record's `ending` gives the ending power's choices (the item held, the counter's value, a name and an optional scene), the counter, the conversation that runs before play ends, and the closing scene of the `ending` action. When play ends the simulation stops and reports the ending's name and scene; the presentation plays the scene and returns to the main menu. Ending G's changes to the world and its save are not done.
 
-**Scenes, engine model.** A scene is a record of steps the presentation plays in order on a picture of 320 × 200, or of 320 × 400 shown with half-height rows: show a picture, part or close a picture's halves over a background in a number of steps, show a caption, fade to a color, wait, show a page of words in a box, show a line in a speaker's panel, or play the step chosen by the character's weapon class. Escape skips the scene; another key or a click ends a page of words or a line early, and skips the scene from any other step. The importer writes the new-game door, the closing and the story in short as scenes; the end scenes and the intro, whose captions are in the game's program, are left out.
+**Scenes, engine model.** A scene is a record of steps the presentation plays in order on a picture of 320 × 200, or of 320 × 400 shown with half-height rows. A step can show a picture (mirrored or not), part or close a picture's halves over a background in a number of steps, or show a caption. It can fade to a color, or in from one, or fade some palette colors only. It can wait, show a page of words in a box, show a line in a speaker's panel, or play the step chosen by the character's weapon class. It can draw a frame of pictures over the scene's pictures in place of the last, switch the palette the scene draws in (its effects running from then), or start, fade or stop a track. Escape skips the scene; another key or a click ends a page of words or a line early, and ends a run of steps marked cancellable. In any other step it skips the scene, unless only Escape skips it. The importer writes the new-game door, the closing, the story in short and the end scenes as scenes. The intro, whose captions are in the game's program, is left out.
+
+## End scenes
+
+The frontend plays an end scene after the closing: ending E plays **the god of Magic**, ending F **Chesschantra's return**, and ending G **Borel's farewell**. Each fades the music out as it ends, and the game then returns to the main menu (or, after ending G, goes on with the saved game).
+
+**The screen.** End scenes draw on the frontend's screen of 320 × 400, whose pixels are half as tall as wide. Positions are (row, column) from its top-left. `+n` is RESOURCE `end-scene base + n` (INIT). A picture drawn *whole* is all its frames stacked, each its height below the last, with its top-left at the position. A frame of `a × b` pieces at (r, c) is drawn from the pieces of `+12h`, each 16 rows by 8 columns: piece (i, j), for i = 0 … a − 1 down and j = 0 … b − 1 across, goes at (r + 16i, c + 8j). The corners are piece 0 and the pieces next to them piece 1. On the left and right sides, the pieces past the first third and before the last third are piece 2, and the rest a random piece 4–12. On the top and bottom, they are piece 3, and the rest a random piece 13–21. The inside is left as it was.
+
+**Colors.** The scenes draw in COLORS palette 7 (formats.md), coming in from black at the start. The captions' lettering is the font's colors 50h–5Fh, moved up by 70h to 50h + 70h = C0h–CFh, the palette's gold. While the scene *cycles*, every 6 ticks colors E0h–EFh rotate as one group of 16 and F0h–F7h as one of 8, each color taking the value of the next as in the view (Palette animation). Whatever is drawn in them shimmers: red for E0h–EFh, gold for F0h–F7h. A *fade* takes eight steps with no wait. A fade from a color brings the palette in from it, and a fade to a color takes it there.
+
+**Captions.** A caption is centered in the box of rows 340–389 across the whole width, below the frame, in place of the caption before. A caption *held* stays its reading time before the scene goes on: 3 seconds for each whole 320 pixels of its lettering's width, 1 more for each whole 150 pixels of the rest, and 3 more.
+
+**The opening.** All three scenes open the same way:
+
+1. The palette goes black. A frame of 15 × 40 pieces is drawn at (80, 0) and the scene's picture `+0` whole at (100, 8).
+2. The framed picture 0 is drawn. The *framed picture* `k` is `+1` drawn whole at (151, 212) and `+2 + k` at (126, 227), in place of the framed picture before.
+3. The track starts with its loop: 6 (16 bars) for the god of Magic and Chesschantra's return, 5 (24 bars) for Borel's farewell. The first two fade out whatever was playing first.
+4. The colors fade in from black, and the scene starts cycling. Nothing more happens for 90 ticks.
+5. The framed picture 1 is drawn.
+
+**The glow.** `+0Ch` drawn whole, with only its colors B0h–EFh. Each color `c` draws as `E0h + (c − B0h) mod 16`, so it takes the shimmering reds. At *strength* `m` only the first `m` of those colors draw (B0h … B0h + m − 1). The glow *comes up* in 16 frames with no wait, strength 4, 8, … 64, and *dies down* in 17, strength 64, 60, … 0.
+
+**Calling up a figure.** A figure is called up from a box at (r, c) with a body, perhaps an extra drawn over it, a place for both at (row, col), its footing at a place of its own, and a caption:
+
+1. The glow comes up at (r + 8, c + 20).
+2. The caption shows.
+3. The figure grows, in ten frames with no wait, `n` = 1 … 10. The body and the extra are drawn scaled by `n`/10 (Scaling) at (row + R/2 − h/2, col + W/2 − w/2). Here R × W is the body's full size, h × w its size scaled, and every halving rounds down. The last frame also draws the footing.
+4. The glow dies down, with the figure, the extra and the footing at full size over it.
+5. The caption clears.
+
+**Scaling.** A picture scaled by `n`/`d` keeps, along each axis, source pixel `i` drawn `⌊(d/2 + (i + 1)n)/d⌋ − ⌊(d/2 + in)/d⌋` times, so its size is `⌊(s·n + d/2)/d⌋` for a side of `s`. Divisions here round down.
+
+**Sparkles over a figure.** Stars twinkle over the 180 × 96 area at (r, c). The area has a list of regions, (row, column) offsets and sizes from the area's top-left. There are six slots. A star shows the frames 0, 1, 2, 3, 4, 3, 2, 1, 0 of `+16h`, one a frame, with that frame's top-left 4 rows above and 8 columns left of the star's point. In each frame with no wait, slot by slot:
+
+- If no pair is waiting, and this slot and the next are free (slots 0–4), a pair is waiting from now on. On a chance of 20 in 100, the two slots light together, at (r + pr, c + pc₀) and (r + pr, c + pc₁).
+- A lit slot draws its star and moves to the next frame. A free one lights on a chance of 25 in 100 at a random point of a random region: an offset of 0 up to the region's size less 1 along each axis.
+- A star past its last frame frees its slot. When that slot is the first of the waiting pair, no pair is waiting any longer.
+
+After 180 ticks, or at a key or click, no slot lights any more. From then on a count, starting at 0, goes up by 1 each frame and down by 1 for each slot still lit. The sparkles end when it reaches 2.
+
+| Area | Regions: offset (size) | Pair (pr; pc₀, pc₁) |
+| --- | --- | --- |
+| The god of Magic's | (4, 16) (16 × 16), (44, 4) (34 × 18), (48, 67) (30 × 20), (28, 56) (22 × 2), (48, 38) (6 × 16), (4, 52) (22 × 24) | 12; 42, 46 |
+| Chesschantra's | (20, 50) (24 × 12), (5, 60) (15 × 19), (20, 80) (30 × 13), (68, 53) (42 × 12), (58, 80) (50 × 5) | 34; 70, 75 |
+
+**The blast.** `+7` drawn whole grows toward the player in `d` frames with no wait, `d` = 20 for one copy and 10 for two. Frame `i` (from 0) scales it by (i + 1)/d (Scaling) to h × w, w taken up to a multiple of 8. It draws it at row max(100, 152 − h/2), column max(8, 59 + 5i − w/2). A second copy goes at column max(8, 139 + 5i − w/2). The earlier frames' copies stay, so the blast leaves a trail. A caption shows as it starts and clears at the end. Then the scene stops cycling, the colors fade to (255, 255, 0), and the screen is cleared.
+
+**The god of Magic** (ending E):
+
+1. The opening.
+2. The god of Magic is called up from the box at (100, 8): body `+4` and extra `+5` at (108, 41), with footing `+0Dh` at (282, 50). Caption: the god of Magic appears.
+3. Sparkles over the god of Magic's area at (108, 41).
+4. The extra gives way to `+6` at (108, 41).
+5. The framed picture 0.
+6. The blast, one copy. Caption: the player's end.
+7. The world's end, the god of Magic and Abighael.
+
+**Chesschantra's return** (ending F):
+
+1. The opening.
+2. Chesschantra is called up from the box at (100, 8): body `+8` and extra `+9` at (122, 60), with footing `+0Fh` at (280, 60). Caption: Chesschantra appears.
+3. Colors F0h–F7h turn green: each takes its green alone. Caption: the player held, the staff taken.
+4. Sparkles over Chesschantra's area at (100, 8). The F0h–F7h ramp is gold again after it.
+5. The god of Magic is called up from the box at (100, 88): body `+4` and extra `+5` at (108, 121), with footing `+0Dh` at (282, 130). Caption: mother and daughter call up the god of Magic.
+6. Sparkles over the god of Magic's area at (108, 121).
+7. The extras give way: `+0Ah` at (122, 60) and `+6` at (108, 121).
+8. The framed picture 0.
+9. The blast, two copies. Caption: the player's end.
+10. The world's end with Chesschantra.
+
+**The world's end.** It is drawn on its own screen:
+
+1. A frame of 21 × 40 pieces at (0, 0), and `+14h` whole at (20, 8).
+2. The music stops. The colors, all (255, 255, 0) after the blast, fade to black.
+3. `+15h` whole at (220, 8).
+
+The palette is 7 again, and it no longer cycles. Three figures take part:
+
+| Figure | Home (row, col) | Rows × width | Faces | Body (+n, rows down) | Poses 0–2 (+n, rows down) | Held 0–1 | Holds at the end |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Chesschantra | (54, 278) | 157 × 120 | left | 24h, 0 | 26h, 27h, 28h; 0 | none | 0 |
+| Abighael | (72, 299) | 149 × 112 | left | 18h, 38 | 21h, 22h, 23h; 2 | 1Fh, 20h | 1 |
+| The god of Magic | (53, 18) | 177 × 136 | right | 17h, 34 | 1Bh, 1Ch, 1Dh; 22 | 19h, 1Ah | 0 |
+
+A figure at (row, col) is drawn in a pose and with a held picture, in order: the body, the pose and the held picture. Each is drawn whole, its rows down from `row`. A figure facing right draws each picture from column `col`. A figure facing left draws each picture mirrored, ending at column `col` (from `col − width`). A figure *wanders*: moving toward a target, it steps one pixel along the axis farther from it, or diagonally when the distances are equal, and stops there. Standing, it picks a new target of its home plus 0–14 rows and 0–14 columns, at random.
+
+**A battle** of some of the figures, with a caption and a last caption:
+
+1. The figures are drawn, pose 0, holding picture 0. The caption shows. In the first battle of a world's end, track 7 starts with its loop of 8 bars, and the colors fade in from black.
+2. Each frame with no wait, every figure wanders a step and is drawn holding picture 0. With no caster chosen, every figure is in pose 0. With one chosen, the caster is in pose 1 and the others in pose 2, or pose 0 once the battle is ending.
+3. At its time the battle chooses a caster at random, and in the next frame the caster casts. The first time comes 18, 36 or 54 ticks from the start, at random, and each later one the same from the end of the cast before. A cast stops the figures where they are. A bolt, the frames of `+25h` taken at random each frame (mirrored when the caster faces right), flies at row `row + 44` of the caster. It starts at column `col − width` for a caster facing left, or `col + width − 24` facing right, and moves 4 columns a frame in the caster's facing. It flies until its column meets a figure facing the other way: `col` to `col + width − 32` of a figure facing right, or, its column taken 24 further, `col − width + 32` to `col` of one facing left. There `+2Dh` and then `+2Eh` show for a frame each, whole at (bolt row − 32, the bolt's column rounded down to a multiple of 8, plus 8 when it flew right). Then the bolt and the burst are gone. After the second cast the caption clears.
+4. After 360 ticks, or at a key or click, the battle is ending. The last caption shows, and a figure holding 0 at the end is chosen at random to cast at once. After that cast every figure is drawn once in pose 0 with its own picture held at the end. Then the caption and the figures are gone.
+
+**A flight.** The figure is drawn, pose 0, holding picture 0, and the caption shows. Each frame with no wait, it wanders ten steps toward the target given, while its column is short of the target's. When it is there, or at a key or click, it is gone.
+
+**The world's end, the god of Magic and Abighael** (ending E): a battle of the god of Magic and Abighael. Caption: the battle; last caption: Abighael's strength fails. Then the god of Magic's flight toward (his home row − 16, column 90). Caption: a dark day.
+
+**The world's end with Chesschantra** (ending F): Chesschantra and Abighael both face left, mirrored, and Chesschantra holds nothing. The god of Magic holds 1 at the end, and the other two 0.
+
+1. A battle of the god of Magic, Chesschantra and Abighael. Caption: the battle; last caption: the two powers prevail.
+2. Chesschantra wanders toward (72, 18), ten steps a frame, with Abighael standing where the battle left her, and the god of Magic gone. Caption: Chesschantra turns on her daughter. Once her column is below 170, she faces right and her column becomes 100. A key or click stops her where she is.
+3. Chesschantra stands at (72, 18) as her home, facing right. She holds picture 0 at the end, and Abighael picture 1.
+4. A battle of Chesschantra and Abighael. Caption: the heavens shake; last caption: Abighael's strength fails.
+5. Chesschantra's flight toward (56, 90). Caption: a dark day.
+
+**The world's end's close**: `+1Eh` for the god of Magic, or `+29h` for Chesschantra's return, whole at (32, 92) or (32, 110). Caption: the world's end. After 54 ticks colors 00h–BFh fade to black. After 54 more, D0h–DFh. After 54 more, the rest.
+
+**Borel's farewell** (ending G):
+
+1. The opening.
+2. Borel is called up from the box at (100, 8): body `+0Bh` at (114, 52), no extra, footing `+0Eh` at (282, 55). Caption: Borel appears.
+3. After 54 ticks, three captions, each held: Abighael sees her father; Borel thanks the player; father and daughter will leave this world.
+4. The portal clears. The framed picture is gone, leaving the scene's picture at rows 126–319, columns 208–271. For a frame with no wait, Abighael steps out: `+2Ch` at (192, 201), `+10h` at (126, 192), `+13h` at (284, 208) and `+11h` at (268, 220). Then she walks to Borel in four frames 3 ticks apart, frame `i` drawing `+2Bh` (`i` even) or `+2Ch` (`i` odd) at (192, 181 − 20i), `+2Ah` at (126, 172 − 20i) and `+13h` at (284, 188 − 20i). `+11h` stays at (268, 220). She stays as the last frame draws her.
+5. Caption, held: the player's duty now.
+6. The caption clears. The glow comes up at (108, 52), with Borel and Abighael drawn over it.
+7. Caption: the farewell. The two go into the portal in ten frames with no wait, `n` = 9 … 0. The area at rows 100–299, columns 48–175 shows the scene's picture, with the glow at full strength at (108, 52). Over it go `+0Bh`, `+2Ch` and `+2Ah`, scaled by `n`/10, around (208, 110). Write `s(v)` for `⌊(v·n + 5)/10⌋`, with `b`, `a`, `e` the scaled widths `s` of `+0Bh`'s and `+2Ah`'s widths and `s(4)`, and `t = b + a − e`. Then:
+   - `+0Bh` goes at (208 − ⌊(R·n + 5)/10⌋/2, 110 − t/2), for its R rows;
+   - `+2Ah` at (208 − s(160)/2, that column + a);
+   - `+2Ch` at (`+2Ah`'s row + s(66), `+2Ah`'s column + s(9)).
+
+   At `n` = 0 none is drawn.
+8. The glow dies down over that area.
+9. Two captions, each held: the WarMonger is gone too; the day is won.
+10. The scene stops cycling. After 18 ticks the colors fade to black.
+
+**End scenes, engine model.** The importer writes each end scene as a scene of 320 × 400 (Scenes, engine model), and gives the choices of the creation record's `ending` its scene: `scene.end.e`, `scene.end.f` and `scene.end.g`. It plays each scene by the rules above, with random choices made once at a fixed seed, and no key or click. Frames with no wait last 1/60 s, so a fade takes 8/60 s. What moves, it writes as frames of pictures over the scene's picture. The frame, the scene's picture and `+14h`/`+15h` are its pictures. The glow at each strength, and the scaled figures and blasts, are sprites of their own. The figures of the world's end are each one sprite, with a frame per pose and held picture, mirrored to face left. The colors are palettes: `palette.end` is palette 7 cycling, `palette.end.green` the same with F0h–F7h green, and palette 7 unmoving for the world's end. A fade of some colors only fades those palette colors. A key or a click during the sparkles, a battle or a flight ends that part early, where the game's would have ended it sooner. The scene goes on from where the uninterrupted part would have ended. Only Escape skips an end scene. A caption held stays the story in short's reading time (2 seconds and 45 ms a letter). The captions are the engine's own words, written for each slot, as the story in short's are:
+
+| Scene | Slot | Words |
+| --- | --- | --- |
+| E, F | the god of Magic appears | The portal flares, and the god of Magic steps forth. |
+| E, F | the player's end | Fire and fury break over you, and your life is spent. |
+| E, F | the battle | Gods and powers clash across the heavens. |
+| E, F | Abighael's strength fails | Abighael fights on bravely, but at last her power fails. |
+| E, F | a dark day | Darkness falls upon all who live. |
+| E, F | the world's end | The end of the world is at hand. |
+| F | Chesschantra appears | Out of the portal steps the witch Chesschantra. |
+| F | the player held, the staff taken | The Staff is wrenched from your hands, and you cannot move. |
+| F | mother and daughter call up the god of Magic | Mother and daughter join their power to call up the god of Magic. |
+| F | the two powers prevail | Against the two together, Magic cannot prevail. |
+| F | Chesschantra turns on her daughter | Then Chesschantra turns on her own daughter. |
+| F | the heavens shake | The sky trembles as the battle rages on. |
+| G | Borel appears | Out of the portal steps Borel. |
+| G | Abighael sees her father | Abighael weeps to see her father once more. |
+| G | Borel thanks the player | Borel turns to you and thanks you for all you have done. |
+| G | father and daughter will leave this world | He and his daughter will leave this world, to seek a place where they can live in peace. |
+| G | the player's duty now | Bringing peace back to this land, he tells you, is now your task. |
+| G | the farewell | You say farewell as Borel and Abighael pass into the portal. |
+| G | the WarMonger is gone too | Only when they are gone do you see that the WarMonger has gone with them. |
+| G | the day is won | The day is yours... for now. |
 
 ## Unknowns
 
-- The frontend's captions, its stock names and the end scenes' captions, which are in the game's program rather than its data files; the save and load screens.
-- How fast the game drew an effect's frames with no wait; the engine gives them 1/60 s.
+- The frontend's captions and its stock names, which are in the game's program rather than its data files; the save and load screens.
+- How fast the game drew an effect's or an end scene's frames with no wait, and its fades; the engine gives them 1/60 s a frame or a fade's step.
 - Which track plays in which scene and level.
-- The full ending sequences and which closing texts belong to which ending.
+- Which closing texts belong to which ending.
 - The ripple's exact zigzag, and how long each slide of the teleport takes. The engine's styles stand in for them.

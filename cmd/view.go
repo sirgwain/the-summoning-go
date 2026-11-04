@@ -25,7 +25,7 @@ func init() {
 // newViewCmd returns the view command, or with play the play command, which opens the same
 // window driving the player.
 func newViewCmd(play bool) *cobra.Command {
-	var level, screenshot, script, out, saves, load string
+	var level, screenshot, script, out, saves, load, scene string
 	var scale, shotTicks int
 	var magnify, menu, mute, lighting, fullscreen bool
 	var at, sel []int
@@ -202,6 +202,12 @@ of live input, and exits when it ends. Its files are written under --out.`,
 				if menu && (script == "" || cmd.Flags().Changed("menu")) && pack.Creation != nil {
 					v.ShowSplash()
 				}
+				if scene != "" {
+					if pack.Scenes[scene] == nil {
+						return fmt.Errorf("pack %s has no scene %q", pack.Manifest.ID, scene)
+					}
+					v.PlaySceneThenMenu(scene)
+				}
 			}
 			if center != nil {
 				v.CenterOn(*center)
@@ -247,6 +253,9 @@ of live input, and exits when it ends. Its files are written under --out.`,
 	viewCmd.Flags().BoolVar(&fullscreen, "fullscreen", false, "start in full screen")
 	viewCmd.Flags().BoolVar(&mute, "mute", false, "play no music or sound effects (none while a script runs)")
 	viewCmd.Flags().StringVar(&screenshot, "screenshot", "", "save a frame to this PNG file and exit")
+	if play {
+		viewCmd.Flags().StringVar(&scene, "scene", "", "play this scene first, as scene.end.e in scenes/end.e.json, then go to the main menu")
+	}
 	viewCmd.Flags().IntVar(&shotTicks, "screenshot-ticks", 0, "updates to run before the screenshot")
 	return viewCmd
 }
@@ -263,7 +272,10 @@ func viewExamples(play bool) string {
   summoning play packs/summoning --menu=false --level level.05
 
   # Restore a saved game
-  summoning play packs/summoning --load quick.sav`
+  summoning play packs/summoning --load quick.sav
+
+  # Watch ending E's end scene (packs/summoning/scenes/end.e.json, id "scene.end.e")
+  summoning play packs/summoning --scene scene.end.e`
 	}
 	return `  # Look around the imported game's start level
   summoning view packs/summoning

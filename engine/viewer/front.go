@@ -81,6 +81,20 @@ func (v *Viewer) frontUpdate(in Input) {
 		}
 	}
 	if f.Scene != nil {
+		for _, m := range f.Scene.TakeMusic() {
+			if v.Audio == nil {
+				continue
+			}
+			if m.Stop {
+				v.Audio.HaltMusic()
+			}
+			if m.Fade {
+				v.Audio.FadeOutMusic()
+			}
+			if m.Track != "" {
+				v.Audio.PlayMusic(m.Track)
+			}
+		}
 		for _, id := range f.Scene.TakeSounds() {
 			if v.Audio != nil {
 				v.Audio.PlayEffect(id)
@@ -139,4 +153,12 @@ func (v *Viewer) afterPlay() {
 			v.OpenFrontend()
 		}
 	}
+}
+
+// PlaySceneThenMenu opens the frontend playing scene id, then going to the main menu.
+func (v *Viewer) PlaySceneThenMenu(id string) {
+	if v.Front == nil {
+		v.OpenFrontend()
+	}
+	v.Front.PlayScene(id, ScreenMenu)
 }

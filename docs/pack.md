@@ -617,6 +617,44 @@ shows in the same place, each row half as tall. More steps, for the story:
   under the panels shows darkened. A key or click ends its step early.
 - A `clear` also clears the page of words and the panels; `keep_text` keeps the page.
 
+More steps, for the end scenes:
+
+```json
+{ "id": "scene.end.e", "size": [320, 400], "escape_only": true, "steps": [
+  { "palette": "palette.7" },
+  { "picture": { "sprite": "sprite.end.frame.15x40" }, "at": [0, 80], "clear": true },
+  { "fade": "#000000", "fade_in": true, "ms": 133, "music_fade": true, "music": "music.6" },
+  { "over": [{ "sprite": "sprite.end.glow", "frame": 3, "at": [28, 108] }], "ms": 16 },
+  { "caption": "end.E.magic", "box": [0, 340, 320, 50] },
+  { "over": [{ "sprite": "sprite.end.figure.1463", "frame": 4, "at": [178, 72], "mirror": true }],
+    "ms": 16, "cancel": true },
+  { "fade": "#000000", "fade_colors": [0, 191], "ms": 133 },
+  { "music_fade": true }
+] }
+```
+
+- `over` draws its pictures (`sprite`, `frame`, `at`, `mirror`) over the scene's, in place of the
+  last `over`'s; `[]` draws none. A `clear` clears them too. `mirror` on a `picture` flips it
+  left to right as well.
+- `palette` switches the palette the scene draws in, its effects running from that step (the
+  pack's palette before any).
+- A `caption` with a `box` shows its words centered in the box, in place of the caption before;
+  `no_caption` clears it.
+- `fade_in` fades in from the color rather than to it; a fade over a scene already covered in a
+  color goes from that color to the new one. `fade_colors` (`[first, last]`) fades only those
+  palette colors, which stay faded until a `clear`. A fade of no `ms` is done at once.
+- `music_stop` stops the track playing at once, `music_fade` fades it out, and `music` starts a
+  track, in that order.
+- A step with no `ms` (and no page of words, line or part) goes on at once to the next, so a frame
+  built of several steps shows whole.
+- A key or click during a `cancel` step skips it and the `cancel` steps after it. With
+  `escape_only`, only Escape skips the scene; another key or a click does nothing outside pages,
+  lines and `cancel` steps.
+
+The importer writes the end scenes as `scene.end.e`, `scene.end.f` and `scene.end.g`, named by the
+ending's choices (`docs/spec/scenes.md`, End scenes), and their palettes as `palette.end` (palette
+7 with colors 224–239 and 240–247 rotating) and `palette.end.green`.
+
 ## Flipbooks
 
 `flipbooks/<name>.json`: an animation rendered ahead of time, played as a list of steps over

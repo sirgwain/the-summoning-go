@@ -53,7 +53,7 @@ The game starts these tracks with a loop; every other track plays once. The fron
 - Once per pass over the creatures, the game checks whether a creature of NPC record 0Dh is on screen. When one first is, it starts track 8 (12 bars); when none is any longer, it stops the music track playing with the slow fade.
 - A change of level, and restoring a game, stop the music track playing with the slow fade.
 
-**Music in the frontend.** A new character's story starts track 1, looping, when Create Character is chosen, and fades it out when the story ends (scenes.md, The story, in short). The intro's crossing figures start track 2; the war story's last caption starts track 3, which plays on under the opening picture that ends the intro, and fades out when the picture does. Each plays once. The main menu fades out whatever plays as it appears.
+**Music in the frontend.** A new character's story starts track 1, looping, when Create Character is chosen, and fades it out when the story ends (scenes.md, The story, in short). The intro's crossing figures start track 2; the war story's last caption starts track 3, which plays on under the opening picture that ends the intro, and fades out when the picture does. Each plays once. The end scenes start theirs with a loop: the god of Magic and Chesschantra's return track 6, Borel's farewell track 5, and the world's end track 7; each fades its music out as it ends (scenes.md, End scenes). The main menu fades out whatever plays as it appears.
 
 ## Song descriptor (24 bytes)
 
@@ -251,4 +251,4 @@ The song player's output, the thing to test, is the list of register writes in o
 
 ## Unknowns
 
-- The new character's story's and the endings' tracks; specified with scenes.
+- The new character's full story's tracks; specified with its scenes.

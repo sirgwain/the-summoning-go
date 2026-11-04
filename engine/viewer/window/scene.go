@@ -10,6 +10,7 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/font"
 	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
+	"github.com/sirgwain/the-summoning-go/engine/sim"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
 
@@ -26,13 +27,14 @@ func (s *Window) drawScene(screen *ebiten.Image, r *viewer.SceneRun) {
 	}
 	w, h := r.Def.Dims()
 	art := s.artImage(image.Pt(w, h))
-	draw := func(img content.Image, x, y int) {
-		if err := s.sprites.DrawImage(art, img, x, y, false); err != nil && s.err == nil {
+	drawAs := func(img content.Image, x, y int, mirror bool) {
+		if err := s.sprites.DrawImage(art, img, x, y, mirror); err != nil && s.err == nil {
 			s.err = err
 		}
 	}
+	draw := func(img content.Image, x, y int) { drawAs(img, x, y, false) }
 	for _, p := range r.Pictures {
-		draw(p.Image, p.At.X, p.At.Y)
+		drawAs(p.Image, p.At.X, p.At.Y, p.Mirror)
 	}
 	if st := r.Current(); st != nil && st.Part != nil {
 		spread, _ := r.Spread()
@@ -41,6 +43,9 @@ func (s *Window) drawScene(screen *ebiten.Image, r *viewer.SceneRun) {
 		}
 		draw(st.Part.Left, -8*spread, 0)
 		draw(st.Part.Right, content.SceneWidth/2+8*spread, 0)
+	}
+	for _, p := range r.Over {
+		drawAs(content.Image{Sprite: p.Sprite, Frame: p.Frame}, p.At[0], p.At[1], p.Mirror)
 	}
 	if r.Banner != nil {
 		draw(*r.Banner, 0, sceneBannerRow)
@@ -51,17 +56,24 @@ func (s *Window) drawScene(screen *ebiten.Image, r *viewer.SceneRun) {
 	scale := max(1, min(s.v.Screen.X/size.X, s.v.Screen.Y/size.Y))
 	at := s.v.Screen.Sub(size.Mul(scale)).Div(2)
 	rowScale := float64(scale) * float64(content.SceneHeight) / float64(h)
-	s.presenter.SetColors(s.palette.At(0), s.v.FixedColors(s.palette))
+	if colors, ok := s.sceneColors(r); ok {
+		s.presenter.SetColors(colors, colors)
+	} else {
+		s.presenter.SetColors(s.palette.At(0), s.v.FixedColors(s.palette))
+	}
 	s.presenter.PresentScaled(screen, art, float64(scale), rowScale, at)
 	// toScreen maps a point of the scene's picture to the screen.
 	toScreen := func(x, y int) image.Point {
 		return image.Pt(at.X+x*scale, at.Y+int(float64(y)*rowScale))
 	}
-	if r.Caption != "" {
+	textScale := max(1, scale/2)
+	if r.Caption != "" && r.CaptionBox != nil {
+		box := image.Rectangle{toScreen(r.CaptionBox.Min.X, r.CaptionBox.Min.Y), toScreen(r.CaptionBox.Max.X, r.CaptionBox.Max.Y)}
+		s.centerWords(screen, r.Words(inspect.Text(s.v.Pack, r.Caption)), box, textScale, false)
+	} else if r.Caption != "" {
 		text := inspect.Text(s.v.Pack, r.Caption)
 		s.print(screen, text, at.X+(size.X*scale-len(text)*viewer.CharWidth)/2, at.Y+sceneBannerRow*scale+(20*scale-viewer.LineHeight)/2)
 	}
-	textScale := max(1, scale/2)
 	if r.Text != "" {
 		box := image.Rectangle{toScreen(r.Box.Min.X, r.Box.Min.Y), toScreen(r.Box.Max.X, r.Box.Max.Y)}
 		s.centerWords(screen, r.Words(inspect.Text(s.v.Pack, r.Text)), box, textScale, r.FromTop)
@@ -73,12 +85,53 @@ func (s *Window) drawScene(screen *ebiten.Image, r *viewer.SceneRun) {
 			s.drawSay(screen, r, line, i == 1, at, scale, textScale)
 		}
 	}
-	if r.Fade != "" && r.Faded > 0 {
-		c := parseColor(r.Fade)
-		c.A = uint8(r.Faded * 255)
+	if c, a := sceneVeil(r); a > 0 {
+		c.A = uint8(a * 255)
 		vector.FillRect(screen, float32(at.X), float32(at.Y), float32(size.X*scale), float32(size.Y*scale),
 			color.RGBA{uint8(int(c.R) * int(c.A) / 255), uint8(int(c.G) * int(c.A) / 255), uint8(int(c.B) * int(c.A) / 255), c.A}, false)
 	}
+}
+
+// sceneVeil returns the color the scene is faded toward and how far, 0–1: in from its color
+// with FadeIn, and from the color it was covered in to the new one with FadeOver.
+func sceneVeil(r *viewer.SceneRun) (color.RGBA, float64) {
+	if r.Fade == "" {
+		return color.RGBA{}, 0
+	}
+	c := parseColor(r.Fade)
+	switch {
+	case r.FadeIn:
+		return c, 1 - r.Faded
+	case r.FadeOver != "":
+		return mix(parseColor(r.FadeOver), c, r.Faded), 1
+	}
+	return c, r.Faded
+}
+
+// mix returns a moved toward b, f of the way.
+func mix(a, b color.RGBA, f float64) color.RGBA {
+	m := func(x, y uint8) uint8 { return uint8(float64(x) + (float64(y)-float64(x))*f + 0.5) }
+	return color.RGBA{m(a.R, b.R), m(a.G, b.G), m(a.B, b.B), 255}
+}
+
+// sceneColors returns the colors of the palette the scene draws in, its effects at the time it
+// has drawn in it and its dimmed colors faded, or false for the pack's palette undimmed.
+func (s *Window) sceneColors(r *viewer.SceneRun) ([256]color.RGBA, bool) {
+	pal := s.v.Pack.Palettes[r.Palette]
+	if pal == nil && len(r.Dims) == 0 {
+		return [256]color.RGBA{}, false
+	}
+	if pal == nil {
+		pal = s.palette
+	}
+	colors := pal.At(int64(r.Elapsed-r.PaletteFrom) * 1000 / sim.StepsPerSecond)
+	for _, d := range r.Dims {
+		to := parseColor(d.Color)
+		for i := max(d.First, 0); i <= min(d.Last, 255); i++ {
+			colors[i] = mix(colors[i], to, d.Amount)
+		}
+	}
+	return colors, true
 }
 
 // A scene's speech panels, in the 320 × 200 place: the speaker's above, the character's below,

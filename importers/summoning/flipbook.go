@@ -264,36 +264,6 @@ func (b *flipbook) write(id string, framed bool) error {
 	if p := b.pending; p.Sounds != nil || p.Music != "" || p.MusicFade || p.MusicStop {
 		b.showFrame(b.shown, 0, false)
 	}
-	used := make([]bool, 256)
-	for _, f := range b.frames {
-		for _, c := range f {
-			if c != clear {
-				used[c] = true
-			}
-		}
-	}
-	transparent := -1
-	for c := 255; c >= 0; c-- {
-		if !used[c] {
-			transparent = c
-			break
-		}
-	}
-	if transparent < 0 {
-		return fmt.Errorf("every color is drawn; none is left for transparency")
-	}
-	frames := make([][]byte, len(b.frames))
-	for i, f := range b.frames {
-		px := make([]byte, len(f))
-		for j, c := range f {
-			if c == clear {
-				px[j] = byte(transparent)
-			} else {
-				px[j] = byte(c)
-			}
-		}
-		frames[i] = px
-	}
 	for i := range b.steps {
 		s := &b.steps[i]
 		kept := s.Sounds[:0]
@@ -310,7 +280,46 @@ func (b *flipbook) write(id string, framed bool) error {
 		}
 	}
 	sid := "sprite." + id
-	b.im.addSprite(sid, frames, b.w, b.h, transparent)
+	if err := b.im.addCanvasSprite(sid, b.frames, b.w, b.h); err != nil {
+		return err
+	}
 	b.im.pack.Flipbooks[id] = &content.Flipbook{ID: id, Sprite: sid, Framed: framed, Steps: b.steps}
+	return nil
+}
+
+// addCanvasSprite adds frames drawn on a canvas as sprite id, the pixels nothing drew in a color
+// no frame uses, made transparent.
+func (im *importer) addCanvasSprite(id string, canvas [][]int16, w, h int) error {
+	used := make([]bool, 256)
+	for _, f := range canvas {
+		for _, c := range f {
+			if c != clear {
+				used[c] = true
+			}
+		}
+	}
+	transparent := -1
+	for c := 255; c >= 0; c-- {
+		if !used[c] {
+			transparent = c
+			break
+		}
+	}
+	if transparent < 0 {
+		return fmt.Errorf("every color is drawn; none is left for transparency")
+	}
+	frames := make([][]byte, len(canvas))
+	for i, f := range canvas {
+		px := make([]byte, len(f))
+		for j, c := range f {
+			if c == clear {
+				px[j] = byte(transparent)
+			} else {
+				px[j] = byte(c)
+			}
+		}
+		frames[i] = px
+	}
+	im.addSprite(id, frames, w, h, transparent)
 	return nil
 }

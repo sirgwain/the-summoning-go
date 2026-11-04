@@ -435,3 +435,94 @@ func TestStory(t *testing.T) {
 		t.Fatalf("Escape did not skip the story: %+v", f.Scene)
 	}
 }
+
+// TestSceneOver plays the end scenes' steps: the palette, the frame over the pictures, a caption
+// in a box, fades in, over a color and of some colors, music, a run of cancel steps and a scene
+// only Escape skips.
+func TestSceneOver(t *testing.T) {
+	over := func(frames ...int) *[]content.ScenePicture {
+		l := []content.ScenePicture{}
+		for _, f := range frames {
+			l = append(l, content.ScenePicture{Sprite: "sprite.x", Frame: f, At: content.Offset{f, 0}})
+		}
+		return &l
+	}
+	box := [4]int{0, 340, 320, 50}
+	s := &content.Scene{ID: "s", EscapeOnly: true, Steps: []content.SceneStep{
+		{Palette: "palette.a"},
+		{Picture: &content.Image{Sprite: "sprite.back"}, Clear: true, Mirror: true},
+		{Fade: "#000000"},
+		{Fade: "#000000", FadeIn: true, MS: 100, MusicFade: true, Music: "music.6"},
+		{Caption: "end.a", Box: &box},
+		{Over: over(1), MS: 16},
+		{Over: over(1, 2), MS: 16, Cancel: true},
+		{NoCaption: true},
+		{Over: over(3), MS: 16, Cancel: true},
+		{Over: over(), MS: 16},
+		{Palette: "palette.b", MusicStop: true},
+		{Fade: "#ffff00", MS: 50},
+		{Fade: "#000000", MS: 50},
+		{Fade: "#000000", FadeColors: &[2]int{0, 191}, MS: 50},
+		{MusicFade: true},
+	}}
+	r := NewSceneRun(s, SceneViewer{})
+	// The first steps go straight on to the fade in.
+	if st := r.Current(); st == nil || !st.FadeIn || r.Palette != "palette.a" || len(r.Pictures) != 1 || !r.Pictures[0].Mirror {
+		t.Fatalf("at %d: %+v, pictures %+v", r.Step, st, r.Pictures)
+	}
+	if r.Fade != "#000000" || r.FadeOver != "" {
+		t.Errorf("fade in from %q over %q", r.Fade, r.FadeOver)
+	}
+	if m := r.TakeMusic(); len(m) != 1 || !m[0].Fade || m[0].Track != "music.6" || m[0].Stop {
+		t.Errorf("music %+v", m)
+	}
+	for r.Current() != nil && r.Current().Over == nil {
+		r.Update()
+	}
+	if r.Caption != "end.a" || r.CaptionBox == nil || r.CaptionBox.Min.Y != 340 || len(r.Over) != 1 {
+		t.Errorf("caption %q in %v, over %+v", r.Caption, r.CaptionBox, r.Over)
+	}
+	// A key outside the cancel steps does nothing; in them it skips the run.
+	if r.Press(false) || r.Step != 5 {
+		t.Errorf("a key skipped to step %d", r.Step)
+	}
+	r.Update()
+	if r.Step != 6 || len(r.Over) != 2 {
+		t.Fatalf("at step %d, over %+v", r.Step, r.Over)
+	}
+	if r.Press(false) || r.Step != 9 || len(r.Over) != 0 || r.Caption != "" {
+		t.Errorf("after the run: step %d, over %+v, caption %q", r.Step, r.Over, r.Caption)
+	}
+	for r.Current() != nil && r.Current().Fade != "#ffff00" {
+		r.Update()
+	}
+	if r.Palette != "palette.b" || r.PaletteFrom != r.Elapsed {
+		t.Errorf("palette %q from %d at %d", r.Palette, r.PaletteFrom, r.Elapsed)
+	}
+	if m := r.TakeMusic(); len(m) != 1 || !m[0].Stop {
+		t.Errorf("music %+v", m)
+	}
+	// The fade to black starts from the yellow covering the scene.
+	for r.Current() != nil && r.Current().Fade != "#000000" {
+		r.Update()
+	}
+	if r.FadeOver != "#ffff00" {
+		t.Errorf("fade over %q", r.FadeOver)
+	}
+	for r.Current() != nil && r.Current().FadeColors == nil {
+		r.Update()
+	}
+	if len(r.Dims) != 1 || r.Dims[0].Last != 191 || r.Dims[0].Amount >= 1 {
+		t.Errorf("dims %+v", r.Dims)
+	}
+	for !r.Update() {
+	}
+	if len(r.Dims) != 1 || r.Dims[0].Amount != 1 {
+		t.Errorf("dims at the end %+v", r.Dims)
+	}
+	// Escape skips it.
+	r = NewSceneRun(s, SceneViewer{})
+	if !r.Press(true) {
+		t.Error("Escape does not skip")
+	}
+}

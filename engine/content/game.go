@@ -86,9 +86,12 @@ const (
 // Scene is steps the presentation plays in order, on a picture of Size (SceneWidth ×
 // SceneHeight when not given; one twice as tall shows each row half as tall).
 type Scene struct {
-	ID    string      `json:"id"`
-	Size  [2]int      `json:"size,omitzero"`
-	Steps []SceneStep `json:"steps"`
+	ID   string `json:"id"`
+	Size [2]int `json:"size,omitzero"`
+	// EscapeOnly lets only Escape skip the scene: another key or a click then ends a page of
+	// words, a line or a run of Cancel steps, and does nothing otherwise.
+	EscapeOnly bool        `json:"escape_only,omitempty"`
+	Steps      []SceneStep `json:"steps"`
 }
 
 // Dims returns the size of the scene's picture.
@@ -99,27 +102,56 @@ func (s *Scene) Dims() (w, h int) {
 	return SceneWidth, SceneHeight
 }
 
-// SceneStep is one step of a scene: one of Picture, Part, Caption, Fade, Text, Say and ByWeapon,
-// held MS. Sounds start as the step shows. Text is a page of words wrapped and centered in Box
-// (x, y, w, h), or from its top with FromTop; ByWeapon plays the step at the character's weapon
-// class. Clear starts the picture afresh, keeping the page of words with KeepText.
+// SceneStep is one step of a scene: one of Picture, Part, Caption, NoCaption, Fade, Text, Say,
+// Over and ByWeapon, held MS. Sounds start as the step shows. Text is a page of words wrapped and
+// centered in Box (x, y, w, h), or from its top with FromTop; a Caption with a Box shows its words
+// centered in it rather than on the banner line. ByWeapon plays the step at the character's weapon
+// class. Clear starts the picture afresh, keeping the page of words with KeepText. Over draws its
+// pictures over the scene's, in place of the last Over's (an empty list draws none). Palette
+// switches the palette the scene draws in, its effects running from this step. Fade fades to its
+// color over MS, or in from it with FadeIn, or only FadeColors' palette colors (first, last). A
+// key or a click during a Cancel step skips it and the Cancel steps after it. Music starts a
+// track; MusicFade fades out the one playing and MusicStop stops it at once, both before Music.
 type SceneStep struct {
-	Picture  *Image      `json:"picture,omitempty"`
-	At       Offset      `json:"at,omitzero"`
-	Clear    bool        `json:"clear,omitempty"`
-	KeepText bool        `json:"keep_text,omitempty"`
-	Part     *Part       `json:"part,omitempty"`
-	Caption  string      `json:"caption,omitempty"`
-	Banner   *Image      `json:"banner,omitempty"`
-	Fade     string      `json:"fade,omitempty"`
-	Text     string      `json:"text,omitempty"`
-	Box      *[4]int     `json:"box,omitempty"`
-	FromTop  bool        `json:"from_top,omitempty"`
-	Say      *SceneSay   `json:"say,omitempty"`
-	ByWeapon []SceneStep `json:"by_weapon,omitempty"`
-	MS       int         `json:"ms,omitempty"`
-	Sounds   []string    `json:"sounds,omitempty"`
+	Picture    *Image          `json:"picture,omitempty"`
+	At         Offset          `json:"at,omitzero"`
+	Mirror     bool            `json:"mirror,omitempty"`
+	Clear      bool            `json:"clear,omitempty"`
+	KeepText   bool            `json:"keep_text,omitempty"`
+	Part       *Part           `json:"part,omitempty"`
+	Caption    string          `json:"caption,omitempty"`
+	NoCaption  bool            `json:"no_caption,omitempty"`
+	Banner     *Image          `json:"banner,omitempty"`
+	Fade       string          `json:"fade,omitempty"`
+	FadeIn     bool            `json:"fade_in,omitempty"`
+	FadeColors *[2]int         `json:"fade_colors,omitempty"`
+	Text       string          `json:"text,omitempty"`
+	Box        *[4]int         `json:"box,omitempty"`
+	FromTop    bool            `json:"from_top,omitempty"`
+	Say        *SceneSay       `json:"say,omitempty"`
+	Over       *[]ScenePicture `json:"over,omitempty"`
+	ByWeapon   []SceneStep     `json:"by_weapon,omitempty"`
+	Palette    string          `json:"palette,omitempty"`
+	Cancel     bool            `json:"cancel,omitempty"`
+	MS         int             `json:"ms,omitempty"`
+	Sounds     []string        `json:"sounds,omitempty"`
+	Music      string          `json:"music,omitempty"`
+	MusicFade  bool            `json:"music_fade,omitempty"`
+	MusicStop  bool            `json:"music_stop,omitempty"`
 }
+
+// ScenePicture is a frame of a sprite drawn with its top-left at At, mirrored left to right with
+// Mirror.
+type ScenePicture struct {
+	Sprite string `json:"sprite"`
+	Frame  int    `json:"frame,omitempty"`
+	At     Offset `json:"at"`
+	Mirror bool   `json:"mirror,omitempty"`
+}
+
+// Holds reports whether the step shows for a while: one that does not goes straight on to the
+// next, so a picture drawn in parts shows whole.
+func (st *SceneStep) Holds() bool { return st.MS > 0 || st.Waits() || st.Part != nil }
 
 // Waits reports whether a key or click ends the step early, rather than skipping the scene.
 func (st *SceneStep) Waits() bool { return st.Text != "" || st.Say != nil }
@@ -268,14 +300,29 @@ func (v *verifier) scene(s *Scene) {
 	var check func(name string, st SceneStep, nested bool)
 	check = func(name string, st SceneStep, nested bool) {
 		n := 0
-		for _, set := range []bool{st.Picture != nil, st.Part != nil, st.Caption != "", st.Fade != "",
-			st.Text != "", st.Say != nil, len(st.ByWeapon) > 0} {
+		for _, set := range []bool{st.Picture != nil, st.Part != nil, st.Caption != "", st.NoCaption, st.Fade != "",
+			st.Text != "", st.Say != nil, st.Over != nil, len(st.ByWeapon) > 0} {
 			if set {
 				n++
 			}
 		}
-		if n != 1 && !(n == 0 && st.MS > 0) {
+		modifies := st.MS > 0 || st.Palette != "" || st.Music != "" || st.MusicFade || st.MusicStop
+		if n != 1 && !(n == 0 && modifies) {
 			v.fail("%s: %s does %d things", owner, name, n)
+		}
+		if st.Over != nil {
+			for _, p := range *st.Over {
+				v.frame(owner, p.Sprite, p.Frame)
+			}
+		}
+		if _, ok := v.p.Palettes[st.Palette]; st.Palette != "" && !ok {
+			v.fail("%s: %s: palette %q not found", owner, name, st.Palette)
+		}
+		if st.Music != "" {
+			v.music(owner+" "+name, st.Music)
+		}
+		if fc := st.FadeColors; fc != nil && (fc[0] < 0 || fc[1] > 255 || fc[0] > fc[1]) {
+			v.fail("%s: %s fades colors %d to %d", owner, name, fc[0], fc[1])
 		}
 		img(st.Picture)
 		img(st.Banner)

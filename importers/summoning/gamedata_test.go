@@ -435,3 +435,59 @@ func TestGameStory(t *testing.T) {
 		t.Errorf("Rowena's portrait: %+v", b)
 	}
 }
+
+// TestGameEndScenes checks each ending has its end scene: tall, skipped only by Escape, cycling
+// palette 7, with frames over the pictures, cancellable runs as long as the battles, and the
+// engine's own captions.
+func TestGameEndScenes(t *testing.T) {
+	p, _ := gamePack(t)
+	choices := p.Creation.Ending.Choices
+	if len(choices) != 3 {
+		t.Fatalf("%d choices", len(choices))
+	}
+	for _, ch := range choices {
+		s := p.Scenes[ch.Scene]
+		if s == nil || ch.Scene != endSceneIDs[ch.Name] {
+			t.Fatalf("ending %s: scene %q", ch.Name, ch.Scene)
+		}
+		if w, h := s.Dims(); w != 320 || h != 400 || !s.EscapeOnly {
+			t.Errorf("%s: %dx%d, escape only %v", s.ID, w, h, s.EscapeOnly)
+		}
+		total, run, longest, overs := 0, 0, 0, 0
+		palettes := map[string]bool{}
+		for _, st := range s.Steps {
+			total += st.MS
+			if st.Cancel {
+				run += st.MS
+				longest = max(longest, run)
+			} else if st.MS > 0 {
+				run = 0
+			}
+			if st.Over != nil {
+				overs++
+			}
+			if st.Palette != "" {
+				palettes[st.Palette] = true
+			}
+			if st.Caption != "" && inspect.Text(p, st.Caption) == st.Caption {
+				t.Errorf("%s: caption %q has no text", s.ID, st.Caption)
+			}
+		}
+		if total < 20000 || total > 120000 || overs < 50 || !palettes[endCyclingID] || !palettes[paletteID(endPalette)] {
+			t.Errorf("%s: %d ms, %d frames, palettes %v", s.ID, total, overs, palettes)
+		}
+		// A battle lasts its ticks, each frame an update.
+		if battle := endMS(1) * endBattleTicks * endUpdatesPerSecond * 10 / int(ticksPerSecond*10); ch.Name != "G" && longest < battle {
+			t.Errorf("%s: the longest cancellable run is %d ms", s.ID, longest)
+		}
+		if ch.Name == "F" && !palettes[endGreenID] {
+			t.Errorf("%s: no green highlights", s.ID)
+		}
+	}
+	if b := p.Sprites["sprite.end.glow"]; b == nil || b.Frames != 16 {
+		t.Errorf("the glow: %+v", b)
+	}
+	if pal := p.Palettes[endGreenID]; pal == nil || pal.Colors[0xF0].R != 0 || pal.Colors[0xF0].G == 0 || len(pal.Effects) != 2 {
+		t.Errorf("the green palette: %+v", pal)
+	}
+}

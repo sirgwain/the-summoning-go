@@ -124,7 +124,7 @@ func (im *importer) creation(rows int, premades []Premade) {
 		c.Story = s.ID
 	}
 	// The ending power's choices: the item held, the NPC record stored in the counter, and the
-	// ending's name. Their end scenes are the game's program's, so none is given.
+	// ending's name. Their end scenes come after the audio (endscenes.go).
 	c.Ending = &content.Ending{Counter: varID(varEnding)}
 	for _, ch := range []struct {
 		template, record int

@@ -3,7 +3,7 @@
 Status: 2026-11-03. The new character's story plays in short (spec/scenes.md, The story, in
 short): an engine summary, then part 7, Rowena's farewell, with words of the engine's own; the
 story's track plays. Scenes have gained a tall size, pages of words, speech panels and steps by
-weapon class. The intro and parts 1–6 are deferred; the end scenes are next. This plan covers writing the spec for the frontend's
+weapon class. The end scenes are specified and played (spec/scenes.md, End scenes), as scenes of pictures with a frame over them rather than flipbooks. The intro and parts 1–6 are deferred. This plan covers writing the spec for the frontend's
 cinematics: the intro, the new character's story and the end scenes. It also says how they fit
 the scene and flipbook model of [spec/scenes.md](spec/scenes.md). Update this file as each phase
 lands, fold what's settled into the spec, and delete it once the frontend's scenes are specified.
@@ -33,8 +33,8 @@ is in RESOURCE, from the frontend base in INIT. Their captions are in the game's
   on their own clocks. Skipping a part leaves out the parts after it. Track 1 plays through,
   looping.
 - **The end scenes**, played after play ends in an ending: ending E's, ending F's (the world's
-  end, with Chesschantra), and ending G's (Borel's return and farewell). Each opens in a frame
-  with its colors shifted by 70h. It calls up figures with a glow, shows framed pictures,
+  end, with Chesschantra), and ending G's (Borel's return and farewell). Each opens in a frame,
+  its captions' lettering moved up by 70h into the palette's golds. It calls up figures with a glow, shows framed pictures,
   sparkles and captions under a cycling palette, and has figures wander to random places and
   walk off. The music fades at the end.
 
@@ -61,9 +61,9 @@ spec: steps, layering, palette, captions, choices ──────────
   in a framed box.
 - **Layers.** A scene step draws on a layer: a picture under, flipbooks over it, captions on top.
   Several flipbooks can run at once.
-- **Palette shifts are baked at import.** The end scenes' colors shifted by 70h are drawn into
-  their frames, so a scene needs no palette field for them; only cycling the palette by the clock
-  would need one, and it too can be baked into frames if the flipbooks stay small enough.
+- **Palettes.** The end scenes' shift by 70h turned out to move only the captions' lettering,
+  which the engine draws in its own gold. Their cycling is a palette with effects that a scene
+  step switches to.
 - **Randomness is baked at import** with a fixed seed, as for the view effects. That covers the
   wandering targets, the twinkles and the portrait's blinking.
 - **Captions are slots.** The spec gives each caption's place, box, alignment, timing and fades,
@@ -120,6 +120,11 @@ Specify the three scenes:
 - which ending plays which scene.
 
 Settle "which closing texts belong to which ending" from spec/scenes.md's Unknowns here.
+
+Done: spec/scenes.md, End scenes. The scenes' moving parts are frames of pictures over the
+scene's (`over`), not flipbooks: a full-screen frame per update would be too large for the
+battles' twenty seconds, while a list of pictures stays small. The closing texts' question is
+still open.
 
 ### 5. Fold in
 
