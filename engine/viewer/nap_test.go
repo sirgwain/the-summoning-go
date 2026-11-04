@@ -56,8 +56,11 @@ func TestNap(t *testing.T) {
 	if v.Napping || v.World.Step()-step != 1 {
 		t.Errorf("a nap at full magic points: napping %v, %d steps", v.Napping, v.World.Step()-step)
 	}
-	// A creature near refuses one.
+	// A hostile creature near refuses one.
 	l.Things = things
+	for _, th := range things {
+		th.Hostile = true
+	}
 	if !v.World.CreatureNear() {
 		t.Skip("no creature near the study's start to refuse a nap")
 	}

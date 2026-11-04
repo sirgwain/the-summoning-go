@@ -216,6 +216,7 @@ func TestCreatureNearMustBeSeen(t *testing.T) {
 		"#######",
 		"#@.D.G#",
 		"#######")
+	w.Current().Thing("guard").Hostile = true
 	w.Update(nil)
 	if len(w.creaturesNear()) == 0 {
 		t.Fatal("the guard is not within reach")
@@ -227,5 +228,27 @@ func TestCreatureNearMustBeSeen(t *testing.T) {
 	settle(w)
 	if !w.CreatureNear() {
 		t.Error("a creature seen through the open door does not count as near")
+	}
+}
+
+// TestCreatureNearMustBeHostile stands the player in sight of a guard: only a hostile one
+// counts as near (docs/spec/player.md, Napping).
+func TestCreatureNearMustBeHostile(t *testing.T) {
+	w := fightWorld(t, nil,
+		"#####",
+		"#@.G#",
+		"#####")
+	w.Update(nil)
+	g := w.Current().Thing("guard")
+	if w.CreatureNear() {
+		t.Error("a creature that is not hostile counts as near")
+	}
+	g.Hostile = true
+	if !w.CreatureNear() {
+		t.Error("a hostile creature in sight does not count as near")
+	}
+	g.HitPoints = 0
+	if w.CreatureNear() {
+		t.Error("a corpse counts as near")
 	}
 }
