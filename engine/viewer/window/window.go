@@ -210,9 +210,10 @@ func (s *Window) Draw(screen *ebiten.Image) {
 		s.drawLabels(screen)
 	}
 	s.drawHotbar(screen)
-	s.drawSpellPanel(screen)
 	s.drawInventory(screen)
 	s.drawLost(screen)
+	// The spell panel opens over the inventory, so is drawn after it.
+	s.drawSpellPanel(screen)
 	s.drawSaid(screen)
 	s.drawMinimap(screen)
 	s.drawStatusIcons(screen)
