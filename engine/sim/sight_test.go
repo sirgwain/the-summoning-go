@@ -34,3 +34,23 @@ func TestSeenWithinSightWindow(t *testing.T) {
 		t.Error("the far end was forgotten as seen")
 	}
 }
+
+// The player's ground point in a wall's cell, as a diagonal step into an inside corner can leave
+// it, does not move the vision cell, so the room beyond that wall stays dark (docs/spec/world.md,
+// Visibility).
+func TestVisionStaysOffWalls(t *testing.T) {
+	w := walkWorld(t,
+		"######",
+		"#@#..#",
+		"#.####",
+		"######")
+	l, p := w.Current(), w.Player()
+	p.U, p.V = cellCenter(cell{1, 2})
+	w.see()
+	if p.vision != (cell{1, 1}) {
+		t.Errorf("vision cell %v, want the floor (1, 1)", p.vision)
+	}
+	if l.Visible(cell{1, 3}) {
+		t.Error("the room beyond the wall is visible")
+	}
+}

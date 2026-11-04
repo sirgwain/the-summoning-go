@@ -22,8 +22,8 @@ func (l *Level) Sighted() bool { return l.visible != nil }
 func (l *Level) index(c content.Cell) int { return c[0]*l.Def.Size[1] + c[1] }
 
 // see brings the player's vision cell and the current level's visibility up to date: the vision
-// cell follows the player, except while it stands in a door's cell (docs/spec/world.md,
-// Visibility).
+// cell follows the player, except while it stands in a door's cell or its ground point is in a
+// blocked cell, as at the inside corner of two walls (docs/spec/world.md, Visibility).
 func (w *World) see() {
 	p := w.player
 	if p == nil {
@@ -31,7 +31,7 @@ func (w *World) see() {
 	}
 	l := w.Current()
 	c := p.Cell()
-	if f := l.byCell[c]; f == nil || f.Kind != content.FeatureDoor {
+	if f := l.byCell[c]; !l.Blocked(c) && (f == nil || f.Kind != content.FeatureDoor) {
 		p.vision = c
 	}
 	l.computeVisibility(p.vision)
