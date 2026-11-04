@@ -349,6 +349,9 @@ func magicRecords(p *content.Pack) {
 		content.MsgNoRoomForPortal: "There is no room for a gateway.", content.MsgHaste: "You are moving faster.",
 		content.MsgFullHealth: "You are not hurt.", content.MsgDoorResists: "The door resists the spell.",
 		content.MsgMissileWall: "The spell strikes the wall.", content.MsgHealed: "You are healed {damage}.",
+		content.MsgNoQuiver: "You wear no quiver.", content.MsgNoArrows: "Your quiver is empty.",
+		content.MsgNoRoomToShoot: "No room to draw the bow.", content.MsgTooCloseToWall: "Too near the wall to throw.",
+		content.MsgCannotThrow: "You cannot throw in this water.", content.MsgCannotAct: "You cannot do that in this water.",
 	} {
 		s["msg."+key] = text
 		p.Messages.Messages[key] = "msg." + key

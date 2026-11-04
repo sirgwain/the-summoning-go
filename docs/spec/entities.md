@@ -175,15 +175,19 @@ Boulder animations are named `roll.d` for direction `d`. The importer makes `rol
 
 ### Things in flight
 
-A thing in flight is an object thrown or fired, by the player, a creature or a cell (arrow traps). It starts at its thrower's ground point, moving along the thrower's facing, and updates every tick: the first update it waits; then it moves 8 units along its direction (half that along 1 and 5), its range falling by 1. Its box is the one for things in flight (Collision boxes).
+A thing in flight is an object thrown or fired, by the player, a creature or a cell (arrow traps). It starts ahead of its thrower's ground point along the thrower's facing, by the **launch distance** of its direction, times the direction's step (README, Directions): 12 units, but 14 along direction 3 and 8 along direction 5; a creature's spell starts 2 units further still. A cell throws from its center the same way. It moves along that facing and updates every tick: the first update it waits; then it moves 8 units along its direction (half that along 1 and 5), its range falling by 1. Its box is the one for things in flight (Collision boxes).
+
+At each update, in this order:
 
 - **Its range runs out:** it lands where it is.
+- **Its box overlaps a thing,** where it is or where it would move, other than its thrower and corpses (the player, if a creature or a cell threw it): it hurts it (arrows as damage kind 3, everything else physical, through the target's defenses), the player's throw turns a creature hostile, and it lands.
 - **Its ground point would enter a blocked cell:** if that is a sealed door its object opens, the object is used up; otherwise it lands where it is.
-- **It would overlap a thing** other than its thrower and corpses (the player, if a creature or a cell threw it): it hurts it (arrows as damage kind 3, everything else physical, through the target's defenses), the player's throw turns a creature hostile, and it lands.
 - **It enters an armed teleporter** that things in flight do not pass over: the teleporter moves it, and turns its direction by the teleporter's `turn` eighths.
 - **Landing:** only the player's throws land; a creature's or a cell's vanish. An arrow breaks 1 time in 25. A bottle becomes its broken item. The object is put down on its cell as rules.md, Dropping objects, says.
 
-A thrower already touching something when it throws (its own box, moved 4 units along its facing, overlaps a thing; for a cell, the flight's box moved so) hits it at once, and the object lands at its feet.
+A thrower already touching something when it throws (its own box, moved 4 units along its facing, overlaps a thing; for a cell, the flight's box moved so) hits it at once, and the object lands where its flight starts.
+
+**Too close to a wall.** Then, if the flight would start in a blocked cell, it does not fly. The player's throw or shot is refused with message 28h (`too_close_to_wall`): the object stays in the hand or goes back into the quiver, and the hand does not wait, practice or pose; a blow already struck by touching stands. A creature's object is lost. Spells say the same in spells.md, Missiles.
 
 **Drawing it.** It glides between its moves, as Drawn between updates says; spells in flight do the same (spells.md, Missiles).
 

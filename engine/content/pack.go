@@ -7,8 +7,9 @@ import (
 	"image"
 )
 
-// Format is the pack format version this package reads and writes.
-const Format = 1
+// Format is the pack format version this package reads and writes. It rises whenever a change
+// means a pack written before must be written again (docs/pack.md): 2 added collision boxes.
+const Format = 2
 
 // Pack is a loaded content pack. Records are keyed by id.
 type Pack struct {

@@ -48,7 +48,7 @@ func Load(fsys fs.FS) (*Pack, error) {
 		return nil, err
 	}
 	if m.Format != Format {
-		return nil, fmt.Errorf("%s: format %d, want %d", manifestFile, m.Format, Format)
+		return nil, fmt.Errorf("%s: format %d, want %d; import or build the pack again", manifestFile, m.Format, Format)
 	}
 	p := NewPack(m)
 

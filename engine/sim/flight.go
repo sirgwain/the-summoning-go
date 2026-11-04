@@ -59,19 +59,51 @@ func (w *World) missileDamage(o *Object, fired bool) int {
 	return o.Weight(w.pack)/10 + 1
 }
 
-// launch sends object o flying from (u, v) along direction d with range and damage. A thrower
-// touching something already hits it at once, and the object lands at its feet.
-func (w *World) launch(l *Level, o *Object, u, v, d, rng, damage int, byPlayer, fired bool, thrower *Thing) {
-	f := &Flight{Object: o, U: u, V: v, Direction: d, Range: rng, Damage: damage, ByPlayer: byPlayer, Fired: fired, Thrower: thrower,
+// launchDistance is how far ahead of its thrower, in steps of its direction, a thing in flight
+// starts, by table direction (docs/spec/entities.md, Things in flight).
+var launchDistance = [8]int{12, 12, 12, 14, 12, 8, 12, 12}
+
+// launchStart returns where a flight from (u, v) along direction d starts, extra units further.
+func launchStart(u, v, d, extra int) (int, int) {
+	a := launchDistance[d] + extra
+	return u + Dirs[d][0]*a, v + Dirs[d][1]*a
+}
+
+// launch sends object o flying from a thrower at (u, v) along direction d with range and damage,
+// starting its launch distance ahead, and reports whether it flies. A thrower touching something
+// hits it at once, and the object lands where its flight starts. A flight that would start in a
+// blocked cell does not fly: the player's object stays with the player (too_close_to_wall),
+// anyone else's is lost.
+func (w *World) launch(l *Level, o *Object, u, v, d, rng, damage int, byPlayer, fired bool, thrower *Thing) bool {
+	su, sv := launchStart(u, v, d, 0)
+	f := &Flight{Object: o, U: su, V: sv, Direction: d, Range: rng, Damage: damage, ByPlayer: byPlayer, Fired: fired, Thrower: thrower,
 		next: w.step + Steps(flightTicks)}
-	f.glide.start(u, v, w.step, f.next)
-	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: f.Cell(), Item: o.Item, Detail: "thrown"})
-	if b := w.flightBlocker(l, f, u+Dirs[d][0]*touchReach, v+Dirs[d][1]*touchReach, w.throwerBox(f)); b != nil {
-		w.flightHits(l, f, b)
-		w.land(l, f)
-		return
+	touched := w.flightBlocker(l, f, u+Dirs[d][0]*touchReach, v+Dirs[d][1]*touchReach, w.throwerBox(f))
+	if touched != nil {
+		w.flightHits(l, f, touched)
+		f.Range = 1
 	}
+	if l.Blocked(f.Cell()) {
+		if byPlayer {
+			w.message(l, cellOf(u, v), content.MsgTooCloseToWall, "")
+		} else {
+			w.emit(Event{Kind: EventObject, Level: l.ID, Cell: f.Cell(), Item: o.Item, Detail: "vanished"})
+		}
+		return false
+	}
+	f.glide.start(su, sv, w.step, f.next)
+	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: f.Cell(), Item: o.Item, Detail: "thrown"})
 	l.Flights = append(l.Flights, f)
+	return true
+}
+
+// flightMeets returns what flight f meets moving to (u, v): what its box overlaps where it is or
+// there, tested before the terrain (docs/spec/entities.md, Things in flight).
+func (w *World) flightMeets(l *Level, f *Flight, u, v int) *body {
+	if b := w.flightBlocker(l, f, f.U, f.V, flightBox); b != nil {
+		return b
+	}
+	return w.flightBlocker(l, f, u, v, flightBox)
 }
 
 // flightBlocker returns what box at (u, v) overlaps for flight f: any living
@@ -148,6 +180,11 @@ func (w *World) updateFlights(l *Level) {
 			speed /= 2
 		}
 		u, v := f.U+Dirs[f.Direction][0]*speed, f.V+Dirs[f.Direction][1]*speed
+		if b := w.flightMeets(l, f, u, v); b != nil {
+			w.flightHits(l, f, b)
+			w.land(l, f)
+			continue
+		}
 		c := cellOf(u, v)
 		if l.Blocked(c) {
 			if door := l.byCell[c]; door != nil && door.Kind == content.FeatureDoor && door.SealedBy != "" && door.SealedBy == f.Object.Item {
@@ -156,11 +193,6 @@ func (w *World) updateFlights(l *Level) {
 				w.emit(Event{Kind: EventObject, Level: l.ID, Cell: c, Item: f.Object.Item, Detail: "used"})
 				continue
 			}
-			w.land(l, f)
-			continue
-		}
-		if b := w.flightBlocker(l, f, u, v, flightBox); b != nil {
-			w.flightHits(l, f, b)
 			w.land(l, f)
 			continue
 		}
@@ -242,34 +274,58 @@ func (w *World) throwFrom(hand int) {
 		w.message(l, p.Cell(), content.MsgCannotThrow, "")
 		return
 	}
+	rng := (100-min(o.Weight(w.pack), 100))/5 + 5
+	if !w.launch(l, o, p.U, p.V, p.Facing, rng, w.missileDamage(o, false), true, false, nil) {
+		return
+	}
 	p.Slots[SlotRightHand+hand] = nil
 	w.takeOff(o)
 	w.setDelay(hand, throwDelay)
-	rng := (100-min(o.Weight(w.pack), 100))/5 + 5
-	w.launch(l, o, p.U, p.V, p.Facing, rng, w.missileDamage(o, false), true, false, nil)
 	w.practice(SkillWeapon+bowClass, 1)
+}
+
+// roomToShoot reports whether the player can draw a bow: whether its box moved a full step along
+// its facing overlaps nothing but corpses (docs/spec/items.md, Engine model).
+func (w *World) roomToShoot() bool {
+	p, l := w.player, w.Current()
+	speed := p.Template.Speed
+	if speed == 0 {
+		speed = 8
+	}
+	u, v := p.U+Dirs[p.Facing][0]*speed, p.V+Dirs[p.Facing][1]*speed
+	box := p.Template.Bounds()
+	for _, b := range w.bodies(l) {
+		if b.thing == nil || b.thing.Template.Kind == content.ThingCreature && b.thing.HitPoints <= 0 {
+			continue
+		}
+		if overlaps(u, v, box, b.u, b.v, b.box) {
+			return false
+		}
+	}
+	return true
 }
 
 // fire shoots the quiver's first arrow with a bow (docs/spec/items.md, Throwing).
 func (w *World) fire() bool {
 	p, l := w.player, w.Current()
 	quiver := p.Slots[SlotQuiver]
-	speed := p.Template.Speed
 	switch {
 	case quiver == nil:
 		w.message(l, p.Cell(), content.MsgNoQuiver, "")
 		return false
+	case !w.roomToShoot():
+		w.message(l, p.Cell(), content.MsgNoRoomToShoot, "")
+		return false
 	case len(quiver.Contents) == 0:
 		w.message(l, p.Cell(), content.MsgNoArrows, "")
 		return false
-	case w.blocker(l, nil, true, p.U+Dirs[p.Facing][0]*speed, p.V+Dirs[p.Facing][1]*speed, p.Template.Bounds(), nil) != nil:
-		w.message(l, p.Cell(), content.MsgNoRoomToShoot, "")
-		return false
 	}
 	arrow := quiver.Contents[0]
-	quiver.Contents = quiver.Contents[1:]
 	damage := max(w.missileDamage(arrow, true)+(p.Attributes[AttrAccuracy]-10)/2, 1)
-	w.launch(l, arrow, p.U, p.V, p.Facing, min(5*p.Attributes[AttrStrength], firedRange), damage, true, true, nil)
+	if !w.launch(l, arrow, p.U, p.V, p.Facing, min(5*p.Attributes[AttrStrength], firedRange), damage, true, true, nil) {
+		return false
+	}
+	quiver.Contents = quiver.Contents[1:]
 	w.pose(2)
 	p.bowRelease = w.step + 1
 	w.practice(SkillWeapon+bowClass, 1)

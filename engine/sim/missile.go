@@ -53,19 +53,46 @@ func (w *World) castMissile(l *Level, c caster, m *content.MissileSpell, power i
 // (docs/spec/spells.md, Missiles).
 func flightFrame(d int) int { return (d + 1) % 8 }
 
-// launchSpell sends missile m flying from c along direction d. A caster touching something ahead
-// hits it at once.
+// creatureLaunchExtra is how much further than a thing in flight a creature's spell starts.
+const creatureLaunchExtra = 2
+
+// launchSpell sends missile m flying from c along direction d, starting its launch distance ahead
+// (docs/spec/spells.md, Missiles). A caster touching something ahead hits it at once. One that
+// would start in a blocked cell goes off at once: the player's at the player, a creature's
+// vanishing.
 func (w *World) launchSpell(l *Level, c caster, d int, m *content.MissileSpell, power int) {
-	f := &Flight{U: c.u, V: c.v, Direction: d, Range: missileRange, Damage: power, ByPlayer: c.player, Thrower: c.thing,
+	extra := 0
+	if c.thing != nil {
+		extra = creatureLaunchExtra
+	}
+	su, sv := launchStart(c.u, c.v, d, extra)
+	f := &Flight{U: su, V: sv, Direction: d, Range: missileRange, Damage: power, ByPlayer: c.player, Thrower: c.thing,
 		Spell: &SpellFlight{Missile: m, Power: power, Sprite: m.Sprite}, next: w.step + Steps(flightTicks)}
-	f.glide.start(c.u, c.v, w.step, f.next)
 	if m.Directional {
 		f.Spell.Frame = flightFrame(d)
 	}
+	touched := w.flightBlocker(l, f, c.u+Dirs[d][0]*touchReach, c.v+Dirs[d][1]*touchReach, w.throwerBox(f))
+	inWall := touched == nil && l.Blocked(f.Cell())
+	if inWall {
+		if !c.player || w.player == nil {
+			return
+		}
+		if !m.Opens {
+			f.U, f.V = c.u, c.v
+			touched = &body{u: c.u, v: c.v, box: w.player.Template.Bounds()}
+		}
+	}
+	f.glide.start(f.U, f.V, w.step, f.next)
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: f.Cell(), Detail: "spell flies"})
 	l.Flights = append(l.Flights, f)
-	if b := w.flightBlocker(l, f, c.u+Dirs[d][0]*touchReach, c.v+Dirs[d][1]*touchReach, w.throwerBox(f)); b != nil {
-		w.spellHits(l, f, b)
+	if inWall && touched == nil {
+		// An opening spell started in a wall or door meets it there.
+		w.spellMeetsWall(l, f, f.Cell())
+		w.endSpell(l, f)
+		return
+	}
+	if touched != nil {
+		w.spellHits(l, f, touched)
 		w.endSpell(l, f)
 	}
 }
@@ -92,6 +119,11 @@ func (w *World) updateSpell(l *Level, f *Flight) {
 	}
 	du, dv := Dirs[f.Direction][0]*speed, Dirs[f.Direction][1]*speed
 	u, v := f.U+du, f.V+dv
+	if b := w.flightMeets(l, f, u, v); b != nil {
+		w.spellHits(l, f, b)
+		w.endSpell(l, f)
+		return
+	}
 	c := cellOf(u, v)
 	if l.Blocked(c) {
 		w.spellMeetsWall(l, f, c)
@@ -99,11 +131,6 @@ func (w *World) updateSpell(l *Level, f *Flight) {
 			w.bounce(l, f, du, dv)
 			return
 		}
-		w.endSpell(l, f)
-		return
-	}
-	if b := w.flightBlocker(l, f, u, v, flightBox); b != nil {
-		w.spellHits(l, f, b)
 		w.endSpell(l, f)
 		return
 	}

@@ -55,7 +55,7 @@ A record's file is named after its id without the kind prefix (`item.dagger` is
   "id": "summoning",
   "name": "The Summoning",
   "version": "0.1.0",
-  "format": 1,
+  "format": 2,
   "depends": [],
   "palette": "palette.0",
   "start": { "level": "level.00", "cell": [16, 15] },
@@ -67,7 +67,9 @@ A record's file is named after its id without the kind prefix (`item.dagger` is
 }
 ```
 
-`format` is this document's version; the loader rejects a format it does not know. `palette` is the
+`format` is this document's version; the loader rejects a format it does not know. It rises with
+any change that a pack written before would not have, so that such a pack is refused and written
+again rather than played wrongly: 2 added `box`. `palette` is the
 palette gameplay draws with. `rules` names the combat rule set (`docs/design.md`, Characters, stats
 and combat); `summoning` is the only one, and the default. `player` is the thing template of kind `player` the player is made
 from; a pack without one runs its levels with no player. `counters` names the counters the engine
@@ -253,7 +255,7 @@ The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slo
 `full_health`, `full_magic`, `not_poisoned`, `not_poisoned_or_confused`, `not_fatigued`,
 `no_destination`, `no_creatures`, `already_have`, `healed` (`{damage}` the amount), `protected`,
 `boost_extended`, `poisoned`, `slowed`, `confused`, `sex_changed`, `lost_weapon_skills`, `lost_magic_skills`, `no_quiver`,
-`no_arrows`, `no_room_to_shoot`, `cannot_throw`, `cannot_act`; for magic `cannot_cast`,
+`no_arrows`, `no_room_to_shoot`, `too_close_to_wall`, `cannot_throw`, `cannot_act`; for magic `cannot_cast`,
 `not_memorized`, `only_spell`, `no_magic`, `forgot`, `forgot_more`, `no_room_for_wall`, `wall_failed`,
 `no_room_for_portal`, `no_spell_near`, `nothing_to_mend`, `no_creature_near`, `no_bottle`,
 `filled`, `door_resists`, `missile_wall`, `battle_rage`, `battle_rage_extended`, `haste`,

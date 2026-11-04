@@ -262,7 +262,7 @@ A scroll's `teaches` are the icons reading it teaches, and its `picture` the ima
 
 ## Throwing
 
-The player throws the object in hand, or fires an arrow from a bow. A thrown object flies `(100 − weight) / 5 + 5` steps (weight above 100 counts as 100); an arrow `5 × STR` steps, at most 127; 8 units a step. It flies as an entity of kind 3 (entities.md).
+The player throws the object in hand, or fires an arrow from a bow. A thrown object flies `(100 − weight) / 5 + 5` steps (weight above 100 counts as 100); an arrow `5 × STR` steps, at most 127; 8 units a step. It flies as an entity of kind 3 (entities.md). A bow cannot be drawn while anything but a corpse stands within a step ahead of the player: firing gives message 96h ("Not enough room to draw bow") and the player must back away first. A throw or shot from too near a wall gives 28h ("Too close to wall to throw").
 
 **Damage.** Seven templates have a thrown look of their own, RESOURCE `held-item base + offset` (INIT), with a frame for each way it flies: frame `(d + 1) mod 8` along table direction `d` (the player's facing that walks `d`). The others fly showing their tiny image.
 
@@ -281,7 +281,7 @@ They roll their action-1 damage, or 1 when a flagged one is thrown rather than f
 
 Throwing is not possible in water of depth 3 or more.
 
-**Engine model.** The player throws the object in a hand (that hand then waits a delay of 5 points, 15 updates) or, with a `fire` action, the first arrow of the quiver worn in slot 25 (message 48h `no_quiver` without one, 49h `no_arrows` when it is empty; 96h `no_room_to_shoot` when something stands a step ahead). Throwing practices weapon class 3 by 1; firing does too, and shows the both-hands strike pose. In deep water of depth 3 or more throwing gives 70h (`cannot_throw`) and other actions 73h (`cannot_act`). A thing in flight (entities.md) carries the object; how far it flies and its damage are as above, the damage from the item's `missile` (its dice, and whether only firing rolls them). A landing bottle becomes the item's `breaks_into`. An item's `poisons_thrown` makes it poison what it hurts in flight; the importer gives it to 82h and 97h.
+**Engine model.** The player throws the object in a hand (that hand then waits a delay of 5 points, 15 updates) or, with a `fire` action, the first arrow of the quiver worn in slot 25 (message 48h `no_quiver` without one; then 96h `no_room_to_shoot` when the player's box moved a full step along its facing, `speed` units even along directions 1 and 5, overlaps any thing but a corpse; then 49h `no_arrows` when the quiver is empty). So a bow cannot be fired at a creature within a step: the player must back off first. A throw or shot whose flight would start in a wall gives 28h `too_close_to_wall` (entities.md, Things in flight). Throwing practices weapon class 3 by 1; firing does too, and shows the both-hands strike pose. In deep water of depth 3 or more throwing gives 70h (`cannot_throw`) and other actions 73h (`cannot_act`). A thing in flight (entities.md) carries the object; how far it flies and its damage are as above, the damage from the item's `missile` (its dice, and whether only firing rolls them). A landing bottle becomes the item's `breaks_into`. An item's `poisons_thrown` makes it poison what it hurts in flight; the importer gives it to 82h and 97h.
 
 Arrows taken up go into a worn quiver when it has room; putting arrows on (in slot 25) with a quiver worn adds them to it.
 

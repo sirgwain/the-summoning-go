@@ -67,6 +67,12 @@ var engineMessages = map[string]struct {
 	content.MsgLostMagicSkills:       {0x67, nil},
 	content.MsgConfused:              {0x36, nil},
 	content.MsgSexChanged:            {0x35, nil},
+	content.MsgNoQuiver:              {0x48, nil},
+	content.MsgNoArrows:              {0x49, nil},
+	content.MsgNoRoomToShoot:         {0x96, nil},
+	content.MsgTooCloseToWall:        {0x28, nil},
+	content.MsgCannotThrow:           {0x70, nil},
+	content.MsgCannotAct:             {0x73, nil},
 
 	content.MsgCannotCast:           {0x71, nil},
 	content.MsgNotMemorized:         {0x46, []string{"school"}},

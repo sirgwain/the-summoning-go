@@ -474,6 +474,7 @@ const (
 	MsgNoQuiver              = "no_quiver"
 	MsgNoArrows              = "no_arrows"
 	MsgNoRoomToShoot         = "no_room_to_shoot"
+	MsgTooCloseToWall        = "too_close_to_wall"
 	MsgCannotThrow           = "cannot_throw"
 	MsgCannotAct             = "cannot_act"
 
@@ -547,6 +548,7 @@ var messageKeys = map[string]bool{
 	MsgNoQuiver:              true,
 	MsgNoArrows:              true,
 	MsgNoRoomToShoot:         true,
+	MsgTooCloseToWall:        true,
 	MsgCannotThrow:           true,
 	MsgCannotAct:             true,
 	MsgCannotCast:            true, MsgNotMemorized: true, MsgOnlySpell: true, MsgNoMagic: true,

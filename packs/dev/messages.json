@@ -1,8 +1,10 @@
 {
   "id": "messages",
   "messages": {
+    "cannot_act": "msg.cannot_act",
     "cannot_cast": "msg.cannot_cast",
     "cannot_hurt": "msg.not_hurt",
+    "cannot_throw": "msg.cannot_throw",
     "creature_hits": "msg.struck",
     "creature_misses": "msg.missed",
     "door_resists": "msg.door_resists",
@@ -20,11 +22,14 @@
     "music_all": "msg.music_all",
     "music_effects": "msg.music_fx",
     "music_silent": "msg.music_off",
+    "no_arrows": "msg.no_arrows",
     "no_drop_here": "msg.no_drop",
     "no_magic": "msg.no_magic",
+    "no_quiver": "msg.no_quiver",
     "no_room": "msg.no_room",
     "no_room_for_portal": "msg.no_room_for_portal",
     "no_room_for_wall": "msg.no_room_for_wall",
+    "no_room_to_shoot": "msg.no_room_to_shoot",
     "not_a_creature": "msg.nothing_hit",
     "not_memorized": "msg.not_memorized",
     "nothing_to_take": "msg.nothing",
@@ -34,6 +39,7 @@
     "slot_stuck": "msg.slot_stuck",
     "slot_wrong_item": "msg.wrong_item",
     "taken": "msg.taken",
+    "too_close_to_wall": "msg.too_close_to_wall",
     "vanishes": "msg.vanishes",
     "wall_failed": "msg.wall_failed",
     "weapon_breaks": "msg.breaks"
