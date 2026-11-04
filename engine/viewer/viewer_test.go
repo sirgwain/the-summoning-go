@@ -597,8 +597,19 @@ func TestViewClearsMinimap(t *testing.T) {
 
 // TestLevelMap opens the map with M in the hall: it shows the seen cells and the player, and
 // closes with M or Esc. The cellar refuses it with its message and hides the minimap.
+// tour puts the player on each cell in turn and back where it started, so that the map has seen
+// what is near them (docs/spec/world.md, Engine model).
+func tour(v *Viewer, cells ...content.Cell) {
+	start := v.World.Player().Cell()
+	for _, c := range append(cells, start) {
+		v.World.Update([]input.Command{input.PlacePlayer{Cell: c}})
+	}
+	v.rebuild()
+}
+
 func TestLevelMap(t *testing.T) {
 	v := playIn(t, devpack.Hall, devpack.HallStart)
+	tour(v, devpack.Trapdoor, devpack.Socket)
 	press := func(k Key) {
 		v.Update(Input{Held: map[Key]bool{k: true}, Pressed: map[Key]bool{k: true}, Cursor: image.Pt(-1, -1)})
 	}
@@ -782,6 +793,7 @@ func TestMapLinks(t *testing.T) {
 // that talks on the full map, with their notes.
 func TestMapFeatures(t *testing.T) {
 	v := playIn(t, devpack.Hall, devpack.HallStart)
+	tour(v, devpack.Mark)
 	v.World.Current().Feature("mark").Rune = "3"
 	m := v.Map()
 	if mc, _ := m.At(devpack.Mouth); mc.Known || len(mc.Heard) != 0 {

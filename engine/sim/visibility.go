@@ -35,6 +35,7 @@ func (w *World) see() {
 		p.vision = c
 	}
 	l.computeVisibility(p.vision)
+	l.markSeen(c)
 	l.takeShapes(w.pack.Walls[l.Def.Walls])
 	w.seeTalkers(l)
 }
@@ -111,9 +112,29 @@ func (l *Level) computeVisibility(from content.Cell) {
 			}
 		}
 	}
-	for i, v := range l.visible {
-		if v {
-			l.seen[i] = true
+}
+
+// Sight window: how far from the player's cell, in tile columns (b − a) and tile rows (a + b), a
+// visible cell is marked seen (docs/spec/world.md, Engine model).
+const (
+	sightColumns = 8
+	sightRows    = 7
+)
+
+// markSeen marks as seen the visible cells within the sight window around cell at.
+func (l *Level) markSeen(at content.Cell) {
+	if l.visible == nil {
+		return
+	}
+	for da := -sightColumns; da <= sightColumns; da++ {
+		for db := -sightColumns; db <= sightColumns; db++ {
+			if abs(db-da) > sightColumns || abs(da+db) > sightRows {
+				continue
+			}
+			c := content.Cell{at[0] + da, at[1] + db}
+			if l.InBounds(c) && l.visible[l.index(c)] {
+				l.seen[l.index(c)] = true
+			}
 		}
 	}
 }
