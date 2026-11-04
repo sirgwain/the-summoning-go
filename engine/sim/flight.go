@@ -7,17 +7,19 @@ import (
 
 // Flight constants (docs/spec/entities.md, Things in flight; docs/spec/items.md, Throwing).
 const (
-	flightSpeed     = 8
-	flightFootprint = 8
-	flightTicks     = 1
-	firedRange      = 127
-	arrowBreaks     = 25
-	throwDelay      = 15
-	// touchReach is how far ahead of its footprint a thrower touches what it hits at once.
+	flightSpeed = 8
+	flightTicks = 1
+	firedRange  = 127
+	arrowBreaks = 25
+	throwDelay  = 15
+	// touchReach is how far ahead a thrower touches what it hits at once.
 	touchReach = 4
 	// bowClass is the weapon class throwing and firing practice.
 	bowClass = 3
 )
+
+// flightBox is what a thing in flight collides by (docs/spec/entities.md, Collision boxes).
+var flightBox = content.Box{-6, 5, 8, 8}
 
 // Flight is a thing in flight: an object thrown or fired, or a spell.
 type Flight struct {
@@ -64,7 +66,7 @@ func (w *World) launch(l *Level, o *Object, u, v, d, rng, damage int, byPlayer, 
 		next: w.step + Steps(flightTicks)}
 	f.glide.start(u, v, w.step, f.next)
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: f.Cell(), Item: o.Item, Detail: "thrown"})
-	if b := w.flightBlocker(l, f, u+Dirs[d][0]*touchReach, v+Dirs[d][1]*touchReach, flightFootprint+touchReach); b != nil {
+	if b := w.flightBlocker(l, f, u+Dirs[d][0]*touchReach, v+Dirs[d][1]*touchReach, w.throwerBox(f)); b != nil {
 		w.flightHits(l, f, b)
 		w.land(l, f)
 		return
@@ -72,9 +74,9 @@ func (w *World) launch(l *Level, o *Object, u, v, d, rng, damage int, byPlayer, 
 	l.Flights = append(l.Flights, f)
 }
 
-// flightBlocker returns what a flight at (u, v) with a footprint n wide overlaps: any living
+// flightBlocker returns what box at (u, v) overlaps for flight f: any living
 // thing or the player, but not its thrower, nor the player when the player threw it.
-func (w *World) flightBlocker(l *Level, f *Flight, u, v, n int) *body {
+func (w *World) flightBlocker(l *Level, f *Flight, u, v int, box content.Box) *body {
 	for _, b := range w.bodies(l) {
 		switch {
 		case b.thing == nil && f.ByPlayer, b.thing != nil && b.thing == f.Thrower:
@@ -82,7 +84,7 @@ func (w *World) flightBlocker(l *Level, f *Flight, u, v, n int) *body {
 		case b.thing != nil && b.thing.Template.Kind == content.ThingCreature && b.thing.HitPoints <= 0:
 			continue
 		}
-		if overlaps(u, v, n, b.u, b.v, b.n) {
+		if overlaps(u, v, box, b.u, b.v, b.box) {
 			return &b
 		}
 	}
@@ -157,7 +159,7 @@ func (w *World) updateFlights(l *Level) {
 			w.land(l, f)
 			continue
 		}
-		if b := w.flightBlocker(l, f, u, v, flightFootprint); b != nil {
+		if b := w.flightBlocker(l, f, u, v, flightBox); b != nil {
 			w.flightHits(l, f, b)
 			w.land(l, f)
 			continue
@@ -260,7 +262,7 @@ func (w *World) fire() bool {
 	case len(quiver.Contents) == 0:
 		w.message(l, p.Cell(), content.MsgNoArrows, "")
 		return false
-	case w.blocker(l, nil, true, p.U+Dirs[p.Facing][0]*speed, p.V+Dirs[p.Facing][1]*speed, p.Template.Size(), nil) != nil:
+	case w.blocker(l, nil, true, p.U+Dirs[p.Facing][0]*speed, p.V+Dirs[p.Facing][1]*speed, p.Template.Bounds(), nil) != nil:
 		w.message(l, p.Cell(), content.MsgNoRoomToShoot, "")
 		return false
 	}
@@ -319,4 +321,16 @@ func (w *World) intoQuiver(o *Object) bool {
 	}
 	q.Contents = append(q.Contents, o)
 	return true
+}
+
+// throwerBox is the box that tests what flight f's thrower touches as it throws: the player's or
+// the creature's own, or the flight's when a cell threw it.
+func (w *World) throwerBox(f *Flight) content.Box {
+	switch {
+	case f.ByPlayer && w.player != nil:
+		return w.player.Template.Bounds()
+	case f.Thrower != nil:
+		return f.Thrower.Template.Bounds()
+	}
+	return flightBox
 }

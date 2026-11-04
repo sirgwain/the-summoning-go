@@ -119,9 +119,9 @@ Weights are in half kilograms: a weight `w` shows as `w / 2` kg, with ".5" for a
 
 Each cell holds a list of objects on its floor; at most eight are drawn. Objects dropped or thrown land on the floor. Objects left on a level stay there.
 
-An object on the floor is drawn with its tiny image (about 8×6 pixels; the small 16×16 image is the inventory icon), centered in its cell's tile box: an image `w × h` has its top-left at `(16 − ⌊w/2⌋, 16 − ⌊h/2⌋)` from the box's corner (world.md). The objects of a cell are drawn in list order, each over the last, after the cell's floor and overlays and before anything standing.
+An object on the floor is drawn with its tiny image (about 8×6 pixels; the small 16×16 image is the inventory icon), with its top-left at `(8, 13)` from its cell's tile box corner (world.md), whatever its size, so a tiny image sits a little left of the box's middle; on a pressed weight plate (terrain 20h) 4 pixels lower, at `(8, 17)`. The objects of a cell are drawn in list order, each over the last, after the cell's floor and overlays and before anything standing.
 
-**Magnified.** Objects on the floor are drawn with their small image instead, centered the same way, so they are easier to see and to pick up, while the player has timed sight (the Sight spell, spells.md) or while interaction variable 98 is set. The options menu's Magnify option sets and clears variable 98 (dialogue.md), so it lasts across saves.
+**Magnified.** Objects on the floor are drawn with their small image instead, at the same place, so they are easier to see and to pick up, while the player has timed sight (the Sight spell, spells.md) or while interaction variable 98 is set. The options menu's Magnify option sets and clears variable 98 (dialogue.md), so it lasts across saves.
 
 **Engine model.** The pack names the counter that magnifies (`magnify`, pack.md); the presentation draws floor objects magnified while it is set or the player's timed sight lasts, or while its own magnify setting is on. Magnifying changes only how floor objects are drawn and where they can be clicked, never the simulation.
 

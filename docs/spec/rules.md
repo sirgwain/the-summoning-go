@@ -146,7 +146,7 @@ What the player does to a level's features, in the engine's terms:
 - **Teleporters.** The player entering an armed teleporter's cell is moved to its destination, keeping its place in the cell, with a teleport sound.
 - **Exits.** Walking onto a floor exit, or into a wall exit along an axis (entities.md, Moving), takes the player to the exit's level and cell.
 - **Pits and open trapdoors.** The player stepping onto one falls to its destination, hurt 4d5, unless it walks along directions 1–3 (stepping down carefully; the game's facings 2–4), which hurts nothing. A levitating player passes over.
-- **Arriving.** The player arrives at the center of the destination cell. Things whose footprints overlap the player's there are crushed: removed, creatures dropping what they carry. The new level's visibility is computed from that cell.
+- **Arriving.** The player arrives at the center of the destination cell. Things whose boxes overlap the player's there are crushed: removed, creatures dropping what they carry. The new level's visibility is computed from that cell.
 
 ## Import
 

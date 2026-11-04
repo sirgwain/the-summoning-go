@@ -133,8 +133,8 @@ not of position.
   neighboring cell without triggering it.
 - **Terrain.** A move is tested at the ground point against the terrain. If blocked, the step shrinks a unit
   at a time until it fits, so a character slides up to a wall rather than stopping short.
-- **Entities.** Each template has a footprint, a square of world units around its ground point. A
-  move that would overlap another entity's footprint backs off.
+- **Entities.** Each template has a collision box, a rectangle in view pixels around where its
+  ground point is drawn. A move that would overlap another entity's box backs off.
 - **Diagonal walls.** A diagonal wall names the corner of its cell it fills; walking along an axis
   into that corner slides along it.
 - **Pushing.** The player pushes pushable things (bodies, boulders, conjured objects) ahead,

@@ -291,7 +291,7 @@ func (im *importer) spellThings() {
 		im.anchor(sid, blockAnchor)
 		im.pack.Things[magicWallID] = &content.Thing{
 			ID: magicWallID, Kind: content.ThingConjured, Sprite: sid, IntervalMS: ms(magicWallTicks),
-			Weight: creatureWeight, Footprint: creatureFootprint,
+			Weight: creatureWeight, Footprint: creatureFootprint, Box: boxOf(creatureBox),
 		}
 	} else {
 		im.report.addf("magic wall: %v", err)
@@ -300,7 +300,7 @@ func (im *importer) spellThings() {
 		im.anchor(sid, content.Offset{b.Width / 2, b.Height - 4})
 		every := content.Fixed(ms(gatewayTicks))
 		im.pack.Things[gatewayID] = &content.Thing{
-			ID: gatewayID, Kind: content.ThingPortal, Sprite: sid, IntervalMS: ms(gatewayTicks), Footprint: creatureFootprint,
+			ID: gatewayID, Kind: content.ThingPortal, Sprite: sid, IntervalMS: ms(gatewayTicks), Footprint: creatureFootprint, Box: boxOf(portalBox),
 			Animations: im.fitAnimations(gatewayID, map[string]content.Animation{"idle": {Frames: []int{0, 1, 2, 1}, MS: every}}, len(b.Frames)),
 		}
 	} else {

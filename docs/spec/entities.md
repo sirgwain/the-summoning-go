@@ -64,7 +64,7 @@ Movement is free, in world units.
 
 **Feet.** The player and creatures move their feet point, `(u + width/3, v + height − 4)` with `width, height` by kind: player (32, 32), creature (32, 32). A move by `(du, dv)` tries the `u` step first, shrinking it by 1 toward 0 until the feet point's cell accepts it; then the `v` step the same way, with the original `u`. A cell accepts the feet if the terrain is walkable for that entity (world.md, rules.md) and entering it does not change the level.
 
-**Other entities.** Each kind has a collision rectangle relative to its position, `(top, left, height, width)` along `(u, v)`:
+**Other entities.** Each kind has a collision rectangle in view pixels, `(top, left, height, width)` from where its sprite's top-left is drawn (the reference point of its position, world.md), so it lies around the figure's feet:
 
 | Kind | Rectangle |
 | --- | --- |
@@ -125,16 +125,29 @@ The player stands like a creature: its standing offset and feet are both `(10, 2
 
 The engine keeps every facing, the player's included, as a direction of the README's table. The player's facing `p` (player.md) is table direction `d = (p + 7) mod 8`. The even directions move along one world axis (the screen diagonals); the odd ones move along both (the screen axes).
 
-### Footprints
+### Collision boxes
 
-Each thing template has a **footprint**: a square of world units centered on its ground point, `footprint` units on a side. Two footprints overlap when their open intervals overlap on both axes. Footprints replace the per-kind rectangles above, which the game measures in view pixels around the sprite; the engine measures in world units around the ground point, so a thing collides the same wherever it is drawn. The importer sets 16 for the player, creatures and boulders and 20 for traps.
+Each thing template has a **box**: the game's rectangle for its kind (Movement), measured in view pixels from the reference point of its ground point rather than of its position, so a thing collides the same wherever its sprite is drawn. A box `(x, y, w, h)` has its left edge `x` and its top `y` pixels from that point. For a kind with standing offset `(su, sv)` the ground point is drawn `(sv − su, su/2 + sv/2)` from the position's point, so the rectangle `(top, left, height, width)` becomes `(left − (sv − su), top − (su/2 + sv/2), width, height)`:
+
+| Kind | Box (x, y, w, h) |
+| --- | --- |
+| Player | (−10, 9, 16, 6) |
+| Creature, conjured | (−10, 9, 16, 12) |
+| In flight | (−6, 5, 8, 8) |
+| Boulder | (−16, 4, 28, 24) |
+| Trap | (−24, 8, 44, 20) |
+| Wall spell (the portal) | (−8, 10, 16, 10) |
+
+Two boxes overlap when their open intervals overlap on both axes. The boxes are thin and lie below the ground point, at the feet: the player can stand just above a creature on screen with their ground points 6 units apart on each axis, often in the same cell, and a thing a step to its side, 8 units off on each axis.
+
+Each thing template also has a **footprint**, a square of world units centered on its ground point, `footprint` units on a side: boulders and traps test its corners against the terrain (Moving), and it sizes the shadow (world.md). The importer sets 16 for the player, creatures and boulders and 20 for traps. A template with no box collides by one derived from its footprint `n`: `(−n/2, −n/4, n, n/2)`.
 
 ### Moving
 
 A move by `(du, dv)` is made in this order:
 
 1. **Terrain.** The player and creatures test their ground point. The `u` step shrinks by 1 toward 0 until the ground point moved by it alone is accepted; then the `v` step the same way, from the original `u`. Boulders and traps test the four corners of their footprint, `footprint/2 − 1` from the ground point on each axis, all moved by the whole step; if any is refused the move is refused. A point is accepted when its cell is inside the level, not blocked (a wall, no floor, or a door that is not open) and not refused by its feature (below).
-2. **Things.** While the moved footprint overlaps another thing's, both steps shrink by 2 toward 0, to nothing at worst. The player and creatures ignore things in flight; what they overlap first is the **blocker**.
+2. **Things.** While the moved box overlaps another thing's, both steps shrink by 2 toward 0, to nothing at worst. The player and creatures ignore things in flight; what they overlap first is the **blocker**.
 3. **Push.** If the player's step shrank to nothing against a blocker that can be pushed, the player pushes it (below).
 4. **Slide.** If the player moved nothing, met no thing, and walked along one axis (an even direction) into a diagonal wall whose filled corner (world.md, Import) lies ahead, it slides 4 units along the other axis, away from that corner.
 
@@ -162,7 +175,7 @@ Boulder animations are named `roll.d` for direction `d`. The importer makes `rol
 
 ### Things in flight
 
-A thing in flight is an object thrown or fired, by the player, a creature or a cell (arrow traps). It starts at its thrower's ground point, moving along the thrower's facing, and updates every tick: the first update it waits; then it moves 8 units along its direction (half that along 1 and 5), its range falling by 1. Its footprint is 8.
+A thing in flight is an object thrown or fired, by the player, a creature or a cell (arrow traps). It starts at its thrower's ground point, moving along the thrower's facing, and updates every tick: the first update it waits; then it moves 8 units along its direction (half that along 1 and 5), its range falling by 1. Its box is the one for things in flight (Collision boxes).
 
 - **Its range runs out:** it lands where it is.
 - **Its ground point would enter a blocked cell:** if that is a sealed door its object opens, the object is used up; otherwise it lands where it is.
@@ -170,7 +183,7 @@ A thing in flight is an object thrown or fired, by the player, a creature or a c
 - **It enters an armed teleporter** that things in flight do not pass over: the teleporter moves it, and turns its direction by the teleporter's `turn` eighths.
 - **Landing:** only the player's throws land; a creature's or a cell's vanish. An arrow breaks 1 time in 25. A bottle becomes its broken item. The object is put down on its cell as rules.md, Dropping objects, says.
 
-A thrower already touching something when it throws (a thing within 4 units ahead of its footprint) hits it at once, and the object lands at its feet.
+A thrower already touching something when it throws (its own box, moved 4 units along its facing, overlaps a thing; for a cell, the flight's box moved so) hits it at once, and the object lands at its feet.
 
 **Drawing it.** It glides between its moves, as Drawn between updates says; spells in flight do the same (spells.md, Missiles).
 

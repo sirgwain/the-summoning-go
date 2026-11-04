@@ -20,9 +20,9 @@ func besideTarget(t *testing.T, hp int, edit ...func(p *content.Pack)) (*World, 
 	w := studyWorld(t, cell{devpack.TargetCell[0], devpack.TargetCell[1] - 1}, 2, edits...)
 	p, tgt := w.Player(), w.Current().Thing("target")
 	p.Slots[SlotRightHand] = w.newObject(devpack.ItemSword)
-	// Within a step of the target: a blow reaches what the player's footprint would overlap a
-	// step ahead.
-	p.U, p.V = tgt.U, tgt.V-20
+	// Within a step of the target: a blow reaches what the player's box would overlap a step
+	// ahead. 14 units back along v the boxes are clear; a step of 8 overlaps them.
+	p.U, p.V = tgt.U, tgt.V-14
 	return w, tgt
 }
 

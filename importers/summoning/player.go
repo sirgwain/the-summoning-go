@@ -108,7 +108,7 @@ func (im *importer) player() error {
 	}
 	im.pack.Things[playerID] = &content.Thing{
 		ID: playerID, Kind: content.ThingPlayer, Sprite: sid, Facing: 3, Speed: creatureSpeed,
-		IntervalMS: ms(playerInterval), Weight: creatureWeight, Footprint: content.DefaultFootprint,
+		IntervalMS: ms(playerInterval), Weight: creatureWeight, Footprint: content.DefaultFootprint, Box: boxOf(playerBox),
 		HitPoints: content.Dice{Bonus: starterHitPoints}, MagicPoints: content.Dice{Bonus: starterMagicPoints},
 		Stats: starterAttributes, Animations: anims, Icons: icons(im.gesture(0)),
 	}

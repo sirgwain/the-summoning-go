@@ -376,6 +376,32 @@ func TestPickUpSwapAndPutDown(t *testing.T) {
 	}
 }
 
+// TestTakeUnderCreature walks the player up to a creature from below on screen: the thin boxes at
+// their feet let the player stand 12 units off on each axis, inside the creature's cell, and take
+// what lies there (docs/spec/entities.md, Collision boxes).
+func TestTakeUnderCreature(t *testing.T) {
+	p := walkPack(
+		"#####",
+		"#G..#",
+		"#.@.#",
+		"#####")
+	p.Things["thing.player"].Box = &content.Box{-10, 9, 16, 6}
+	p.Things["thing.guard"].Box = &content.Box{-10, 9, 16, 12}
+	w, err := New(p, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l, pl := w.Current(), w.Player()
+	l.Objects[cell{1, 1}] = append(l.Objects[cell{1, 1}], w.newObject("item.key"))
+	walk(w, 7, 6)
+	if pl.U != 60 || pl.V != 60 || pl.Cell() != (cell{1, 1}) {
+		t.Fatalf("the player stopped at (%d, %d) in %v, want (60, 60) in the guard's cell", pl.U, pl.V, pl.Cell())
+	}
+	if ev := w.Update([]input.Command{input.PickUp{}}); has(ev, EventMessage, content.MsgNothingToTake) || len(l.Objects[cell{1, 1}]) != 0 {
+		t.Errorf("the key under the guard was not taken: %v", ev)
+	}
+}
+
 func TestPack(t *testing.T) {
 	w := walkWorld(t,
 		"####",

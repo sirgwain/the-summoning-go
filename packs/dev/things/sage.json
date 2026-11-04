@@ -4,6 +4,7 @@
   "sprite": "sprite.sage",
   "facing": 3,
   "interval_ms": 330,
+  "box": [-10, 9, 16, 12],
   "weight": 100,
   "hit_points": "30",
   "behaviors": [

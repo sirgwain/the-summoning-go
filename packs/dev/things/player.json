@@ -6,6 +6,7 @@
   "speed": 8,
   "interval_ms": 275,
   "footprint": 16,
+  "box": [-10, 9, 16, 6],
   "weight": 100,
   "hit_points": "56",
   "magic_points": "52",

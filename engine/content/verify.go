@@ -347,6 +347,9 @@ func (v *verifier) thing(t *Thing) {
 	if t.Speed < 0 || t.IntervalMS < 0 || t.Weight < 0 || t.Footprint < 0 {
 		v.fail("%s: negative speed, interval, weight or footprint", owner)
 	}
+	if b := t.Box; b != nil && (b[2] <= 0 || b[3] <= 0) {
+		v.fail("%s: box %v has no area", owner, *b)
+	}
 	for _, l := range t.Figure {
 		v.figureLook(owner+" figure "+l.Name, l.FigureLook)
 	}

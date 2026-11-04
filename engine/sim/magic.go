@@ -579,7 +579,7 @@ func (w *World) timedSpell(effect string, power int) {
 func (w *World) conjure(l *Level, c caster, sp *content.Spell, cj *content.Conjure, power int) {
 	tmpl := w.pack.Things[cj.Thing]
 	u, v := c.ahead(cj.Distance)
-	if tmpl == nil || l.Blocked(cellOf(u, v)) || w.blocker(l, nil, false, u, v, tmpl.Size(), nil) != nil {
+	if tmpl == nil || l.Blocked(cellOf(u, v)) || w.blocker(l, nil, false, u, v, tmpl.Bounds(), nil) != nil {
 		w.message(l, cellOf(c.u, c.v), content.MsgWallFailed, "")
 		return
 	}
@@ -609,7 +609,7 @@ func (w *World) openPortal(l *Level, c caster, pt *content.Portal) {
 			w.removeThing(l, t, "closed")
 		}
 	}
-	if tmpl == nil || l.Blocked(cellOf(u, v)) || w.blocker(l, nil, true, u, v, tmpl.Size(), nil) != nil {
+	if tmpl == nil || l.Blocked(cellOf(u, v)) || w.blocker(l, nil, true, u, v, tmpl.Bounds(), nil) != nil {
 		w.message(l, cellOf(c.u, c.v), content.MsgNoRoomForPortal, "")
 		return
 	}

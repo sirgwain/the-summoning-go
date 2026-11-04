@@ -352,6 +352,12 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 	for _, f := range looks[content.LayerFloor] {
 		cmds = append(cmds, featureCmds(p, f)...)
 	}
+	sunk := map[content.Cell]bool{}
+	for _, f := range s.Features {
+		if f.Kind == content.FeaturePlate && f.State == "down" {
+			sunk[f.Cell] = true
+		}
+	}
 	shown := map[content.Cell]int{}
 	for _, o := range s.Objects {
 		if !s.shows(o.Cell) {
@@ -360,7 +366,7 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 		if shown[o.Cell]++; shown[o.Cell] > maxFloorObjects {
 			continue
 		}
-		if cmd, ok := objectCmd(p, o, opts); ok {
+		if cmd, ok := objectCmd(p, o, sunk[o.Cell], opts); ok {
 			cmds = append(cmds, cmd)
 		}
 	}
@@ -516,8 +522,15 @@ func featureCmds(p *content.Pack, f Feature) []Cmd {
 	return cmds
 }
 
-// objectCmd draws a floor object centered in its cell's tile box.
-func objectCmd(p *content.Pack, o Object, opts Options) (Cmd, bool) {
+// Where a floor object's image goes from its cell's tile box corner, and how much lower on a
+// plate that is down (docs/spec/items.md, Objects on the floor).
+var (
+	objectAt   = image.Pt(8, 13)
+	objectSunk = 4
+)
+
+// objectCmd draws a floor object at its place in its cell's tile box, lower when sunk.
+func objectCmd(p *content.Pack, o Object, sunk bool, opts Options) (Cmd, bool) {
 	it, ok := p.Items[o.Item]
 	if !ok {
 		return Cmd{}, false // a random object is chosen when the level is first entered
@@ -526,13 +539,14 @@ func objectCmd(p *content.Pack, o Object, opts Options) (Cmd, bool) {
 	if opts.Magnify {
 		img = it.Icon
 	}
-	sprite, ok := p.Sprites[img.Sprite]
-	if !ok {
+	if _, ok := p.Sprites[img.Sprite]; !ok {
 		return Cmd{}, false
 	}
-	box := TileBox(o.Cell)
-	w, h := sprite.FrameSize[0], sprite.FrameSize[1]
-	return Cmd{Sprite: img.Sprite, Frame: img.Frame, X: box.X + TileSize/2 - w/2, Y: box.Y + TileSize/2 - h/2, Glow: GlowObject}, true
+	at := TileBox(o.Cell).Add(objectAt)
+	if sunk {
+		at.Y += objectSunk
+	}
+	return Cmd{Sprite: img.Sprite, Frame: img.Frame, X: at.X, Y: at.Y, Glow: GlowObject}, true
 }
 
 // CellUnits is the size of a cell in world units.

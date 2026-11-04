@@ -6,5 +6,6 @@
   "speed": 8,
   "interval_ms": 110,
   "footprint": 16,
+  "box": [-16, 4, 28, 24],
   "weight": 100
 }

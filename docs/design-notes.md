@@ -287,7 +287,6 @@ Change's frame by facing, and the hostile speed of records 23h and 2Bh (`hostile
 
 Recorded with their reasons in [design-questions.md](design-questions.md):
 
-- Footprints in world units instead of the game's per-kind rectangles in view pixels.
 - Floor halves fixed at import; the game's wall shapes that change with what is visible are not
   done (world.md, Visibility).
 - Exit markers as floor features rather than entities.

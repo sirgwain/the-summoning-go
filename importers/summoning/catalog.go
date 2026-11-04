@@ -438,6 +438,15 @@ var (
 	creatureOffset = content.Offset{-6, 12}
 )
 
+// Collision boxes by kind (entities.md, Collision boxes).
+var (
+	playerBox   = content.Box{-10, 9, 16, 6}
+	creatureBox = content.Box{-10, 9, 16, 12}
+	boulderBox  = content.Box{-16, 4, 28, 24}
+	trapBox     = content.Box{-24, 8, 44, 20}
+	portalBox   = content.Box{-8, 10, 16, 10}
+)
+
 // NPC record values (creatures.md).
 const (
 	stationaryCaster      = 2
@@ -497,7 +506,7 @@ func (im *importer) creature(n int) (string, error) {
 		Attack:     dice(rec.Attack()),
 		Experience: content.Dice{Count: rec.HitDice(), Sides: 10, Bonus: expBonus},
 		ID:         id, Kind: content.ThingCreature, Sprite: sid, Speed: creatureSpeed,
-		IntervalMS: ms(rec.Interval()), Weight: creatureWeight, Footprint: creatureFootprint,
+		IntervalMS: ms(rec.Interval()), Weight: creatureWeight, Footprint: creatureFootprint, Box: boxOf(creatureBox),
 		HitPoints: content.Dice{Count: rec.HitDice(), Sides: 10, Bonus: 4 * rec.HitBonus()},
 		Stats:     map[string]int{"resistance": rec.Resistance(), "bonus": rec.Bonus(), "accuracy": rec.Accuracy()},
 	}
@@ -644,7 +653,7 @@ func (im *importer) boulder(res int) (string, error) {
 	}
 	im.pack.Things[id] = &content.Thing{
 		ID: id, Kind: content.ThingBoulder, Sprite: sid, Speed: boulderSpeed, IntervalMS: ms(boulderInterval),
-		Weight: creatureWeight, Footprint: creatureFootprint, Animations: im.fitAnimations(id, anims, len(b.Frames)),
+		Weight: creatureWeight, Footprint: creatureFootprint, Box: boxOf(boulderBox), Animations: im.fitAnimations(id, anims, len(b.Frames)),
 	}
 	return id, nil
 }
@@ -663,7 +672,11 @@ func (im *importer) trap(res int) (string, error) {
 	im.pack.Things[id] = &content.Thing{
 		ID: id, Kind: content.ThingTrap, Sprite: sid, IntervalMS: ms(trapInterval), Weight: creatureWeight,
 		Footprint:  trapFootprint,
+		Box:        boxOf(trapBox),
 		Animations: im.fitAnimations(id, map[string]content.Animation{"idle": {Frames: []int{0}}}, len(b.Frames)),
 	}
 	return id, nil
 }
+
+// boxOf returns a copy of b for a template to hold.
+func boxOf(b content.Box) *content.Box { return &b }

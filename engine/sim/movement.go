@@ -58,37 +58,46 @@ func cellOf(u, v int) content.Cell {
 
 // body is something that takes up room in a level: a thing, or the player when thing is nil.
 type body struct {
-	thing   *Thing
-	u, v, n int
+	thing *Thing
+	u, v  int
+	box   content.Box
 }
 
-// overlaps reports whether squares of sides a and b centered on (au, av) and (bu, bv) overlap,
-// as open intervals.
-func overlaps(au, av, a, bu, bv, b int) bool {
-	return 2*abs(au-bu) < a+b && 2*abs(av-bv) < a+b
+// viewPoint returns where world point (u, v) is drawn, in view pixels, up to the view's origin
+// (docs/spec/world.md, Projection).
+func viewPoint(u, v int) (x, y int) {
+	return v - u, floorDiv(u, 2) + floorDiv(v, 2)
+}
+
+// overlaps reports whether box a with its ground point at (au, av) overlaps box b with its ground
+// point at (bu, bv) (docs/spec/entities.md, Collision boxes).
+func overlaps(au, av int, a content.Box, bu, bv int, b content.Box) bool {
+	ax, ay := viewPoint(au, av)
+	bx, by := viewPoint(bu, bv)
+	return a.Overlaps(ax, ay, b, bx, by)
 }
 
 // bodies returns what takes up room in level l, the player first.
 func (w *World) bodies(l *Level) []body {
 	var out []body
 	if p := w.player; p != nil && w.current == l.ID {
-		out = append(out, body{u: p.U, v: p.V, n: p.Template.Size()})
+		out = append(out, body{u: p.U, v: p.V, box: p.Template.Bounds()})
 	}
 	for _, t := range l.Things {
-		out = append(out, body{thing: t, u: t.U, v: t.V, n: t.Template.Size()})
+		out = append(out, body{thing: t, u: t.U, v: t.V, box: t.Template.Bounds()})
 	}
 	return out
 }
 
-// blocker returns the first body of l other than self (nil self is the player) whose footprint
-// overlaps a footprint n wide at (u, v), leaving out bodies in skip.
-func (w *World) blocker(l *Level, self *Thing, playerSelf bool, u, v, n int, skip map[*Thing]bool) *body {
+// blocker returns the first body of l other than self (nil self is the player) whose box
+// overlaps box at (u, v), leaving out bodies in skip.
+func (w *World) blocker(l *Level, self *Thing, playerSelf bool, u, v int, box content.Box, skip map[*Thing]bool) *body {
 	for _, b := range w.bodies(l) {
 		switch {
 		case b.thing == nil && playerSelf, b.thing != nil && b.thing == self, b.thing != nil && skip[b.thing]:
 			continue
 		}
-		if overlaps(u, v, n, b.u, b.v, b.n) {
+		if overlaps(u, v, box, b.u, b.v, b.box) {
 			return &b
 		}
 	}
@@ -124,7 +133,7 @@ func (w *World) push(l *Level, t *Thing, du, dv, depth int, end int64) bool {
 		return false
 	}
 	for range maxDepth {
-		b := w.blocker(l, t, true, t.U+du, t.V+dv, t.Template.Size(), nil)
+		b := w.blocker(l, t, true, t.U+du, t.V+dv, t.Template.Bounds(), nil)
 		if b == nil {
 			t.glide.start(t.U, t.V, w.step, end)
 			w.moveThingBy(l, t, du, dv)
@@ -177,7 +186,7 @@ func (w *World) rollBoulders(l *Level) {
 			speed = 8
 		}
 		du, dv := Dirs[d][0]*speed, Dirs[d][1]*speed
-		b := w.blocker(l, t, false, t.U+du, t.V+dv, t.Template.Size(), nil)
+		b := w.blocker(l, t, false, t.U+du, t.V+dv, t.Template.Bounds(), nil)
 		if b == nil && w.thingFits(l, t, t.U+du, t.V+dv) {
 			w.moveThingBy(l, t, du, dv)
 			continue

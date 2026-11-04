@@ -64,7 +64,7 @@ func (w *World) launchSpell(l *Level, c caster, d int, m *content.MissileSpell, 
 	}
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: f.Cell(), Detail: "spell flies"})
 	l.Flights = append(l.Flights, f)
-	if b := w.flightBlocker(l, f, c.u+Dirs[d][0]*touchReach, c.v+Dirs[d][1]*touchReach, flightFootprint+touchReach); b != nil {
+	if b := w.flightBlocker(l, f, c.u+Dirs[d][0]*touchReach, c.v+Dirs[d][1]*touchReach, w.throwerBox(f)); b != nil {
 		w.spellHits(l, f, b)
 		w.endSpell(l, f)
 	}
@@ -102,7 +102,7 @@ func (w *World) updateSpell(l *Level, f *Flight) {
 		w.endSpell(l, f)
 		return
 	}
-	if b := w.flightBlocker(l, f, u, v, flightFootprint); b != nil {
+	if b := w.flightBlocker(l, f, u, v, flightBox); b != nil {
 		w.spellHits(l, f, b)
 		w.endSpell(l, f)
 		return
@@ -238,7 +238,7 @@ func (w *World) scatter(l *Level, t *Thing) bool {
 			continue
 		}
 		u, v := cellCenter(c)
-		if w.blocker(l, t, false, u, v, t.Template.Size(), nil) != nil {
+		if w.blocker(l, t, false, u, v, t.Template.Bounds(), nil) != nil {
 			continue
 		}
 		w.moveThing(l, t, c, 0)

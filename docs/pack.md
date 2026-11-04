@@ -369,9 +369,11 @@ leaves out shows nothing. Later milestones add keys.
 - `facing` is the starting direction, `speed` the step in world units, `interval_ms` the time
   between updates. `hostile_speed`, if set, is a creature's speed once a conversation turns it
   hostile.
-- `footprint` is the side, in world units, of the square around the ground point the thing takes
-  up: two things whose footprints overlap collide. Boulders and traps also test the footprint's
-  corners against the terrain. 0 means 16.
+- `box` is the rectangle the thing collides by, `[x, y, w, h]` in view pixels from where its
+  ground point is drawn: its left edge, its top, its width and its height. Two things whose boxes
+  overlap collide. Without one, a thing collides by `[-n/2, -n/4, n, n/2]` for its footprint `n`.
+- `footprint` is the side, in world units, of the square around the ground point that boulders
+  and traps test against the terrain at its corners; it also sizes the thing's shadow. 0 means 16.
 - `weight` is what the thing adds to a plate it stands on; 0 presses nothing.
 - `hit_points` are rolled when the thing is placed. A creature with none is placed as a corpse.
   `magic_points` (players) are rolled the same way. A player's `stats` may also give its starting

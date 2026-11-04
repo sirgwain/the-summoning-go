@@ -5,6 +5,7 @@
   "facing": 6,
   "speed": 8,
   "interval_ms": 275,
+  "box": [-10, 9, 16, 12],
   "weight": 100,
   "hit_points": "2d8+2",
   "behaviors": [

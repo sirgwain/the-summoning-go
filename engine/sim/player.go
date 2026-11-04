@@ -270,7 +270,7 @@ func (w *World) place(c content.Cell, quiet bool) {
 	p, l := w.player, w.Current()
 	p.U, p.V = cellCenter(c)
 	for _, t := range append([]*Thing(nil), l.Things...) {
-		if overlaps(p.U, p.V, p.Template.Size(), t.U, t.V, t.Template.Size()) {
+		if overlaps(p.U, p.V, p.Template.Bounds(), t.U, t.V, t.Template.Bounds()) {
 			w.removeThing(l, t, "crushed")
 		}
 	}
@@ -585,10 +585,10 @@ func (w *World) walk(d int) bool {
 	}
 
 	// Things: the player walks out of anything it already overlaps.
-	n := p.Template.Size()
+	n := p.Template.Bounds()
 	skip := map[*Thing]bool{}
 	for _, t := range l.Things {
-		if overlaps(p.U, p.V, n, t.U, t.V, t.Template.Size()) {
+		if overlaps(p.U, p.V, n, t.U, t.V, t.Template.Bounds()) {
 			skip[t] = true
 		}
 	}

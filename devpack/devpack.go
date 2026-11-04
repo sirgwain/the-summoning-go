@@ -37,7 +37,28 @@ func Build() *content.Pack {
 	menu(p)
 	sounds(p)
 	effects(p)
+	boxThings(p)
 	return p
+}
+
+// kindBoxes are the collision boxes of the game's kinds (docs/spec/entities.md, Collision boxes).
+var kindBoxes = map[string]content.Box{
+	content.ThingPlayer:   {-10, 9, 16, 6},
+	content.ThingCreature: {-10, 9, 16, 12},
+	content.ThingConjured: {-10, 9, 16, 12},
+	content.ThingBoulder:  {-16, 4, 28, 24},
+	content.ThingTrap:     {-24, 8, 44, 20},
+	content.ThingPortal:   {-8, 10, 16, 10},
+}
+
+// boxThings gives every thing template without a box its kind's, so the dev pack collides as an
+// imported one does.
+func boxThings(p *content.Pack) {
+	for _, t := range p.Things {
+		if b, ok := kindBoxes[t.Kind]; ok && t.Box == nil {
+			t.Box = &b
+		}
+	}
 }
 
 // Sprite, set and look ids.

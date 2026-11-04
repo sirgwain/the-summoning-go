@@ -210,7 +210,7 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 	}
 	var hit *body
 	for du != 0 || dv != 0 {
-		b := w.blocker(l, t, false, t.U+du, t.V+dv, t.Template.Size(), nil)
+		b := w.blocker(l, t, false, t.U+du, t.V+dv, t.Template.Bounds(), nil)
 		if b == nil {
 			break
 		}
@@ -224,7 +224,7 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 		return
 	}
 	if hit == nil {
-		hit = w.blocker(l, t, false, t.U+Dirs[d][0]*speed, t.V+Dirs[d][1]*speed, t.Template.Size(), nil)
+		hit = w.blocker(l, t, false, t.U+Dirs[d][0]*speed, t.V+Dirs[d][1]*speed, t.Template.Bounds(), nil)
 	}
 	switch {
 	case hit != nil && hit.thing == nil && t.Hostile && !p.Dead:
@@ -499,13 +499,13 @@ func hasTag(it *content.Item, tag string) bool {
 
 // swing strikes with object o (nil for bare hands) by action a, swinging hand (2 for both): at
 // the first creature one step ahead (docs/spec/combat.md, The player attacks).
-// strikeAt returns what a blow at a footprint n wide at (u, v) meets: the first living creature
+// strikeAt returns what a blow by a body with box at (u, v) meets: the first living creature
 // there, past any corpse or object in front of it, else the first thing there, else nil
 // (docs/spec/combat.md, The player attacks).
-func (w *World) strikeAt(l *Level, u, v, n int) *body {
+func (w *World) strikeAt(l *Level, u, v int, box content.Box) *body {
 	var first *body
 	for _, b := range w.bodies(l) {
-		if b.thing == nil || !overlaps(u, v, n, b.u, b.v, b.n) {
+		if b.thing == nil || !overlaps(u, v, box, b.u, b.v, b.box) {
 			continue
 		}
 		if alive(b.thing) {
@@ -526,7 +526,7 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 		speed = 8
 	}
 	d := p.Facing
-	b := w.strikeAt(l, p.U+Dirs[d][0]*speed, p.V+Dirs[d][1]*speed, p.Template.Size())
+	b := w.strikeAt(l, p.U+Dirs[d][0]*speed, p.V+Dirs[d][1]*speed, p.Template.Bounds())
 	switch {
 	case b == nil || b.thing == nil || !alive(b.thing):
 		w.message(l, p.Cell(), content.MsgNotACreature, "")

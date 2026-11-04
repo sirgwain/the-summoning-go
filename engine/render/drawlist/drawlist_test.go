@@ -86,8 +86,8 @@ func TestBuild(t *testing.T) {
 		// Overlays, then floor looks in their state.
 		{"hazard", 2, 0, 32, Whole, "", "", false, GlowObject, 0},
 		{"plate", 1, -16, 40, Whole, "", "plate", false, GlowObject, 0},
-		// The key centered in (0, 0).
-		{"tiny", 0, 12, 13, Whole, "", "", false, GlowObject, 0},
+		// The key at (8, 13) in (0, 0)'s tile box.
+		{"tiny", 0, 8, 13, Whole, "", "", false, GlowObject, 0},
 		// Row 0: the lever and the door; then row 1: the exit look in place of its wall and
 		// decoration, and the wall with its decoration.
 		{"lever", 1, 4, 2, Whole, "", "lever", false, GlowObject, 0},
@@ -145,11 +145,30 @@ func TestBuildDiamondFloors(t *testing.T) {
 func TestBuildMagnified(t *testing.T) {
 	p, l := testPack()
 	for _, c := range Build(p, LevelScene(p, l), Options{Magnify: true}) {
-		if c.Sprite == "icon" && (c.X != 8 || c.Y != 8) {
-			t.Errorf("magnified key at (%d, %d), want (8, 8)", c.X, c.Y)
+		if c.Sprite == "icon" && (c.X != 8 || c.Y != 13) {
+			t.Errorf("magnified key at (%d, %d), want (8, 13)", c.X, c.Y)
 		}
 		if c.Sprite == "tiny" {
 			t.Error("magnified key drawn with its floor image")
+		}
+	}
+}
+
+// TestObjectOnPressedPlate draws an object on a plate that is down 4 pixels lower, and on one that
+// is up at its usual place (docs/spec/items.md, Objects on the floor).
+func TestObjectOnPressedPlate(t *testing.T) {
+	for _, down := range []bool{true, false} {
+		p, l := testPack()
+		l.Features[1].Down = down
+		l.Objects = []*content.FloorObject{{Cell: content.Cell{1, 1}, Object: content.Object{Item: "key"}}}
+		want := TileBox(content.Cell{1, 1}).Add(image.Pt(8, 13))
+		if down {
+			want.Y += 4
+		}
+		for _, c := range Build(p, LevelScene(p, l), Options{}) {
+			if c.Sprite == "tiny" && (c.X != want.X || c.Y != want.Y) {
+				t.Errorf("plate down %v: key at (%d, %d), want %v", down, c.X, c.Y, want)
+			}
 		}
 	}
 }

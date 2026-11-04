@@ -73,16 +73,15 @@ names would be guesswork; numbered ids are stable and an author can rename them.
 
 **Revisit if** names can be found for them, for example from a creature's conversation script name.
 
-## Footprints in world units
+## Collision boxes around the ground point
 
-**Choice.** Things collide by a square footprint in world units around their ground point, one
-size per template. The game measures each kind's rectangle in view pixels around its sprite.
+**Choice.** Things collide by the game's rectangle for their kind, in view pixels, measured from
+where the ground point is drawn rather than from the sprite's corner. Square footprints in world
+units, an earlier choice, kept things about twice as far apart as the game does: the player could
+not reach an arrow lying under a creature.
 
-**Why.** Ground points are the engine's way of placing things; a footprint around one collides
-the same however the thing is drawn, and an author sets one number.
-
-**Revisit if** play shows things meeting at visibly different distances than in the game, for
-example boulders against the player.
+**Why.** Measured from the ground point, a box collides the same however the thing is drawn, and
+the game's distances stay.
 
 ## Putting down where the player stands
 
@@ -120,16 +119,13 @@ be struck) or `stationary` (it stands and casts). The game tells these apart by 
 
 ## Striking reach
 
-**Choice.** The player strikes what its footprint would overlap one full step ahead, as the game
-tests a step. With footprints of 16 that means walking right up to a creature.
-
-**Revisit if** fights feel cramped next to the game, where the rectangles in view pixels may reach
-a little differently along each axis.
+**Choice.** The player strikes what its box would overlap one full step ahead, as the game tests a
+step.
 
 ## Things in flight are not things
 
 **Choice.** An object in flight is a flight of its level, not a thing with a template: it has a
-footprint of 8, moves a step a tick, and draws the item's floor image above its ground point.
+box of its own, moves a step a tick, and draws the item's floor image above its ground point.
 
 **Why.** Flights live a few seconds and carry an object; giving them templates would add records
 nobody edits. Spells in flight will reuse them with Magic.

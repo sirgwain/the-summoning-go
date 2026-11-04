@@ -277,9 +277,13 @@ type Thing struct {
 	Speed        int `json:"speed,omitempty"`
 	HostileSpeed int `json:"hostile_speed,omitempty"`
 	IntervalMS   int `json:"interval_ms,omitempty"`
-	// Footprint is the side of the square, in world units around the ground point, the thing
-	// takes up; 0 means DefaultFootprint.
+	// Footprint is the side of the square, in world units around the ground point, whose corners
+	// boulders and traps test against the terrain, and which sizes the shadow; 0 means
+	// DefaultFootprint.
 	Footprint int `json:"footprint,omitempty"`
+	// Box is the rectangle, in view pixels from where the ground point is drawn, the thing
+	// collides by; nil means one derived from the footprint (Thing.Bounds).
+	Box *Box `json:"box,omitempty"`
 	// Weight is what the thing adds to a plate it stands on.
 	Weight      int            `json:"weight"`
 	HitPoints   Dice           `json:"hit_points,omitzero"`
@@ -363,6 +367,27 @@ func (t *Thing) Size() int {
 		return t.Footprint
 	}
 	return DefaultFootprint
+}
+
+// Box is a rectangle in view pixels, [x, y, w, h]: its left and top from a point, its width and
+// height.
+type Box [4]int
+
+// Overlaps reports whether box a at point (ax, ay) and box b at (bx, by) overlap, as open
+// intervals on both axes.
+func (a Box) Overlaps(ax, ay int, b Box, bx, by int) bool {
+	al, at, bl, bt := ax+a[0], ay+a[1], bx+b[0], by+b[1]
+	return bl+b[2] > al && bl < al+a[2] && bt+b[3] > at && bt < at+a[3]
+}
+
+// Bounds returns the box the thing collides by: its own, or else a footprint n wide's, n by n/2
+// with its top a quarter of n above the ground point.
+func (t *Thing) Bounds() Box {
+	if t.Box != nil {
+		return *t.Box
+	}
+	n := t.Size()
+	return Box{-n / 2, -n / 4, n, n / 2}
 }
 
 // Has reports whether the thing has behavior b.

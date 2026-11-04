@@ -121,7 +121,7 @@ An object's wear value starts at its template's durability (items.md). Wearing b
 
 Combat is a module (`engine/combat`) the simulation calls with plain numbers; the pack names the rule set, and the Summoning's is this file. The simulation finds who strikes whom and applies the results; the rule set rolls and computes.
 
-- **Striking.** The player strikes the first creature whose footprint overlaps the player's moved one full step along its facing. A creature strikes the player when its own step is blocked by the player.
+- **Striking.** The player strikes the first creature whose box overlaps the player's moved one full step along its facing (entities.md, Collision boxes). A creature strikes the player when its own step is blocked by the player.
 - **Behind.** In engine directions: the striker's direction, rounded down to an even one, equals the target's facing.
 - **Dice.** An item action's damage and a creature's attack are dice in the pack. A damage code byte `c` imports as `((c >> 4) + 1)d((c & 0Fh) + 1)`, and 00h as no damage.
 - **Rolls.** "d20" is 1 + rand(20). Every message above is an engine message (pack.md): `miss` (5Bh, the score), `hit` (5Ch, the score and the damage), `not_a_creature` (5Ah), `cannot_hurt` (5Dh), `creature_hits` (7Dh), `creature_misses` (7Eh), `weapon_breaks` (8Ah, the item's name).
