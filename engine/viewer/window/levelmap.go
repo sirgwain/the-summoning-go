@@ -15,8 +15,8 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
 
-// The level map drawn as ink on parchment (docs/spec/world.md, The engine's map): the minimap in
-// its iron frame, and the full map unrolling over the view.
+// The level map drawn as ink (docs/spec/world.md, The engine's map): the minimap straight over
+// the view, and the full map on parchment unrolling over the view.
 
 // Ink colors of the ground.
 var (
@@ -73,9 +73,9 @@ const (
 type mapPics struct {
 	// glow is a soft round spot, white, for the symbols' halos.
 	glow *ebiten.Image
-	// sheet is the full map's parchment and roll its rolled end, at their sizes; mini the
-	// minimap's.
-	sheet, roll, mini *ebiten.Image
+	// sheet is the full map's parchment and roll its rolled end, at their sizes; miniMask the
+	// minimap's edge fade.
+	sheet, roll, miniMask *ebiten.Image
 	// page is the full map as last drawn, and its place on the screen, kept so it can roll up
 	// once it has closed.
 	page     *ebiten.Image
@@ -84,7 +84,7 @@ type mapPics struct {
 	open    bool
 	closing bool
 	since   time.Time
-	// cells is the minimap's own picture, clipped to its frame.
+	// cells is the minimap's own picture, clipped to its place.
 	cells *ebiten.Image
 }
 
@@ -541,32 +541,50 @@ func scaleColor(c color.RGBA, k float32) color.RGBA {
 // mapTime is the time the map's lights go by.
 func (s *Window) mapTime() float64 { return float64(s.drawn) / float64(ebiten.TPS()) }
 
-// drawMinimap draws the minimap in the top-left corner: the parchment in an iron frame, the
-// level about the player, and a plaque naming the level under it.
+// minimapOpacity is how opaque the minimap's ink is over the view.
+const minimapOpacity = 0.85
+
+// drawMinimap draws the minimap in the top-left corner: the level about the player, inked
+// straight over the view with no frame or parchment and fading out toward its edges, and the
+// level's name under it.
 func (s *Window) drawMinimap(screen *ebiten.Image) {
 	mv := s.v.Minimap()
 	if mv == nil {
 		return
 	}
-	s.drawFrame(screen, frame.Iron, mv.Frame, mv.Scale, 1)
 	size := mv.Area.Size()
-	sheet := sized(&s.maps.mini, size.Div(parchmentScale), func() image.Image {
-		return frame.Parchment(size.X/parchmentScale, size.Y/parchmentScale, false)
-	})
 	page := blank(&s.maps.cells, size)
-	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
-	op.GeoM.Scale(float64(size.X)/float64(sheet.Bounds().Dx()), float64(size.Y)/float64(sheet.Bounds().Dy()))
-	page.DrawImage(sheet, op)
 	d := &mapDrawing{s: s, dst: page, m: mv.LevelMap, f: mv.MapFrame, off: mv.Area.Min, t: s.mapTime()}
 	d.draw()
+	// Fade the edges out over a cell's width.
+	fade := float64(mv.Zoom * 2)
+	mask := sized(&s.maps.miniMask, size, func() image.Image { return edgeFade(size, fade) })
+	op := &ebiten.DrawImageOptions{Blend: ebiten.BlendDestinationIn}
+	page.DrawImage(mask, op)
 	op = &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(float64(mv.Area.Min.X), float64(mv.Area.Min.Y))
+	op.ColorScale.ScaleAlpha(minimapOpacity)
 	screen.DrawImage(page, op)
-	// The plaque.
+	// The level's name, shadowed so it reads over the view.
 	p := mv.Plaque
-	vector.FillRect(screen, float32(p.Min.X), float32(p.Min.Y), float32(p.Dx()), float32(p.Dy()), color.RGBA{16, 20, 28, 240}, false)
-	vector.StrokeRect(screen, float32(p.Min.X)+0.5, float32(p.Min.Y)+0.5, float32(p.Dx()-1), float32(p.Dy()-1), 1, color.RGBA{120, 140, 170, 255}, false)
-	s.printIn(screen, mv.Name, p.Min.X+viewer.Margin, p.Min.Y+2, color.RGBA{235, 215, 160, 255})
+	x, y := p.Min.X+viewer.Margin, p.Min.Y+2
+	s.printIn(screen, mv.Name, x+1, y+1, color.RGBA{0, 0, 0, 200})
+	s.printIn(screen, mv.Name, x, y, color.RGBA{235, 215, 160, 255})
+}
+
+// edgeFade is a mask of size, opaque in the middle and fading to clear over fade pixels toward
+// each edge.
+func edgeFade(size image.Point, fade float64) image.Image {
+	img := image.NewAlpha(image.Rectangle{Max: size})
+	for y := range size.Y {
+		for x := range size.X {
+			d := math.Min(math.Min(float64(x)+0.5, float64(size.X-x)-0.5), math.Min(float64(y)+0.5, float64(size.Y-y)-0.5))
+			a := math.Min(1, d/fade)
+			a = a * a * (3 - 2*a)
+			img.SetAlpha(x, y, color.Alpha{uint8(255 * a)})
+		}
+	}
+	return img
 }
 
 // drawFullMap draws the full map: the view darkened, and the parchment unrolling from the
@@ -613,7 +631,7 @@ func (s *Window) drawFullMap(screen *ebiten.Image) {
 		screen.DrawImage(st.page.SubImage(src).(*ebiten.Image), op)
 	}
 	// The rolls, each half over the sheet's edge.
-	rw := rollWidth(screen.Bounds().Size())
+	rw := viewer.MapRollWidth(screen.Bounds().Size())
 	roll := sized(&st.roll, image.Pt(rw, r.Dy()+rw).Div(parchmentScale), func() image.Image {
 		return frame.Roll(rw/parchmentScale, (r.Dy()+rw)/parchmentScale)
 	})
@@ -627,11 +645,6 @@ func (s *Window) drawFullMap(screen *ebiten.Image) {
 		op.GeoM.Translate(-3, -4)
 		screen.DrawImage(roll, op)
 	}
-}
-
-// rollWidth is the rolls' width on a screen of size.
-func rollWidth(size image.Point) int {
-	return max(24, min(size.X, size.Y)/20) / parchmentScale * parchmentScale
 }
 
 // easeOut eases t, 0..1, so that it slows toward the end.
@@ -672,9 +685,20 @@ func (s *Window) drawMapPage(fv *viewer.FullMapView) {
 
 	s.drawMapLegend(page, fv, off, t)
 	s.drawMapNote(page, fv, off)
-	keys := "Wheel zoom  Drag pan  Right-click follow  Backspace back  PgUp/PgDn levels  Home here  M close"
-	if kw := len(keys) * viewer.CharWidth; kw < size.X-8*viewer.Margin {
-		s.printIn(page, keys, (size.X-kw)/2, size.Y-3*viewer.Margin-viewer.LineHeight, color.RGBA{225, 205, 160, 255})
+	// The keys along the bottom, wrapped onto more lines when the sheet is narrow.
+	keys := []string{"Wheel zoom", "Drag pan", "Right-click follow", "Backspace back", "PgUp/PgDn levels", "Home here", "M close"}
+	n := fv.Inner.Dx() / viewer.CharWidth
+	var lines []string
+	for _, k := range keys {
+		if last := len(lines) - 1; last >= 0 && len(lines[last])+2+len(k) <= n {
+			lines[last] += "  " + k
+		} else {
+			lines = append(lines, k)
+		}
+	}
+	for i, l := range lines {
+		y := size.Y - 3*viewer.Margin - (len(lines)-i)*viewer.LineHeight
+		s.printIn(page, l, (size.X-len(l)*viewer.CharWidth)/2, y, color.RGBA{225, 205, 160, 255})
 	}
 }
 

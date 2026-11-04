@@ -227,7 +227,7 @@ Change's frame by facing, and the hostile speed of records 23h and 2Bh (`hostile
 - Hotkeys for the hotbar's objects.
 - Done: the map in the engine's own style (`docs/spec/world.md`, The engine's map): ink on a
   parchment made from noise (`frame.Parchment`, `frame.Roll`) that unrolls, raised walls,
-  glowing symbols, the minimap in iron following the player. The world records the links the
+  glowing symbols, the minimap following the player. The world records the links the
   player travels, an exit's way back when one is beside the arrival, and the order levels are
   visited, what each mouth has said and where each creature that talks was last seen, kept in
   saves (`TestLinksRecorded`, `TestExitTeachesTheWayBack`, `TestMouthsAndTalkersRecorded`); the

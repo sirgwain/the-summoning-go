@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
-	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
 	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
@@ -347,9 +346,11 @@ type mapPlace struct {
 // FullMapView is the full map as it shows now.
 type FullMapView struct {
 	*LevelMap
-	// Rect is the parchment on the screen; Title the level's name as it heads the map.
-	Rect  image.Rectangle
-	Title string
+	// Rect is the parchment on the screen; Inner the part of it clear of its rolled ends and
+	// margins, which the legend, notes, labels and keys keep within. Title is the level's name as
+	// it heads the map.
+	Rect, Inner image.Rectangle
+	Title       string
 	MapFrame
 	// Legend is where the legend's lines start, one LegendLine apart.
 	LegendAt image.Point
@@ -435,6 +436,10 @@ func (v *Viewer) fullMap(cursor image.Point) *FullMapView {
 	}
 	fv.Rect = image.Rect(Margin, Margin, v.Screen.X-Margin, v.Screen.Y-Margin)
 	inner := fv.Rect.Inset(3 * Margin)
+	rw := MapRollWidth(v.Screen) / 2
+	inner.Min.X += rw
+	inner.Max.X -= rw
+	fv.Inner = inner
 	fv.LegendAt = image.Pt(inner.Min.X, inner.Min.Y+3*LineHeight)
 	fv.Area = image.Rect(inner.Min.X+legendWidth(m)+Margin, inner.Min.Y+2*LineHeight, inner.Max.X, inner.Max.Y)
 	fit, center := mapFit(m, fv.Area)
@@ -539,7 +544,8 @@ func (fv *FullMapView) links(v *Viewer) {
 		}
 		text := fmt.Sprintf("%s (%d, %d)", v.levelName(other.Level), other.Cell[0], other.Cell[1])
 		w := len(text)*CharWidth + 12
-		fv.Labels = append(fv.Labels, MapLabel{Rect: image.Rect(at.X, at.Y, at.X+w, at.Y+LineHeight+2), Text: text,
+		lx := max(fv.Inner.Min.X, min(at.X, fv.Inner.Max.X-w))
+		fv.Labels = append(fv.Labels, MapLabel{Rect: image.Rect(lx, at.Y, lx+w, at.Y+LineHeight+2), Text: text,
 			Kind: lk.Kind, In: in, To: other, Button: v.mapShowable(other.Level)})
 		at.Y -= LineHeight + 4
 	}
@@ -619,6 +625,19 @@ func (fv *FullMapView) note(v *Viewer) {
 	if len(fv.Note) == 0 {
 		return
 	}
+	// Lines too wide for the sheet wrap.
+	n := max(8, min(noteWidth, (fv.Inner.Dx()-16)/CharWidth))
+	var lines []NoteLine
+	for _, l := range fv.Note {
+		for i, t := range wrapText(l.Text, n) {
+			if i > 0 {
+				l.Kind = ""
+			}
+			l.Text = t
+			lines = append(lines, l)
+		}
+	}
+	fv.Note = lines
 	w := 0
 	for _, l := range fv.Note {
 		w = max(w, len(l.Text))
@@ -626,9 +645,15 @@ func (fv *FullMapView) note(v *Viewer) {
 	x, y := fv.CellPoint(c)
 	size := image.Pt(w*CharWidth+16, len(fv.Note)*LineHeight+8)
 	at := image.Pt(int(x)+int(fv.Zoom)+8, int(y)+int(fv.Zoom/2)+4)
-	at.X = max(fv.Rect.Min.X, min(at.X, fv.Rect.Max.X-size.X))
-	at.Y = max(fv.Rect.Min.Y, min(at.Y, fv.Rect.Max.Y-size.Y))
+	at.X = max(fv.Inner.Min.X, min(at.X, fv.Inner.Max.X-size.X))
+	at.Y = max(fv.Inner.Min.Y, min(at.Y, fv.Inner.Max.Y-size.Y))
 	fv.NoteRect = image.Rectangle{at, at.Add(size)}
+}
+
+// MapRollWidth is the width of the full map's rolled ends on a screen of size; each covers half
+// its width of the sheet.
+func MapRollWidth(size image.Point) int {
+	return max(24, min(size.X, size.Y)/20) / 2 * 2
 }
 
 // isRune reports whether symbol s is one of the game's rune marks.
@@ -804,12 +829,12 @@ func (v *Viewer) mapGo(id string) {
 	st.level, st.zoom, st.selected, st.arrival = id, 0, nil, nil
 }
 
-// MinimapView is the minimap as it shows now: the level's map in a frame, centered on the
-// player.
+// MinimapView is the minimap as it shows now: the level's map over the view, with no frame,
+// centered on the player.
 type MinimapView struct {
 	*LevelMap
-	// Frame is the frame on the screen, Scale its panel pixels' size; Plaque is under it, naming
-	// the level.
+	// Frame is the minimap's place on the screen, Scale its panel pixels' size; Plaque is the
+	// place under it where the level's name is written.
 	Frame  image.Rectangle
 	Scale  int
 	Plaque image.Rectangle
@@ -833,7 +858,7 @@ func (v *Viewer) Minimap() *MinimapView {
 	w := v.Screen.X / 4
 	mv := &MinimapView{LevelMap: m, Scale: s}
 	mv.Frame = image.Rect(Margin, Margin, Margin+w/s*s, Margin+w/2/s*s)
-	mv.Area = mv.Frame.Inset(frame.Width * s)
+	mv.Area = mv.Frame
 	mv.Zoom = float64(minimapCell*s) / 2
 	mv.Center = mapPoint(m.Player[0], m.Player[1])
 	pw := (len(m.Name)*CharWidth + 2*Margin)
