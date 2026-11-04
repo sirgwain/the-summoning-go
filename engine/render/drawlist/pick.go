@@ -53,11 +53,12 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 		s.Things = append(s.Things, th)
 	}
 	for _, f := range l.Flights {
+		u, v := f.Drawn(w.Step())
 		if f.Spell != nil {
-			s.Flights = append(s.Flights, Flight{Sprite: f.Spell.Sprite, Frame: f.Spell.Frame, U: f.U, V: f.V, Spell: true})
+			s.Flights = append(s.Flights, Flight{Sprite: f.Spell.Sprite, Frame: f.Spell.Frame, U: u, V: v, Spell: true})
 			continue
 		}
-		fl := Flight{Item: f.Object.Item, U: f.U, V: f.V}
+		fl := Flight{Item: f.Object.Item, U: u, V: v}
 		if it := w.Pack().Items[f.Object.Item]; it != nil && it.Flying != nil && (f.Fired || !it.Flying.FiredOnly) {
 			fl.Sprite, fl.Frame = it.Flying.Sprite, (f.Direction+1)%8
 		}

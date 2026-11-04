@@ -168,6 +168,8 @@ A thing in flight is an object thrown or fired, by the player, a creature or a c
 
 A thrower already touching something when it throws (a thing within 4 units ahead of its footprint) hits it at once, and the object lands at its feet.
 
+**Drawing it.** The game draws a thing in flight where it is, so it jumps 8 units each tick. The engine draws it gliding instead, and this changes nothing in play: between its updates, at step `s`, it is drawn the fraction `(s − m) / (n − m)` of the way from where it was before its last update to where it is, `m` being the step of its last update and `n` that of its next, each coordinate rounded toward where it was. An update that did not move it (its first, one that ended it, an ended spell's frames) leaves it drawn where it is, and so does a teleporter's move, which is drawn as a jump. A flight restored from a save is drawn where it is until its next update. The same holds for spells in flight (spells.md, Missiles).
+
 ### The player's update
 
 The player's update comes every `interval_ms` of its template (player.md, Speed). In it, if a walk was asked for since the last update, the player turns to that direction and moves its template's `speed` along it, half that along directions 1 and 5 (screen left and right). A walk that moves shows the walk animation's next frame; after 8 updates without walking the player shows its idle frame. A blocked step that meets a creature touches it (combat, later).

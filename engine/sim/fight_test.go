@@ -688,3 +688,43 @@ func TestTwoHandedBlocksItsHand(t *testing.T) {
 		t.Errorf("still blocked with the other hand empty: %v", ev)
 	}
 }
+
+// TestFlightGlides draws a thing in flight between where it was and where it is, never past
+// where the simulation has it, reaching it by its next update.
+func TestFlightGlides(t *testing.T) {
+	w := fightWorld(t, nil,
+		"############",
+		"#@.........#",
+		"############")
+	p, l := w.Player(), w.Current()
+	p.Facing = 2
+	p.Slots[SlotRightHand] = w.newObject("item.rock")
+	w.Update([]input.Command{input.Throw{Hand: 0}})
+	f := l.Flights[0]
+	if u, v := f.Drawn(w.Step()); u != f.U || v != f.V {
+		t.Errorf("a flight just thrown is drawn at (%d, %d), want where it is (%d, %d)", u, v, f.U, f.V)
+	}
+	glided := false
+	for range 30 {
+		w.Update(nil)
+		if len(l.Flights) == 0 {
+			break
+		}
+		u, v := f.Drawn(w.Step())
+		if u != f.fromU || v != f.fromV {
+			if u != f.U || v != f.V {
+				glided = true
+			}
+		}
+		// Along direction 2 only v changes, from fromV up to V.
+		if u != f.U || v < f.fromV || v > f.V {
+			t.Fatalf("step %d: drawn at (%d, %d), want between (%d, %d) and (%d, %d)", w.Step(), u, v, f.fromU, f.fromV, f.U, f.V)
+		}
+		if u, v := f.Drawn(f.next); u != f.U || v != f.V {
+			t.Fatalf("at its next update it is drawn at (%d, %d), want (%d, %d)", u, v, f.U, f.V)
+		}
+	}
+	if !glided {
+		t.Error("the flight was never drawn between its places")
+	}
+}

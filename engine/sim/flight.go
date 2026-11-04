@@ -34,7 +34,30 @@ type Flight struct {
 	Thrower  *Thing `json:"-"`
 	waited   bool
 	next     int64
+	// fromU and fromV are where it was before its last update, at step moved; it is drawn
+	// between there and (U, V) (docs/spec/entities.md, Drawing it).
+	fromU, fromV int
+	moved        int64
 }
+
+// Drawn returns where flight f is drawn at step: the part of the way from where it was before
+// its last update to where it is that the time since that update is of the time to its next
+// (docs/spec/entities.md, Things in flight, Drawing it).
+func (f *Flight) Drawn(step int64) (u, v int) {
+	span := f.next - f.moved
+	if span <= 0 || step >= f.next || (f.fromU == f.U && f.fromV == f.V) {
+		return f.U, f.V
+	}
+	k := max(0, step-f.moved)
+	toward := func(from, to int) int {
+		d := int64(to-from) * k / span // truncates toward 0: toward where it was
+		return from + int(d)
+	}
+	return toward(f.fromU, f.U), toward(f.fromV, f.V)
+}
+
+// still has flight f drawn where it is until it moves again.
+func (f *Flight) still() { f.fromU, f.fromV = f.U, f.V }
 
 // Cell returns the cell the flight is over.
 func (f *Flight) Cell() content.Cell { return cellOf(f.U, f.V) }
@@ -56,7 +79,7 @@ func (w *World) missileDamage(o *Object, fired bool) int {
 // touching something already hits it at once, and the object lands at its feet.
 func (w *World) launch(l *Level, o *Object, u, v, d, rng, damage int, byPlayer, fired bool, thrower *Thing) {
 	f := &Flight{Object: o, U: u, V: v, Direction: d, Range: rng, Damage: damage, ByPlayer: byPlayer, Fired: fired, Thrower: thrower,
-		next: w.step + Steps(flightTicks)}
+		next: w.step + Steps(flightTicks), fromU: u, fromV: v, moved: w.step}
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: f.Cell(), Item: o.Item, Detail: "thrown"})
 	if b := w.flightBlocker(l, f, u+Dirs[d][0]*touchReach, v+Dirs[d][1]*touchReach, flightFootprint+touchReach); b != nil {
 		w.flightHits(l, f, b)
@@ -106,6 +129,7 @@ func (w *World) updateFlights(l *Level) {
 			continue
 		}
 		f.next = w.step + Steps(flightTicks)
+		f.fromU, f.fromV, f.moved = f.U, f.V, w.step
 		if f.Spell != nil {
 			w.updateSpell(l, f)
 			continue
@@ -146,6 +170,7 @@ func (w *World) updateFlights(l *Level) {
 				dest := w.jump(l, t)
 				f.U, f.V = CellUnits*dest[0]+f.U-CellUnits*to[0], CellUnits*dest[1]+f.V-CellUnits*to[1]
 				f.Direction = (f.Direction + t.Turn + 8) % 8
+				f.still()
 			}
 		}
 	}

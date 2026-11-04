@@ -538,8 +538,9 @@ func (v *Viewer) took(events []sim.Event) []sim.Event {
 			}
 		}
 	}
-	// Shown damage runs out without an event, so a view showing some rebuilds each update.
-	if len(events) > 0 || len(v.Labels) > 0 || v.World.Magnified() != v.magnified {
+	// Shown damage runs out without an event, and things in flight glide between their moves
+	// (docs/spec/entities.md, Things in flight), so a view showing either rebuilds each update.
+	if len(events) > 0 || len(v.Labels) > 0 || len(v.World.Current().Flights) > 0 || v.World.Magnified() != v.magnified {
 		v.rebuild()
 	}
 	if a := v.arrival; a != nil {

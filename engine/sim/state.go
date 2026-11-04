@@ -228,6 +228,7 @@ func Restore(p *content.Pack, s *State) (*World, error) {
 		for _, fs := range ls.Flights {
 			f := fs.Flight
 			f.Thrower, f.waited, f.next = things[fs.Thrower], fs.Waited, fs.Next
+			f.still()
 			if f.Spell != nil {
 				sp := *f.Spell
 				sp.ending = fs.Ending
