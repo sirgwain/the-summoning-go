@@ -128,18 +128,30 @@ The game has no lighting; its fire and glows animate by palette alone. The remak
 
 **Steady colors.** A color no palette effect changes is its own steady color. A color an effect animates has as its steady color the mean of the colors it takes over the effect's cycle: for a rotating group, the mean of the group's colors; for a cycled color, the mean of its list.
 
-**Sources.** Two kinds of drawn frame give light, each from its **glowing pixels**:
+**Sources.** Anything drawn with the palette's effects can give light, each drawn frame from its **glowing pixels**. The player's figure and the objects in its hands are drawn without them (scenes.md) and give none; the player in another's shape does give light.
 
-| Source | Glowing pixels | Strength `s` | Radius `R` | Flicker `k`, speed `w` |
+| Source | Glowing pixels | Fewest | Strength `s` | Radius `R` | Flicker `k`, speed `w` |
+|---|---|---|---|---|---|
+| A wall decoration | Those in colors a palette effect animates | 4 | 0.30 | 64 | 0.08, 1 |
+| A spell in flight, or the cloud it ends as | Those, and those whose steady color's mean component is at least 60% of full | 4 | 0.45 | 48 | 0.15, 3 |
+| A thing: a creature, a corpse, a portal, a boulder | Those in animated colors | 4 | 0.35 | 56 | 0.10, 2 |
+| An overlay, a feature's look, a prop, an object on the floor or thrown | Those in animated colors | 4 | 0.25 | 48 | 0.05, 1 |
+| A floor tile, or the half of it drawn | Those in animated colors | 32 | 0.25 | 48 | 0.05, 1 |
+
+So a campfire, a phoenix, a will-o-wisp's sparks, a specter's outline, a spider's eyes, a fire door, an armed teleporter, a full gem socket and a rune on the floor each light their surroundings in their own color. A floor tile needs more glowing pixels than the rest, so a glowing rune set in the floor gives light and a scatter of glowing moss does not.
+
+A frame with fewer glowing pixels than its source's fewest gives none. Otherwise its light is centered at the mean position of its glowing pixels, a decoration's moved 8 pixels down, out from its wall's face. Its color is the mean of its glowing pixels' steady colors, scaled so that its largest component is full, and its strength is `s · min(1, n / 16)` for `n` glowing pixels.
+
+**Shields.** While the player has a fire shield or a lightning shield, it gives a light of its own, centered on the middle of its figure's frame. With both, it gives both. In another's shape, the shields' light is given in place of the shape's.
+
+| Shield | Color | Strength | Radius | Flicker `k`, speed `w` |
 |---|---|---|---|---|
-| A wall decoration | Those in colors a palette effect animates | 0.30 | 64 | 0.08, 1 |
-| A spell in flight, or the cloud it ends as | Those, and those whose steady color's mean component is at least 60% of full | 0.45 | 48 | 0.15, 3 |
-
-A frame with fewer than 4 glowing pixels gives none. Otherwise its light is centered at the mean position of its glowing pixels, a decoration's moved 8 pixels down, out from its wall's face. Its color is the mean of its glowing pixels' steady colors, scaled so that its largest component is full, and its strength is `s · min(1, n / 16)` for `n` glowing pixels.
+| Fire | (1, 0.55, 0.2) | 0.50 | 72 | 0.15, 3 |
+| Lightning | (0.65, 0.8, 1) | 0.50 | 72 | 0.35, 7 |
 
 **Flicker.** At time `t` seconds a light's strength is multiplied by `1 + k · (sin(2.3·w·t + a) + sin(3.7·w·t + 1.7·a)) / 2`, where `a` is a phase from its center `(x, y)`: `0.37·x + 0.61·y`. Each light flickers on its own; nothing in play depends on it.
 
-**Lighting the view.** At a view pixel `p`, a light centered at `c` reaches `f = (1 − d²)²` for `d < 1`, else 0, where `d = |(pₓ − cₓ, 2·(p_y − c_y))| / R`, so its pool is twice as wide as it is high, lying on the floor. The pixel's color, looked up in the palette, is multiplied by `0.86 + Σ strength · f · color` over the lights, each component of that factor at most 1.25, the result at most full. The rest of the view is thus a little dimmer than the game's, and warmer and brighter near its fires.
+**Lighting the view.** At a view pixel `p`, a light centered at `c` reaches `f = (1 − d²)²` for `d < 1`, else 0, where `d = |(pₓ − cₓ, 2·(p_y − c_y))| / R`, so its pool is twice as wide as it is high, lying on the floor. The pixel's color, looked up in the palette, is multiplied by `0.86 + Σ strength · f · color` over the lights, each component of that factor at most 1.25, the result at most full. The rest of the view is thus a little dimmer than the game's, and warmer and brighter near its fires. At most 32 lights light the view: of those whose pools reach it, the 32 whose centers are nearest the view's center.
 
 **Shadows.** The player, each creature that is not dead, and each boulder casts a shadow: an ellipse under its feet, `w = 2 × footprint` pixels wide and `w / 2` high, the size its footprint covers on the floor. It is centered on the lowest row the figure's frames draw (with what it holds), at the middle, rounded, of the pixels they draw in their lowest three rows. Its ground point, where it stands, is drawn higher than its feet, so it is not used. It darkens the floors, overlays and floor objects beneath it by `0.35 · (1 − d²)` at the point a fraction `d` of the way from its center to its edge. Where shadows overlap, the darker one shows. Everything standing is drawn over shadows, so they darken only the floor.
 

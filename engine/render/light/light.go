@@ -47,21 +47,42 @@ func (l Light) Reach(x, y float64) float64 {
 	return (1 - d2) * (1 - d2)
 }
 
-// source is how a kind of glowing frame lights.
+// source is how a kind of glowing frame lights: from its glowing pixels (the animated ones, and
+// the bright ones too when bright is set), of which it needs at least fewest.
 type source struct {
 	bright                 bool
+	fewest                 int
 	strength, radius, drop float64
 	flicker, speed         float64
 }
 
 var sources = map[drawlist.Glow]source{
-	drawlist.GlowDecoration: {strength: 0.30, radius: 64, drop: 8, flicker: 0.08, speed: 1},
-	drawlist.GlowSpell:      {bright: true, strength: 0.45, radius: 48, flicker: 0.15, speed: 3},
+	drawlist.GlowDecoration: {fewest: 4, strength: 0.30, radius: 64, drop: 8, flicker: 0.08, speed: 1},
+	drawlist.GlowSpell:      {bright: true, fewest: 4, strength: 0.45, radius: 48, flicker: 0.15, speed: 3},
+	drawlist.GlowThing:      {fewest: 4, strength: 0.35, radius: 56, flicker: 0.10, speed: 2},
+	drawlist.GlowObject:     {fewest: 4, strength: 0.25, radius: 48, flicker: 0.05, speed: 1},
+	drawlist.GlowFloor:      {fewest: 32, strength: 0.25, radius: 48, flicker: 0.05, speed: 1},
+}
+
+// shield is the light a shield gives, from the middle of the player's frame.
+type shield struct {
+	color                            [3]float64
+	strength, radius, flicker, speed float64
+}
+
+var (
+	fireShield      = shield{color: [3]float64{1, 0.55, 0.2}, strength: 0.50, radius: 72, flicker: 0.15, speed: 3}
+	lightningShield = shield{color: [3]float64{0.65, 0.8, 1}, strength: 0.50, radius: 72, flicker: 0.35, speed: 7}
+)
+
+// shields are the shields each shield glow gives light from.
+var shields = map[drawlist.Glow][]shield{
+	drawlist.GlowFireShield:      {fireShield},
+	drawlist.GlowLightningShield: {lightningShield},
+	drawlist.GlowShields:         {fireShield, lightningShield},
 }
 
 const (
-	// minGlowing is the fewest glowing pixels a frame lights with.
-	minGlowing = 4
 	// fullGlowing is the count of glowing pixels a frame lights fully with.
 	fullGlowing = 16
 	// brightLevel is the mean component, of full, at which a spell's pixel glows.
@@ -79,7 +100,8 @@ type glow struct {
 type frameKey struct {
 	sprite string
 	frame  int
-	glow   drawlist.Glow
+	part   drawlist.Part
+	bright bool
 }
 
 // Finder finds the lights of draw commands, from a pack's sprites in a palette.
@@ -135,12 +157,19 @@ func Steady(p *content.Palette) (colors [256]color.RGBA, animated [256]bool) {
 func (f *Finder) Find(cmds []drawlist.Cmd) []Light {
 	var out []Light
 	for _, c := range cmds {
-		src, ok := sources[c.Glow]
-		if !ok || c.Sprite == "" {
+		if c.Sprite == "" {
 			continue
 		}
-		g := f.frame(frameKey{c.Sprite, c.Frame, c.Glow}, src.bright)
-		if g.n < minGlowing {
+		if sh, ok := shields[c.Glow]; ok {
+			out = append(out, f.shields(c, sh)...)
+			continue
+		}
+		src, ok := sources[c.Glow]
+		if !ok {
+			continue
+		}
+		g := f.frame(frameKey{c.Sprite, c.Frame, c.Part, src.bright})
+		if g.n < src.fewest {
 			continue
 		}
 		hue := g.color
@@ -161,8 +190,24 @@ func (f *Finder) Find(cmds []drawlist.Cmd) []Light {
 	return out
 }
 
-// frame returns the glow of a frame, worked out once.
-func (f *Finder) frame(k frameKey, bright bool) glow {
+// shields returns the lights of shields sh around the player drawn by c, centered on the middle
+// of its frame.
+func (f *Finder) shields(c drawlist.Cmd, sh []shield) []Light {
+	b := f.pack.Sprites[c.Sprite]
+	if b == nil {
+		return nil
+	}
+	x, y := float64(c.X)+float64(b.FrameSize[0])/2, float64(c.Y)+float64(b.FrameSize[1])/2
+	out := make([]Light, len(sh))
+	for i, s := range sh {
+		out[i] = Light{X: x, Y: y, Radius: s.radius, Color: s.color, Strength: s.strength, Flicker: s.flicker, Speed: s.speed}
+	}
+	return out
+}
+
+// frame returns the glow of a frame, or of the part of it drawn, worked out once. Positions are
+// from the top-left of what is drawn.
+func (f *Finder) frame(k frameKey) glow {
 	if g, ok := f.frames[k]; ok {
 		return g
 	}
@@ -170,6 +215,12 @@ func (f *Finder) frame(k frameKey, bright bool) glow {
 	b := f.pack.Sprites[k.sprite]
 	if b != nil && b.Sheet != nil && k.frame >= 0 && k.frame < b.Frames {
 		r := b.FrameRect(k.frame)
+		switch k.part {
+		case drawlist.UpperHalf:
+			r.Max.Y = min(r.Max.Y, r.Min.Y+drawlist.HalfHeight)
+		case drawlist.LowerHalf:
+			r.Min.Y = min(r.Max.Y, r.Min.Y+drawlist.HalfHeight)
+		}
 		for y := r.Min.Y; y < r.Max.Y; y++ {
 			for x := r.Min.X; x < r.Max.X; x++ {
 				i := int(b.Sheet.ColorIndexAt(x, y))
@@ -177,7 +228,7 @@ func (f *Finder) frame(k frameKey, bright bool) glow {
 					continue
 				}
 				c := f.steady[i]
-				if !f.animated[i] && !(bright && (c[0]+c[1]+c[2])/3 >= brightLevel) {
+				if !f.animated[i] && !(k.bright && (c[0]+c[1]+c[2])/3 >= brightLevel) {
 					continue
 				}
 				g.n++

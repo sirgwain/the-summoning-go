@@ -38,8 +38,9 @@ func TestSteady(t *testing.T) {
 	}
 }
 
-// pack has one 8×8 sprite whose frames are: 0, eight animated pixels in its top-left 4×2 and
-// the rest dim; 1, three animated pixels; 2, a bright 4×4 square.
+// pack has an 8×8 sprite "s" whose frames are: 0, eight animated pixels in its top-left 4×2 and
+// the rest dim; 1, three animated pixels; 2, a bright 4×4 square. And a 32×32 tile "big" whose
+// lower half has 128 animated pixels in a checker in its middle 16 columns, its upper half none.
 func pack() *content.Pack {
 	p := content.NewPack(content.Manifest{})
 	sheet := image.NewPaletted(image.Rect(0, 0, 24, 8), nil)
@@ -62,6 +63,16 @@ func pack() *content.Pack {
 		}
 	}
 	p.Sprites["s"] = &content.SpriteBank{ID: "s", FrameSize: content.Offset{8, 8}, Columns: 3, Frames: 3, Sheet: sheet}
+	big := image.NewPaletted(image.Rect(0, 0, 32, 32), nil)
+	for y := range 32 {
+		for x := range 32 {
+			big.Pix[y*32+x] = 7
+			if y >= 16 && x >= 8 && x < 24 && y < 32 && (x+y)%2 == 0 {
+				big.Pix[y*32+x] = 1
+			}
+		}
+	}
+	p.Sprites["big"] = &content.SpriteBank{ID: "big", FrameSize: content.Offset{32, 32}, Columns: 1, Frames: 1, Sheet: big}
 	return p
 }
 
@@ -98,6 +109,58 @@ func TestFindSpell(t *testing.T) {
 	l := got[0]
 	if l.X != 14 || l.Y != 24 || l.Strength != 0.45 || l.Radius != 48 || math.Abs(l.Color[0]-1)+math.Abs(l.Color[1]-1)+math.Abs(l.Color[2]-0.8) > 1e-9 {
 		t.Errorf("light %+v, want at (14, 24), strength 0.45, radius 48, color (1, 1, 0.8)", l)
+	}
+}
+
+// TestFindThingsAndFloors lights a thing and an object from their animated pixels alone, and a
+// floor tile only with 32 of them, counting those of the half drawn.
+func TestFindThingsAndFloors(t *testing.T) {
+	f := NewFinder(pack(), testPalette())
+	got := f.Find([]drawlist.Cmd{
+		{Sprite: "s", Frame: 0, X: 10, Y: 20, Glow: drawlist.GlowThing},
+		{Sprite: "s", Frame: 0, X: 30, Y: 40, Glow: drawlist.GlowObject},
+		{Sprite: "s", Frame: 2, X: 0, Y: 0, Glow: drawlist.GlowThing},
+		{Sprite: "s", Frame: 0, X: 0, Y: 0, Glow: drawlist.GlowFloor},
+		{Sprite: "big", Frame: 0, X: 0, Y: 0, Glow: drawlist.GlowFloor},
+		{Sprite: "big", Frame: 0, X: 0, Y: 16, Part: drawlist.LowerHalf, Glow: drawlist.GlowFloor},
+		{Sprite: "big", Frame: 0, X: 0, Y: 0, Part: drawlist.UpperHalf, Glow: drawlist.GlowFloor},
+	})
+	want := []Light{
+		{X: 12, Y: 21, Radius: 56, Color: [3]float64{1, 0.5, 0}, Strength: 0.35 * 8 / 16, Flicker: 0.10, Speed: 2},
+		{X: 32, Y: 41, Radius: 48, Color: [3]float64{1, 0.5, 0}, Strength: 0.25 * 8 / 16, Flicker: 0.05, Speed: 1},
+		{X: 16, Y: 24, Radius: 48, Color: [3]float64{1, 0.5, 0}, Strength: 0.25, Flicker: 0.05, Speed: 1},
+		{X: 16, Y: 24, Radius: 48, Color: [3]float64{1, 0.5, 0}, Strength: 0.25, Flicker: 0.05, Speed: 1},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("%d lights, want %d: a thing's bright pixels, a tile with 8 glowing pixels and a half with none give none\n%+v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("light %d is %+v, want %+v", i, got[i], want[i])
+		}
+	}
+}
+
+// TestFindShields lights the player under each shield, and both, from the middle of its frame.
+func TestFindShields(t *testing.T) {
+	f := NewFinder(pack(), testPalette())
+	for _, c := range []struct {
+		glow drawlist.Glow
+		want [][3]float64
+	}{
+		{drawlist.GlowFireShield, [][3]float64{{1, 0.55, 0.2}}},
+		{drawlist.GlowLightningShield, [][3]float64{{0.65, 0.8, 1}}},
+		{drawlist.GlowShields, [][3]float64{{1, 0.55, 0.2}, {0.65, 0.8, 1}}},
+	} {
+		got := f.Find([]drawlist.Cmd{{Sprite: "s", Frame: 0, X: 10, Y: 20, Fixed: true, Glow: c.glow}})
+		if len(got) != len(c.want) {
+			t.Fatalf("glow %d: %d lights, want %d", c.glow, len(got), len(c.want))
+		}
+		for i, l := range got {
+			if l.X != 14 || l.Y != 24 || l.Color != c.want[i] || l.Strength != 0.5 || l.Radius != 72 {
+				t.Errorf("glow %d light %d: %+v, want at (14, 24) in %v, strength 0.5, radius 72", c.glow, i, l, c.want[i])
+			}
+		}
 	}
 }
 

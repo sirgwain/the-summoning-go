@@ -41,6 +41,19 @@ const (
 	GlowDecoration
 	// GlowSpell lights from those and the bright pixels.
 	GlowSpell
+	// GlowThing is a thing drawn with the palette's effects, lighting from its animated pixels.
+	GlowThing
+	// GlowObject is an overlay, a feature's look, a prop or a floor object, lighting from its
+	// animated pixels.
+	GlowObject
+	// GlowFloor is a floor tile, or a half of one, lighting from its animated pixels when it has
+	// enough of them.
+	GlowFloor
+	// GlowFireShield, GlowLightningShield and GlowShields are the player under a fire shield, a
+	// lightning shield or both, lighting from the middle of its frame in the shields' colors.
+	GlowFireShield
+	GlowLightningShield
+	GlowShields
 )
 
 // Scene is a level as it is to be drawn: its definition's fixed art, and the grids, features,
@@ -184,6 +197,8 @@ type Thing struct {
 	Sprite string
 	// Back moves it on screen back toward where it was, as it glides (GlideBack).
 	Back image.Point
+	// FireShield and LightningShield are the player's shields, which give light.
+	FireShield, LightningShield bool
 }
 
 // point returns the view pixel thing t's ground point is drawn at.
@@ -298,7 +313,7 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 		}
 		v, halves := l.FloorTypes[s.Floor[c[0]][c[1]]].Variant, s.halves(c, set, doors, sights, noSight)
 		if halves == content.HalvesBoth {
-			cmds = append(cmds, Cmd{Sprite: floors.Sprite, Frame: v, X: box.X, Y: box.Y})
+			cmds = append(cmds, Cmd{Sprite: floors.Sprite, Frame: v, X: box.X, Y: box.Y, Glow: GlowFloor})
 			continue
 		}
 		for _, h := range []struct {
@@ -308,7 +323,7 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 		}{{content.HalfUpper, UpperHalf, 0}, {content.HalfLower, LowerHalf, HalfHeight}} {
 			cmd := Cmd{X: box.X, Y: box.Y + h.dy, Part: h.part}
 			if halves&h.bit != 0 {
-				cmd.Sprite, cmd.Frame = floors.Sprite, v
+				cmd.Sprite, cmd.Frame, cmd.Glow = floors.Sprite, v, GlowFloor
 			} else if floors.Diamond() {
 				continue
 			}
@@ -317,7 +332,9 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 	}
 	for _, o := range l.Overlays {
 		if s.shows(o.Cell) {
-			cmds = append(cmds, placed(o))
+			cmd := placed(o)
+			cmd.Glow = GlowObject
+			cmds = append(cmds, cmd)
 		}
 	}
 	looks := map[string][]Feature{}
@@ -408,7 +425,7 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 			continue
 		}
 		at := RefPoint(f.U, f.V).Add(f.Back).Sub(image.Pt(sprite.FrameSize[0]/2, sprite.FrameSize[1]/2+flightHeight))
-		cmd := Cmd{Sprite: img.Sprite, Frame: img.Frame, X: at.X, Y: at.Y}
+		cmd := Cmd{Sprite: img.Sprite, Frame: img.Frame, X: at.X, Y: at.Y, Glow: GlowObject}
 		if f.Spell {
 			cmd.Glow = GlowSpell
 		}
@@ -419,6 +436,7 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 			continue
 		}
 		cmd := placed(pr)
+		cmd.Glow = GlowObject
 		items = append(items, standing{depth: pr.Cell[0] + pr.Cell[1], top: TileBox(pr.Cell).Y + 1, cmds: []Cmd{cmd}})
 	}
 	cmds = append(cmds, shadows...)
@@ -493,7 +511,7 @@ func featureCmds(p *content.Pack, f Feature) []Cmd {
 	box := TileBox(f.Cell)
 	cmds := make([]Cmd, len(parts))
 	for i, pt := range parts {
-		cmds[i] = Cmd{Sprite: pt.Sprite, Frame: pt.Frame, X: box.X + pt.Offset[0], Y: box.Y + pt.Offset[1], Feature: f.ID}
+		cmds[i] = Cmd{Sprite: pt.Sprite, Frame: pt.Frame, X: box.X + pt.Offset[0], Y: box.Y + pt.Offset[1], Feature: f.ID, Glow: GlowObject}
 	}
 	return cmds
 }
@@ -514,7 +532,7 @@ func objectCmd(p *content.Pack, o Object, opts Options) (Cmd, bool) {
 	}
 	box := TileBox(o.Cell)
 	w, h := sprite.FrameSize[0], sprite.FrameSize[1]
-	return Cmd{Sprite: img.Sprite, Frame: img.Frame, X: box.X + TileSize/2 - w/2, Y: box.Y + TileSize/2 - h/2}, true
+	return Cmd{Sprite: img.Sprite, Frame: img.Frame, X: box.X + TileSize/2 - w/2, Y: box.Y + TileSize/2 - h/2, Glow: GlowObject}, true
 }
 
 // CellUnits is the size of a cell in world units.
@@ -577,7 +595,18 @@ func thingCmd(p *content.Pack, t Thing) (Cmd, content.Cell, bool) {
 	anchor, _ := sprite.AnchorOf(frame)
 	at := t.point().Sub(image.Pt(anchor[0], anchor[1]))
 	cell := content.Cell{floorDiv(t.U, CellUnits), floorDiv(t.V, CellUnits)}
-	return Cmd{Sprite: sid, Frame: frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: tmpl.Kind == content.ThingPlayer && t.Sprite == ""}, cell, true
+	cmd := Cmd{Sprite: sid, Frame: frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: tmpl.Kind == content.ThingPlayer && t.Sprite == ""}
+	switch {
+	case t.FireShield && t.LightningShield:
+		cmd.Glow = GlowShields
+	case t.FireShield:
+		cmd.Glow = GlowFireShield
+	case t.LightningShield:
+		cmd.Glow = GlowLightningShield
+	case !cmd.Fixed:
+		cmd.Glow = GlowThing
+	}
+	return cmd, cell, true
 }
 
 // heldCmds draws thing t's frame cmd with the layers of the items in its hands: the layers behind
@@ -610,7 +639,7 @@ func heldCmds(p *content.Pack, t Thing, cmd Cmd) []Cmd {
 }
 
 // lookCmds draws thing t's frame cmd as its look layers, bottom up, or as cmd itself without
-// any. A layer without the frame is left out.
+// any. A layer without the frame is left out; the bottom one drawn gives cmd's light.
 func lookCmds(p *content.Pack, t Thing, cmd Cmd) []Cmd {
 	if len(t.Looks) == 0 {
 		return []Cmd{cmd}
@@ -624,6 +653,9 @@ func lookCmds(p *content.Pack, t Thing, cmd Cmd) []Cmd {
 		anchor, _ := sprite.AnchorOf(cmd.Frame)
 		at := t.point().Sub(image.Pt(anchor[0], anchor[1]))
 		out = append(out, Cmd{Sprite: sid, Frame: cmd.Frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: cmd.Fixed})
+	}
+	if len(out) > 0 {
+		out[0].Glow = cmd.Glow
 	}
 	return out
 }

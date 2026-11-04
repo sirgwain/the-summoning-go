@@ -80,7 +80,8 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 	}
 	if p := w.Player(); p != nil && w.Current() == l {
 		th := Thing{ID: sim.PlayerID, Template: p.Template.ID, U: p.U, V: p.V, Facing: p.Facing, Sprite: p.Look,
-			Back: GlideBack(p.U, p.V, p.Glide(w.Step()))}
+			Back:       GlideBack(p.U, p.V, p.Glide(w.Step())),
+			FireShield: p.Timed[sim.TimedFireShield] > 0, LightningShield: p.Timed[sim.TimedLightningShield] > 0}
 		if p.Look == "" && !w.DeepWater() {
 			th.Looks = p.FigureLooks(w.Pack())
 		}
