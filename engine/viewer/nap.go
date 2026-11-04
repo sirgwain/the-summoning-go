@@ -11,7 +11,14 @@ import (
 // wait for magic points, until something needs the player.
 
 // napFactor is how many world updates a napping update runs.
-const napFactor = 32
+const napFactor = 64
+
+// napShowFactor is how much faster the presentation's clock and the animations that run on time
+// go while napping: slower than the world, which would show them a second or more apart.
+const napShowFactor = 8
+
+// updateMS is an update's length in ms.
+const updateMS = 1000 / sim.StepsPerSecond
 
 // KeyNap is the key held to nap.
 const KeyNap Key = "N"
@@ -54,16 +61,23 @@ func (v *Viewer) nap(in Input, cmds []input.Command) bool {
 		v.Napping = false
 		return false
 	}
-	for range napFactor {
-		hp := p.HitPoints
-		events := v.updateWorld(nil)
-		if stop, why := v.napStop(events, hp); stop {
-			v.Napping = false
-			if why != "" {
-				v.notice(why)
+	// The frame is drawn once, so the scene is rebuilt once for all of its world updates.
+	stopped := false
+	v.batch(func() {
+		for range napFactor {
+			hp := p.HitPoints
+			events := v.updateWorld(nil)
+			if stop, why := v.napStop(events, hp); stop {
+				v.Napping, stopped = false, true
+				if why != "" {
+					v.notice(why)
+				}
+				return
 			}
-			return true
 		}
+	})
+	if stopped {
+		return true
 	}
 	p = v.World.Player()
 	played := v.World.Step() / sim.StepsPerSecond

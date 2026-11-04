@@ -194,10 +194,10 @@ func (s *Window) Draw(screen *ebiten.Image) {
 	}
 	s.buffer.Clear()
 	s.view.Draw(s.buffer, v.Origin)
-	s.presenter.SetColors(s.palette.At(v.Ticks*1000/int64(ebiten.TPS())), v.FixedColors(s.palette))
+	s.presenter.SetColors(s.palette.At(v.ShowMS()), v.FixedColors(s.palette))
 	world := s.tr.world(screen.Bounds().Size(), v.Transition)
 	if v.Lit {
-		s.presenter.PresentLit(world, s.buffer, v.Scale, s.light(size, float64(v.Ticks)/float64(ebiten.TPS())))
+		s.presenter.PresentLit(world, s.buffer, v.Scale, s.light(size, float64(v.ShowMS())/1000))
 	} else {
 		s.presenter.Present(world, s.buffer, v.Scale)
 	}

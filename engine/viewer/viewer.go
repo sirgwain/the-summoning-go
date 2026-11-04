@@ -46,8 +46,11 @@ type Viewer struct {
 	World *sim.World
 	// Seed is the seed the world was made with, from which new games take theirs.
 	Seed uint64
-	// Ticks counts updates, the clock palette effects run on.
+	// Ticks counts updates; shown counts the presentation's clock in updates, which palette
+	// effects and the lights' flicker run on (ShowMS): one each update, napShowFactor while
+	// napping (docs/spec/player.md, Napping).
 	Ticks int64
+	shown int64
 	// Levels are the pack's levels in order; Shown is the one drawn.
 	Levels []string
 	Shown  string
@@ -184,6 +187,11 @@ type Viewer struct {
 	autosaveDue bool
 	// anims plays the animations that run on time, as the world runs.
 	anims *drawlist.Animator
+	// batching defers the rebuilds of world updates run together, as a nap runs them, to one
+	// when they end; owed is whether one is due.
+	batching, owed bool
+	// rebuilds counts the scene's rebuilds.
+	rebuilds int
 
 	// The frontend.
 
@@ -234,6 +242,7 @@ func sortedIDs[V any](m map[string]V) []string {
 
 // rebuild rebuilds the draw commands from the world, recentering when the level changed.
 func (v *Viewer) rebuild() {
+	v.rebuilds++
 	l := v.World.Current()
 	scene := drawlist.SimScene(v.World, l)
 	if v.SeeAll {
@@ -383,6 +392,31 @@ func (v *Viewer) CellPoint(c content.Cell) image.Point {
 	return v.ScreenPoint(cellCenter(c)).Add(image.Pt(v.Scale/2, v.Scale/2))
 }
 
+// rebuildSoon rebuilds the scene now, or once the batch of world updates running ends.
+func (v *Viewer) rebuildSoon() {
+	if v.batching {
+		v.owed = true
+		return
+	}
+	v.rebuild()
+}
+
+// batch runs run with the rebuilds of its world updates made once, at its end.
+func (v *Viewer) batch(run func()) {
+	v.batching = true
+	defer func() {
+		v.batching = false
+		if v.owed {
+			v.owed = false
+			v.rebuild()
+		}
+	}()
+	run()
+}
+
+// ShowMS is the presentation's clock, in ms.
+func (v *Viewer) ShowMS() int64 { return v.shown * 1000 / sim.StepsPerSecond }
+
 // Update applies one update's input: moves the camera, changes the selection and tools, and
 // advances the world with the commands the input makes. The first of these that is showing
 // takes the input: the frontend, a flipbook playing, play's pause, the conversation log, then a
@@ -391,6 +425,11 @@ func (v *Viewer) CellPoint(c content.Cell) image.Point {
 // time passes.
 func (v *Viewer) Update(in Input) {
 	v.Ticks++
+	if v.Napping {
+		v.shown += napShowFactor
+	} else {
+		v.shown++
+	}
 	v.Cursor = in.Cursor
 	v.dropLost()
 	if v.Front != nil {
@@ -524,8 +563,12 @@ func (v *Viewer) modal(in Input) ([]input.Command, bool) {
 // updateWorld runs the world's update with cmds and brings the view up to date.
 func (v *Viewer) updateWorld(cmds []input.Command) []sim.Event {
 	events := v.World.Update(cmds)
-	if v.anims != nil && v.anims.Advance(1000/sim.StepsPerSecond) && len(events) == 0 {
-		v.rebuild()
+	ms := updateMS
+	if v.Napping {
+		ms = updateMS * napShowFactor / napFactor
+	}
+	if v.anims != nil && v.anims.Advance(ms) && len(events) == 0 {
+		v.rebuildSoon()
 	}
 	return v.took(events)
 }
@@ -571,7 +614,7 @@ func (v *Viewer) took(events []sim.Event) []sim.Event {
 	// update, and once more when the last glide ends.
 	gliding := v.World.Gliding()
 	if len(events) > 0 || len(v.Labels) > 0 || gliding || v.glided || v.World.Magnified() != v.magnified {
-		v.rebuild()
+		v.rebuildSoon()
 	}
 	v.glided = gliding
 	if a := v.arrival; a != nil {

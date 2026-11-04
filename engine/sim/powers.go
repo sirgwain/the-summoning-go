@@ -258,8 +258,20 @@ func (w *World) mark(r string) *Feature {
 	return nil
 }
 
-// CreatureNear reports whether a living creature is near the player, as near as power 12h reaches.
-func (w *World) CreatureNear() bool { return w.player != nil && len(w.creaturesNear()) > 0 }
+// CreatureNear reports whether a living creature is near the player, as near as power 12h
+// reaches, on a cell the player can see (docs/spec/player.md, Napping).
+func (w *World) CreatureNear() bool {
+	if w.player == nil {
+		return false
+	}
+	l := w.Current()
+	for _, t := range w.creaturesNear() {
+		if l.Visible(t.Cell()) {
+			return true
+		}
+	}
+	return false
+}
 
 // creaturesNear returns the living creatures near the player.
 func (w *World) creaturesNear() []*Thing {

@@ -173,7 +173,7 @@ transcript: while variable 99 is set, conversation lines and questions, and the 
 action 1Ch, go to `transcript.txt` beside the saves, wrapped at 80 columns with keywords
 underlined (`TestTranscriptFile`). A debug command sets a counter (`input.SetCounter`). The map
 shows the game's kinds (plates, rune marks, gem sockets, trapdoors besides walls, doors, exits,
-mouths, teleporters and pits) with a legend. Holding N naps: the world runs 32 times as fast
+mouths, teleporters and pits) with a legend. Holding N naps: the world runs 64 times as fast
 until something needs the player. Play starts with the debug overlay hidden (`--debug` shows it).
 
 **Done (Fight and Inventory leftovers).** The player's figure wears what it wears: torso, legs,

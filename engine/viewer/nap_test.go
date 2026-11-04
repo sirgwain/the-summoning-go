@@ -68,3 +68,55 @@ func TestNap(t *testing.T) {
 		t.Errorf("a nap with a creature near: napping %v, notice %q", v.Napping, v.Notice)
 	}
 }
+
+// TestNapShowsTimePassing naps: the presentation's clock runs napShowFactor times as fast while
+// the world runs napFactor times as fast.
+func TestNapShowsTimePassing(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	v.World.Current().Things = nil
+	v.World.Player().MagicPoints = 0
+	v.Update(napInput(true))
+	if !v.Napping {
+		t.Fatalf("not napping: %q", v.Notice)
+	}
+	shown, step := v.ShowMS(), v.World.Step()
+	for range 10 {
+		v.Update(napInput(false))
+	}
+	if got, want := v.ShowMS()-shown, int64(10*napShowFactor*1000/60); got < want-1 || got > want+1 {
+		t.Errorf("the presentation's clock ran %d ms in 10 napping updates, want %d", got, want)
+	}
+	if got := v.World.Step() - step; got != 10*napFactor {
+		t.Errorf("the world ran %d steps, want %d", got, 10*napFactor)
+	}
+	// Awake, it runs at the updates' pace again.
+	v.Update(Input{})
+	shown = v.ShowMS()
+	v.Update(Input{})
+	if got := v.ShowMS() - shown; got < 16 || got > 17 {
+		t.Errorf("awake, an update ran the clock %d ms", got)
+	}
+}
+
+// TestNapRebuildsOnce naps: each napping update rebuilds the scene once, not once for each of its
+// world updates, so the nap keeps up with the screen.
+func TestNapRebuildsOnce(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	v.World.Current().Things = nil
+	p := v.World.Player()
+	p.MagicPoints = 0
+	// Damage shown over the player rebuilds the scene with every world update.
+	p.Shown, p.ShownUntil = 5, 1<<40
+	v.rebuild()
+	v.Update(napInput(true))
+	if !v.Napping {
+		t.Fatalf("not napping: %q", v.Notice)
+	}
+	before := v.rebuilds
+	for range 10 {
+		v.Update(napInput(false))
+	}
+	if got := v.rebuilds - before; got > 10 {
+		t.Errorf("10 napping updates rebuilt the scene %d times", got)
+	}
+}

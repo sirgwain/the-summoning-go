@@ -210,3 +210,22 @@ func TestHasStatus(t *testing.T) {
 		t.Error("confused at 25")
 	}
 }
+
+func TestCreatureNearMustBeSeen(t *testing.T) {
+	w := fightWorld(t, nil,
+		"#######",
+		"#@.D.G#",
+		"#######")
+	w.Update(nil)
+	if len(w.creaturesNear()) == 0 {
+		t.Fatal("the guard is not within reach")
+	}
+	if w.CreatureNear() {
+		t.Error("a creature behind a closed door counts as near")
+	}
+	w.Update([]input.Command{input.Switch{Feature: "door", Mode: input.SwitchOn}})
+	settle(w)
+	if !w.CreatureNear() {
+		t.Error("a creature seen through the open door does not count as near")
+	}
+}
