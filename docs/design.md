@@ -235,7 +235,8 @@ audio/sfx/<id>.wav
 audio/cues.json            the sounds of the engine's cues
 ```
 
-The file formats are in [pack.md](pack.md).
+The file formats are in [pack.md](pack.md). What packs other than the Summoning's need (their own
+labels, skins, ranged combat and higher-resolution art) is planned in [packs-plan.md](packs-plan.md).
 
 - **The engine's own terms.** The format is designed as if no game existed before it: names, ground
   points, named states and hooks, never an original game's codes or byte layouts. Importers
