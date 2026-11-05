@@ -9,7 +9,8 @@ import (
 
 // Format is the pack format version this package reads and writes. It rises whenever a change
 // means a pack written before must be written again (docs/pack.md): 2 added collision boxes, 3
-// damage kinds as data and the shot of a fire action.
+// damage kinds as data and the shot of a fire action. A skin (ui.json) needs no new format: a
+// pack without one looks as before.
 const Format = 3
 
 // Pack is a loaded content pack. Records are keyed by id.
@@ -45,6 +46,8 @@ type Pack struct {
 	Effects *EffectCues
 	// Combat is combat.json, or nil when the pack has none (CombatRules).
 	Combat *Combat
+	// Skin is ui.json, or nil when the pack has none.
+	Skin *Skin
 }
 
 // NewPack returns an empty pack with the given manifest.

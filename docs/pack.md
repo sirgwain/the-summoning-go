@@ -287,6 +287,45 @@ whose damage it cuts to 1 point. The rule set works damage through the kinds (`d
 Engine model). Without the file a pack has the Summoning's: `physical`, `fire`, `lightning`,
 `arrow` and `poison`, with `fire_shield` against fire and `lightning_shield` against lightning.
 
+## Skin
+
+`ui.json`: how the engine's panels look in this pack. Without it they keep the engine's frames,
+colors and letters (`docs/design.md`, UI).
+
+```json
+{
+  "id": "ui",
+  "frames": { "hotbar": "hull", "inventory": "plate", "spells": "hull", "menu": "hull", "notice": "hull" },
+  "styles": { "plate": { "image": { "sprite": "sprite.ui.plate", "frame": 0 }, "corner": 12, "inside": "#0c0d0ff0" } },
+  "colors": { "text": "#e8e2d4", "gauge.magic_points": "#2fb4c8", "button_chosen": "#4a3a1e" },
+  "font": { "small": "sprite.font.small", "large": "sprite.font.large" },
+  "splash": { "sprite": "sprite.splash", "frame": 0 }
+}
+```
+
+- `frames` gives each framed panel (`hotbar`, `inventory`, `spells`, `menu` for the frontend's and
+  the game's menus, `notice`) a frame style: a built-in one, `iron` (blue-black iron with
+  sapphires, the hotbar's, the inventory's, the menus' and notices' own), `runic` (slate cut with
+  lit runes, the spell panel's own) or `hull` (riveted hull plate with amber lights), or one of
+  `styles`.
+- `styles` are the pack's frame styles, each an image cut in nine: its corners `corner` pixels
+  square kept, its edges stretched (repeated with `tile`), and its middle stretched or, with
+  `inside`, filled with that color. The panels are laid out for a frame 8 of their pixels thick.
+- `colors` override the engine's named colors, `#rrggbb` or `#rrggbbaa`: `text`, `text_low` and
+  `text_high` (an attribute below or above its maximum), `panel`, `slot`, `slot_edge`,
+  `hand_edge`, `open_edge`, `action`, `wait`, `selection`, `hover`; the menus' buttons
+  `button`, `button_hover`, `button_chosen`, `button_light`, `button_dark`, and the gems on the
+  chosen one `gem`, `gem_dark`; the gauges `gauge.hit_points`, `gauge.magic_points`,
+  `gauge.load`, `gauge.overload`, `gauge.armor`; a scene's words `scene_words`; and `front`, behind
+  the frontend.
+- `font` replaces the engine's letters, `small` (the play UI's) and `large` (the frontend's): a
+  sprite of a frame for each letter from space to `~`, each the engine face's cell (8 × 16 small,
+  10 × 20 large, the letter a column in), lit white on clear to be drawn tinted. The engine's
+  letters stand in for those the sprite lacks, and letters past `~` draw as `?`. The letters'
+  spacing stays the engine's, which the panels' layout is made to.
+- `splash` is the opening splash's artwork, in place of the engine's; its lettering is the labels
+  `ui.splash.over` and `ui.splash.title`.
+
 ## Labels
 
 The words the engine's own panels, menus, book, map and help show are labels: text keys named by

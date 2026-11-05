@@ -17,6 +17,9 @@ var splashPNG []byte
 
 // splashArt returns the splash artwork, decoded once, or nil when it cannot be.
 func (s *Window) splashArt() *ebiten.Image {
+	if s.skin.splash != nil {
+		return s.skin.splash
+	}
 	if s.splash == nil {
 		img, _, err := image.Decode(bytes.NewReader(splashPNG))
 		if err != nil {

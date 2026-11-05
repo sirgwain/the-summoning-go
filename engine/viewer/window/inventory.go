@@ -37,7 +37,7 @@ func (s *Window) drawInventory(screen *ebiten.Image) {
 	}
 	win := s.inv
 	win.Clear()
-	s.drawFrame(screen, frame.Iron, ip.Frame, ip.Scale, 1)
+	s.panelFrame(screen, content.PanelInventory, frame.Iron, ip.Frame, ip.Scale, 1)
 	for _, b := range ip.Slots {
 		r := b.Rect.Inset(1)
 		vector.FillRect(win, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), slotColor, false)

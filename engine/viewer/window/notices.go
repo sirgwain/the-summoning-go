@@ -7,6 +7,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
@@ -79,7 +80,7 @@ func (s *Window) drawReading(screen *ebiten.Image) {
 	pad := 2 * frame.Width
 	at := image.Pt((v.Screen.X-size.X*scale)/2, bottom-(size.Y+pad)*scale)
 	r := image.Rectangle{at, at.Add(size.Mul(scale))}.Inset(-pad * scale)
-	s.drawFrame(screen, frame.Iron, r, scale, 1)
+	s.panelFrame(screen, content.PanelNotice, frame.Iron, r, scale, 1)
 	art := s.artImage(size)
 	if err := s.sprites.DrawImage(art, *img, 0, 0, false); err != nil && s.err == nil {
 		s.err = err

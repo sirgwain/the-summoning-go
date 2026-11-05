@@ -6,7 +6,7 @@ import (
 )
 
 func TestDrawFillsTheBorderAndLeavesTheInside(t *testing.T) {
-	for _, style := range []Style{Iron, Runic} {
+	for _, style := range []Style{Iron, Runic, Hull} {
 		p := Draw(style, 120, 60)
 		if got := p.Base.Bounds(); got != image.Rect(0, 0, 120, 60) {
 			t.Fatalf("style %d: bounds %v", style, got)
@@ -87,5 +87,32 @@ func TestParchmentIsTornOnlyWhenRagged(t *testing.T) {
 	r := Roll(12, 100)
 	if r.RGBAAt(6, 50).A != 255 || r.RGBAAt(0, 0).A != 0 {
 		t.Error("the roll is not a cylinder with rounded ends")
+	}
+}
+
+// TestHullLights gives the hull frame amber lights in every group, and finds every built-in style
+// by its name.
+func TestHullLights(t *testing.T) {
+	p := Draw(Hull, 200, 120)
+	for g, img := range p.Glow {
+		if img == nil {
+			t.Fatalf("group %d has no lights", g)
+		}
+		lit := false
+		for y := range 120 {
+			for x := range 200 {
+				if c := img.RGBAAt(x, y); c.A > 200 && c.R > c.B {
+					lit = true
+				}
+			}
+		}
+		if !lit {
+			t.Errorf("group %d has no amber light", g)
+		}
+	}
+	for name, want := range map[string]Style{"iron": Iron, "runic": Runic, "hull": Hull} {
+		if Names[name] != want {
+			t.Errorf("style %q is %d, want %d", name, Names[name], want)
+		}
 	}
 }

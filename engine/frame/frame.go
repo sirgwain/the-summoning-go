@@ -27,7 +27,18 @@ const (
 	Iron Style = iota
 	// Runic is dark slate cut with runes lit blue.
 	Runic
+	// Hull is riveted hull plate with amber indicator lights, for science fiction.
+	Hull
 )
+
+// styles are the built-in styles' painters, by style; Names their names in a pack's skin.
+var styles = map[Style]painter{Iron: iron{}, Runic: runic{}, Hull: hull{}}
+
+// Names are the built-in styles by name.
+var Names = map[string]Style{"iron": Iron, "runic": Runic, "hull": Hull}
+
+// lit are the styles with lights.
+var lit = map[Style]bool{Runic: true, Hull: true}
 
 // Picture is a frame drawn at one size: Base is the frame with its inside clear, and Glow, for
 // a style with lights, the lights of each group, to be drawn over Base at Pulse's strength.
@@ -45,7 +56,7 @@ func Pulse(g int, t float64) float64 {
 func Draw(style Style, w, h int) *Picture {
 	p := &Picture{Base: image.NewRGBA(image.Rect(0, 0, w, h))}
 	st := painterOf(style)
-	if style == Runic {
+	if lit[style] {
 		for g := range p.Glow {
 			p.Glow[g] = image.NewRGBA(p.Base.Rect)
 		}
@@ -89,8 +100,8 @@ func Draw(style Style, w, h int) *Picture {
 func Inside(style Style) color.RGBA { return painterOf(style).inside() }
 
 func painterOf(style Style) painter {
-	if style == Runic {
-		return runic{}
+	if p, ok := styles[style]; ok {
+		return p
 	}
 	return iron{}
 }

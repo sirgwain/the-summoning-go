@@ -1,6 +1,6 @@
 # Packs plan
 
-Status: 2026-11-05. Phases 1 (labels) and 3 (ranged combat) have landed. This plan covers what the engine needs so that a pack other than
+Status: 2026-11-05. Phases 1 (labels), 2 (skins) and 3 (ranged combat) have landed. This plan covers what the engine needs so that a pack other than
 The Summoning can look and play like its own game. A second, original pack built
 without engine changes shows the gaps the engine has: fantasy labels, the
 iron and slate frames, combat tied to bows and quivers, and art capped at the Summoning's pixel scale.
@@ -44,20 +44,16 @@ Panel frames are drawn by code in `engine/frame`, with two styles (`Iron`, `Runi
 the viewer. The text color and gauge colors are constants, and the font is the engine's own
 (design.md, UI).
 
-- [ ] Specify a `ui.json` record in pack.md:
-  - for each panel (hotbar, inventory, spell panel, menus and buttons, conversation, map, book,
-    log), either a built-in frame style by name or a pack image cut in nine (corners kept, edges
-    and middle stretched or tiled), with its frame width;
-  - the inside color, text colors and the button states (chosen, under the pointer, disabled);
-  - the gauge colors (hit points, magic points, load, armor);
-  - optionally a pack font: an atlas sprite with an advance and line height, at a small and a
-    large size, letters it lacks shown as `?` as now.
-  - the splash artwork, which the engine now embeds (its lettering is already labels).
-  The record is optional: without it the panels keep today's frames.
-- [ ] Give `engine/frame` a style table instead of a fixed switch, and add a third built-in
-      style suited to science fiction (riveted hull plate with amber indicator lights), so a
-      pack can be skinned without art of its own.
-- [ ] Have the viewer take every frame, color and the font from the skin.
+- [x] Specify a `ui.json` record in pack.md (Skin): a frame style for each framed panel (`hotbar`,
+      `inventory`, `spells`, `menu`, `notice`), built-in or a pack image cut in nine; named colors
+      (text, slots, buttons, gems, gauges, scene words); a pack font; the splash artwork. The
+      conversation, book, log and map have no frame today, so only their colors are skinned.
+- [x] Give `engine/frame` a style table (`frame.Names`) and a third built-in style, `hull`:
+      riveted hull plate with amber indicator lights.
+- [x] Have the viewer take every frame, the named colors, the letters and the splash from the
+      skin (`window/skin.go`). A pack font keeps the engine's letter cells and spacing, which the
+      layout is made to; letters of other sizes wait for phase 4's UI at density.
+      splash artwork waits for phase 4's true-color sprites.
 
 ### 3. Ranged combat beyond bows
 

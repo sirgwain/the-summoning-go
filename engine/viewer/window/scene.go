@@ -154,7 +154,7 @@ func (s *Window) drawSay(screen *ebiten.Image, r *viewer.SceneRun, line *viewer.
 		panel = sayBottom
 	}
 	outer := image.Rectangle{at.Add(panel.Min.Mul(scale)), at.Add(panel.Max.Mul(scale))}
-	s.drawFrame(screen, frame.Iron, outer, scale, menuOpacity)
+	s.panelFrame(screen, content.PanelMenu, frame.Iron, outer, scale, menuOpacity)
 	if line == nil {
 		return
 	}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/font"
 	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
@@ -71,7 +72,7 @@ func (s *Window) drawFront(screen *ebiten.Image) {
 	}
 	panel := s.drawMenuPanel(screen, f, lettered)
 	center := func(text string, y int) {
-		s.printFace(screen, font.Large, text, (f.Size.X-font.Large.Measure(text))/2, y, 1, color.White)
+		s.printFace(screen, font.Large, text, (f.Size.X-font.Large.Measure(text))/2, y, 1, textColor)
 	}
 	if !lettered {
 		center(f.Title, f.TitleAt())
@@ -95,7 +96,7 @@ func (s *Window) drawFront(screen *ebiten.Image) {
 		// The sapphires go only where there is room beside the label.
 		gems := (r.Dx()-w)/2 >= r.Dy()
 		drawPlaque(screen, r, i == f.Choice, cursor.In(r), gems, menuScale(f))
-		s.printFace(screen, font.Large, b.Label, r.Min.X+(r.Dx()-w)/2, r.Min.Y+2, 1, color.White)
+		s.printFace(screen, font.Large, b.Label, r.Min.X+(r.Dx()-w)/2, r.Min.Y+2, 1, textColor)
 	}
 	if f.RollsShown > 0 && !panel.Empty() {
 		text := s.ui("ui.rolls", "n", f.Rolls)
@@ -149,7 +150,7 @@ func (s *Window) drawMenuPanel(screen *ebiten.Image, f *viewer.Frontend, lettere
 	// The frame is whole frame pixels.
 	outer.Max.X += (scale - outer.Dx()%scale) % scale
 	outer.Max.Y += (scale - outer.Dy()%scale) % scale
-	s.drawFrame(screen, frame.Iron, outer, scale, menuOpacity)
+	s.panelFrame(screen, content.PanelMenu, frame.Iron, outer, scale, menuOpacity)
 	return outer
 }
 

@@ -243,6 +243,15 @@ func TestVerify(t *testing.T) {
 		"anchors":         {func(p *Pack) { p.Sprites["sprite.npc"].Anchors = []Offset{{0, 0}} }, "anchors"},
 		"thing anim":      {func(p *Pack) { p.Things["thing.guard"].Animations = map[string]Animation{"idle": {Frames: []int{3}}} }, "frame 3 of 3"},
 		"look layer":      {func(p *Pack) { p.Looks["look.plate"].Layer = "sky" }, "unknown layer"},
+		"skin panel":      {func(p *Pack) { p.Skin = &Skin{ID: "ui", Frames: map[string]string{"sky": "iron"}} }, "unknown panel"},
+		"skin style":      {func(p *Pack) { p.Skin = &Skin{ID: "ui", Frames: map[string]string{PanelHotbar: "brass"}} }, "unknown frame style"},
+		"skin color":      {func(p *Pack) { p.Skin = &Skin{ID: "ui", Colors: map[string]string{ColorText: "amber"}} }, "not #rrggbb"},
+		"skin color name": {func(p *Pack) { p.Skin = &Skin{ID: "ui", Colors: map[string]string{"glow": "#ffffff"}} }, "unknown color"},
+		"skin corner": {func(p *Pack) {
+			p.Skin = &Skin{ID: "ui", Styles: map[string]*FrameStyle{"plate": {Image: Image{Sprite: "sprite.tiles"}, Corner: 40}}}
+		}, "does not fit"},
+		"damage kind":     {func(p *Pack) { p.Things["thing.guard"].Resists = []string{"plasma"} }, "unknown damage kind"},
+		"shot sources":    {func(p *Pack) { p.Combat = &Combat{ID: "combat", Kinds: []DamageKind{{ID: "a"}, {ID: "a"}}} }, "twice"},
 		"look frame":      {func(p *Pack) { p.Looks["look.plate"].States["up"][0].Frame = 9 }, "frame 9"},
 		"item text":       {func(p *Pack) { p.Items["item.key"].Name = "item.nope" }, "not in text.en"},
 		"item icon":       {func(p *Pack) { p.Items["item.key"].Icon.Sprite = "sprite.none" }, "not found"},

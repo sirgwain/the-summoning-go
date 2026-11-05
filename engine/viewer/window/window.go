@@ -44,8 +44,10 @@ type Window struct {
 	splash  *ebiten.Image
 	// title is where the splash's title is lettered while it fills in.
 	title *ebiten.Image
-	// fonts are the faces' letters, made when first drawn.
+	// fonts are the faces' letters, made when first drawn or from the skin.
 	fonts map[*font.Face]*ebiten.Image
+	// skin is the pack's skin worked out.
+	skin skinned
 	// backdrop is how bright the splash artwork shows behind the frontend now.
 	backdrop float32
 	keys     map[viewer.Key]ebiten.Key
@@ -86,6 +88,7 @@ func New(v *viewer.Viewer) (*Window, error) {
 		art: map[image.Point]*ebiten.Image{}, frames: map[frameKey]*framePics{},
 		fonts: map[*font.Face]*ebiten.Image{},
 	}
+	s.applySkin()
 	s.view = render.NewLevelView(s.sprites)
 	s.lights = light.NewFinder(v.Pack, s.palette)
 	names := map[string]ebiten.Key{}
