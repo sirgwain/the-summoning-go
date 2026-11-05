@@ -52,12 +52,13 @@ type Status struct {
 // PlayerStrike is the player striking a creature with a hand.
 type PlayerStrike struct {
 	Agility, Endurance, Accuracy, Strength int
-	// Weapon is false for bare hands; Skill is the weapon class's skill level.
-	Weapon bool
-	Skill  int
-	Damage content.Dice
-	Behind bool
-	Status Status
+	// Weapon is false for bare hands; Classed is true for an object with a weapon class, and
+	// Skill is that class's skill level.
+	Weapon, Classed bool
+	Skill           int
+	Damage          content.Dice
+	Behind          bool
+	Status          Status
 	// The creature: its accuracy and resistance; Vulnerable when the weapon's class is its
 	// vulnerability; PhysicalOnly when only weapons that hurt such creatures (Hurts) do.
 	CreatureAccuracy, Resistance int

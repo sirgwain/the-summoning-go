@@ -68,7 +68,9 @@ func (w *World) hurtThing(l *Level, t *Thing, d int, k combat.Kind) int {
 	if !alive(t) {
 		return 0
 	}
-	w.thaw(t)
+	if !t.Template.Has(content.BehaviorInvulnerable) {
+		w.actAtOnce(t)
+	}
 	if l == w.Current() {
 		w.learnCreature(t, StageFought)
 		w.meetKind(l, t, k)
@@ -105,11 +107,10 @@ func (w *World) freeze(l *Level, ticks int) {
 	}
 }
 
-// thaw takes back the delay freezes added to thing t, as a strike on it does (docs/spec/combat.md,
-// Hurting a creature).
-func (w *World) thaw(t *Thing) {
-	t.next -= t.frozen
-	t.frozen = 0
+// actAtOnce has hurt creature t take its next update now, which ends any freeze on it
+// (docs/spec/combat.md, Hurting a creature).
+func (w *World) actAtOnce(t *Thing) {
+	t.next, t.frozen = w.step, 0
 }
 
 // creatureDies drops what creature t carries, gives the player its experience, and leaves its
@@ -628,7 +629,7 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 	s := combat.PlayerStrike{
 		Agility: p.Attributes[AttrAgility], Endurance: p.Attributes[AttrEndurance],
 		Accuracy: p.Attributes[AttrAccuracy], Strength: p.Attributes[AttrStrength],
-		Weapon: o != nil, Damage: a.Damage, Behind: behind(d, t.Facing), Status: w.combatStatus(),
+		Weapon: o != nil, Classed: class >= 0, Damage: a.Damage, Behind: behind(d, t.Facing), Status: w.combatStatus(),
 		CreatureAccuracy: t.Template.Stats["accuracy"], Resistance: t.Template.Stats["resistance"],
 		Vulnerable:   class >= 0 && t.Template.Vulnerability != nil && *t.Template.Vulnerability == class,
 		PhysicalOnly: t.Template.Has(content.BehaviorPhysicalOnly),
@@ -678,14 +679,14 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 	}
 }
 
-// wearWeapon wears the weapon in hand by n; one worn past what is left breaks
+// wearWeapon wears the weapon in hand by n; one worn to what is left or past it breaks
 // (docs/spec/combat.md, Wear).
 func (w *World) wearWeapon(hand int, o *Object, n int) {
 	if o.Value >= unwearing {
 		return
 	}
 	n = w.rules.Wear(n)
-	if n <= o.Value {
+	if n < o.Value {
 		o.Value -= n
 		return
 	}
@@ -693,6 +694,7 @@ func (w *World) wearWeapon(hand int, o *Object, n int) {
 	for i := range 2 {
 		if p.Slots[SlotRightHand+i] == o {
 			p.Slots[SlotRightHand+i] = nil
+			w.takeOff(o)
 			w.emit(Event{Kind: EventObject, Level: l.ID, Cell: p.Cell(), Item: o.Item, Detail: "worn_out", Slot: SlotRightHand + i})
 		}
 	}

@@ -314,25 +314,26 @@ func (w *World) transition(cue string) {
 func (w *World) hurtPlayer(n int, k combat.Kind, by string) {
 	w.foughtBy(by)
 	p := w.player
-	if p == nil || n <= 0 || p.Dead {
+	if p == nil || n < 0 || p.Dead {
 		return
 	}
 	armor := p.Slots[SlotBody]
 	def := combat.PlayerDefense{Status: w.combatStatus(), ArmorClass: p.ArmorClass, BodyArmor: armor != nil}
-	absorbed := false
 	if p.Status.Charges {
-		def.Absorb = func(d int) int {
-			rest := w.absorb(d)
-			absorbed = rest < d
-			return rest
-		}
+		def.Absorb = w.absorb
 	}
 	d, wear := w.rules.HurtPlayer(n, k, def)
 	if wear > 0 && armor.Value < unwearing {
-		armor.Value = max(0, armor.Value-wear)
+		armor.Value = max(0, armor.Value-w.rules.Wear(wear))
 		w.wornChanged()
 	}
-	w.loseHitPoints(d, !absorbed, by)
+	w.loseHitPoints(d, true, by)
+}
+
+// hurtPoisons reports whether a hurt of kind k may poison the player: under the charges status
+// only physical hurts do (docs/spec/combat.md, Hurting the player).
+func (w *World) hurtPoisons(k combat.Kind) bool {
+	return k == combat.Physical || !w.player.Status.Charges
 }
 
 // loseHitPoints takes d hit points off the player, past every defense, showing the amount when

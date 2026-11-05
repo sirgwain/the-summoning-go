@@ -173,10 +173,11 @@ func TestWearing(t *testing.T) {
 	if p.IntervalBonus != 0 || p.ArmorClass != 4 || p.Hand == nil {
 		t.Errorf("boots off: armor %d, interval bonus %d", p.ArmorClass, p.IntervalBonus)
 	}
-	// A blow wears the body armor by up to the armor class and the armor takes it off.
+	// A blow wears the body armor by up to the armor class, three times over as all wear is, and
+	// the armor takes it off.
 	hp := p.HitPoints
 	w.hurtPlayer(10, 0, "a test")
-	if p.HitPoints != hp-6 || p.Slots[SlotBody].Value != 7500-4 {
+	if p.HitPoints != hp-6 || p.Slots[SlotBody].Value != 7500-3*4 {
 		t.Errorf("a blow of 10 through mail: %d hit points taken, mail at %d", hp-p.HitPoints, p.Slots[SlotBody].Value)
 	}
 }
@@ -1032,4 +1033,58 @@ func TestFreezeHoldsFlights(t *testing.T) {
 		t.Errorf("the flight's next update is %d", f.next)
 	}
 	l.Flights = nil
+}
+
+func TestWeaponBreaksAtWhatIsLeft(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) {
+		class := 1
+		p.Items["item.battlecraft"] = &content.Item{ID: "item.battlecraft", Weight: 1, Size: 1, Wear: content.WearHand,
+			WeaponClass: &class, Durability: 30, Power: 0x1F, PowerWorn: true}
+	},
+		"####",
+		"#@.#",
+		"####")
+	p := w.Player()
+	o := w.newObject("item.battlecraft")
+	p.Slots[SlotRightHand] = o
+	w.putOn(o)
+	if p.Skills[SkillWeapon+1].Level != 2 {
+		t.Fatalf("battlecraft worn: skill %d", p.Skills[SkillWeapon+1].Level)
+	}
+	w.wearWeapon(0, o, 10) // wears 30, all that is left
+	if p.Slots[SlotRightHand] != nil || p.Skills[SkillWeapon+1].Level != 0 {
+		t.Errorf("worn to nothing: hand %v, skill %d", p.Slots[SlotRightHand], p.Skills[SkillWeapon+1].Level)
+	}
+}
+
+func TestChargesStopPoisonGas(t *testing.T) {
+	w := fightWorld(t, nil,
+		"#######",
+		"#@...G#",
+		"#######")
+	p := w.Player()
+	p.Status.Charges = true
+	f := &Flight{ByPlayer: false, Spell: &SpellFlight{Missile: &content.MissileSpell{Hurts: content.HurtsPoison, Poisons: true}, Power: 3}}
+	w.spellHits(w.Current(), f, &body{u: p.U, v: p.V})
+	if p.Poisoned {
+		t.Error("poison gas poisoned the player under the charges status")
+	}
+	p.Status.Charges = false
+	w.spellHits(w.Current(), f, &body{u: p.U, v: p.V})
+	if !p.Poisoned {
+		t.Error("poison gas did not poison the player")
+	}
+}
+
+func TestHurtCreatureActsAtOnce(t *testing.T) {
+	w := fightWorld(t, nil,
+		"#######",
+		"#@...G#",
+		"#######")
+	g := w.Current().Thing("guard")
+	g.next = w.step + 500
+	w.hurtThing(w.Current(), g, 1, 0)
+	if g.next != w.step {
+		t.Errorf("a hurt guard's next update is %d, at step %d", g.next, w.step)
+	}
 }

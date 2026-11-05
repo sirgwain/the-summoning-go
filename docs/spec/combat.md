@@ -30,22 +30,22 @@ score = (AGI − creature accuracy) / 2
       + (END − 10)               if END < 10
       + (ACC − 12) / 2
       + 2                        if status "accurate"
-      + skill − 1                with a weapon, its class's skill level
+      + skill − 1                with a weapon (an object with a weapon class), its class's skill level
       + 4                        under battle rage
       + 4                        from behind
 ```
 
 A miss shows message 5Bh with the score.
 
-**Damage**, rolled from the action's damage code:
+**Damage**, rolled from the action's damage code. A roll of 0 (code 00h) does no damage, and nothing below is added to it:
 
 ```
-d = roll + skill                 (skill of the weapon's class; none bare-handed)
+d = roll + skill                 (skill of the weapon's class; none bare-handed or without a class)
 d = d × 2                        from behind
 d = d + d / 2                    under battle rage
 d = d + 2                        if status "accurate"
 d = d + d / 4                    if the weapon's category is the creature's vulnerability
-d = d + STR − 10                 with a weapon (not bare hands)
+d = d + STR − 10                 with any object in the hand (not bare hands)
 d = the Silver Sword's action-1 roll, or 0 for any other weapon
                                  against creatures with behavior 0400h
 d = max(0, d − creature resistance)
@@ -94,8 +94,8 @@ For damage `d` of kind `k`:
 2. Status "resist quarter": `d − d/4`. Status "resist forty": `d − 4d/10`.
 3. At least 1.
 4. Fire (1) under a fire shield, or lightning (2) under a lightning shield: 1.
-5. Non-physical damage (any kind but 0, arrows included) while the player has the "charges" status is absorbed by the quantity (items.md, Object values) of the object in the right hand whose power is 23h, else the left hand's: each one used absorbs 1, until the damage or the quantity runs out, the object staying in the hand, and message 3Ah shows how many it absorbed. Hit points then drop without the damage shown.
-6. With body armor and armor class above 0: the armor wears by `min(d, AC)`, then `d − AC`, at least 1.
+5. Non-physical damage (any kind but 0, arrows included) while the player has the "charges" status is absorbed by the quantity (items.md, Object values) of the object in the right hand whose power is 23h, else the left hand's: each one used absorbs 1, until the damage or the quantity runs out, the object staying in the hand, and message 3Ah shows how many it absorbed. Such a hurt does not poison, whatever would have poisoned with it, and whether or not anything was absorbed.
+6. With damage left, body armor and armor class above 0: the armor wears by `min(d, AC)` (as all wear does, Wear below: three times that when above 1), then `d − AC`, at least 1.
 7. Hit points drop by `d`. The amount shows over the player for 6 updates (at most 99).
 8. At 0 hit points or less with death protection: the protection is used up and hit points and magic points are restored to full.
 
@@ -108,8 +108,8 @@ For damage `d` of kind `k`, with `poison` set by poisoning attacks:
 - Creature record 79h is not hurt: the player takes the damage instead, as if hurt by it. It only animates, but it can be struck.
 
 - Animated objects, corpses and kinds other than creatures are not hurt. A conjured thing loses 1 of its strength instead.
-- A creature delayed by a freeze (spell 20, item power 21h) and struck loses what is left of the delay, whatever the blow does: its next update returns to when it was before the freezes. Several freezes add up, and a strike ends them all.
-- Behavior 1000h: immune. Record 31h: hurt only by exactly 3000.
+- Behavior 1000h: immune, and nothing below happens. Record 31h: hurt only by exactly 3000.
+- A creature hurt past those takes its next update at once, whatever the damage then comes to (even 0, as below): a hurt creature acts sooner, a poisoned one acts again at once when its poison bites, and one delayed by a freeze (spell 20, item power 21h) loses what is left of the delay.
 - Behavior 0400h: non-physical damage does 0.
 - Quarter damage: poison with 8000h, fire with 2000h, lightning with 4000h.
 - Arrows (3) do `d + d/4` against creatures whose vulnerability is 0Ch (weapon class 3).
@@ -121,7 +121,7 @@ For damage `d` of kind `k`, with `poison` set by poisoning attacks:
 
 An object's wear value starts at its template's durability (items.md). Wearing by `n` takes `3n` when `n > 1`.
 
-- **Weapons** (category flag set): durability 30000 never wears. When the wear exceeds what is left, the weapon breaks: message 8Ah with its name, and it is destroyed. The engine shows it going from its hand as a timed object running out does (items.md, Timed objects).
+- **Weapons** (category flag set): durability 30000 never wears. When the wear comes to what is left or more, the weapon breaks: message 8Ah with its name, and it is taken off its hand (ending its power, as taking it off does, items.md) and destroyed. The engine shows it going from its hand as a timed object running out does (items.md, Timed objects).
 - **Armor** (category 1): wear is taken off the value, at most what is left. Each time the value falls past a multiple of 500 and the armor's effective AC drops, the player's armor class drops by 1.
 
 ## Special weapons

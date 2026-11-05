@@ -222,7 +222,7 @@ func (w *World) spellHits(l *Level, f *Flight, b *body) {
 		k := w.kind(m.Hurts)
 		if t == nil {
 			w.hurtPlayer(s.Power, k, "a spell")
-			if m.Poisons {
+			if m.Poisons && w.player != nil && w.hurtPoisons(k) {
 				w.poisonPlayer()
 			}
 		} else {

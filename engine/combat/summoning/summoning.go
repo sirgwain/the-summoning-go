@@ -27,7 +27,7 @@ func (Rules) PlayerStrikes(r combat.Roller, s combat.PlayerStrike) combat.Result
 	if s.Status.Accurate {
 		score += 2
 	}
-	if s.Weapon {
+	if s.Classed {
 		score += s.Skill - 1
 	}
 	if s.Status.BattleRage {
@@ -41,7 +41,10 @@ func (Rules) PlayerStrikes(r combat.Roller, s combat.PlayerStrike) combat.Result
 		return combat.Result{Score: score}
 	}
 	d := combat.Roll(r, s.Damage)
-	if s.Weapon {
+	if d <= 0 {
+		return combat.Result{Score: score, Hit: true}
+	}
+	if s.Classed {
 		d += s.Skill
 	}
 	if s.Behind {
