@@ -10,6 +10,7 @@ import (
 func (p *Pack) Verify() error {
 	v := &verifier{p: p}
 	v.manifest()
+	v.combat()
 	for _, id := range sortedKeys(p.Palettes) {
 		v.errs = append(v.errs, p.Palettes[id].verify()...)
 	}

@@ -3,7 +3,6 @@ package sim
 import (
 	"slices"
 
-	"github.com/sirgwain/the-summoning-go/engine/combat"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 )
 
@@ -137,25 +136,6 @@ func (w *World) meetDefense(l *Level, t *Thing, d string) {
 	}
 	if e := w.learnCreature(t, StageFought); e != nil && !e.Knows(d) {
 		e.Defenses = append(e.Defenses, d)
-	}
-}
-
-// meetKind learns the defenses of creature t that being hurt by kind k shows.
-func (w *World) meetKind(l *Level, t *Thing, k combat.Kind) {
-	switch k {
-	case combat.Fire:
-		w.meetDefense(l, t, content.BehaviorResistsFire)
-	case combat.Lightning:
-		w.meetDefense(l, t, content.BehaviorResistsLight)
-	case combat.Poison:
-		w.meetDefense(l, t, content.BehaviorResistsPoison)
-	case combat.Arrow:
-		if v := t.Template.Vulnerability; v != nil && *v == content.ArrowClass {
-			w.meetDefense(l, t, DefenseVulnerable)
-		}
-	}
-	if k != combat.Physical {
-		w.meetDefense(l, t, content.BehaviorPhysicalOnly)
 	}
 }
 

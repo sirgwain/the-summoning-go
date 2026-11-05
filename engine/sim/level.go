@@ -97,6 +97,8 @@ type Thing struct {
 	// it is not winding up.
 	WindUpFrom  int64 `json:",omitempty"`
 	WindUpUntil int64 `json:",omitempty"`
+	// ShotNext is the step a creature with a ranged attack may next shoot.
+	ShotNext int64 `json:",omitempty"`
 	// casting counts a stationary caster's updates to its next cast; animCount and animStep an
 	// animated creature's frame changes; spin the ticks a teleported creature still spins.
 	casting             int

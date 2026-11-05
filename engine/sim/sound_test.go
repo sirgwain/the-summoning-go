@@ -66,7 +66,7 @@ func TestBowSound(t *testing.T) {
 			Container: &content.Container{Capacity: 4, Largest: 1}}
 		bow := 3
 		p.Items["item.bow"] = &content.Item{ID: "item.bow", Weight: 3, Size: 3, Wear: content.WearHand, WeaponClass: &bow,
-			Actions: []content.ItemAction{{Kind: content.ActionFire, Delay: 3}}}
+			Actions: []content.ItemAction{{Kind: content.ActionFire, Delay: 3, NeedsRoom: true}}}
 	}, "##########", "#@.......#", "##########")
 	p := w.Player()
 	p.Facing = 2

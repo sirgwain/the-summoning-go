@@ -31,6 +31,8 @@ type World struct {
 	pack *content.Pack
 	rng  *rand.Rand
 	src  *rand.PCG
+	// defenses are the creature templates' defenses, worked out once each.
+	defenses map[*content.Thing]combat.CreatureDefense
 	// step counts updates since the world began.
 	step int64
 	// levels holds every level entered so far, as it was left.

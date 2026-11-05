@@ -272,7 +272,7 @@ func TestArrowTrapAndBow(t *testing.T) {
 			Container: &content.Container{Capacity: 4, Largest: 1}}
 		bow := 3
 		p.Items["item.bow"] = &content.Item{ID: "item.bow", Weight: 3, Size: 3, Wear: content.WearHand, WeaponClass: &bow,
-			Actions: []content.ItemAction{{Kind: content.ActionFire, Delay: 3}}}
+			Actions: []content.ItemAction{{Kind: content.ActionFire, Delay: 3, NeedsRoom: true}}}
 		p.Levels["level.walk"].Procedures["trap"] = []content.Action{{ShootItem: &content.ShootItem{Cell: cell{1, 6}, Item: "item.arrow", Direction: 6}}}
 	},
 		"########",

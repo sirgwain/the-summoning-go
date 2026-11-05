@@ -318,7 +318,7 @@ func (w *World) hurtPlayer(n int, k combat.Kind, by string) {
 		return
 	}
 	armor := p.Slots[SlotBody]
-	def := combat.PlayerDefense{Status: p.combatStatus(), ArmorClass: p.ArmorClass, BodyArmor: armor != nil}
+	def := combat.PlayerDefense{Status: w.combatStatus(), ArmorClass: p.ArmorClass, BodyArmor: armor != nil}
 	absorbed := false
 	if p.Status.Charges {
 		def.Absorb = func(d int) int {
@@ -820,7 +820,7 @@ func (w *World) floorEffect(e *content.Effect) {
 			if p.Status.FireImmune || p.Status.Levitating {
 				return
 			}
-			k = combat.Fire
+			k = w.kind(content.KindFire)
 		}
 		if e.Cue != "" {
 			w.cue(p.Cell(), e.Cue)

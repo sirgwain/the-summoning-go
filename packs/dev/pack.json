@@ -2,7 +2,7 @@
   "id": "dev",
   "name": "Dev pack",
   "version": "0.1.0",
-  "format": 2,
+  "format": 3,
   "depends": [],
   "palette": "palette.dev",
   "start": {

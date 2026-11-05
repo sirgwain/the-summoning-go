@@ -142,9 +142,12 @@ func (h *Held) Hand(i int) *HeldLayers {
 
 // Missile is how an item hurts in flight.
 type Missile struct {
-	Damage Dice `json:"damage"`
+	// Damage is what it does in flight; without it, weight / 10 + 1.
+	Damage Dice `json:"damage,omitzero"`
 	// FiredOnly items do 1 when thrown rather than fired.
 	FiredOnly bool `json:"fired_only,omitempty"`
+	// Kind is the damage kind it does, the pack's first without one.
+	Kind string `json:"kind,omitempty"`
 }
 
 // InventoryObject is an object in an inventory slot.
@@ -192,6 +195,15 @@ type ItemAction struct {
 	// Swings makes a use or use-up action also show the swing pose, without a blow: of both
 	// hands for a weapon, else of its hand.
 	Swings bool `json:"swings,omitempty"`
+	// A fire action's shots come from one of Ammo (DefaultAmmo without any), the weapon's own
+	// charges (Charges a shot) or the player's magic points (Power a shot). Shot says what flies,
+	// falling back to the ammunition's missile. NeedsRoom refuses a shot with anything but a
+	// corpse within a step ahead (docs/pack.md, Items).
+	Ammo      *Ammo `json:"ammo,omitempty"`
+	Charges   int   `json:"charges,omitempty"`
+	Power     int   `json:"power,omitempty"`
+	Shot      *Shot `json:"shot,omitempty"`
+	NeedsRoom bool  `json:"needs_room,omitempty"`
 }
 
 // Attack reports whether the action strikes.
@@ -263,9 +275,6 @@ var behaviors = map[string]bool{
 // Behaviors returns the behaviors the engine knows, sorted.
 func Behaviors() []string { return sortedKeys(behaviors) }
 
-// ArrowClass is the weapon class of bows; arrows hurt creatures vulnerable to it more.
-const ArrowClass = 3
-
 // Thing is a template for things that stand in a level.
 type Thing struct {
 	ID     string `json:"id"`
@@ -297,6 +306,13 @@ type Thing struct {
 	Experience Dice `json:"experience,omitzero"`
 	// Vulnerability is the weapon class that hurts it more, nil for none.
 	Vulnerability *int `json:"vulnerability,omitempty"`
+	// Resists, Ignores and WeakTo name damage kinds it takes a quarter of, none of, or a quarter
+	// more of (docs/pack.md, Things).
+	Resists []string `json:"resists,omitempty"`
+	Ignores []string `json:"ignores,omitempty"`
+	WeakTo  []string `json:"weak_to,omitempty"`
+	// Shoots is a ranged attack it makes without a spell.
+	Shoots *Shoots `json:"shoots,omitempty"`
 	// Spell is the spell a creature casts, empty for none, at the power SpellPower rolls.
 	Spell      string `json:"spell,omitempty"`
 	SpellPower Dice   `json:"spell_power,omitzero"`
@@ -475,6 +491,8 @@ const (
 	MsgLostMagicSkills       = "lost_magic_skills"
 	MsgNoQuiver              = "no_quiver"
 	MsgNoArrows              = "no_arrows"
+	MsgNoCharges             = "no_charges"
+	MsgNoPower               = "no_power"
 	MsgNoRoomToShoot         = "no_room_to_shoot"
 	MsgTooCloseToWall        = "too_close_to_wall"
 	MsgCannotThrow           = "cannot_throw"
@@ -549,6 +567,8 @@ var messageKeys = map[string]bool{
 	MsgLostMagicSkills:       true,
 	MsgNoQuiver:              true,
 	MsgNoArrows:              true,
+	MsgNoCharges:             true,
+	MsgNoPower:               true,
 	MsgNoRoomToShoot:         true,
 	MsgTooCloseToWall:        true,
 	MsgCannotThrow:           true,

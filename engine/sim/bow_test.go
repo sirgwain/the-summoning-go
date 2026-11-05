@@ -15,12 +15,12 @@ func bowWorld(t *testing.T, rows ...string) *World {
 		p.Things["thing.player"].Box = &content.Box{-10, 9, 16, 6}
 		p.Things["thing.guard"].Box = &content.Box{-10, 9, 16, 12}
 		p.Items["item.arrow"] = &content.Item{ID: "item.arrow", Weight: 1, Size: 1, Tags: []string{"arrows"},
-			Missile: &content.Missile{Damage: content.Dice{Bonus: 5}}}
+			Missile: &content.Missile{Damage: content.Dice{Bonus: 5}, Kind: content.KindArrow}}
 		p.Items["item.quiver"] = &content.Item{ID: "item.quiver", Weight: 1, Size: 2, Wear: content.WearQuiver,
 			Container: &content.Container{Capacity: 4, Largest: 1}}
 		bow := 3
 		p.Items["item.bow"] = &content.Item{ID: "item.bow", Weight: 3, Size: 3, Wear: content.WearHand, WeaponClass: &bow,
-			Actions: []content.ItemAction{{Kind: content.ActionFire, Delay: 3}}}
+			Actions: []content.ItemAction{{Kind: content.ActionFire, Delay: 3, NeedsRoom: true}}}
 	}, rows...)
 	p := w.Player()
 	p.Facing = 2

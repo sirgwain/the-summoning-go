@@ -192,7 +192,7 @@ func TestLabelsRenamed(t *testing.T) {
 	sort.Slice(texts, func(i, j int) bool { return len(texts[i]) > len(texts[j]) })
 	var defaults []string
 	for _, s := range inspect.Labels {
-		if s = strings.TrimSpace(s); len(s) > 2 {
+		if s = strings.TrimSpace(s); len(s) > 2 && (strings.ToLower(s) != s || strings.Contains(s, " ")) {
 			defaults = append(defaults, s)
 		}
 	}

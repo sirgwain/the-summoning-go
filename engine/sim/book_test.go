@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/sirgwain/the-summoning-go/engine/combat"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 )
 
@@ -163,7 +162,7 @@ func TestBookDefenses(t *testing.T) {
 	if !e.Knows(DefenseVulnerable) || e.Knows(content.BehaviorResistsFire) {
 		t.Fatalf("struck with a sword: %+v", e)
 	}
-	w.hurtThing(l, g, 8, combat.Fire)
+	w.hurtThing(l, g, 8, w.kind(content.KindFire))
 	if !e.Knows(content.BehaviorResistsFire) || e.Knows(content.BehaviorResistsPoison) {
 		t.Errorf("burned: %+v", e)
 	}

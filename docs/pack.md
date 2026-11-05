@@ -55,7 +55,7 @@ A record's file is named after its id without the kind prefix (`item.dagger` is
   "id": "summoning",
   "name": "The Summoning",
   "version": "0.1.0",
-  "format": 2,
+  "format": 3,
   "depends": [],
   "palette": "palette.0",
   "start": { "level": "level.00", "cell": [16, 15] },
@@ -69,7 +69,8 @@ A record's file is named after its id without the kind prefix (`item.dagger` is
 
 `format` is this document's version; the loader rejects a format it does not know. It rises with
 any change that a pack written before would not have, so that such a pack is refused and written
-again rather than played wrongly: 2 added `box`. `palette` is the
+again rather than played wrongly: 2 added `box`, 3 damage kinds as data (Combat) and the shot of
+a `fire` action. `palette` is the
 palette gameplay draws with. `rules` names the combat rule set (`docs/design.md`, Characters, stats
 and combat); `summoning` is the only one, and the default. `player` is the thing template of kind `player` the player is made
 from; a pack without one runs its levels with no player. `counters` names the counters the engine
@@ -255,7 +256,7 @@ The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slo
 `full_health`, `full_magic`, `not_poisoned`, `not_poisoned_or_confused`, `not_fatigued`,
 `no_destination`, `no_creatures`, `already_have`, `healed` (`{damage}` the amount), `protected`,
 `boost_extended`, `poisoned`, `slowed`, `confused`, `sex_changed`, `lost_weapon_skills`, `lost_magic_skills`, `no_quiver`,
-`no_arrows`, `no_room_to_shoot`, `too_close_to_wall`, `cannot_throw`, `cannot_act`; for magic `cannot_cast`,
+`no_arrows`, `no_charges`, `no_power`, `no_room_to_shoot`, `too_close_to_wall`, `cannot_throw`, `cannot_act`; for magic `cannot_cast`,
 `not_memorized`, `only_spell`, `no_magic`, `forgot`, `forgot_more`, `no_room_for_wall`, `wall_failed`,
 `no_room_for_portal`, `no_spell_near`, `nothing_to_mend`, `no_creature_near`, `no_bottle`,
 `filled`, `door_resists`, `missile_wall`, `battle_rage`, `battle_rage_extended`, `haste`,
@@ -263,6 +264,28 @@ The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slo
 `weapon_skills_extended`, `magic_skills_up`, `magic_skills_extended`, `cured`; for fights `killed`
 and `absorbed`; for the music key `music_all`, `music_effects` and `music_silent`. A key the pack
 leaves out shows nothing. Later milestones add keys.
+
+## Combat
+
+`combat.json`: the pack's damage kinds, and the statuses that shield the player from them.
+
+```json
+{
+  "id": "combat",
+  "kinds": [{ "id": "ballistic" }, { "id": "plasma", "name": "kind.plasma" }, { "id": "emp" }],
+  "shields": { "fire_shield": "plasma" }
+}
+```
+
+`kinds` lists the kinds by id, with an optional text key naming each for the book (else the label
+`ui.kind.<id>`, else the id); at most 64. The first is what blows, falls, boulders and the other
+hurts the engine itself deals do. The engine finds the other kinds it deals by id: `fire` for
+burning floors, `poison` for poison (a creature hurt by it is poisoned unless it resists or
+ignores it), and a spell missile's `hurts`; a kind the pack lacks is its first. Items, missiles,
+shots and creatures name kinds by id. `shields` names, by timed status (Magic, `timed`), the kind
+whose damage it cuts to 1 point. The rule set works damage through the kinds (`docs/spec/combat.md`,
+Engine model). Without the file a pack has the Summoning's: `physical`, `fire`, `lightning`,
+`arrow` and `poison`, with `fire_shield` against fire and `lightning_shield` against lightning.
 
 ## Labels
 
@@ -405,6 +428,15 @@ the engine's own words.
 | `ui.book.resists_poison` | Resists poison. |
 | `ui.book.resists_teleport` | Resists teleporting. |
 | `ui.book.physical_only` | Magic does not hurt it, and of weapons only silver does. |
+| `ui.book.resists` | Resists {kind}. |
+| `ui.book.ignores` | {kind} does not hurt it. |
+| `ui.book.weak` | Weak to {kind}. |
+| `ui.book.shoots` | Shoots for {dice} ({kind}). |
+| `ui.kind.physical` | physical |
+| `ui.kind.fire` | fire |
+| `ui.kind.lightning` | lightning |
+| `ui.kind.arrow` | arrows |
+| `ui.kind.poison` | poison |
 | `ui.book.hit_points` | Hit points: {dice} |
 | `ui.book.worth` | Worth {dice} experience. |
 | `ui.book.defeated` | Defeated: {n} |
@@ -560,6 +592,22 @@ the engine's own words.
   updates the hand then waits; `skill` the class skill an attack needs (`docs/spec/items.md`);
   `sound` the sound a `use_up` action makes when it uses its object up; `swings` makes a `use` or
   `use_up` action also show the swing pose, of both hands for a `weapon`, without a blow.
+- A `fire` action shoots, and says where its shots come from with one of:
+  - `ammo`, `{ "tag", "slot" }`: the first object with the tag inside what the worn slot holds
+    (`no_quiver` with nothing worn there, `no_arrows` with no such object). Without any source a
+    `fire` action takes `{ "tag": "arrows", "slot": 25 }`, the quiver's arrows;
+  - `charges`: the charges of the weapon itself a shot uses (`no_charges` with too few left);
+  - `power`: the magic points a shot costs (`no_power` with too few).
+
+  `shot` says what flies: `{ "item", "damage", "kind", "range", "speed" }`. `item` is the item
+  whose object flies and so its look, needed for charge and power shots, whose object vanishes
+  where it lands; `damage` dice, else the ammunition's `missile`; `kind` a damage kind (Combat),
+  else the missile's; `range` in steps, `{ "base", "attribute", "times", "max" }` (base plus times
+  the attribute, at most max), else 5 × `strength` up to 127; `speed` the units it moves each step,
+  else 8. The player's accuracy adds `(ACC − 10) / 2` to a shot's damage, at least 1 in all.
+  `needs_room` refuses a shot (`no_room_to_shoot`) while anything but a corpse stands within a
+  step ahead, as a bow must be drawn; without it a weapon fires point-blank. Firing practices the
+  weapon's class (bows' without one) and shows the both-hands strike pose.
 - `power` is the number of the power the item starts when used (`docs/spec/items.md`, Powers), and
   with `power_worn` also when worn. `spent` is the item a used-up object leaves
   in its hand; without one the hand is left empty. A charged object is never replaced.
@@ -588,8 +636,9 @@ the engine's own words.
 - `looks` are the looks the item puts on the player's figure layers while worn (not in a hand),
   by layer name: `{ "body": { "sprite", "female" }, … }`, `female` the sprite for a female player
   when it differs.
-- `missile` is how the item hurts in flight: `{ "damage": dice, "fired_only": bool }`; without it a
-  thrown object does `weight / 10 + 1`. `breaks_into` is the item a landing bottle becomes, and
+- `missile` is how the item hurts in flight: `{ "damage": dice, "fired_only": bool, "kind" }`;
+  without it, or its `damage`, a thrown object does `weight / 10 + 1`. `kind` is the damage kind
+  it does (Combat), the pack's first without one. `breaks_into` is the item a landing bottle becomes, and
   `on_break` actions run when it breaks (`set_counter`, `converse`, `remove_all`, `experience`).
   `flying` is its look in flight, `{ "sprite", "fired_only" }`: a frame for each direction,
   `(direction + 1) mod 8`, shown only when fired with `fired_only`; without it the floor image.
@@ -651,9 +700,19 @@ the engine's own words.
   `resists_teleport` (teleporters, pits and plates leave it alone), `invulnerable`, `poisonous`,
   `hurts_on_contact`, `death_blow`, `physical_only`, `resists_fire`, `resists_lightning`,
   `resists_poison`, `animated` (only animates in place, and cannot be struck), `stationary` (stands
-  and casts). Other creatures walk.
+  and casts). Other creatures walk. `resists_fire`, `resists_lightning` and `resists_poison` stand
+  for resisting those kinds, and `physical_only` for ignoring every kind but the first (and for
+  being hurt by no weapon but one that hurts such creatures).
+- `resists`, `ignores` and `weak_to` (creatures) name damage kinds (Combat) of which it takes a
+  quarter, none, or a quarter more. The book learns each when such damage first meets it, and
+  shows a weakness of a creature with a `vulnerability` as that vulnerability.
+- `shoots` (creatures) is a ranged attack made without a spell:
+  `{ "item", "damage", "kind", "range", "interval_ms", "speed" }`. Hostile, it shoots at the player
+  standing within `range` steps along one of the eight directions (within 12 units of the line),
+  at most once each `interval_ms`: it faces that way, takes its attack pose and launches an object
+  of `item` (its look) doing `damage` of `kind`, which vanishes where it lands.
 - `attack` (creatures) is the damage dice of its blow, `experience` the dice of what killing it is
-  worth, `vulnerability` the weapon class that does it extra damage (arrows too, for class 3), `spell` its magic
+  worth, `vulnerability` the weapon class that does it extra damage, `spell` its magic
   attack. What the game sets in play (talked to, dead) is world state.
 - `stats` are named numbers the pack's rule set reads; the engine does not interpret them, except a
   `player`'s attributes `strength`, `agility`, `endurance`, `accuracy`, `talent` and `power`,

@@ -1,6 +1,6 @@
 # Packs plan
 
-Status: 2026-11-05. Phase 1 (labels) has landed. This plan covers what the engine needs so that a pack other than
+Status: 2026-11-05. Phases 1 (labels) and 3 (ranged combat) have landed. This plan covers what the engine needs so that a pack other than
 The Summoning can look and play like its own game. A second, original pack built
 without engine changes shows the gaps the engine has: fantasy labels, the
 iron and slate frames, combat tied to bows and quivers, and art capped at the Summoning's pixel scale.
@@ -67,22 +67,19 @@ damage kind `Arrow`, and refuses with "Not enough room to draw bow" within a ste
 (`Physical`, `Fire`, `Lightning`, `Arrow`, `Poison`), and creature defenses are fixed flags
 matched to them.
 
-- [ ] **Ammunition by tag.** A `fire` action names where its shots come from: `ammo` (an item tag
-      and the worn slot that holds it, the quiver and `arrows` for the Summoning), the weapon's
-      own `charges` (a magazine), or the player's magic points (an energy weapon), with the
-      cost of a shot. The importer writes the Summoning's quiver rule as this data.
-- [ ] **The shot on the weapon.** `range` (a formula of attributes, `5 × STR` capped at 127 for
-      the Summoning), flight `speed`, `damage`, `kind` and the flying look can be given on the
-      `fire` action. Each falls back to the ammunition's `missile` as now.
-- [ ] **Room to fire** becomes a per-action flag (`needs_room`), set by the importer on bows, so
-      a pistol fires point-blank.
-- [ ] **Damage kinds as data.** The pack lists its kinds (ballistic, plasma, EMP…). Creature
-      templates resist, ignore or are weak to kinds by name, and the shields and statuses that
-      change damage name kinds as well. The Summoning's five kinds, and how its flags map to
-      them, become the importer's pack. `combat.Kind` becomes an index into the pack's list.
-- [ ] **Creature ranged attacks.** A creature template can name a missile attack (damage, kind,
-      range, look, interval) without going through a spell, so a turret or a gunner drone
-      shoots.
+- [x] **Ammunition by tag.** A `fire` action takes `ammo` (`{tag, slot}`), `charges` or `power`
+      (pack.md, Items); without any, the quiver's arrows. The importer writes the bow's quiver
+      rule as `ammo`. Charge and power shots fly an object of `shot.item` that vanishes.
+- [x] **The shot on the weapon.** `shot: {item, damage, kind, range, speed}`, `range` as
+      `{base, attribute, times, max}`, each falling back to the ammunition's `missile`.
+- [x] **Room to fire** is `needs_room`, set by the importer on bows.
+- [x] **Damage kinds as data.** `combat.json` lists the kinds and the shields (pack.md, Combat);
+      `combat.Kind` is an index into it and the rule set gets `combat.Kinds` sets. Creatures take
+      `resists`, `ignores`, `weak_to`; the old `resists_*` and `physical_only` behaviors stand for
+      them, so saves and the Summoning's book are unchanged. The importer writes the five kinds,
+      `kind: arrow` on arrows' missiles and `weak_to: [arrow]` on bow-vulnerable creatures.
+- [x] **Creature ranged attacks.** `shoots: {item, damage, kind, range, interval_ms, speed}`: a
+      hostile creature shoots the player in reach along one of the eight directions.
 - [ ] Later, if the slice needs them: bursts (shots per action and spread), a `reload` action,
       and heat as a hand delay that builds with firing.
 - [ ] A second rule set behind `combat.Rules` only if the formulas themselves (to-hit, levels,

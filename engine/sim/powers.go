@@ -67,16 +67,6 @@ const (
 	smiteDamage         = 2000
 )
 
-// combatStatus is what the player's statuses do to a fight.
-func (p *Player) combatStatus() combat.Status {
-	return combat.Status{
-		BattleRage: p.Timed[TimedBattleRage] > 0, Accurate: p.Status.Accurate,
-		Invisible:      p.Status.Invisible || p.Timed[TimedInvisibility] > 0,
-		BlowProtection: p.Status.BlowProtection, ResistQuarter: p.Status.ResistQuarter, ResistForty: p.Status.ResistForty,
-		FireShield: p.Timed[TimedFireShield] > 0, LightningShield: p.Timed[TimedLightningShield] > 0,
-	}
-}
-
 // hidden reports whether creatures cannot see the player to chase it.
 func (p *Player) hidden() bool {
 	return p.Status.Invisible || p.Timed[TimedInvisibility] > 0 || p.Status.Transformed

@@ -51,17 +51,6 @@ const (
 // rulesFor returns the rule set pack p names; the Summoning's is the only one.
 func rulesFor(*content.Pack) combat.Rules { return summoningRules }
 
-// creatureDefense is what creature t's template does to damage.
-func creatureDefense(t *Thing) combat.CreatureDefense {
-	tm := t.Template
-	return combat.CreatureDefense{
-		Invulnerable: tm.Has(content.BehaviorInvulnerable), PhysicalOnly: tm.Has(content.BehaviorPhysicalOnly),
-		ResistsFire: tm.Has(content.BehaviorResistsFire), ResistsLightning: tm.Has(content.BehaviorResistsLight),
-		ResistsPoison:      tm.Has(content.BehaviorResistsPoison),
-		VulnerableToArrows: tm.Vulnerability != nil && *tm.Vulnerability == content.ArrowClass,
-	}
-}
-
 // alive reports whether t is a living creature.
 func alive(t *Thing) bool { return t.Template.Kind == content.ThingCreature && t.HitPoints > 0 }
 
@@ -83,14 +72,14 @@ func (w *World) hurtThing(l *Level, t *Thing, d int, k combat.Kind) int {
 		w.learnCreature(t, StageFought)
 		w.meetKind(l, t, k)
 	}
-	d = w.rules.HurtCreature(d, k, creatureDefense(t))
+	d = w.rules.HurtCreature(d, k, w.creatureDefense(t))
 	if d <= 0 {
 		return 0
 	}
 	t.HitPoints = max(0, t.HitPoints-d)
 	t.Shown, t.ShownUntil = min(d, maxShown), w.step+3*stepsMS(t.Template.IntervalMS)
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "hurt", Damage: d})
-	if k == combat.Poison && !t.Template.Has(content.BehaviorResistsPoison) {
+	if w.isKind(k, content.KindPoison) && !w.resistsPoison(t) {
 		t.Poisoned = true
 	}
 	if t.HitPoints == 0 {
@@ -167,6 +156,9 @@ func (w *World) updateCreatures(l *Level) {
 			if !alive(t) {
 				continue
 			}
+		}
+		if w.creatureShoots(l, t) {
+			continue
 		}
 		switch {
 		case t.Template.Animate != nil:
@@ -344,7 +336,7 @@ func (w *World) creatureStrikes(l *Level, t *Thing) {
 	}
 	r := w.rules.CreatureStrikes(w.rng, combat.CreatureStrike{
 		Accuracy: t.Template.Stats["accuracy"], Bonus: t.Template.Stats["bonus"], Damage: t.Template.Attack,
-		Behind: behind(t.Facing, p.Facing), PlayerAgility: p.Attributes[AttrAgility], Status: p.combatStatus(),
+		Behind: behind(t.Facing, p.Facing), PlayerAgility: p.Attributes[AttrAgility], Status: w.combatStatus(),
 	})
 	if !r.Hit {
 		w.messageNumbers(l, t.Cell(), content.MsgCreatureMiss, r.Score, 0)
@@ -501,7 +493,7 @@ func (w *World) handAct(hand int, o *Object, action int) {
 		}
 		w.delay(hand, it, a)
 		w.exert(o.Weight(w.pack) / 8)
-		w.fire()
+		w.fire(o, a)
 		return
 	default:
 		if a.Kind == content.ActionUse && w.Quantity(o) <= 0 {
@@ -602,7 +594,7 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 	s := combat.PlayerStrike{
 		Agility: p.Attributes[AttrAgility], Endurance: p.Attributes[AttrEndurance],
 		Accuracy: p.Attributes[AttrAccuracy], Strength: p.Attributes[AttrStrength],
-		Weapon: o != nil, Damage: a.Damage, Behind: behind(d, t.Facing), Status: p.combatStatus(),
+		Weapon: o != nil, Damage: a.Damage, Behind: behind(d, t.Facing), Status: w.combatStatus(),
 		CreatureAccuracy: t.Template.Stats["accuracy"], Resistance: t.Template.Stats["resistance"],
 		Vulnerable:   class >= 0 && t.Template.Vulnerability != nil && *t.Template.Vulnerability == class,
 		PhysicalOnly: t.Template.Has(content.BehaviorPhysicalOnly),
@@ -640,7 +632,7 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 		w.wearWeapon(hand, o, r.Damage)
 	}
 	w.hurtThing(l, t, r.Damage, combat.Physical)
-	if it != nil && it.Poisons && alive(t) && !t.Template.Has(content.BehaviorResistsPoison) {
+	if it != nil && it.Poisons && alive(t) && !w.resistsPoison(t) {
 		t.Poisoned = true
 	}
 	practice := 1

@@ -1,6 +1,8 @@
 package sim
 
 import (
+	"slices"
+
 	"github.com/sirgwain/the-summoning-go/engine/combat"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 )
@@ -29,6 +31,11 @@ type Flight struct {
 	// U and V are its ground point; Direction its table direction; Range the steps it has left.
 	U, V, Direction, Range int
 	Damage                 int
+	// Kind is the damage kind it does; Speed the units it moves a step, flightSpeed without one.
+	// A Vanishes flight's object vanishes where it lands, as a bolt does.
+	Kind     combat.Kind `json:"kind,omitempty"`
+	Speed    int         `json:"speed,omitempty"`
+	Vanishes bool        `json:"vanishes,omitempty"`
 	// ByPlayer flights land and turn creatures hostile; others vanish. Thrower is the thing that
 	// threw it, if a creature did. Fired is an object shot rather than thrown.
 	ByPlayer bool
@@ -50,13 +57,28 @@ func (f *Flight) Cell() content.Cell { return cellOf(f.U, f.V) }
 // firing rolls them), or weight / 10 + 1.
 func (w *World) missileDamage(o *Object, fired bool) int {
 	it := w.pack.Items[o.Item]
-	if it.Missile != nil {
-		if it.Missile.FiredOnly && !fired {
+	if m := it.Missile; m != nil && m.Damage != (content.Dice{}) {
+		if m.FiredOnly && !fired {
 			return 1
 		}
-		return w.roll(it.Missile.Damage)
+		return w.roll(m.Damage)
 	}
 	return o.Weight(w.pack)/10 + 1
+}
+
+// missileKind is the damage kind object o does in flight: its missile's, else the first.
+func (w *World) missileKind(o *Object) combat.Kind {
+	if it := w.pack.Items[o.Item]; it != nil && it.Missile != nil {
+		return w.kind(it.Missile.Kind)
+	}
+	return combat.Physical
+}
+
+// shotOptions change a flight as it is launched: a shot's kind, speed and vanishing.
+type shotOptions struct {
+	kind     *combat.Kind
+	speed    int
+	vanishes bool
 }
 
 // launchDistance is how far ahead of its thrower, in steps of its direction, a thing in flight
@@ -74,17 +96,23 @@ func launchStart(u, v, d, extra int) (int, int) {
 // hits it at once, and the object lands where its flight starts. A flight that would start in a
 // blocked cell does not fly: the player's object stays with the player (too_close_to_wall),
 // anyone else's is lost.
-func (w *World) launch(l *Level, o *Object, u, v, d, rng, damage int, byPlayer, fired bool, thrower *Thing) bool {
+func (w *World) launch(l *Level, o *Object, u, v, d, rng, damage int, byPlayer, fired bool, thrower *Thing, opts ...shotOptions) bool {
 	su, sv := launchStart(u, v, d, 0)
 	f := &Flight{Object: o, U: su, V: sv, Direction: d, Range: rng, Damage: damage, ByPlayer: byPlayer, Fired: fired, Thrower: thrower,
-		next: w.step + Steps(flightTicks)}
+		Kind: w.missileKind(o), next: w.step + Steps(flightTicks)}
+	for _, op := range opts {
+		if op.kind != nil {
+			f.Kind = *op.kind
+		}
+		f.Speed, f.Vanishes = op.speed, op.vanishes
+	}
 	touched := w.flightBlocker(l, f, u+Dirs[d][0]*touchReach, v+Dirs[d][1]*touchReach, w.throwerBox(f))
 	if touched != nil {
 		w.flightHits(l, f, touched)
 		f.Range = 1
 	}
 	if l.Blocked(f.Cell()) {
-		if byPlayer {
+		if byPlayer && !f.Vanishes {
 			w.message(l, cellOf(u, v), content.MsgTooCloseToWall, "")
 		} else {
 			w.emit(Event{Kind: EventObject, Level: l.ID, Cell: f.Cell(), Item: o.Item, Detail: "vanished"})
@@ -123,12 +151,9 @@ func (w *World) flightBlocker(l *Level, f *Flight, u, v int, box content.Box) *b
 	return nil
 }
 
-// flightHits hurts what flight f met: arrows as arrow damage, anything else physical.
+// flightHits hurts what flight f met, by the flight's damage kind.
 func (w *World) flightHits(l *Level, f *Flight, b *body) {
-	k := combat.Physical
-	if it := w.pack.Items[f.Object.Item]; it != nil && hasTag(it, "arrows") {
-		k = combat.Arrow
-	}
+	k := f.Kind
 	it := w.pack.Items[f.Object.Item]
 	poisons := it != nil && it.PoisonsThrown
 	if b.thing == nil {
@@ -150,7 +175,7 @@ func (w *World) flightHits(l *Level, f *Flight, b *body) {
 		}
 	}
 	w.hurtThing(l, t, f.Damage, k)
-	if poisons && alive(t) && !t.Template.Has(content.BehaviorResistsPoison) {
+	if poisons && alive(t) && !w.resistsPoison(t) {
 		t.Poisoned = true
 	}
 }
@@ -176,6 +201,9 @@ func (w *World) updateFlights(l *Level) {
 			continue
 		}
 		speed := flightSpeed
+		if f.Speed > 0 {
+			speed = f.Speed
+		}
 		if f.Direction == 1 || f.Direction == 5 {
 			speed /= 2
 		}
@@ -233,7 +261,7 @@ func (w *World) land(l *Level, f *Flight) {
 	c, o := f.Cell(), f.Object
 	it := w.pack.Items[o.Item]
 	switch {
-	case !f.ByPlayer:
+	case !f.ByPlayer || f.Vanishes:
 		w.emit(Event{Kind: EventObject, Level: l.ID, Cell: c, Item: o.Item, Detail: "vanished"})
 		return
 	case hasTag(it, "arrows") && w.chance(1, arrowBreaks):
@@ -284,8 +312,8 @@ func (w *World) throwFrom(hand int) {
 	w.practice(SkillWeapon+bowClass, 1)
 }
 
-// roomToShoot reports whether the player can draw a bow: whether its box moved a full step along
-// its facing overlaps nothing but corpses (docs/spec/items.md, Engine model).
+// roomToShoot reports whether the player has room to fire: whether its box moved a full step
+// along its facing overlaps nothing but corpses (docs/spec/items.md, Engine model).
 func (w *World) roomToShoot() bool {
 	p, l := w.player, w.Current()
 	speed := p.Template.Speed
@@ -305,31 +333,104 @@ func (w *World) roomToShoot() bool {
 	return true
 }
 
-// fire shoots the quiver's first arrow with a bow (docs/spec/items.md, Throwing).
-func (w *World) fire() bool {
+// fire shoots with weapon o's fire action a (docs/spec/items.md, Throwing; docs/pack.md, Items):
+// the first object of the ammunition's tag in what the ammunition's slot holds, or a new object
+// of the shot's item paid for with the weapon's charges or the player's magic points.
+func (w *World) fire(o *Object, a content.ItemAction) bool {
 	p, l := w.player, w.Current()
-	quiver := p.Slots[SlotQuiver]
+	refuse := func(msg string) bool {
+		w.message(l, p.Cell(), msg, "")
+		return false
+	}
+	shot := content.Shot{}
+	if a.Shot != nil {
+		shot = *a.Shot
+	}
+	var arrow *Object
+	var holder *Object
+	at := -1
 	switch {
-	case quiver == nil:
-		w.message(l, p.Cell(), content.MsgNoQuiver, "")
-		return false
-	case !w.roomToShoot():
-		w.message(l, p.Cell(), content.MsgNoRoomToShoot, "")
-		return false
-	case len(quiver.Contents) == 0:
-		w.message(l, p.Cell(), content.MsgNoArrows, "")
+	case a.Charges > 0:
+		if a.NeedsRoom && !w.roomToShoot() {
+			return refuse(content.MsgNoRoomToShoot)
+		}
+		if w.Quantity(o) < a.Charges {
+			return refuse(content.MsgNoCharges)
+		}
+		arrow = w.newObject(shot.Item)
+	case a.Power > 0:
+		if a.NeedsRoom && !w.roomToShoot() {
+			return refuse(content.MsgNoRoomToShoot)
+		}
+		if p.MagicPoints < a.Power {
+			return refuse(content.MsgNoPower)
+		}
+		arrow = w.newObject(shot.Item)
+	default:
+		ammo := content.DefaultAmmo
+		if a.Ammo != nil {
+			ammo = *a.Ammo
+		}
+		if ammo.Slot >= 0 && ammo.Slot < len(p.Slots) {
+			holder = p.Slots[ammo.Slot]
+		}
+		if holder == nil {
+			return refuse(content.MsgNoQuiver)
+		}
+		if a.NeedsRoom && !w.roomToShoot() {
+			return refuse(content.MsgNoRoomToShoot)
+		}
+		at = slices.IndexFunc(holder.Contents, func(c *Object) bool {
+			it := w.pack.Items[c.Item]
+			return it != nil && hasTag(it, ammo.Tag)
+		})
+		if at < 0 {
+			return refuse(content.MsgNoArrows)
+		}
+		arrow = holder.Contents[at]
+	}
+	if arrow == nil {
+		return refuse(content.MsgNoArrows)
+	}
+	damage := w.missileDamage(arrow, true)
+	if shot.Damage != (content.Dice{}) {
+		damage = w.roll(shot.Damage)
+	}
+	damage = max(damage+(p.Attributes[AttrAccuracy]-10)/2, 1)
+	rng := content.DefaultRange
+	if shot.Range != nil {
+		rng = *shot.Range
+	}
+	opts := shotOptions{speed: shot.Speed, vanishes: holder == nil}
+	if shot.Kind != "" {
+		k := w.kind(shot.Kind)
+		opts.kind = &k
+	}
+	if !w.launch(l, arrow, p.U, p.V, p.Facing, rng.Steps(p.Attributes), damage, true, true, nil, opts) {
 		return false
 	}
-	arrow := quiver.Contents[0]
-	damage := max(w.missileDamage(arrow, true)+(p.Attributes[AttrAccuracy]-10)/2, 1)
-	if !w.launch(l, arrow, p.U, p.V, p.Facing, min(5*p.Attributes[AttrStrength], firedRange), damage, true, true, nil) {
-		return false
+	switch {
+	case holder != nil:
+		holder.Contents = slices.Delete(holder.Contents, at, at+1)
+	case a.Charges > 0:
+		for range a.Charges {
+			w.useOne(o)
+		}
+	default:
+		p.MagicPoints -= a.Power
 	}
-	quiver.Contents = quiver.Contents[1:]
 	w.pose(2)
 	p.bowRelease = w.step + 1
-	w.practice(SkillWeapon+bowClass, 1)
+	w.practice(SkillWeapon+w.fireClass(o), 1)
 	return true
+}
+
+// fireClass is the weapon class firing weapon o practices: its own, else the bow's.
+func (w *World) fireClass(o *Object) int {
+	if it := w.pack.Items[o.Item]; it != nil && it.WeaponClass != nil {
+		return *it.WeaponClass
+	}
+	return bowClass
 }
 
 // shootItem fires a new object of item from cell c along direction d (arrow traps); it vanishes

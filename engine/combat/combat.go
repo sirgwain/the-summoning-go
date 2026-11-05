@@ -20,23 +20,33 @@ func Roll(r Roller, d content.Dice) int {
 	return n
 }
 
-// Kind is a kind of damage.
+// Kind is a kind of damage: its place in the pack's list of kinds (docs/pack.md, Combat). The
+// first, Physical, is what blows, falls and boulders do.
 type Kind int
 
-// Damage kinds (docs/spec/combat.md, Damage kinds).
-const (
-	Physical Kind = iota
-	Fire
-	Lightning
-	Arrow
-	Poison
-)
+// Physical is the pack's first damage kind.
+const Physical Kind = 0
 
-// Status is what the player's statuses do to a fight.
+// Kinds is a set of damage kinds.
+type Kinds uint64
+
+// Has reports whether s holds kind k.
+func (s Kinds) Has(k Kind) bool { return k >= 0 && k < 64 && s&(1<<k) != 0 }
+
+// With returns s with kind k.
+func (s Kinds) With(k Kind) Kinds {
+	if k < 0 || k >= 64 {
+		return s
+	}
+	return s | 1<<k
+}
+
+// Status is what the player's statuses do to a fight. Shields are the kinds the player's
+// shields cut to 1 point.
 type Status struct {
 	BattleRage, Accurate, Invisible, BlowProtection bool
 	ResistQuarter, ResistForty                      bool
-	FireShield, LightningShield                     bool
+	Shields                                         Kinds
 }
 
 // PlayerStrike is the player striking a creature with a hand.
@@ -83,11 +93,11 @@ type PlayerDefense struct {
 	Absorb func(d int) int
 }
 
-// CreatureDefense is what a creature's template does to damage it takes.
+// CreatureDefense is what a creature's template does to damage it takes: none at all when
+// Invulnerable, and by kind a quarter (Resists), none (Ignores) or a quarter more (Weak).
 type CreatureDefense struct {
-	Invulnerable, PhysicalOnly                   bool
-	ResistsFire, ResistsLightning, ResistsPoison bool
-	VulnerableToArrows                           bool
+	Invulnerable           bool
+	Resists, Ignores, Weak Kinds
 }
 
 // Rules is a combat rule set.

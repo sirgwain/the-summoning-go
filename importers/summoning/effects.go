@@ -64,6 +64,8 @@ func (im *importer) linkFlipbooks() {
 			cues[cue] = id
 		}
 	}
+	combat := content.DefaultCombat
+	im.pack.Combat = &combat
 	im.pack.Effects = &content.EffectCues{ID: "effects", Cues: cues, Transitions: transitions(),
 		ItemLost: &content.LostItem{Style: content.LostShatter, MS: 1200, Inventory: true}}
 	keep := func(as []content.Action) []content.Action {

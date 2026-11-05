@@ -3,6 +3,7 @@ package summoning
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
@@ -17,6 +18,9 @@ const (
 	sackFillPer      = 3
 	templateFirstGem = 0xC0
 	categoryRandom   = 6
+	// quiverSlot is the worn slot of the quiver; bowClass the weapon class of bows.
+	quiverSlot = sim25
+	bowClass   = 3
 )
 
 // sealingSpheres are the templates that open sealed door stages 5, 6 and 7 (rules.md, Doors).
@@ -332,7 +336,9 @@ func (im *importer) fighting(i int, tm *ObjectTemplate, it *content.Item) {
 			case 110:
 				act.Kind = content.ActionAttackBoth
 			case 120:
+				// A bow fires the quiver's arrows, and needs room to be drawn (items.md, Throwing).
 				act.Kind, act.Skill = content.ActionFire, 0
+				act.Ammo, act.NeedsRoom = &content.Ammo{Tag: "arrows", Slot: quiverSlot}, true
 			}
 		case icon == 9 || icon == 10:
 			act.Kind = content.ActionUseUp
@@ -357,6 +363,13 @@ func (im *importer) fighting(i int, tm *ObjectTemplate, it *content.Item) {
 	}
 	if look, ok := thrownLooks[i]; ok {
 		it.Missile = &content.Missile{Damage: dice(tm.DamageCode(1)), FiredOnly: look}
+	}
+	// Arrows hurt as arrows, thrown or fired (combat.md, Damage kinds).
+	if slices.Contains(it.Tags, "arrows") {
+		if it.Missile == nil {
+			it.Missile = &content.Missile{}
+		}
+		it.Missile.Kind = content.KindArrow
 	}
 }
 
@@ -532,6 +545,11 @@ func (im *importer) creature(n int) (string, error) {
 	if v := rec.Vulnerability(); v >= categoryFirstWeapon && v <= categoryLastWeapon {
 		class := v - categoryFirstWeapon
 		t.Vulnerability = &class
+		// A creature vulnerable to bows takes a quarter more from arrows (combat.md, Hurting a
+		// creature).
+		if class == bowClass {
+			t.WeakTo = []string{content.KindArrow}
+		}
 	}
 	if rec.Bank() == slowBank {
 		t.Speed = slowSpeed

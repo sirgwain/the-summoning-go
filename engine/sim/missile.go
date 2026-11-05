@@ -1,7 +1,6 @@
 package sim
 
 import (
-	"github.com/sirgwain/the-summoning-go/engine/combat"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 )
@@ -215,7 +214,7 @@ func (w *World) spellHits(l *Level, f *Flight, b *body) {
 	}
 	switch {
 	case m.Hurts != "":
-		k := map[string]combat.Kind{content.HurtsFire: combat.Fire, content.HurtsLightning: combat.Lightning, content.HurtsPoison: combat.Poison}[m.Hurts]
+		k := w.kind(m.Hurts)
 		if t == nil {
 			w.hurtPlayer(s.Power, k, "a spell")
 		} else {

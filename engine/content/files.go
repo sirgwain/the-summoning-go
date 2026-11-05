@@ -37,6 +37,7 @@ const (
 	pointersFile  = "pointers.json"
 	inventoryFile = "inventory.json"
 	creationFile  = "creation.json"
+	combatFile    = "combat.json"
 	scenesDir     = "scenes"
 	talkDir       = "conversations"
 )
@@ -120,6 +121,7 @@ func Load(fsys fs.FS) (*Pack, error) {
 		{creationFile, func() any { p.Creation = &Creation{}; return p.Creation }},
 		{cuesFile, func() any { p.Cues = &Cues{}; return p.Cues }},
 		{effectsFile, func() any { p.Effects = &EffectCues{}; return p.Effects }},
+		{combatFile, func() any { p.Combat = &Combat{}; return p.Combat }},
 	} {
 		if _, err := fs.Stat(fsys, f.name); err == nil {
 			if err := readJSON(fsys, f.name, f.set()); err != nil {
@@ -292,7 +294,7 @@ func Write(p *Pack, dir string) error {
 		name string
 		v    any
 		ok   bool
-	}{{messagesFile, p.Messages, p.Messages != nil}, {magicFile, p.Magic, p.Magic != nil}, {keywordsFile, p.Keywords, p.Keywords != nil}, {pointersFile, p.Pointers, p.Pointers != nil}, {inventoryFile, p.Inventory, p.Inventory != nil}, {creationFile, p.Creation, p.Creation != nil}, {cuesFile, p.Cues, p.Cues != nil}, {effectsFile, p.Effects, p.Effects != nil}} {
+	}{{messagesFile, p.Messages, p.Messages != nil}, {magicFile, p.Magic, p.Magic != nil}, {keywordsFile, p.Keywords, p.Keywords != nil}, {pointersFile, p.Pointers, p.Pointers != nil}, {inventoryFile, p.Inventory, p.Inventory != nil}, {creationFile, p.Creation, p.Creation != nil}, {cuesFile, p.Cues, p.Cues != nil}, {effectsFile, p.Effects, p.Effects != nil}, {combatFile, p.Combat, p.Combat != nil}} {
 		if f.ok {
 			if err := writeJSON(dir, f.name, f.v); err != nil {
 				return err

@@ -70,6 +70,27 @@ func WeaponClassName(p *content.Pack, n int) string {
 	return UI(p, "ui.weapon_class", "n", n)
 }
 
+// KindName returns damage kind id's name: the pack's text of it, else its label, else its id.
+func KindName(p *content.Pack, id string) string {
+	if id == "" {
+		if kinds := p.CombatRules().Kinds; len(kinds) > 0 {
+			id = kinds[0].ID
+		}
+	}
+	for _, k := range p.CombatRules().Kinds {
+		if k.ID == id && k.Name != "" {
+			return Text(p, k.Name)
+		}
+	}
+	if _, ok := Labels["ui.kind."+id]; ok {
+		return UI(p, "ui.kind."+id)
+	}
+	if s, ok := packText(p, "ui.kind."+id); ok {
+		return s
+	}
+	return id
+}
+
 // PlayTime returns step as play time: hours, minutes and seconds.
 func PlayTime(step int64) string {
 	s := step / sim.StepsPerSecond
@@ -155,7 +176,22 @@ func CreatureLines(p *content.Pack, id string, e *sim.Entry) (lines []string, hi
 	if t.Spell != "" {
 		lines = append(lines, UI(p, "ui.book.casts", "spell", SpellName(p, t.Spell)))
 	}
+	if s := t.Shoots; s != nil {
+		lines = append(lines, UI(p, "ui.book.shoots", "dice", s.Damage, "kind", KindName(p, s.Kind)))
+	}
 	for _, d := range e.Defenses {
+		if k, ok := strings.CutPrefix(d, sim.DefenseResists); ok {
+			lines = append(lines, UI(p, "ui.book.resists", "kind", KindName(p, k)))
+			continue
+		}
+		if k, ok := strings.CutPrefix(d, sim.DefenseIgnores); ok {
+			lines = append(lines, UI(p, "ui.book.ignores", "kind", KindName(p, k)))
+			continue
+		}
+		if k, ok := strings.CutPrefix(d, sim.DefenseWeak); ok {
+			lines = append(lines, UI(p, "ui.book.weak", "kind", KindName(p, k)))
+			continue
+		}
 		switch d {
 		case sim.DefenseVulnerable:
 			if t.Vulnerability != nil {
@@ -377,6 +413,17 @@ func FullEntry(e *sim.Entry, t *content.Thing) *sim.Entry {
 	var defenses []string
 	if t.Vulnerability != nil {
 		defenses = append(defenses, sim.DefenseVulnerable)
+	}
+	for _, k := range t.Resists {
+		defenses = append(defenses, sim.DefenseResists+k)
+	}
+	for _, k := range t.Ignores {
+		defenses = append(defenses, sim.DefenseIgnores+k)
+	}
+	if t.Vulnerability == nil {
+		for _, k := range t.WeakTo {
+			defenses = append(defenses, sim.DefenseWeak+k)
+		}
 	}
 	for _, b := range []string{content.BehaviorResistsFire, content.BehaviorResistsLight, content.BehaviorResistsPoison,
 		content.BehaviorResistsTeleport, content.BehaviorPhysicalOnly} {

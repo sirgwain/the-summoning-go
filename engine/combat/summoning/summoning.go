@@ -113,7 +113,7 @@ func (Rules) HurtPlayer(d int, k combat.Kind, def combat.PlayerDefense) (int, in
 		d -= 4 * d / 10
 	}
 	d = max(d, 1)
-	if k == combat.Fire && st.FireShield || k == combat.Lightning && st.LightningShield {
+	if st.Shields.Has(k) {
 		d = 1
 	}
 	if k != combat.Physical && def.Absorb != nil {
@@ -133,15 +133,13 @@ func (Rules) HurtPlayer(d int, k combat.Kind, def combat.PlayerDefense) (int, in
 // creature).
 func (Rules) HurtCreature(d int, k combat.Kind, def combat.CreatureDefense) int {
 	switch {
-	case def.Invulnerable:
-		return 0
-	case def.PhysicalOnly && k != combat.Physical:
+	case def.Invulnerable, def.Ignores.Has(k):
 		return 0
 	}
-	if k == combat.Poison && def.ResistsPoison || k == combat.Fire && def.ResistsFire || k == combat.Lightning && def.ResistsLightning {
+	if def.Resists.Has(k) {
 		d /= 4
 	}
-	if k == combat.Arrow && def.VulnerableToArrows {
+	if def.Weak.Has(k) {
 		d += d / 4
 	}
 	return d
