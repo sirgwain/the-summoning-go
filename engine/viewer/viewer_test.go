@@ -1151,3 +1151,24 @@ func TestFollowKeepsThePlayerAboveTheHotbar(t *testing.T) {
 		t.Errorf("player %d view pixels down, want %d, halfway to the hotbar", rel.Y, top/2)
 	}
 }
+
+// TestLoadRerolls: loading the same quick save at another moment of play rolls on afresh, as the
+// game keeps no random state in its saves; at the same moment it repeats.
+func TestLoadRerolls(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	v.SaveDir = t.TempDir()
+	v.SaveGame(QuickSave)
+	rngAt := func(ticks int64) string {
+		v.Ticks = ticks
+		v.LoadGame(QuickSave)
+		s, err := v.World.State()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(s.RNG)
+	}
+	a, b, again := rngAt(100), rngAt(200), rngAt(100)
+	if a == b || a != again {
+		t.Errorf("loads at ticks 100, 200, 100: same %v, repeated %v", a == b, a == again)
+	}
+}

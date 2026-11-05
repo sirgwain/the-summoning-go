@@ -1,6 +1,6 @@
 # Saved games
 
-The game saves to `SAVES\dNNN.sav`, a snapshot of its running state: the player, the story's variables, the level the player is on and every level visited before. The importer reads these files and turns each into an engine save, so a game played in the original can be carried on in the engine.
+The game saves to `SAVES\dNNN.sav`, a snapshot of its running state: the player, the story's variables, the level the player is on and every level visited before. It keeps no state of its random numbers: after a load, chances go on from wherever they stand, so loading the same save twice and doing the same thing can turn out differently. **Engine model.** The engine's saves hold the world's random state, so a restored state replays exactly; a game loaded in play (quick load, the disk menu, a file) is reseeded from the viewer's seed and how long it has run, so loads differ in live play and repeat in a script with a fixed seed. The importer reads these files and turns each into an engine save, so a game played in the original can be carried on in the engine.
 
 A save holds the game's own records as they are while it runs, not the LEVELS grammar. The importer reads it alongside the data files (it needs LEVELS, OBJECTS, NPC and TEXT to name what the records refer to) and the pack imported from them.
 

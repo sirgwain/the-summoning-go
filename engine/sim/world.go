@@ -80,6 +80,10 @@ type World struct {
 
 var summoningRules combat.Rules = summoning.Rules{}
 
+// Reseed starts the world's random numbers again from seed. A game loaded in play is reseeded,
+// as the game keeps no random state in its saves (docs/spec/saves.md).
+func (w *World) Reseed(seed uint64) { w.src.Seed(seed, seed^0x9E3779B97F4A7C15) }
+
 // New returns a world for pack p at its start level. The seed makes its random choices
 // reproducible.
 func New(p *content.Pack, seed uint64) (*World, error) {

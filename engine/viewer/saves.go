@@ -107,6 +107,8 @@ func (v *Viewer) LoadFile(path string) error {
 	if err != nil {
 		return err
 	}
+	// The game's chances go on from where they stand, not from where the save was made.
+	w.Reseed(v.Seed + uint64(v.Ticks))
 	v.setWorld(w)
 	if v.Audio != nil {
 		v.Audio.StopMusic()
