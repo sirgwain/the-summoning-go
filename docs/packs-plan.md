@@ -1,6 +1,6 @@
 # Packs plan
 
-Status: 2026-11-05. Phase 1 has landed in the engine (labels). This plan covers what the engine needs so that a pack other than
+Status: 2026-11-05. Phase 1 (labels) has landed. This plan covers what the engine needs so that a pack other than
 The Summoning can look and play like its own game. A second, original pack built
 without engine changes shows the gaps the engine has: fantasy labels, the
 iron and slate frames, combat tied to bows and quivers, and art capped at the Summoning's pixel scale.
