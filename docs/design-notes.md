@@ -281,7 +281,8 @@ Change's frame by facing, and the hostile speed of records 23h and 2Bh (`hostile
 
 ### 10. Modding
 
-- Override packs, `summoning verify` as a command, and the editor.
+- Override packs, `summoning verify` as a command, and the editor. Planned in
+  [mods-plan.md](mods-plan.md).
 
 ## Simplifications to revisit
 

@@ -84,6 +84,9 @@ matched to them.
 
 ### 4. Higher-resolution art
 
+Superseded by [mods-plan.md](mods-plan.md) phase 1, which makes density and color a sprite's
+rather than a pack's, so a mod can mix high-resolution art into the Summoning. Work from that.
+
 The 32-pixel tile size is fixed twice (`drawlist.TileSize = 32`, `sim.CellUnits = 32`). All art
 is indexed and drawn through one 256-color palette shader. The world buffer is at the art's pixel
 scale, scaled to the window by a whole number (design.md, Rendering).
