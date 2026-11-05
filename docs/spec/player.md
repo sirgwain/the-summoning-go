@@ -19,7 +19,9 @@ The character is made in the frontend (scenes.md): name, attributes, sex, portra
 
 - Hit points: maximum `STR + END + 20`, starting full.
 - Magic points: maximum `TAL + POW + 20`, starting full.
-- Hit and magic points stay between 0 and their maxima. A heal of more than 1 shows message 4Ah with the amount.
+- Hit and magic points stay between 0 and their maxima. A heal of more than 1 shows message 4Ah with the amount; a gain of more than 2 magic points shows message 4Bh with the amount. Both count what was gained, after the maximum.
+- A change to an attribute shows message 7Bh (raised) or 7Ch (lowered) with the attribute's name (TEXT records 22h–27h, Strength to Power), unless it is quiet. Quiet changes are said so where they are described; the attribute boosts, powers 14h and 2Ah–2Fh, are not quiet, neither starting nor ending.
+- Recovering fatigue (power 44h, the Restore spell) moves up to the amount from fatigue back to endurance, sets exertion to the new `END + 3`, and shows message 97h when it is one point, else message 3Dh with the amount; with no fatigue it does nothing and shows nothing.
 - Armor class: the sum of the worn objects' armor (items.md), starting 0.
 
 ## Experience and levels
@@ -192,7 +194,7 @@ Every 109 ticks:
 2. Deep water and fire levels hurt the player (world.md).
 3. Every fourth tick, 1 magic point.
 4. Timed objects in worn slots run down (items.md).
-5. Attribute boosts run down; one ending takes its +2 back off.
+5. Attribute boosts run down; one ending takes its +2 back off, with message 7Ch.
 6. Each timed effect counts down; on reaching 0:
    - sight ends (the view redraws);
    - the shields end;

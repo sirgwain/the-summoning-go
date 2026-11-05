@@ -73,7 +73,7 @@ The player has slots:
 | 27 | Neck |
 | 28+ | Pack: the contents of the bag held in the left hand, one slot per capacity |
 
-Pack slots exist only up to the right-hand bag's capacity and take what fits in it. Putting an object in a worn slot (20–27, the hands included) adds its armor and, when its use handler has 80h, starts its power; taking it off ends both. Ending undoes the powers marked "lasts while worn" and the speed powers (09h–0Bh), so a worn object's speed counts only while worn. The Leather Boots (24h) every character starts in have power 0Ah with 80h: interval −2 while worn. Taking an object from the floor with the take key puts it in the first empty shelf and shows its name as a message; with none, message 7Fh and it stays on the floor. An arrow taken goes into the quiver when it fits, with message 99h (`%N put in your quiver`, the object's name). With nothing on the floor, message 80h. Taking an object onto the pointer shows its name too.
+Pack slots exist only up to the right-hand bag's capacity and take what fits in it. Putting an object in a worn slot (20–27, the hands included) adds its armor and, when its use handler has 80h, starts its power; taking it off ends both. Putting an object on with 80h starts whatever its power is, as using it would, without its refusals. Taking it off undoes these powers, and only these: the speed powers (09h–0Bh, and 4Fh's −2), the statuses resist quarter (0Ch), resist forty (0Dh), blow protection (0Eh), levitating (0Fh), regenerating (17h), charges (23h), accurate (43h), invisible (47h), mana regenerating (4Ch), fire-immune (4Fh) and the death-blow ward (5Bh), the quiet skill raises (10h −3, 1Fh −2, quietly), and the attribute raises (30h–41h, quietly). A status is one flag, not a count: taking off one of two objects that both give it clears it, while the other is still worn. Any other power, a heal for one, is not undone, and starts again each time the object is put on. The Leather Boots (24h) every character starts in have power 0Ah with 80h: interval −2 while worn. Taking an object from the floor with the take key puts it in the first empty shelf and shows its name as a message; with none, message 7Fh and it stays on the floor. An arrow taken goes into the quiver when it fits, with message 99h (`%N put in your quiver`, the object's name). With nothing on the floor, message 80h. Taking an object onto the pointer shows its name too.
 
 Objects given by the game (conversations, powers) go into the first empty shelf, or are dropped at the player's feet.
 
@@ -188,7 +188,7 @@ An object's power starts when it is worn (if it lasts while worn) or used. Some 
 
 | Power | Effect | Lasts while worn |
 | --- | --- | --- |
-| 01h | Magic points +2d6 | |
+| 01h | Magic points +2d6 (player.md, message 4Bh) | |
 | 02h | Magic points +4d6 | |
 | 03h | Magic points +3000 | |
 | 04h | Confusion +75 (player.md); 2d8 hit points lost, past every defense and the armor; poisoned | |
@@ -204,14 +204,14 @@ An object's power starts when it is worn (if it lasts while worn) or used. Some 
 | 11h, 26h, 1Ah | Teleport to the level's rune mark 21h, 22h or 23h; refused (message 43h) when the level has none | |
 | 12h | 2000 damage to every creature near the player; refused (88h) when none | |
 | 13h | Cast spell 3 at power 20 | |
-| 14h | Half the time, change sex (message 35h, confusion +50, player.md); otherwise a random attribute and its maximum ±1 | |
+| 14h | Half the time, change sex (message 35h, confusion +50, player.md); otherwise a random attribute and its maximum ±1, with its message | |
 | 15h | Cure poison and confusion; refused (41h) unless poisoned or confused over 25 | |
 | 16h | Nothing | yes |
 | 17h | Status: regenerating | yes |
-| 18h | Shows "(cast smoke spell)" | |
+| 18h | Shows the words "(cast smoke spell)" as a message, and does nothing else | |
 | 19h | Cast spell 4 at the object's action-1 damage | |
 | 1Bh | Turn the object into a random object (Template 0, above), where it is kept; it is not then used up | |
-| 1Ch | Fire shield, 10 | |
+| 1Ch | Fire shield +10, message 37h | |
 | 1Dh | Heal 6d6 (the Jera potion: its value); refused (3Eh) at full | |
 | 1Eh | Cast spell 0Bh | |
 | 1Fh | Weapon class 1 skill +2, quietly | |
@@ -221,14 +221,14 @@ An object's power starts when it is worn (if it lasts while worn) or used. Some 
 | 23h | Status: charges | |
 | 24h | Cure poison; refused (40h) unless poisoned | |
 | 25h | A random weapon class +1 | |
-| 27h | Lightning shield, 10 | |
+| 27h | Lightning shield +10, message 38h | |
 | 28h | Heal 5d10; refused at full | |
 | 29h | Cast spell 0Eh at power 20 | |
-| 2Ah–2Fh | Attribute 0–5 +2 for 10 status ticks (if already boosted, message 33h and the time extends) | |
+| 2Ah–2Fh | Attribute 0–5 +2 for 10 status ticks, with its message (if already boosted, message 33h instead, and the time extends) | |
 | 30h–41h | Attribute `(n − 30h) / 3` +`(n − 30h) % 3 + 1`, quietly | yes |
-| 42h | Shows "(open all doors)" | |
+| 42h | Shows the words "(open all doors)" as a message, and does nothing else | |
 | 43h | Status: accurate | |
-| 44h | Recover 1–3 fatigue; refused (3Fh) without fatigue | |
+| 44h | Recover 1–3 fatigue (player.md); refused (3Fh) without fatigue | |
 | 45h | Heal 3000; refused at full | |
 | 46h | Heal 20d4; refused at full | |
 | 47h | Invisibility | yes |
@@ -246,7 +246,7 @@ An object's power starts when it is worn (if it lasts while worn) or used. Some 
 | 5Dh | Cast spell 6 | |
 | 5Eh | The ending, chosen by what the player holds (scenes.md); refused (8Eh) unless holding the Chesschantra Skull (F7h), WarMonger (64h) or the Necklace of Runes (59h) | |
 
-Taking off a lasting object undoes its effect (interval, status, attribute).
+Taking an object off undoes only the powers listed under Inventory.
 
 **Timed objects.** An object in a worn slot (20–27, the hands included) whose use handler has 80h and whose power lasts while worn is timed. Each status tick (player.md) its value, or its template's shared count for 72h–7Bh, drops by 1 as a 16-bit number: a value of 0 becomes 65535 and so lasts that many ticks more. On reaching 0 the object comes off, ending its power and armor; message 32h shows with its name; it flashes on the figure and is destroyed. The flash takes the object off the figure and puts it back ten times, 3 ticks each way, while the game waits; a weapon that breaks (combat.md, Wear) flashes off its hand the same way. **Engine model.** In place of the flashing, the object is gone at once and the presentation shows it going by the pack's lost-item style (pack.md, Effects): in its box on the inventory panel while that is open, else on the hotbar, else over the player's head. With `inventory`, the inventory panel opens for it, if it is not open, and the world waits until it has gone; the panel then closes again if it opened for it. The importer gives The Summoning `shatter` for 1200 ms with `inventory`, so it shows on the figure as the game's flash does, in less time: the box flashes, and the image breaks into a 3 × 3 grid of pieces that fly out from its middle, rise a little and fall, turning and fading. Body armor counts down the same value that wear takes down, so a timed cloak lasts at most 7500 ticks.
 
@@ -258,7 +258,7 @@ An action of kind use up (icons 9, 10) or use (11–20) starts the object's powe
 
 **Engine model.** An item's `power` is its number and `power_worn` the 80h flag; `spent` is the item it leaves when used up. The engine runs the powers in the table that need only the player: hit and magic points, cures, skills and attributes, statuses and timed effects, speed, and teleporting to a rune mark (a `mark` feature whose rune is `1`, `2` or `3` for 21h, 22h, 23h). A power that casts a spell is the item's `casts`: the spell and its power (none for the spell's own roll), with powers 19h and 5Ch taking the item's action-1 damage dice; using the object casts it at once, with no gesture, cost or memorization, and the cast practices the school as any cast by the player does. A power that starts a conversation is the item's `conversation`, a thing template whose conversation it holds; with `use_result` (power 51h) the object is used only when the conversation leaves the pack's result counter nonzero, and otherwise never. Power 22h shows the level map and is never used up; power 5Eh chooses the ending (scenes.md, Endings), refused with `no_ending` (8Eh).
 
-A scroll's `teaches` are the icons reading it teaches, and its `picture` the image shown when it is read. Each refusal is an engine message: `full_health` (3Eh), `full_magic` (42h), `not_poisoned` (40h), `not_poisoned_or_confused` (41h), `not_fatigued` (3Fh), `no_destination` (43h), `no_creatures` (88h), `already_have` (21h); others shown: `healed` (4Ah, `{damage}` the amount), `protected` (3Ch), `boost_extended` (33h), `poisoned` (59h), `slowed` (60h), `lost_weapon_skills` (64h), `lost_magic_skills` (67h).
+A scroll's `teaches` are the icons reading it teaches, and its `picture` the image shown when it is read. Each refusal is an engine message: `full_health` (3Eh), `full_magic` (42h), `not_poisoned` (40h), `not_poisoned_or_confused` (41h), `not_fatigued` (3Fh), `no_destination` (43h), `no_creatures` (88h), `already_have` (21h); others shown: `healed` (4Ah, `{damage}` the amount), `magic_restored` (4Bh, `{damage}` the amount), `attribute_up` and `attribute_down` (7Bh, 7Ch, `{attribute}` its name), `endurance_restored` (97h) and `endurance_points_restored` (3Dh, `{damage}` the amount), `fire_shield` (37h), `lightning_shield` (38h), `frozen` (39h), `cast_smoke` and `open_all_doors` (the words of powers 18h and 42h, which are no TEXT record: the importer gives them as the game shows them), `protected` (3Ch), `boost_extended` (33h), `poisoned` (59h), `slowed` (60h), `lost_weapon_skills` (64h), `lost_magic_skills` (67h).
 
 ## Throwing
 

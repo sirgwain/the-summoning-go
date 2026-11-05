@@ -870,3 +870,102 @@ func TestStrikeThawsFrozenCreature(t *testing.T) {
 		t.Errorf("the struck guard is still frozen: next %d at step %d", g.next, w.step)
 	}
 }
+
+func TestTakingOffUndoesWornPowers(t *testing.T) {
+	worn := func(id string, power int) *content.Item {
+		return &content.Item{ID: id, Weight: 1, Size: 1, Power: power, PowerWorn: true}
+	}
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Items["item.plate"] = worn("item.plate", 0x0D)
+		p.Items["item.cloak"] = worn("item.cloak", 0x0D)
+		p.Items["item.gloves"] = worn("item.gloves", 0x10)
+		p.Items["item.boots"] = worn("item.boots", 0x4F)
+		p.Items["item.foot"] = worn("item.foot", 0x43)
+		p.Items["item.mirror"] = worn("item.mirror", 0x5B)
+		p.Items["item.shield"] = worn("item.shield", 0x23)
+		p.Items["item.helm"] = worn("item.helm", 0x0E)
+	},
+		"####",
+		"#@.#",
+		"####")
+	p := w.Player()
+	bonus := p.IntervalBonus
+	var on []*Object
+	for _, id := range []string{"item.plate", "item.gloves", "item.boots", "item.foot", "item.mirror", "item.shield", "item.helm"} {
+		o := w.newObject(id)
+		w.putOn(o)
+		on = append(on, o)
+	}
+	s := p.Status
+	if !s.ResistForty || !s.FireImmune || !s.Accurate || !s.DeathBlowWard || !s.Charges || !s.BlowProtection ||
+		p.Skills[SkillWeapon+3].Level != 3 || p.IntervalBonus != bonus-2 {
+		t.Fatalf("worn: %+v, archery %d, bonus %d", s, p.Skills[SkillWeapon+3].Level, p.IntervalBonus)
+	}
+	for _, o := range on {
+		w.takeOff(o)
+	}
+	if p.Status != (Status{}) || p.Skills[SkillWeapon+3].Level != 0 || p.IntervalBonus != bonus {
+		t.Errorf("taken off: %+v, archery %d, bonus %d", p.Status, p.Skills[SkillWeapon+3].Level, p.IntervalBonus)
+	}
+	// A status is one flag: taking off one of two objects that give it clears it.
+	plate, cloak := w.newObject("item.plate"), w.newObject("item.cloak")
+	w.putOn(plate)
+	w.putOn(cloak)
+	w.takeOff(plate)
+	if p.Status.ResistForty {
+		t.Error("resist forty outlasted taking one of its objects off")
+	}
+}
+
+func TestPowerMessages(t *testing.T) {
+	use := func(id string, power, charges int) *content.Item {
+		kind := content.ActionUseUp
+		if charges > 0 {
+			kind = content.ActionUse
+		}
+		return &content.Item{ID: id, Weight: 1, Size: 1, Power: power, Charges: charges,
+			Actions: []content.ItemAction{{Kind: kind, Delay: 3}}}
+	}
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Items["item.laguz"] = use("item.laguz", 0x18, 0)
+		p.Items["item.chimes"] = use("item.chimes", 0x42, 3)
+		p.Items["item.mana"] = use("item.mana", 0x03, 0)
+		p.Items["item.rest"] = use("item.rest", 0x44, 0)
+		p.Items["item.boost"] = use("item.boost", 0x2A, 0)
+		p.Items["item.fire"] = use("item.fire", 0x1C, 0)
+	},
+		"####",
+		"#@.#",
+		"####")
+	p := w.Player()
+	p.Slots[SlotRightHand] = w.newObject("item.laguz")
+	if ev := strike(w, 0, 0); !has(ev, EventMessage, content.MsgCastSmoke) || has(ev, EventNotYet, "") || p.Slots[SlotRightHand] != nil {
+		t.Errorf("the Laguz rune: %v, hand %v", ev, p.Slots[SlotRightHand])
+	}
+	p.Slots[SlotRightHand] = w.newObject("item.chimes")
+	if ev := strike(w, 0, 0); !has(ev, EventMessage, content.MsgOpenAllDoors) || p.Slots[SlotRightHand].Value != 2 {
+		t.Errorf("the chimes: %v, charges %d", ev, p.Slots[SlotRightHand].Value)
+	}
+	p.MagicPoints = 1
+	p.Slots[SlotRightHand] = w.newObject("item.mana")
+	if ev := strike(w, 0, 0); !has(ev, EventMessage, content.MsgMagicRestored) || p.MagicPoints != p.MaxMagicPoints {
+		t.Errorf("restoring magic: %v", ev)
+	}
+	end := p.Attributes[AttrEndurance]
+	p.Fatigue = 1
+	p.Slots[SlotRightHand] = w.newObject("item.rest")
+	if ev := strike(w, 0, 0); !has(ev, EventMessage, content.MsgEnduranceRestored) || p.Fatigue != 0 ||
+		p.Attributes[AttrEndurance] != end+1 || p.Exertion != end+4 {
+		t.Errorf("recovering fatigue: %v, endurance %d, exertion %d", ev, p.Attributes[AttrEndurance], p.Exertion)
+	}
+	str := p.Attributes[AttrStrength]
+	p.Slots[SlotRightHand] = w.newObject("item.boost")
+	if ev := strike(w, 0, 0); !slices.ContainsFunc(ev, func(e Event) bool { return e.Detail == content.MsgAttributeUp && e.Item == "attr.strength" }) ||
+		p.Attributes[AttrStrength] != str+2 {
+		t.Errorf("a strength boost: %v", ev)
+	}
+	p.Slots[SlotRightHand] = w.newObject("item.fire")
+	if ev := strike(w, 0, 0); !has(ev, EventMessage, content.MsgFireShield) {
+		t.Errorf("a fire shield: %v", ev)
+	}
+}

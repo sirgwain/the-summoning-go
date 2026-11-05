@@ -32,7 +32,7 @@ func ItemName(p *content.Pack, item string) string {
 }
 
 // Message returns the words an event shows, with an item's name in place of {item}, a skill's
-// in place of {skill}, and a strike's numbers in place of {score} and {damage}.
+// in place of {skill}, an attribute's in place of {attribute}, and a strike's numbers in place of {score} and {damage}.
 func Message(p *content.Pack, e sim.Event) string {
 	if e.Text == "" {
 		return ""
@@ -41,7 +41,11 @@ func Message(p *content.Pack, e sim.Event) string {
 	if n, ok := strings.CutPrefix(e.Item, "skill."); ok {
 		skill = SkillName(p, n)
 	}
-	return strings.NewReplacer("{item}", ItemName(p, e.Item), "{skill}", skill, "{school}", Text(p, e.Item), "{name}", Text(p, e.Item),
+	attribute := e.Item
+	if n, ok := strings.CutPrefix(e.Item, "attr."); ok {
+		attribute = UI(p, "ui.attribute."+n)
+	}
+	return strings.NewReplacer("{item}", ItemName(p, e.Item), "{skill}", skill, "{attribute}", attribute, "{school}", Text(p, e.Item), "{name}", Text(p, e.Item),
 		"{score}", strconv.Itoa(e.Score), "{damage}", strconv.Itoa(e.Damage)).Replace(Text(p, e.Text))
 }
 

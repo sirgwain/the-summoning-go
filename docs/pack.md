@@ -261,12 +261,14 @@ The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slo
 `weapon_breaks`, `vanishes` and `filled`, `{item}` stands for the item's name; in `not_memorized` and
 `only_spell`, `{school}` for the school's name; in `killed`, `{name}` for the creature's; in
 `absorbed`, `{damage}` for the damage absorbed; in `miss`, `hit`, `creature_hits` and
-`creature_misses`, `{score}` and `{damage}` stand for the numbers. The keys: `lever_stuck`,
+`creature_misses`, `{score}` and `{damage}` stand for the numbers; in `attribute_up` and
+`attribute_down`, `{attribute}` for the attribute's name (the label `ui.attribute.<name>`). The keys: `lever_stuck`,
 `slot_wrong_item`, `slot_stuck`, `no_drop_here`, `no_room`, `not_a_creature`, `cannot_hurt`,
 `miss`, `hit`, `creature_hits`, `creature_misses`, `weapon_breaks`, `vanishes`, `skill_up`, `level_up`,
 `full_health`, `full_magic`, `not_poisoned`, `not_poisoned_or_confused`, `not_fatigued`,
 `no_destination`, `no_creatures`, `already_have`, `healed` (`{damage}` the amount), `protected`,
-`boost_extended`, `poisoned`, `slowed`, `confused`, `sex_changed`, `lost_weapon_skills`, `lost_magic_skills`, `no_quiver`,
+`magic_restored` (`{damage}` the amount), `attribute_up`, `attribute_down`, `endurance_restored`,
+`endurance_points_restored` (`{damage}` the amount), `cast_smoke`, `open_all_doors`, `boost_extended`, `poisoned`, `slowed`, `confused`, `sex_changed`, `lost_weapon_skills`, `lost_magic_skills`, `no_quiver`,
 `no_arrows`, `no_charges`, `no_power`, `no_room_to_shoot`, `too_close_to_wall`, `cannot_throw`, `cannot_act`; for magic `cannot_cast`,
 `not_memorized`, `only_spell`, `no_magic`, `forgot`, `forgot_more`, `no_room_for_wall`, `wall_failed`,
 `no_room_for_portal`, `no_spell_near`, `nothing_to_mend`, `no_creature_near`, `no_bottle`,
@@ -371,6 +373,12 @@ the engine's own words.
 | `ui.attr.accuracy` | ACC |
 | `ui.attr.talent` | TAL |
 | `ui.attr.power` | POW |
+| `ui.attribute.strength` | Strength |
+| `ui.attribute.agility` | Agility |
+| `ui.attribute.endurance` | Endurance |
+| `ui.attribute.accuracy` | Accuracy |
+| `ui.attribute.talent` | Talent |
+| `ui.attribute.power` | Power |
 | `ui.weight` | `Weight: ` |
 | `ui.damage` | `Can do ` |
 | `ui.damage_after` | ` damage points` |

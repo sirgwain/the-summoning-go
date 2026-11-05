@@ -534,6 +534,14 @@ const (
 	MsgKilled               = "killed"
 	MsgAbsorbed             = "absorbed"
 	MsgNoEnding             = "no_ending"
+	// The messages of gains and of powers 18h and 42h (docs/spec/player.md, items.md).
+	MsgMagicRestored           = "magic_restored"
+	MsgAttributeUp             = "attribute_up"
+	MsgAttributeDown           = "attribute_down"
+	MsgEnduranceRestored       = "endurance_restored"
+	MsgEndurancePointsRestored = "endurance_points_restored"
+	MsgCastSmoke               = "cast_smoke"
+	MsgOpenAllDoors            = "open_all_doors"
 	// MsgMusicAll, MsgMusicEffects and MsgMusicSilent announce the music key's settings.
 	MsgMusicAll     = "music_all"
 	MsgMusicEffects = "music_effects"
@@ -585,6 +593,8 @@ var messageKeys = map[string]bool{
 	MsgBattleRage: true, MsgBattleRageExtended: true, MsgHaste: true, MsgFireShield: true,
 	MsgLightningShield: true, MsgFrozen: true, MsgSight: true, MsgWeaponSkillsUp: true,
 	MsgWeaponSkillsExtended: true, MsgMagicSkillsUp: true, MsgMagicSkillsExtended: true, MsgCured: true, MsgKilled: true, MsgAbsorbed: true,
+	MsgMagicRestored: true, MsgAttributeUp: true, MsgAttributeDown: true, MsgEnduranceRestored: true,
+	MsgEndurancePointsRestored: true, MsgCastSmoke: true, MsgOpenAllDoors: true,
 }
 
 // FigureColor is the first of the colors a player's figure draws in its portrait's FigureColors.

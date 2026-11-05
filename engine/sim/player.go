@@ -349,7 +349,8 @@ func (w *World) loseHitPoints(d int, shown bool, by string) {
 	w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "hurt by " + by, Damage: d})
 	if p.HitPoints == 0 && p.Status.DeathProtection {
 		p.Status.DeathProtection = false
-		p.HitPoints, p.MagicPoints = p.MaxHitPoints, p.MaxMagicPoints
+		w.gainMagic(p.MaxMagicPoints)
+		w.heal(p.MaxHitPoints)
 		w.emit(Event{Kind: EventThing, Level: w.current, Cell: p.Cell(), Thing: PlayerID, Detail: "revived"})
 	}
 	if p.HitPoints == 0 {

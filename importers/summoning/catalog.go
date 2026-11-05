@@ -78,40 +78,45 @@ var engineMessages = map[string]struct {
 	content.MsgCannotThrow:           {0x70, nil},
 	content.MsgCannotAct:             {0x73, nil},
 
-	content.MsgCannotCast:           {0x71, nil},
-	content.MsgNotMemorized:         {0x46, []string{"school"}},
-	content.MsgOnlySpell:            {0x47, []string{"school"}},
-	content.MsgNoMagic:              {0x29, nil},
-	content.MsgForgot:               {0x68, nil},
-	content.MsgForgotMore:           {0x69, nil},
-	content.MsgNoRoomForWall:        {0x6A, nil},
-	content.MsgWallFailed:           {0x6B, nil},
-	content.MsgNoRoomForPortal:      {0x6F, nil},
-	content.MsgNoSpellNear:          {0x61, nil},
-	content.MsgNothingToMend:        {0x6D, nil},
-	content.MsgNoCreatureNear:       {0x89, nil},
-	content.MsgNoBottle:             {0x6C, nil},
-	content.MsgFilled:               {0x6E, []string{"item"}},
-	content.MsgDoorResists:          {0x34, nil},
-	content.MsgMissileWall:          {0x93, nil},
-	content.MsgBattleRage:           {0x5E, nil},
-	content.MsgBattleRageExtended:   {0x92, nil},
-	content.MsgHaste:                {0x5F, nil},
-	content.MsgFireShield:           {0x37, nil},
-	content.MsgLightningShield:      {0x38, nil},
-	content.MsgFrozen:               {0x39, nil},
-	content.MsgSight:                {0x3B, nil},
-	content.MsgWeaponSkillsUp:       {0x62, nil},
-	content.MsgWeaponSkillsExtended: {0x63, nil},
-	content.MsgMagicSkillsUp:        {0x65, nil},
-	content.MsgMagicSkillsExtended:  {0x66, nil},
-	content.MsgCured:                {0x7A, nil},
-	content.MsgKilled:               {0x8B, []string{"name"}},
-	content.MsgAbsorbed:             {0x3A, []string{"damage"}},
-	content.MsgNoEnding:             {0x8E, nil},
-	content.MsgMusicAll:             {0xA6, nil},
-	content.MsgMusicEffects:         {0xA7, nil},
-	content.MsgMusicSilent:          {0xA8, nil},
+	content.MsgCannotCast:              {0x71, nil},
+	content.MsgNotMemorized:            {0x46, []string{"school"}},
+	content.MsgOnlySpell:               {0x47, []string{"school"}},
+	content.MsgNoMagic:                 {0x29, nil},
+	content.MsgForgot:                  {0x68, nil},
+	content.MsgForgotMore:              {0x69, nil},
+	content.MsgNoRoomForWall:           {0x6A, nil},
+	content.MsgWallFailed:              {0x6B, nil},
+	content.MsgNoRoomForPortal:         {0x6F, nil},
+	content.MsgNoSpellNear:             {0x61, nil},
+	content.MsgNothingToMend:           {0x6D, nil},
+	content.MsgNoCreatureNear:          {0x89, nil},
+	content.MsgNoBottle:                {0x6C, nil},
+	content.MsgFilled:                  {0x6E, []string{"item"}},
+	content.MsgDoorResists:             {0x34, nil},
+	content.MsgMissileWall:             {0x93, nil},
+	content.MsgBattleRage:              {0x5E, nil},
+	content.MsgBattleRageExtended:      {0x92, nil},
+	content.MsgHaste:                   {0x5F, nil},
+	content.MsgFireShield:              {0x37, nil},
+	content.MsgLightningShield:         {0x38, nil},
+	content.MsgFrozen:                  {0x39, nil},
+	content.MsgSight:                   {0x3B, nil},
+	content.MsgWeaponSkillsUp:          {0x62, nil},
+	content.MsgWeaponSkillsExtended:    {0x63, nil},
+	content.MsgMagicSkillsUp:           {0x65, nil},
+	content.MsgMagicSkillsExtended:     {0x66, nil},
+	content.MsgCured:                   {0x7A, nil},
+	content.MsgKilled:                  {0x8B, []string{"name"}},
+	content.MsgAbsorbed:                {0x3A, []string{"damage"}},
+	content.MsgNoEnding:                {0x8E, nil},
+	content.MsgMagicRestored:           {0x4B, []string{"damage"}},
+	content.MsgAttributeUp:             {0x7B, []string{"attribute"}},
+	content.MsgAttributeDown:           {0x7C, []string{"attribute"}},
+	content.MsgEnduranceRestored:       {0x97, nil},
+	content.MsgEndurancePointsRestored: {0x3D, []string{"damage"}},
+	content.MsgMusicAll:                {0xA6, nil},
+	content.MsgMusicEffects:            {0xA7, nil},
+	content.MsgMusicSilent:             {0xA8, nil},
 }
 
 // placeholders replaces s's format codes, in order, with the named placeholders.
@@ -173,6 +178,17 @@ func (im *importer) text(strs []string) {
 			t.Strings[id] = strings.Join(lines, "\n")
 			m.Messages[key] = id
 		}
+	}
+	// An attribute's message names it by its TEXT record, 22h–27h (player.md, Derived values).
+	for i, name := range []string{"strength", "agility", "endurance", "accuracy", "talent", "power"} {
+		if w, ok := t.Strings[msgID(0x22+i)]; ok {
+			t.Strings["ui.attribute."+name] = w
+		}
+	}
+	// Powers 18h and 42h show words of their own, in no TEXT record (items.md, Powers).
+	for key, words := range map[string]string{content.MsgCastSmoke: "(cast smoke spell)", content.MsgOpenAllDoors: "(open all doors)"} {
+		t.Strings["msg."+key] = words
+		m.Messages[key] = "msg." + key
 	}
 	// Taking an object names it, with no record of its own (items.md, Inventory).
 	t.Strings["msg."+content.MsgTaken] = "{item}"

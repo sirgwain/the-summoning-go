@@ -507,9 +507,7 @@ func (w *World) spellEffect(l *Level, c caster, sp *content.Spell, e content.Act
 		p.Poisoned = false
 		w.message(l, at, content.MsgCured, "")
 	case e.Restore:
-		n := min(power, p.Fatigue)
-		p.Fatigue -= n
-		p.Attributes[AttrEndurance] += n
+		w.recoverFatigue(power)
 	case e.Heal != nil:
 		w.heal(w.roll(*e.Heal))
 	case e.Effect != nil:

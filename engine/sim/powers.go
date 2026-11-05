@@ -50,10 +50,13 @@ var attributeNames = [6]string{AttrStrength, AttrAgility, AttrEndurance, AttrAcc
 // Status and effect constants (docs/spec/player.md, items.md).
 const (
 	// powerShowMap shows the level map.
-	powerShowMap  = 0x22
-	maxTimed      = 255
-	confusedOver  = 25
-	confusionBump = 6
+	powerShowMap = 0x22
+	// powerSmoke and powerOpenAllDoors only show their words.
+	powerSmoke        = 0x18
+	powerOpenAllDoors = 0x42
+	maxTimed          = 255
+	confusedOver      = 25
+	confusionBump     = 6
 	// The confusion a teleporter, a ripple teleport and a change of sex add.
 	teleporterConfusion = 30
 	rippleConfusion     = 40
@@ -97,6 +100,54 @@ func (w *World) heal(n int) {
 	}
 }
 
+// gainMagic adds n magic points, at most the maximum, and says so when more than 2
+// (docs/spec/player.md, Derived values).
+func (w *World) gainMagic(n int) {
+	p := w.player
+	n = max(0, min(n, p.MaxMagicPoints-p.MagicPoints))
+	p.MagicPoints += n
+	if n > 2 {
+		w.messageNumbers(w.Current(), p.Cell(), content.MsgMagicRestored, 0, n)
+	}
+}
+
+// changeAttribute changes attribute i by n, and its maximum too when withMax, saying so unless
+// quiet (docs/spec/player.md, Derived values).
+func (w *World) changeAttribute(i, n int, withMax, quiet bool) {
+	p := w.player
+	a := attributeNames[i]
+	p.Attributes[a] += n
+	if withMax {
+		p.MaxAttributes[a] += n
+	}
+	if quiet || n == 0 {
+		return
+	}
+	key := content.MsgAttributeUp
+	if n < 0 {
+		key = content.MsgAttributeDown
+	}
+	w.message(w.Current(), p.Cell(), key, "attr."+a)
+}
+
+// recoverFatigue moves up to n fatigue back to endurance, saying how much (docs/spec/player.md,
+// Derived values).
+func (w *World) recoverFatigue(n int) {
+	p := w.player
+	if p.Fatigue == 0 {
+		return
+	}
+	n = min(n, p.Fatigue)
+	p.Fatigue -= n
+	p.Attributes[AttrEndurance] += n
+	p.Exertion = p.Attributes[AttrEndurance] + 3
+	if n == 1 {
+		w.message(w.Current(), p.Cell(), content.MsgEnduranceRestored, "")
+	} else {
+		w.messageNumbers(w.Current(), p.Cell(), content.MsgEndurancePointsRestored, 0, n)
+	}
+}
+
 // raiseSkill changes skill i's level by n, saying so unless quiet.
 func (w *World) raiseSkill(i, n int, quiet bool) {
 	p := w.player
@@ -116,7 +167,7 @@ func (w *World) statusTickPlayer() {
 		b := &p.Boosts[i]
 		if b.Ticks > 0 {
 			if b.Ticks--; b.Ticks == 0 {
-				p.Attributes[attributeNames[i]] -= b.Amount
+				w.changeAttribute(i, -b.Amount, false, false)
 				b.Amount = 0
 			}
 		}
@@ -165,7 +216,7 @@ func (w *World) everyMove() {
 		w.heal(w.roll(content.Dice{Count: 2, Sides: 2}))
 	}
 	if p.Status.ManaRegenerating && w.chance(1, regenerateChance) {
-		p.MagicPoints = min(p.MagicPoints+w.roll(content.Dice{Count: 2, Sides: 2}), p.MaxMagicPoints)
+		w.gainMagic(w.roll(content.Dice{Count: 2, Sides: 2}))
 	}
 	if p.Poisoned && w.chance(1, poisonChance) {
 		w.hurtPlayer(1+w.rng.IntN(2), combat.Physical, "poison")
@@ -281,11 +332,10 @@ func (w *World) creaturesNear() []*Thing {
 func (w *World) startPower(power, sign int) bool {
 	p, l := w.player, w.Current()
 	ending := sign < 0
-	attr := func(i, n int) { p.Attributes[attributeNames[i]] += n * sign }
 	switch {
 	case power >= 0x30 && power <= 0x41:
 		n := power - 0x30
-		attr(n/3, n%3+1)
+		w.changeAttribute(n/3, (n%3+1)*sign, false, true)
 		return true
 	case power >= 0x2A && power <= 0x2F && !ending:
 		b := &p.Boosts[power-0x2A]
@@ -293,7 +343,7 @@ func (w *World) startPower(power, sign int) bool {
 			w.message(l, p.Cell(), content.MsgBoostExtended, "")
 		} else {
 			b.Amount = boostAmount
-			p.Attributes[attributeNames[power-0x2A]] += boostAmount
+			w.changeAttribute(power-0x2A, boostAmount, false, false)
 		}
 		b.Ticks += boostTicks
 		return true
@@ -325,6 +375,25 @@ func (w *World) startPower(power, sign int) bool {
 		p.Status.ManaRegenerating = !ending
 	case 0x47:
 		p.Status.Invisible = !ending
+	case 0x0C:
+		p.Status.ResistQuarter = !ending
+	case 0x0D:
+		p.Status.ResistForty = !ending
+	case 0x0E:
+		p.Status.BlowProtection = !ending
+	case 0x10:
+		w.raiseSkill(SkillWeapon+3, 3*sign, true)
+	case 0x1F:
+		w.raiseSkill(SkillWeapon+1, 2*sign, true)
+	case powerCharges:
+		p.Status.Charges = !ending
+	case 0x43:
+		p.Status.Accurate = !ending
+	case 0x4F:
+		p.Status.FireImmune = !ending
+		p.IntervalBonus -= 2 * sign
+	case 0x5B:
+		p.Status.DeathBlowWard = !ending
 	case 0x16:
 	}
 	if ending {
@@ -332,25 +401,15 @@ func (w *World) startPower(power, sign int) bool {
 	}
 	switch power {
 	case 0x01:
-		p.MagicPoints = min(p.MagicPoints+w.roll(content.Dice{Count: 2, Sides: 6}), p.MaxMagicPoints)
+		w.gainMagic(w.roll(content.Dice{Count: 2, Sides: 6}))
 	case 0x02:
-		p.MagicPoints = min(p.MagicPoints+w.roll(content.Dice{Count: 4, Sides: 6}), p.MaxMagicPoints)
+		w.gainMagic(w.roll(content.Dice{Count: 4, Sides: 6}))
 	case 0x03:
-		p.MagicPoints = p.MaxMagicPoints
+		w.gainMagic(3000)
 	case 0x04:
 		p.Confusion += 75
 		w.loseHitPoints(w.roll(content.Dice{Count: 2, Sides: 8}), true, "confusion")
 		w.poisonPlayer()
-	case 0x0C:
-		p.Status.ResistQuarter = true
-	case 0x0D:
-		p.Status.ResistForty = true
-	case 0x0E:
-		p.Status.BlowProtection = true
-	case 0x10:
-		w.raiseSkill(SkillWeapon+3, 3, true)
-	case 0x1F:
-		w.raiseSkill(SkillWeapon+1, 2, true)
 	case 0x11, 0x26, 0x1A:
 		w.weigh(l, p.Cell(), -p.weight(), 0)
 		w.place(w.mark(runeOf(power)).Cell, false)
@@ -371,17 +430,17 @@ func (w *World) startPower(power, sign int) bool {
 			if w.chance(1, 2) {
 				n = -1
 			}
-			a := attributeNames[w.rng.IntN(6)]
-			p.Attributes[a] += n
-			p.MaxAttributes[a] += n
+			w.changeAttribute(w.rng.IntN(6), n, true, false)
 		}
 	case 0x15:
 		p.Poisoned, p.Confusion = false, 0
 		w.playerSparkle(w.pack.Effect(content.SparkleCure))
 	case 0x1C:
 		p.addTimed(TimedFireShield, shieldTicks)
+		w.message(l, p.Cell(), content.MsgFireShield, "")
 	case 0x27:
 		p.addTimed(TimedLightningShield, shieldTicks)
+		w.message(l, p.Cell(), content.MsgLightningShield, "")
 	case 0x1D:
 		w.heal(w.roll(content.Dice{Count: 6, Sides: 6}))
 		w.playerSparkle(w.pack.Effect(content.SparkleHeal))
@@ -398,27 +457,22 @@ func (w *World) startPower(power, sign int) bool {
 		w.raiseSkill(SkillWeapon+w.rng.IntN(4), 1, false)
 	case 0x21:
 		w.freeze(l, Steps(freezeTicks))
-	case 0x23:
-		p.Status.Charges = true
+		w.message(l, p.Cell(), content.MsgFrozen, "")
 	case 0x24:
 		p.Poisoned = false
-	case 0x43:
-		p.Status.Accurate = true
 	case 0x44:
-		n := min(1+w.rng.IntN(3), p.Fatigue)
-		p.Fatigue -= n
-		p.Attributes[AttrEndurance] += n
+		w.recoverFatigue(1 + w.rng.IntN(3))
+	case powerSmoke:
+		w.message(l, p.Cell(), content.MsgCastSmoke, "")
+	case powerOpenAllDoors:
+		w.message(l, p.Cell(), content.MsgOpenAllDoors, "")
 	case 0x4D:
 		p.Status.DeathProtection = true
 		w.message(l, p.Cell(), content.MsgProtected, "")
-	case 0x4F:
-		p.Status.FireImmune = true
-		p.IntervalBonus -= 2
 	case 0x50:
 		w.addConfusion(150)
-	case 0x5B:
-		p.Status.DeathBlowWard = true
-	case 0x0F, 0x17, 0x4C, 0x47, 0x16, powerSpeed1, powerSpeed2, powerSpeed2Lasting:
+	case 0x0F, 0x17, 0x4C, 0x47, 0x16, powerSpeed1, powerSpeed2, powerSpeed2Lasting,
+		0x0C, 0x0D, 0x0E, 0x10, 0x1F, powerCharges, 0x43, 0x4F, 0x5B:
 	default:
 		w.emit(Event{Kind: EventNotYet, Level: l.ID, Cell: p.Cell(), Detail: "power " + strconv.Itoa(power)})
 		return false
