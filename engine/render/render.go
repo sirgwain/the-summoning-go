@@ -23,19 +23,24 @@ import (
 // (docs/spec/world.md, Light and shadow): a shadow raises it to its own, and anything drawn over
 // it sets it back to 0.
 
-// Sprites holds the pack's sprite banks as index images, one per frame.
+// Sprites holds the pack's sprite banks as index images, one per frame, and each bank's density.
 type Sprites struct {
-	frames map[string][]*ebiten.Image
+	frames  map[string][]*ebiten.Image
+	density map[string]int
 }
 
 // NewSprites uploads every sprite bank of p.
 func NewSprites(p *content.Pack) *Sprites {
-	s := &Sprites{frames: map[string][]*ebiten.Image{}}
+	s := &Sprites{frames: map[string][]*ebiten.Image{}, density: map[string]int{}}
 	for id, b := range p.Sprites {
 		s.frames[id] = uploadBank(b)
+		s.density[id] = b.Scale()
 	}
 	return s
 }
+
+// Density returns sprite bank id's density, 1 for an unknown one.
+func (s *Sprites) Density(id string) int { return max(1, s.density[id]) }
 
 func uploadBank(b *content.SpriteBank) []*ebiten.Image {
 	bounds := b.Sheet.Bounds()
@@ -69,10 +74,12 @@ func (s *Sprites) Frame(sprite string, i int) (*ebiten.Image, error) {
 type LevelView struct {
 	sprites *Sprites
 	cmds    []drawlist.Cmd
-	// images holds each command's frame, or blank for a command that blanks a tile box.
-	images []*ebiten.Image
-	blank  *ebiten.Image
-	bounds image.Rectangle
+	// images holds each command's frame, or blank for a command that blanks a tile box, and
+	// densities each image's density.
+	images    []*ebiten.Image
+	densities []int
+	blank     *ebiten.Image
+	bounds    image.Rectangle
 	// shadows are the shadow ellipses, by width.
 	shadows map[int]*ebiten.Image
 }
@@ -88,8 +95,10 @@ func NewLevelView(s *Sprites) *LevelView {
 // bounds.
 func (v *LevelView) Set(cmds []drawlist.Cmd, bounds image.Rectangle) error {
 	images := make([]*ebiten.Image, len(cmds))
+	densities := make([]int, len(cmds))
 	for i, c := range cmds {
 		img := v.blank
+		densities[i] = 1
 		if c.Shadow > 0 {
 			images[i] = v.shadow(c.Shadow)
 			continue
@@ -99,10 +108,11 @@ func (v *LevelView) Set(cmds []drawlist.Cmd, bounds image.Rectangle) error {
 			if img, err = v.sprites.Frame(c.Sprite, c.Frame); err != nil {
 				return err
 			}
+			densities[i] = v.sprites.Density(c.Sprite)
 		}
-		images[i] = part(img, c.Part)
+		images[i] = part(img, c.Part, densities[i])
 	}
-	v.cmds, v.images, v.bounds = cmds, images, bounds
+	v.cmds, v.images, v.densities, v.bounds = cmds, images, densities, bounds
 	return nil
 }
 
@@ -141,14 +151,14 @@ func (v *LevelView) shadow(w int) *ebiten.Image {
 	return img
 }
 
-// part returns the part of img a command draws.
-func part(img *ebiten.Image, p drawlist.Part) *ebiten.Image {
+// part returns the part of img, of density d, a command draws.
+func part(img *ebiten.Image, p drawlist.Part, d int) *ebiten.Image {
 	b := img.Bounds()
 	switch p {
 	case drawlist.UpperHalf:
-		b.Max.Y = b.Min.Y + drawlist.HalfHeight
+		b.Max.Y = b.Min.Y + drawlist.HalfHeight*d
 	case drawlist.LowerHalf:
-		b.Min.Y += drawlist.HalfHeight
+		b.Min.Y += drawlist.HalfHeight * d
 	default:
 		return img
 	}
@@ -161,16 +171,20 @@ func (v *LevelView) Cmds() []drawlist.Cmd { return v.cmds }
 // Bounds returns the view-pixel rectangle the level covers.
 func (v *LevelView) Bounds() image.Rectangle { return v.bounds }
 
-// Draw draws the level into the index image dst, with view pixel origin at dst's top-left.
-func (v *LevelView) Draw(dst *ebiten.Image, origin image.Point) {
-	view := dst.Bounds().Add(origin)
+// Draw draws the level into the index image dst, with view pixel origin at dst's top-left, at
+// density d: d of dst's pixels to a view pixel each way. Each image is scaled from its own
+// density to d, nearest pixel.
+func (v *LevelView) Draw(dst *ebiten.Image, origin image.Point, d int) {
+	d = max(1, d)
+	view := image.Rectangle{origin, origin.Add(dst.Bounds().Size().Div(d))}
 	var op ebiten.DrawImageOptions
 	var fixedOp colorm.DrawImageOptions
 	var fixed colorm.ColorM
 	fixed.Translate(0, 1, 0, 0)
 	for i, c := range v.cmds {
 		img := v.images[i]
-		r := img.Bounds().Sub(img.Bounds().Min).Add(image.Pt(c.X, c.Y))
+		k := float64(d) / float64(v.densities[i])
+		r := image.Rectangle{Max: img.Bounds().Size().Div(v.densities[i])}.Add(image.Pt(c.X, c.Y))
 		if c.Shadow > 0 {
 			r = r.Sub(r.Size().Div(2))
 		}
@@ -179,19 +193,22 @@ func (v *LevelView) Draw(dst *ebiten.Image, origin image.Point) {
 		}
 		if c.Shadow > 0 {
 			op.GeoM.Reset()
-			op.GeoM.Translate(float64(r.Min.X-origin.X), float64(r.Min.Y-origin.Y))
+			op.GeoM.Scale(k, k)
+			op.GeoM.Translate(float64((r.Min.X-origin.X)*d), float64((r.Min.Y-origin.Y)*d))
 			op.Blend = shadowBlend
 			dst.DrawImage(img, &op)
 			continue
 		}
 		if c.Fixed && c.Sprite != "" {
 			fixedOp.GeoM.Reset()
-			fixedOp.GeoM.Translate(float64(c.X-origin.X), float64(c.Y-origin.Y))
+			fixedOp.GeoM.Scale(k, k)
+			fixedOp.GeoM.Translate(float64((c.X-origin.X)*d), float64((c.Y-origin.Y)*d))
 			colorm.DrawImage(dst, img, fixed, &fixedOp)
 			continue
 		}
 		op.GeoM.Reset()
-		op.GeoM.Translate(float64(c.X-origin.X), float64(c.Y-origin.Y))
+		op.GeoM.Scale(k, k)
+		op.GeoM.Translate(float64((c.X-origin.X)*d), float64((c.Y-origin.Y)*d))
 		op.Blend = ebiten.BlendSourceOver
 		if c.Sprite == "" {
 			op.Blend = ebiten.BlendClear
@@ -305,6 +322,13 @@ func (pr *Presenter) Present(dst, src *ebiten.Image, scale int) {
 // and shadow): the first MaxLights of its lights, and its shadows.
 func (pr *Presenter) PresentLit(dst, src *ebiten.Image, scale int, l *Lighting) {
 	pr.present(dst, src, float64(scale), float64(scale), image.Point{}, false, l)
+}
+
+// PresentWorld draws src, the world buffer drawn at density d, as Present does at scale screen
+// pixels a view pixel, lit by l when it is not nil.
+func (pr *Presenter) PresentWorld(dst, src *ebiten.Image, scale, d int, l *Lighting) {
+	k := float64(scale) / float64(max(1, d))
+	pr.present(dst, src, k, k, image.Point{}, false, l)
 }
 
 // PresentAt draws src onto dst through the palette at point at, scaled by a whole number. What

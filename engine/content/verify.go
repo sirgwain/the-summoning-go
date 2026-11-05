@@ -26,8 +26,8 @@ func (p *Pack) Verify() error {
 		switch f.Shape {
 		case "", FloorBox:
 		case FloorDiamond:
-			if b, ok := p.Sprites[f.Sprite]; ok && b.FrameSize != f.FrameSize() {
-				v.fail("floor set %s: %v frames, a diamond set wants %v", id, b.FrameSize, f.FrameSize())
+			if b, ok := p.Sprites[f.Sprite]; ok && b.FrameSize != (Offset{f.FrameSize()[0] * b.Scale(), f.FrameSize()[1] * b.Scale()}) {
+				v.fail("floor set %s: %v frames at density %d, a diamond set wants %v at density 1", id, b.FrameSize, b.Scale(), f.FrameSize())
 			}
 		default:
 			v.fail("floor set %s: unknown shape %q", id, f.Shape)
@@ -193,6 +193,11 @@ func (v *verifier) sprite(b *SpriteBank) {
 	}
 	if b.Transparent != nil && (*b.Transparent < 0 || *b.Transparent > 255) {
 		v.fail("sprite bank %s: transparent index %d", id, *b.Transparent)
+	}
+	switch b.Density {
+	case 0, 1, 2, 4:
+	default:
+		v.fail("sprite bank %s: density %d, not 1, 2 or 4", id, b.Density)
 	}
 	if b.Frames > 0 && !b.FrameRect(b.Frames-1).In(b.Sheet.Bounds()) {
 		v.fail("sprite bank %s: %d frames do not fit the %v sheet", id, b.Frames, b.Sheet.Bounds().Size())

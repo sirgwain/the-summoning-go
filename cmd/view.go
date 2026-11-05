@@ -29,6 +29,7 @@ func newViewCmd(play bool) *cobra.Command {
 	var scale, shotTicks int
 	var magnify, menu, mute, lighting, fullscreen bool
 	var at, sel []int
+	var mods []string
 	var seed uint64
 	use, short, long := "view [pack-dir]", "Look around a content pack's levels and work their mechanisms",
 		`Opens a window showing a pack's levels in the game's projection, running the simulation.
@@ -144,6 +145,13 @@ of live input, and exits when it ends. Its files are written under --out.`,
 			if err != nil {
 				return err
 			}
+			for _, m := range mods {
+				changes, err := content.LoadMod(pack, os.DirFS(m))
+				if err != nil {
+					return err
+				}
+				fmt.Fprintf(cmd.ErrOrStderr(), "mod %s: %d changes\n", m, len(changes))
+			}
 			cell := func(name string, xy []int) (*content.Cell, error) {
 				switch len(xy) {
 				case 0:
@@ -236,6 +244,7 @@ of live input, and exits when it ends. Its files are written under --out.`,
 			return nil
 		},
 	}
+	viewCmd.Flags().StringArrayVar(&mods, "mod", nil, "load the mod in this directory over the pack (docs/mods-plan.md); repeat for more, later ones winning")
 	viewCmd.Flags().StringVar(&level, "level", "", "id of the level to open, as in its level.json, e.g. level.05 for packs/summoning/levels/05 (default: the start level)")
 	viewCmd.Flags().IntVar(&scale, "scale", 3, "pixels per art pixel")
 	viewCmd.Flags().IntSliceVar(&at, "at", nil, "center the view on this cell, as x,y")

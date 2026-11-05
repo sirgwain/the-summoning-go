@@ -430,7 +430,7 @@ func Build(p *content.Pack, s Scene, opts Options) []Cmd {
 		if !ok || !s.shows(cell) || img.Frame < 0 || img.Frame >= sprite.Frames {
 			continue
 		}
-		at := RefPoint(f.U, f.V).Add(f.Back).Sub(image.Pt(sprite.FrameSize[0]/2, sprite.FrameSize[1]/2+flightHeight))
+		at := RefPoint(f.U, f.V).Add(f.Back).Sub(image.Pt(sprite.FrameSize[0]/sprite.Scale()/2, sprite.FrameSize[1]/sprite.Scale()/2+flightHeight))
 		cmd := Cmd{Sprite: img.Sprite, Frame: img.Frame, X: at.X, Y: at.Y, Glow: GlowObject}
 		if f.Spell {
 			cmd.Glow = GlowSpell
@@ -607,7 +607,7 @@ func thingCmd(p *content.Pack, t Thing) (Cmd, content.Cell, bool) {
 		}
 	}
 	anchor, _ := sprite.AnchorOf(frame)
-	at := t.point().Sub(image.Pt(anchor[0], anchor[1]))
+	at := t.point().Sub(image.Pt(anchor[0]/sprite.Scale(), anchor[1]/sprite.Scale()))
 	cell := content.Cell{floorDiv(t.U, CellUnits), floorDiv(t.V, CellUnits)}
 	cmd := Cmd{Sprite: sid, Frame: frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: tmpl.Kind == content.ThingPlayer && t.Sprite == ""}
 	switch {
@@ -645,7 +645,7 @@ func heldCmds(p *content.Pack, t Thing, cmd Cmd) []Cmd {
 				continue
 			}
 			anchor, _ := sprite.AnchorOf(cmd.Frame)
-			at := t.point().Sub(image.Pt(anchor[0], anchor[1]))
+			at := t.point().Sub(image.Pt(anchor[0]/sprite.Scale(), anchor[1]/sprite.Scale()))
 			*layer.into = append(*layer.into, Cmd{Sprite: layer.sprite, Frame: cmd.Frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: cmd.Fixed})
 		}
 	}
@@ -665,7 +665,7 @@ func lookCmds(p *content.Pack, t Thing, cmd Cmd) []Cmd {
 			continue
 		}
 		anchor, _ := sprite.AnchorOf(cmd.Frame)
-		at := t.point().Sub(image.Pt(anchor[0], anchor[1]))
+		at := t.point().Sub(image.Pt(anchor[0]/sprite.Scale(), anchor[1]/sprite.Scale()))
 		out = append(out, Cmd{Sprite: sid, Frame: cmd.Frame, X: at.X, Y: at.Y, Thing: t.ID, Fixed: cmd.Fixed})
 	}
 	if len(out) > 0 {
@@ -685,7 +685,7 @@ func Labels(p *content.Pack, s Scene) []Label {
 		if !ok || !s.shows(cell) {
 			continue
 		}
-		w := p.Sprites[cmd.Sprite].FrameSize[0]
+		w := p.Sprites[cmd.Sprite].FrameSize[0] / p.Sprites[cmd.Sprite].Scale()
 		out = append(out, Label{At: image.Pt(cmd.X+w/2, cmd.Y), Text: fmt.Sprint(t.Shown)})
 	}
 	return out

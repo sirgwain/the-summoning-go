@@ -46,8 +46,9 @@ type Window struct {
 	title *ebiten.Image
 	// fonts are the faces' letters, made when first drawn or from the skin.
 	fonts map[*font.Face]*ebiten.Image
-	// skin is the pack's skin worked out.
-	skin skinned
+	// skin is the pack's skin worked out; density the density the world is drawn at.
+	skin    skinned
+	density int
 	// backdrop is how bright the splash artwork shows behind the frontend now.
 	backdrop float32
 	keys     map[viewer.Key]ebiten.Key
@@ -89,6 +90,7 @@ func New(v *viewer.Viewer) (*Window, error) {
 		fonts: map[*font.Face]*ebiten.Image{},
 	}
 	s.applySkin()
+	s.density = v.Pack.Density()
 	s.view = render.NewLevelView(s.sprites)
 	s.lights = light.NewFinder(v.Pack, s.palette)
 	names := map[string]ebiten.Key{}
@@ -189,21 +191,23 @@ func (s *Window) Draw(screen *ebiten.Image) {
 		return
 	}
 	size := v.BufferSize()
-	if s.buffer == nil || s.buffer.Bounds().Size() != size {
+	// The world is drawn at the density of the pack's finest art (docs/mods-plan.md, phase 1).
+	d := s.density
+	if s.buffer == nil || s.buffer.Bounds().Size() != size.Mul(d) {
 		if s.buffer != nil {
 			s.buffer.Deallocate()
 		}
-		s.buffer = ebiten.NewImage(size.X, size.Y)
+		s.buffer = ebiten.NewImage(size.X*d, size.Y*d)
 	}
 	s.buffer.Clear()
-	s.view.Draw(s.buffer, v.Origin)
+	s.view.Draw(s.buffer, v.Origin, d)
 	s.presenter.SetColors(s.palette.At(v.ShowMS()), v.FixedColors(s.palette))
 	world := s.tr.world(screen.Bounds().Size(), v.Transition)
+	var lit *render.Lighting
 	if v.Lit {
-		s.presenter.PresentLit(world, s.buffer, v.Scale, s.light(size, float64(v.ShowMS())/1000))
-	} else {
-		s.presenter.Present(world, s.buffer, v.Scale)
+		lit = s.light(size, float64(v.ShowMS())/1000, d)
 	}
+	s.presenter.PresentWorld(world, s.buffer, v.Scale, d, lit)
 	s.tr.draw(screen, v.Transition, v.Scale)
 	overlay := v.Overlay()
 	// What is drawn over the world belongs to the new view, so waits for a transition to end.
@@ -233,9 +237,9 @@ func (s *Window) Draw(screen *ebiten.Image) {
 	s.takeShots(screen)
 }
 
-// light returns how the world buffer, of size size, is lit at time t: the lights reaching it,
-// nearest its center first, in buffer pixels.
-func (s *Window) light(size image.Point, t float64) *render.Lighting {
+// light returns how the world buffer, of view size size drawn at density d, is lit at time t:
+// the lights reaching it, nearest its center first, in buffer pixels.
+func (s *Window) light(size image.Point, t float64, d int) *render.Lighting {
 	l := &s.lighting
 	l.Lights, l.Strengths = l.Lights[:0], l.Strengths[:0]
 	o := s.v.Origin
@@ -251,8 +255,9 @@ func (s *Window) light(size image.Point, t float64) *render.Lighting {
 		return cmp.Compare(math.Hypot(a.X-cx, a.Y-cy), math.Hypot(b.X-cx, b.Y-cy))
 	})
 	l.Lights = l.Lights[:min(len(l.Lights), render.MaxLights)]
-	for _, li := range l.Lights {
+	for i, li := range l.Lights {
 		l.Strengths = append(l.Strengths, li.At(t))
+		l.Lights[i].X, l.Lights[i].Y, l.Lights[i].Radius = li.X*float64(d), li.Y*float64(d), li.Radius*float64(d)
 	}
 	return l
 }

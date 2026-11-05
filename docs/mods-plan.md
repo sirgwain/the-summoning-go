@@ -1,6 +1,12 @@
 # Mods plan
 
-Status: 2026-11-05. Nothing landed. This plan covers mods: packs that load over another pack to
+Status: 2026-11-05. A proof of concept has landed: `density` on indexed sprite sheets (phase 1,
+first item, indexed only) and `--mod` loading sprites, floor and wall sets and text over a pack
+(phase 2, first cut, no patches). It was tried with 4× upscales of the Summoning's floor and wall
+sets made in Aseprite: the walls were already indexed in the game palette; the true-color floors
+were matched to the palette, keeping the base's color-cycling indexes where the base pixel
+cycles. That mod is made from the game's art and lives only in the gitignored
+`packs/summoning-hires/`. This plan covers mods: packs that load over another pack to
 add or change its content, so that people can give The Summoning new levels and new art, high
 resolution included, and share them without the game's files. It also changes phase 4 of
 [packs-plan.md](packs-plan.md) (higher-resolution art) so that one picture can mix the base

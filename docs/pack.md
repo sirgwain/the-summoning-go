@@ -67,6 +67,11 @@ A record's file is named after its id without the kind prefix (`item.dagger` is
 }
 ```
 
+A pack with `"kind": "mod"` is a mod: `summoning play <pack> --mod <dir>` loads it over the pack
+it `depends` on (`docs/mods-plan.md`). So far a mod adds or replaces sprites, floor and wall sets
+by id, and adds text by key. A sprite replacing one of the pack's must keep its frames, its named
+animations and its size at its own density, so whatever uses it still works.
+
 `format` is this document's version; the loader rejects a format it does not know. It rises with
 any change that a pack written before would not have, so that such a pack is refused and written
 again rather than played wrongly: 2 added `box`, 3 damage kinds as data (Combat) and the shot of
@@ -117,6 +122,12 @@ are drawn with the palette's own colors, without its effects, and with its portr
   transparent index fully transparent, so the sheet looks right in an image editor.
 - Frames are laid out in a grid, left to right, top to bottom, in frame order. Every frame of a
   sheet has the same size.
+- `density` (1, 2 or 4; 1 without it) is how many of the sheet's pixels make one projection pixel
+  each way: art drawn finer than the projection. Its `frame_size` and anchors are in its own
+  pixels, so a density-4 floor tile is 128 × 128 where the Summoning's is 32 × 32. The world is
+  drawn at the highest density among the pack's sprites, and art of a lower density is scaled up
+  into it, nearest pixel, so densities mix in one picture. Indexed sheets only, for now
+  (`docs/mods-plan.md`, phase 1).
 
 ```json
 {

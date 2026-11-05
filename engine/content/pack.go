@@ -80,6 +80,9 @@ type Manifest struct {
 	Version string   `json:"version"`
 	Format  int      `json:"format"`
 	Depends []string `json:"depends"`
+	// Kind is "mod" for a pack that loads over the packs it depends on (LoadMod), empty for a
+	// game.
+	Kind string `json:"kind,omitempty"`
 	// Palette is the palette gameplay draws with.
 	Palette string `json:"palette"`
 	Start   Start  `json:"start"`
@@ -124,8 +127,29 @@ type SpriteBank struct {
 	Anchor     *Offset              `json:"anchor,omitempty"`
 	Anchors    []Offset             `json:"anchors,omitempty"`
 	Animations map[string]Animation `json:"animations,omitempty"`
+	// Density is how many of its pixels make one projection pixel each way (1, 2 or 4; 0 is 1):
+	// art drawn at a higher resolution than the projection's. Its frame size and anchors are in
+	// its own pixels (docs/mods-plan.md, phase 1).
+	Density int `json:"density,omitempty"`
 	// Sheet holds the frames' palette indexes.
 	Sheet *image.Paletted `json:"-"`
+}
+
+// Scale returns the bank's density, 1 without one.
+func (b *SpriteBank) Scale() int {
+	if b == nil || b.Density <= 0 {
+		return 1
+	}
+	return b.Density
+}
+
+// Density returns the highest density of the pack's sprites: the scale its world is drawn at.
+func (p *Pack) Density() int {
+	d := 1
+	for _, b := range p.Sprites {
+		d = max(d, b.Scale())
+	}
+	return d
 }
 
 // AnchorOf returns frame i's anchor, and false when the sprite has none.
