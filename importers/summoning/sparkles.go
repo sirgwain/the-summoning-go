@@ -20,6 +20,7 @@ var sparkles = []struct {
 	{"cure", 0x5E, 0x30},
 	{"heal", 0x5E, 0x50},
 	{"restore", 0x60, sparkleOwnColor},
+	{"weapon_skills", 0x61, sparkleOwnColor},
 	{"seal.5", 0x5F, sparkleOwnColor},
 	{"seal.6", 0x5E, 0x80},
 	{"seal.7", 0x5E, 0x30},

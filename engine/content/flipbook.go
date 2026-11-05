@@ -35,11 +35,15 @@ const (
 	// SparkleCure and SparkleHeal are the sparkles of the curing and healing powers that show one.
 	SparkleCure = "cure"
 	SparkleHeal = "heal"
+	// SparkleWeaponSkills and SparkleMagicSkills are the sparkles of the Weapon Skill and Magic
+	// Skill spells starting.
+	SparkleWeaponSkills = "weapon_skills"
+	SparkleMagicSkills  = "magic_skills"
 )
 
 var effectCueKeys = map[string]bool{
 	EffectClimbDown: true, EffectFall: true, EffectCasterDies: true, EffectDeathBlow: true,
-	SparkleCure: true, SparkleHeal: true,
+	SparkleCure: true, SparkleHeal: true, SparkleWeaponSkills: true, SparkleMagicSkills: true,
 }
 
 // Effect returns the flipbook an effect cue plays, or "" when the pack plays none.

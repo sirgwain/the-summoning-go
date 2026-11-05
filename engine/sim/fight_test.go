@@ -845,9 +845,9 @@ func TestStrikeThawsFrozenCreature(t *testing.T) {
 	l, p := w.Current(), w.Player()
 	g := l.Thing("guard")
 	before := g.next
-	w.freeze(l, Steps(1000))
-	if g.next != before+Steps(1000) {
-		t.Fatalf("freeze delayed the guard to %d, want %d", g.next, before+Steps(1000))
+	w.freeze(l, 1000)
+	if g.next != before+Steps(1000+freezeBase) {
+		t.Fatalf("freeze delayed the guard to %d, want %d", g.next, before+Steps(1000+freezeBase))
 	}
 	s, err := w.State()
 	if err != nil {
@@ -858,8 +858,8 @@ func TestStrikeThawsFrozenCreature(t *testing.T) {
 	}
 	l, p = w.Current(), w.Player()
 	g = l.Thing("guard")
-	if g.frozen != Steps(1000) {
-		t.Fatalf("restored freeze delay %d, want %d", g.frozen, Steps(1000))
+	if g.frozen != Steps(1000+freezeBase) {
+		t.Fatalf("restored freeze delay %d, want %d", g.frozen, Steps(1000+freezeBase))
 	}
 	p.Facing = 2
 	besideGuard(w)
@@ -968,4 +968,68 @@ func TestPowerMessages(t *testing.T) {
 	if ev := strike(w, 0, 0); !has(ev, EventMessage, content.MsgFireShield) {
 		t.Errorf("a fire shield: %v", ev)
 	}
+}
+
+// missileAtGuard casts missile m from the player, 64 units short of the guard and facing it, with power,
+// and runs until the flight ends.
+func missileAtGuard(t *testing.T, w *World, m content.MissileSpell, power int) *Thing {
+	t.Helper()
+	l, p := w.Current(), w.Player()
+	g := l.Thing("guard")
+	p.Facing = 2
+	p.U, p.V = g.U, g.V-64
+	sp := &content.Spell{ID: "spell.test", School: 0, Effects: []content.Action{{Missile: &m}}}
+	w.castSpell(w.playerCaster(), sp, power)
+	for range 400 {
+		if len(l.Flights) == 0 {
+			break
+		}
+		w.Update(nil)
+	}
+	return g
+}
+
+func TestPoisonGasPoisons(t *testing.T) {
+	w := fightWorld(t, nil,
+		"#######",
+		"#@...G#",
+		"#######")
+	g := w.Current().Thing("guard")
+	g.HitPoints = 1000
+	missileAtGuard(t, w, content.MissileSpell{Hurts: content.HurtsPoison, Poisons: true, Sprite: "sprite.res.1"}, 256+7)
+	if !g.Poisoned || g.HitPoints != 1000-7 {
+		t.Errorf("poison gas: poisoned %v, hit points %d (a power over 255 counts mod 256)", g.Poisoned, g.HitPoints)
+	}
+}
+
+func TestZapAwayPracticesWhenNothingMoves(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Things["thing.guard"].Behaviors = append(p.Things["thing.guard"].Behaviors, content.BehaviorStationary)
+	},
+		"#######",
+		"#@...G#",
+		"#######")
+	p := w.Player()
+	g := missileAtGuard(t, w, content.MissileSpell{Scatters: true, Sprite: "sprite.res.1"}, 5)
+	if g.Cell() != (cell{1, 5}) || p.Skills[SkillSchool+1].Practice != scatterPractice {
+		t.Errorf("zap away on a stationary guard: at %v, practice %d", g.Cell(), p.Skills[SkillSchool+1].Practice)
+	}
+	if w.nearestCreature(128) != nil {
+		t.Error("shape change counts a stationary creature")
+	}
+}
+
+func TestFreezeHoldsFlights(t *testing.T) {
+	w := fightWorld(t, nil,
+		"#######",
+		"#@...G#",
+		"#######")
+	l := w.Current()
+	f := &Flight{next: w.step + 1}
+	l.Flights = append(l.Flights, f)
+	w.freeze(l, 10)
+	if f.next != w.step+1+Steps(10+freezeBase) {
+		t.Errorf("the flight's next update is %d", f.next)
+	}
+	l.Flights = nil
 }

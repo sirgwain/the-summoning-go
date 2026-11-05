@@ -456,7 +456,7 @@ func (w *World) startPower(power, sign int) bool {
 	case 0x25:
 		w.raiseSkill(SkillWeapon+w.rng.IntN(4), 1, false)
 	case 0x21:
-		w.freeze(l, Steps(freezeTicks))
+		w.freeze(l, freezeTicks)
 		w.message(l, p.Cell(), content.MsgFrozen, "")
 	case 0x24:
 		p.Poisoned = false

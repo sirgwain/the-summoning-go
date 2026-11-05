@@ -89,11 +89,19 @@ func (w *World) hurtThing(l *Level, t *Thing, d int, k combat.Kind) int {
 	return d
 }
 
-// freeze delays every thing on level l by n steps (docs/spec/spells.md, Freeze).
-func (w *World) freeze(l *Level, n int64) {
+// freezeBase is the ticks every freeze adds to the delay it is given.
+const freezeBase = 100
+
+// freeze delays every thing and every thing in flight on level l by ticks + freezeBase ticks
+// (docs/spec/spells.md, Freeze).
+func (w *World) freeze(l *Level, ticks int) {
+	n := Steps(ticks + freezeBase)
 	for _, t := range l.Things {
 		t.next += n
 		t.frozen += n
+	}
+	for _, f := range l.Flights {
+		f.next += n
 	}
 }
 

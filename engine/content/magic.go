@@ -188,9 +188,11 @@ const (
 
 // MissileSpell flies a spell.
 type MissileSpell struct {
-	Hurts    string `json:"hurts,omitempty"`
-	Opens    bool   `json:"opens,omitempty"`
-	Scatters bool   `json:"scatters,omitempty"`
+	Hurts string `json:"hurts,omitempty"`
+	// Poisons poisons what it hurts, as a poisoning throw does.
+	Poisons  bool `json:"poisons,omitempty"`
+	Opens    bool `json:"opens,omitempty"`
+	Scatters bool `json:"scatters,omitempty"`
 	// Bane is a thing template the missile hurts by BaneDamage; it does nothing to others.
 	Bane       string `json:"bane,omitempty"`
 	BaneDamage int    `json:"bane_damage,omitempty"`

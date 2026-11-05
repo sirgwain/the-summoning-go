@@ -33,6 +33,7 @@ var effectCues = map[string]string{
 	content.EffectClimbDown: effectID(viewClimbDown), content.EffectFall: effectID(viewFall),
 	content.EffectCasterDies: effectID(viewCasterDies), content.EffectDeathBlow: effectID(viewDeathBlow),
 	content.SparkleCure: sparkleID("cure"), content.SparkleHeal: sparkleID("heal"),
+	content.SparkleWeaponSkills: sparkleID("weapon_skills"), content.SparkleMagicSkills: sparkleID("restore"),
 }
 
 // transitions are how the level transitions and teleports show (scenes.md, Level transitions):

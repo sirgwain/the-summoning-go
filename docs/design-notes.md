@@ -206,6 +206,14 @@ Change's frame by facing, and the hostile speed of records 23h and 2Bh (`hostile
   through on the imported game; nor is any quest that a conversation drives across levels.
 - Powers are still numbers the engine knows (items.md, Powers); casting and talking powers
   became item fields (`casts`, `conversation`), the rest could become records too.
+- Spell quirks of the game not yet in the spec or the engine, all rare in play: Flame Arrow and
+  Lightning (the missiles that end as a cloud) do not end when their range runs out, but fly on,
+  showing frame 1, until they meet something; Dispel sets off each spell near the player as a hit
+  on whatever the last collision met, not simply ending it, and its condition counts spells
+  already ending; a bouncing missile also moves a step as it turns; an eight-direction creature's
+  Four-way Fireball starts from its facing's parity, as the player's does; Kano meeting a wall
+  shows 93h whoever cast it; a cast's extra practice is a second practice, so it can raise a level
+  twice.
 - See a spell in flight and its burst on the imported game on screen: the dev pack's are drawn
   (`TestStudy`), the imported ones only checked by rule.
 

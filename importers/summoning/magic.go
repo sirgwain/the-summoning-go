@@ -185,7 +185,7 @@ func (im *importer) spells() error {
 		case 2:
 			effects = missile(resFireball, content.MissileSpell{Hurts: content.HurtsFire, Bounces: true})
 		case 3:
-			effects = missile(resPoisonGas, content.MissileSpell{Hurts: content.HurtsPoison})
+			effects = missile(resPoisonGas, content.MissileSpell{Hurts: content.HurtsPoison, Poisons: true})
 		case 4:
 			effects = missile(resFireball, content.MissileSpell{Hurts: content.HurtsFire})
 		case 5:

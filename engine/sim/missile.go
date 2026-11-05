@@ -19,6 +19,10 @@ const (
 	scatterPractice = 3
 	banePractice    = 20
 	scatterTries    = 100
+	// scatterPicks bounds the random picks a scatter makes in looking for its tries' cells.
+	scatterPicks = 100000
+	// missilePowerMask keeps a missile's power to the one byte it carries.
+	missilePowerMask = 0xFF
 )
 
 // SpellFlight is what a missile spell in flight carries.
@@ -65,6 +69,7 @@ func (w *World) launchSpell(l *Level, c caster, d int, m *content.MissileSpell, 
 		extra = creatureLaunchExtra
 	}
 	su, sv := launchStart(c.u, c.v, d, extra)
+	power &= missilePowerMask
 	f := &Flight{U: su, V: sv, Direction: d, Range: missileRange, Damage: power, ByPlayer: c.player, Thrower: c.thing,
 		Spell: &SpellFlight{Missile: m, Power: power, Sprite: m.Sprite}, next: w.step + Steps(flightTicks)}
 	if m.Directional {
@@ -217,8 +222,14 @@ func (w *World) spellHits(l *Level, f *Flight, b *body) {
 		k := w.kind(m.Hurts)
 		if t == nil {
 			w.hurtPlayer(s.Power, k, "a spell")
+			if m.Poisons {
+				w.poisonPlayer()
+			}
 		} else {
 			w.hurtThing(l, t, s.Power, k)
+			if m.Poisons && alive(t) && !w.resistsPoison(t) {
+				t.Poisoned = true
+			}
 		}
 		if s.Power < bigHit {
 			practice(0, 1)
@@ -231,9 +242,10 @@ func (w *World) spellHits(l *Level, f *Flight, b *body) {
 			practice(1, openPractice)
 		}
 	case m.Scatters:
-		if t != nil && w.scatter(l, t) {
-			practice(1, scatterPractice)
+		if t != nil {
+			w.scatter(l, t)
 		}
+		practice(1, scatterPractice)
 	case m.Bane != "":
 		if t != nil && t.Template.ID == m.Bane && alive(t) {
 			t.HitPoints = max(0, t.HitPoints-m.BaneDamage)
@@ -246,8 +258,9 @@ func (w *World) spellHits(l *Level, f *Flight, b *body) {
 	}
 }
 
-// scatter moves thing t to a random floor cell the player has seen, and reports whether it did.
-// Boulders, traps, conjured things and walking creatures scatter; others stay.
+// scatter moves thing t to a random plain floor cell the player has seen, trying up to
+// scatterTries such cells, and reports whether it did. Boulders, traps, conjured things and
+// walking creatures scatter; others stay.
 func (w *World) scatter(l *Level, t *Thing) bool {
 	switch {
 	case t.Template.Kind == content.ThingCreature && (t.Template.Has(content.BehaviorAnimated) || t.Template.Has(content.BehaviorStationary)),
@@ -258,11 +271,12 @@ func (w *World) scatter(l *Level, t *Thing) bool {
 	if rows < 3 || cols < 3 {
 		return false
 	}
-	for range scatterTries {
+	for tries, picks := 0, 0; tries < scatterTries && picks < scatterPicks; picks++ {
 		c := content.Cell{1 + w.rng.IntN(rows-2), 1 + w.rng.IntN(cols-2)}
-		if l.Blocked(c) || !l.Seen(c) {
+		if l.Blocked(c) || l.byCell[c] != nil || !l.Seen(c) {
 			continue
 		}
+		tries++
 		u, v := cellCenter(c)
 		if w.blocker(l, t, false, u, v, t.Template.Bounds(), nil) != nil {
 			continue

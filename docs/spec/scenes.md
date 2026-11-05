@@ -171,7 +171,8 @@ Healing, cures and the sealed doors show a sparkle: small stars that grow and fa
 | --- | --- | --- | --- |
 | Spell 31 Cure Poison; power 15h (cure poison and confusion) | RESOURCE 5Eh | 30h | the player's point on screen − (12, 10) |
 | Spell 33 Heal; powers 1Dh (heal 6d6) and 45h (heal 3000) | RESOURCE 5Eh | 50h | the same |
-| Spell 32 Restore | RESOURCE 60h | 60h | the same |
+| Spell 32 Restore; spell 24 Magic Skill, when it starts | RESOURCE 60h | 60h | the same |
+| Spell 23 Weapon Skill, when it starts | RESOURCE 61h | 60h | the same |
 | A sealed door opening, stage 5 (rules.md) | RESOURCE 5Fh | 60h | the door's point on screen − (12, 20), only when on screen |
 | Stage 6 | RESOURCE 5Eh | 80h | the same |
 | Stage 7 | RESOURCE 5Eh | 30h | the same |

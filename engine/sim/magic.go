@@ -414,17 +414,17 @@ func (w *World) handHolding(item string) int {
 	return -1
 }
 
-// nearestCreature returns the nearest living creature within dist of the player (half the
-// Manhattan distance), or nil.
+// nearestCreature returns the nearest living creature nearer the player than dist (half the
+// Manhattan distance), or nil; creatures that only animate or stand and cast do not count.
 func (w *World) nearestCreature(dist int) *Thing {
 	p, l := w.player, w.Current()
 	var best *Thing
 	bestD := 0
 	for _, t := range l.Things {
-		if !alive(t) {
+		if !alive(t) || t.Template.Has(content.BehaviorAnimated) || t.Template.Has(content.BehaviorStationary) {
 			continue
 		}
-		if d := (abs(t.U-p.U) + abs(t.V-p.V)) / 2; d <= dist && (best == nil || d < bestD) {
+		if d := (abs(t.U-p.U) + abs(t.V-p.V)) / 2; d < dist && (best == nil || d < bestD) {
 			best, bestD = t, d
 		}
 	}
@@ -496,7 +496,7 @@ func (w *World) spellEffect(l *Level, c caster, sp *content.Spell, e content.Act
 		}
 	case e.Freeze != nil:
 		w.message(l, at, content.MsgFrozen, "")
-		w.freeze(l, Steps(power**e.Freeze))
+		w.freeze(l, power**e.Freeze)
 	case e.ShapeChange != nil:
 		if t := w.nearestCreature(*e.ShapeChange); t != nil {
 			w.shapeChange(t.Template.Sprite)
@@ -555,10 +555,13 @@ func (w *World) timedSpell(effect string, power int) {
 		say(content.MsgLightningShield)
 	case content.TimedWeaponSkills, content.TimedMagicSkills:
 		timed, first, up, more := TimedWeaponSkills, SkillWeapon, content.MsgWeaponSkillsUp, content.MsgWeaponSkillsExtended
+		sparkle := content.SparkleWeaponSkills
 		if effect == content.TimedMagicSkills {
 			timed, first, up, more = TimedMagicSkills, SkillSchool, content.MsgMagicSkillsUp, content.MsgMagicSkillsExtended
+			sparkle = content.SparkleMagicSkills
 		}
 		if p.Timed[timed] == 0 {
+			w.playerSparkle(w.pack.Effect(sparkle))
 			for i := range 4 {
 				w.raiseSkill(first+i, 1, true)
 			}

@@ -68,7 +68,7 @@ Every cast by the player practices its school by 1; some spells practice more (b
 | 15 | A rune mark 22h on the level | 43h |
 | 17 | A spell in flight within 96 of the player | 61h |
 | 19 | The two staff halves in the hands | 6Dh |
-| 25 | A creature within 128 | 89h |
+| 25 | A creature nearer than 128, as Shape Change counts them | 89h |
 | 30 | An Empty Bottle (template 7) in a hand | 6Ch |
 | 31 | Poisoned | 40h |
 | 32 | Fatigue | 3Fh |
@@ -76,7 +76,7 @@ Every cast by the player practices its school by 1; some spells practice more (b
 
 ## Missiles
 
-A missile spell flies as an entity of kind 3. The player's starts ahead of the player along its facing, a creature's ahead of the creature, by the launch distance of things in flight (entities.md, Things in flight; a creature's 2 units further), 8 units a step (half along directions 1 and 5), and it flies up to 255 steps. A caster already touching something ahead (within 4 units) hits it at once. Otherwise a missile that would start where its flight cannot go (a wall, a closed door, the edge of the map) goes off at once: a creature's vanishes without a hit; the player's that opens (type 0Bh) meets that wall or door there, as a step into it would; any other of the player's goes off at the player, hitting the player. A step that meets an entity, or a wall, closed door or the edge of the map, ends the flight there; running out of range ends it without a hit. An ended missile shows its last four frames (1–4) and vanishes, except types 0 and 5, which end as a cloud of their own (resources 57 and 58) that shows those frames the same way.
+A missile spell flies as an entity of kind 3. It carries its power as one byte: a power over 255 counts as its remainder after dividing by 256, for its damage and its practice alike. The player's starts ahead of the player along its facing, a creature's ahead of the creature, by the launch distance of things in flight (entities.md, Things in flight; a creature's 2 units further), 8 units a step (half along directions 1 and 5), and it flies up to 255 steps. A caster already touching something ahead (within 4 units) hits it at once. Otherwise a missile that would start where its flight cannot go (a wall, a closed door, the edge of the map) goes off at once: a creature's vanishes without a hit; the player's that opens (type 0Bh) meets that wall or door there, as a step into it would; any other of the player's goes off at the player, hitting the player. A step that meets an entity, or a wall, closed door or the edge of the map, ends the flight there; running out of range ends it without a hit. An ended missile shows its last four frames (1–4) and vanishes, except types 0 and 5, which end as a cloud of their own (resources 57 and 58) that shows those frames the same way.
 
 On hitting an entity (the player included):
 
@@ -84,9 +84,9 @@ On hitting an entity (the player included):
 | --- | --- | --- |
 | 0, 4 | Fire damage (kind 1) of the power | School 0 by 1, by 2 when the power is 50 or more |
 | 5 | Lightning damage (kind 2) | As 0 |
-| 3 | Poison damage (kind 4) | As 0 |
+| 3 | Poison damage (kind 4), and what it hurts is poisoned: the player (message 59h when not poisoned already), or a creature that neither resists poison nor takes only physical damage, as the thrown Isa Potion poisons (items.md) | As 0 |
 | 0Bh | Starts a boulder rolling the way the missile flew | School 1 by 5 |
-| 0Eh | Moves its target, a boulder, trap, conjured thing or walking creature (not the player, nor a creature that only animates or stands and casts), to a random floor cell the player has seen | School 1 by 3 |
+| 0Eh | Moves its target, a boulder, trap, conjured thing or walking creature (not the player, nor a creature that only animates or stands and casts), to a random plain floor cell (terrain 1Bh–1Eh) the player has seen. Random cells are drawn until 100 such cells have been tried; the first where the target is not blocked takes it | School 1 by 3, on hitting anything, whether or not it moves |
 | 1Ah | 3000 damage to creature record 31h; nothing to others | School 2 by 20 |
 
 Only the player's missiles practice, and a creature hit by one turns hostile. Type 0Bh meeting a door whose bit 20h is set (rules.md) opens it (school 1 by 5); a door without it gives message 34h (school 1 by 1); a wall gives message 93h. Bouncing missiles turn back off walls (a diagonal one turning a quarter when it meets a wall along one axis) and fly on; meeting an entity ends them.
@@ -125,12 +125,12 @@ A directional sprite's eight frames are numbered by the caster's facing, which i
 | 17 | Dispel | The spells in flight within 96 of the player end where they are |
 | 18 | Gateway | Practices Sorcery 5 more. Opens a portal (kind 9, resource 60, frames 0, 1, 2, 1 every 9 ticks) a cell ahead, replacing any other; message 6Fh when there is no room. Walking into it removes it, stores the player's level and cell, and takes the player to level 30 at (60, 26) |
 | 19 | Mending | Joins the staff halves D8h and D9h in the hands into DAh, in the right hand (Sorcery 20 more); sets interaction variable 32 to 1 and starts conversation 79h |
-| 20 | Freeze | Practices Enchantment 1 more. Delays every other entity's update by `power × 10` ticks (message 39h); a creature struck while delayed loses the delay (combat.md, Hurting a creature) |
+| 20 | Freeze | Practices Enchantment 1 more. Delays every other entity's update, spells and objects in flight included, by `power × 10 + 100` ticks (message 39h); a creature struck while delayed loses the delay (combat.md, Hurting a creature) |
 | 21 | Lightning Shield | Practices Enchantment 1 more. Lightning shield for `power` ticks (message 38h) |
 | 22 | Fire Shield | Practices Enchantment 1 more. Fire shield for `power` ticks (message 37h) |
-| 23 | Weapon Skill | Each weapon class +1 for `power` ticks (message 62h); if already active, message 63h and the time extends |
-| 24 | Magic Skill | Each school +1 for `power` ticks (message 65h); if active, message 66h |
-| 25 | Shape Change | The player takes the look of the nearest creature within 128 (transformed); message 89h if none. Taking the look of NPC bank +4Dh sets interaction variable 14. The transformed figure is that creature's sprite alone, frame `p >> 1` for the player's facing `p` (player.md), modulo its frames: no held objects and no armor. It lasts until the player's next step that moves it |
+| 23 | Weapon Skill | Each weapon class +1, quietly, for `power` ticks, with a sparkle (scenes.md) and message 62h; if already active, message 63h and the time extends |
+| 24 | Magic Skill | Each school +1, quietly, for `power` ticks, with a sparkle and message 65h; if active, message 66h and the time extends |
+| 25 | Shape Change | The player takes the look of the nearest creature nearer than 128 (half the Manhattan distance), not counting creatures that only animate or stand and cast (transformed); message 89h if none. Taking the look of NPC bank +4Dh sets interaction variable 14. The transformed figure is that creature's sprite alone, frame `p >> 1` for the player's facing `p` (player.md), modulo its frames: no held objects and no armor. It lasts until the player's next step that moves it |
 | 26 | Alteration | Missile type 1Ah |
 | 30 | Liquify | Healing 1 more. With an Empty Bottle in one hand, the other hand's object fills it: Amethyst (ABh) → 80h, Emerald (ACh) → 82h, Ruby (ADh) → 83h, Diamond (AEh) → DDh, NightShade Leftovers (0Bh) → 82h, using the object up; anything else, or nothing, makes a Jera potion (81h) whose value is the power, and stays. The bottle's hand holds the result; message 6Eh names it |
 | 31 | Cure Poison | Practices Healing 3 more. Cures poison (message 7Ah) |

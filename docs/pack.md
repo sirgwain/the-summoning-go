@@ -1090,7 +1090,9 @@ engine plays on its own it names by cue, and `effects.json` gives each cue's fli
 The cues: `climb_down` (the player stepping down into a pit or open trapdoor, along directions
 1–3), `fall` (falling into one any other way), `caster_dies` (a `stationary` creature dying, by it),
 `death_blow` (a death blow landing, by the player, before the player dies), and the sparkles of the
-powers that show one, `cure` (power 15h) and `heal` (powers 1Dh and 45h). A cue the pack leaves out
+powers that show one, `cure` (power 15h) and `heal` (powers 1Dh and 45h), and of the spells
+starting, `weapon_skills` and `magic_skills` (the `weapon_skills` and `magic_skills` timed effects,
+when they are not already running). A cue the pack leaves out
 plays nothing, and a level change it would have held happens at once.
 
 ### Transitions and lost objects
@@ -1353,7 +1355,7 @@ Spells' effects use these actions too, with the cast's power:
 
 | Action | Effect |
 | --- | --- |
-| `{ "missile": { "hurts", "opens", "scatters", "bane", "bane_damage", "sprite", "directional", "cloud", "bounces", "around" } }` | Fly a missile (`docs/spec/spells.md`, Missiles): `hurts` is `fire`, `lightning` or `poison`; `opens` opens doors and starts boulders; `scatters` moves what it hits to a random seen cell; `bane` is a thing template it hurts by `bane_damage`. `directional` draws the frame of the direction it flies; `cloud` is the sprite it ends as; `around` casts four, along the diagonals; `sound` is the sound it makes on hitting something or meeting a wall where the player sees it |
+| `{ "missile": { "hurts", "poisons", "opens", "scatters", "bane", "bane_damage", "sprite", "directional", "cloud", "bounces", "around" } }` | Fly a missile (`docs/spec/spells.md`, Missiles): `hurts` is `fire`, `lightning` or `poison`; `poisons` also poisons what it hurts, as a `poisons_thrown` item does; `opens` opens doors and starts boulders; `scatters` moves what it hits to a random seen plain floor cell (a cell with no feature); `bane` is a thing template it hurts by `bane_damage`. `directional` draws the frame of the direction it flies; `cloud` is the sprite it ends as; `around` casts four, along the diagonals; `sound` is the sound it makes on hitting something or meeting a wall where the player sees it |
 | `{ "fire_item": item }` | Fire a new object of the item from the caster |
 | `{ "timed": effect }` | A timed effect for `power` status ticks |
 | `{ "conjure": { "thing", "distance", "look_per_skill" } }` | A new thing half a cell ahead, lasting `power` of its updates, showing frame school skill / `look_per_skill` |
