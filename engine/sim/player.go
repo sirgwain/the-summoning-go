@@ -618,9 +618,10 @@ func (w *World) walk(d int) bool {
 		case t.Template.Kind == content.ThingPortal && t.Portal != nil:
 			w.enterPortal(l, t)
 			return true
-		case alive(t) && t.Template.Has(content.BehaviorHurtsOnContact):
+		case alive(t) && t.Template.Has(content.BehaviorHurtsOnContact) &&
+			!t.Template.Has(content.BehaviorAnimated) && !t.Template.Has(content.BehaviorStationary):
 			w.hurtPlayer(1, combat.Physical, t.ID)
-			if t.Template.Has(content.BehaviorPoisonous) {
+			if t.Template.Has(content.BehaviorPoisonous) && w.chance(2, 8) {
 				w.poisonPlayer()
 			}
 		case t.Template.Kind == content.ThingBoulder:

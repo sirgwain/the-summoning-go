@@ -121,7 +121,7 @@ When the count goes from 25 or less to over 25, message 36h ("You are confused")
 
 **Engine model.** The teleporter's 30 is the level's `teleporter_confusion` when the level gives one (pack.md, Levels); the importer gives level 19 5. Variable 34 is the pack's new-game `counter` (pack.md, Creation). Message 36h is the engine message `confused` and 35h `sex_changed`. The engine's messages leave the line on their own, so nothing is cleared at 25.
 
-When a step is blocked, the player pushes what can be pushed (entities.md), enters a level exit marker or a Gateway, or touches a creature, which hurts the player if it hurts on contact (creatures.md). A boulder rolling across the step hurts 2d3. Moving ends a Shape Change.
+When a step is blocked, the player pushes what can be pushed (entities.md), enters a level exit marker or a Gateway, or touches a creature, which hurts the player by 1 if it hurts on contact and does more than animate or stand and cast, poisoning 2 times in 8 if it is poisonous (creatures.md). A boulder rolling across the step hurts 2d3. Moving ends a Shape Change.
 
 ## Speed
 

@@ -256,7 +256,7 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 		w.recover(t)
 	case hit != nil && hit.thing == nil && t.Template.Has(content.BehaviorHurtsOnContact):
 		w.hurtPlayer(1, combat.Physical, t.ID)
-		if t.Template.Has(content.BehaviorPoisonous) {
+		if t.Template.Has(content.BehaviorPoisonous) && w.chance(2, 8) {
 			w.poisonPlayer()
 		}
 	case t.Hostile:
