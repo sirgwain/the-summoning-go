@@ -730,17 +730,15 @@ func (w *World) fallPlayer(f *Feature, d int) {
 }
 
 // goThrough plays view effect id at the player, then takes the player through exit, pit or
-// trapdoor f of the current level once it ends, shown by transition cue, and records the link,
-// and for an exit the way back beside the arrival.
+// trapdoor f of the current level once it ends, shown by transition cue, and records the link
+// and the way back beside the arrival.
 func (w *World) goThrough(id string, f *Feature, cue string) {
 	l := w.Current()
 	w.playerEffect(id)
 	w.afterEffect(func() {
 		if w.travel(f.To, cue) {
 			w.recordLink(l, f)
-			if f.Kind == content.FeatureExit {
-				w.recordReturn(l, f)
-			}
+			w.recordReturn(l, f)
 		}
 	})
 }

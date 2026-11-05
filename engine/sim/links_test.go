@@ -64,21 +64,25 @@ func TestLinksRecorded(t *testing.T) {
 	}
 }
 
-// TestExitTeachesTheWayBack records the exit beside the arrival that leads back beside the exit
-// taken; an exit beside the arrival that leads elsewhere teaches nothing.
+// TestExitTeachesTheWayBack records the exit beside the arrival that leads back beside the exit,
+// pit or trapdoor taken (a ladder down is a pit, the way up an exit beside where it lands); an
+// exit beside the arrival that leads elsewhere teaches nothing.
 func TestExitTeachesTheWayBack(t *testing.T) {
 	for _, tc := range []struct {
 		name string
+		row  string       // the way down, at cell (1, 3)
 		back content.Cell // where the exit beside the arrival leads on level.walk
 		want int
 	}{
-		{"two-way", cell{1, 3}, 2},
-		{"leads elsewhere", cell{1, 1}, 1},
+		{"two-way", "#@.X.#", cell{1, 3}, 2},
+		{"leads elsewhere", "#@.X.#", cell{1, 1}, 1},
+		{"ladder", "#@.O.#", cell{1, 2}, 2},
+		{"ladder elsewhere", "#@.O.#", cell{1, 5}, 1},
 	} {
 		p := walkPack(
-			"######",
-			"#@.X.#",
-			"######")
+			"#######",
+			tc.row+"#",
+			"#######")
 		b := p.Levels["level.below"]
 		b.Features = append(b.Features, &content.Feature{ID: "up", Kind: content.FeatureExit, Cell: cell{1, 2},
 			To: &content.Destination{Level: "level.walk", Cell: tc.back}})
