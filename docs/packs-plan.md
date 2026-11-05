@@ -1,6 +1,6 @@
 # Packs plan
 
-Status: 2026-11-05. Nothing landed. This plan covers what the engine needs so that a pack other than
+Status: 2026-11-05. Phase 1 has landed in the engine (labels). This plan covers what the engine needs so that a pack other than
 The Summoning can look and play like its own game. A second, original pack built
 without engine changes shows the gaps the engine has: fantasy labels, the
 iron and slate frames, combat tied to bows and quivers, and art capped at the Summoning's pixel scale.
@@ -30,11 +30,13 @@ The viewer and the book print fixed English: "Hit points" and "Magic points"
 (`engine/viewer/window/spells.go`), the help screen, the inventory's stats, the hotbar's tips,
 the options menu.
 
-- [ ] Specify engine labels in pack.md (Text): each label a text key with an English default kept
-      by the engine, overridden by the pack's text. They are named by their role, not their words:
-      `ui.hit_points`, `ui.magic_points`, `ui.spell`, `ui.school`, `ui.memorize`, `ui.armor`, and so on.
-- [ ] Move every fixed label in `engine/viewer`, `engine/viewer/window` and `engine/inspect` to them.
-      A test walks the panels with a pack that renames every label and finds no default left.
+- [x] Specify engine labels in pack.md (Labels): each label a text key with an English default kept
+      by the engine (`inspect.Labels`), overridden by the pack's text, named by role.
+- [x] Move every fixed label in `engine/viewer`, `engine/viewer/window` and `engine/inspect` to them,
+      the splash's lettering and the help's play keys included. `TestLabelsRenamed` walks the panels
+      with every label renamed and finds no default left; `TestLabelsInSource` finds no default
+      among the panels' strings; `TestLabelsDocumented` keeps pack.md's table whole. The debugging
+      tools (inspector, tools' help, full book) keep their own words.
 
 ### 2. Skins: frames, colors and font from the pack
 
@@ -50,6 +52,7 @@ the viewer. The text color and gauge colors are constants, and the font is the e
   - the gauge colors (hit points, magic points, load, armor);
   - optionally a pack font: an atlas sprite with an advance and line height, at a small and a
     large size, letters it lacks shown as `?` as now.
+  - the splash artwork, which the engine now embeds (its lettering is already labels).
   The record is optional: without it the panels keep today's frames.
 - [ ] Give `engine/frame` a style table instead of a fixed switch, and add a third built-in
       style suited to science fiction (riveted hull plate with amber indicator lights), so a

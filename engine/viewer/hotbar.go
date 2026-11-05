@@ -172,8 +172,8 @@ func (v *Viewer) Hotbar() *Hotbar {
 	x += 2*SlotSize + gap
 	h.Gesture.Rect = image.Rect(x, 0, x+gestureSize, gestureSize)
 	x += gestureSize + gap
-	h.Log = PanelButton{Rect: image.Rect(x, 0, x+SlotSize, SlotSize), Name: "log", Label: "Log"}
-	h.Book = PanelButton{Rect: image.Rect(x, SlotSize, x+SlotSize, 2*SlotSize), Name: "book", Label: "Bk"}
+	h.Log = PanelButton{Rect: image.Rect(x, 0, x+SlotSize, SlotSize), Name: "log", Label: v.ui("ui.hotbar.log")}
+	h.Book = PanelButton{Rect: image.Rect(x, SlotSize, x+SlotSize, 2*SlotSize), Name: "book", Label: v.ui("ui.hotbar.book")}
 	if c, ok := p.Magic.Icon(v.Pack); ok && v.Pack.Magic != nil && int(c-'A') < len(v.Pack.Magic.Icons) {
 		h.Gesture.Icon, h.Gesture.Has = v.Pack.Magic.Icons[c-'A'], true
 	} else if m := v.Pack.Magic; m != nil && m.Panel != nil {

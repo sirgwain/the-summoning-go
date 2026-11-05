@@ -34,7 +34,8 @@ func (s *Window) drawLog(screen *ebiten.Image) {
 	edge := func(r image.Rectangle, c color.Color) {
 		vector.StrokeRect(win, float32(r.Min.X)+0.5, float32(r.Min.Y)+0.5, float32(r.Dx()-1), float32(r.Dy()-1), 1, c, false)
 	}
-	s.print(win, "Find:", lv.Field.Min.X-6*viewer.CharWidth, lv.Field.Min.Y+2)
+	find := s.ui("ui.find")
+	s.print(win, find, lv.Field.Min.X-(len(find)+1)*viewer.CharWidth, lv.Field.Min.Y+2)
 	fill(lv.Field, slotColor)
 	edge(lv.Field, keywordColor)
 	cursor := ""

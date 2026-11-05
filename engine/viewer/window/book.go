@@ -50,7 +50,8 @@ func (s *Window) drawBook(screen *ebiten.Image) {
 	if bv.Full {
 		button(bv.Toggle, actionColor)
 	}
-	s.print(win, "Find:", bv.Field.Min.X-6*viewer.CharWidth, bv.Field.Min.Y+2)
+	find := s.ui("ui.find")
+	s.print(win, find, bv.Field.Min.X-(len(find)+1)*viewer.CharWidth, bv.Field.Min.Y+2)
 	fill(bv.Field, slotColor)
 	edge(bv.Field, keywordColor)
 	cursor := ""

@@ -169,7 +169,8 @@ func (v *Viewer) Inventory() *InventoryPanel {
 	// The stats under the figure, across the panel.
 	y = max(y, invPad+dollH) + invGap
 	stats := v.stats(p, inv)
-	ip.Armor = Gauge{Rect: image.Rect(invPad+6*CharWidth, y+2*LineHeight+4, invPad+6*CharWidth+2*armorCells, y+3*LineHeight-4),
+	ax := invPad + (len(v.ui("ui.armor"))+1)*CharWidth
+	ip.Armor = Gauge{Rect: image.Rect(ax, y+2*LineHeight+4, ax+2*armorCells, y+3*LineHeight-4),
 		Value: armorGauge(p.ArmorClass), Max: armorCells}
 	for _, l := range stats {
 		l.At = l.At.Add(image.Pt(invPad, y))
@@ -278,20 +279,20 @@ func (v *Viewer) described(ip *InventoryPanel) *sim.Object {
 func (v *Viewer) details(o *sim.Object) []string {
 	p := v.World.Player()
 	if o == nil {
-		return []string{v.playerName(), v.levelTitle(p.Level), inspect.Label(v.Pack, content.LabelWeight, "Weight: ") + inspect.Weight(p.Carried(v.Pack))}
+		return []string{v.playerName(), v.levelTitle(p.Level), inspect.Label(v.Pack, content.LabelWeight, "ui.weight") + inspect.Weight(p.Carried(v.Pack))}
 	}
 	it := v.Pack.Items[o.Item]
 	if it == nil {
 		return nil
 	}
-	lines := []string{inspect.ItemName(v.Pack, o.Item), inspect.Label(v.Pack, content.LabelWeight, "Weight: ") + inspect.Weight(o.Weight(v.Pack))}
+	lines := []string{inspect.ItemName(v.Pack, o.Item), inspect.Label(v.Pack, content.LabelWeight, "ui.weight") + inspect.Weight(o.Weight(v.Pack))}
 	if slices.Contains(it.Tags, "weapon") {
 		most := 0
 		for _, a := range it.Actions {
 			most = max(most, a.Damage.Max())
 		}
 		if most > 1 {
-			lines = append(lines, inspect.Label(v.Pack, content.LabelDamage, "Can do ")+fmt.Sprint(most)+inspect.Label(v.Pack, content.LabelDamageAfter, " damage points"))
+			lines = append(lines, inspect.Label(v.Pack, content.LabelDamage, "ui.damage")+fmt.Sprint(most)+inspect.Label(v.Pack, content.LabelDamageAfter, "ui.damage_after"))
 		}
 	}
 	if it.Armor > 0 {
@@ -300,10 +301,10 @@ func (v *Viewer) details(o *sim.Object) []string {
 			eff := max(it.Armor-(it.Durability-o.Value)/500, it.Armor/2)
 			armor = fmt.Sprintf("%d (%d)", eff, it.Armor)
 		}
-		lines = append(lines, inspect.Label(v.Pack, content.LabelArmor, "AC bonus of ")+armor)
+		lines = append(lines, inspect.Label(v.Pack, content.LabelArmor, "ui.armor_bonus")+armor)
 	}
 	if slices.Contains(it.Tags, "two_handed") {
-		lines = append(lines, inspect.Label(v.Pack, content.LabelTwoHanded, "Requires two hands"))
+		lines = append(lines, inspect.Label(v.Pack, content.LabelTwoHanded, "ui.two_handed"))
 	}
 	return lines
 }
@@ -313,20 +314,19 @@ func (v *Viewer) levelTitle(level int) string {
 	if inv := v.Pack.Inventory; inv != nil && level < len(inv.LevelTitles) {
 		return inspect.Text(v.Pack, inv.LevelTitles[level])
 	}
-	return fmt.Sprintf("level %d", level)
+	return v.ui("ui.level_title", "n", level)
 }
 
 // stats are the character's lines: attributes (with the maximum after one that differs from it),
 // hit and magic points, armor, level and experience, and each skill with a level, with its icon
 // and rating.
 func (v *Viewer) stats(p *sim.Player, inv *content.Inventory) []TextLine {
-	short := []string{"STR", "AGI", "END", "ACC", "TAL", "POW"}
-	names := []string{sim.AttrStrength, sim.AttrAgility, sim.AttrEndurance, sim.AttrAccuracy, sim.AttrTalent, sim.AttrPower}
+	armor := v.ui("ui.armor")
 	// Each attribute, in its tone when below or above its maximum, which then follows it.
 	var lines []TextLine
 	x := 0
-	for i, n := range names {
-		l := TextLine{Text: fmt.Sprintf("%s:%d", short[i], p.Attributes[n]), At: image.Pt(x, 0)}
+	for _, n := range Attributes {
+		l := TextLine{Text: fmt.Sprintf("%s:%d", AttributeLabel(v.Pack, n), p.Attributes[n]), At: image.Pt(x, 0)}
 		if m, ok := p.MaxAttributes[n]; ok && m != p.Attributes[n] {
 			l.Text += fmt.Sprintf("/%d", m)
 			if l.Tone = ToneLow; p.Attributes[n] > m {
@@ -337,11 +337,11 @@ func (v *Viewer) stats(p *sim.Player, inv *content.Inventory) []TextLine {
 		x += (len(l.Text) + 2) * CharWidth
 	}
 	lines = append(lines,
-		TextLine{Text: fmt.Sprintf("HP %d/%d  MP %d/%d  %s  EXP %d/%d", p.HitPoints, p.MaxHitPoints, p.MagicPoints, p.MaxMagicPoints,
-			v.levelTitle(p.Level), p.Experience, p.NextLevel), At: image.Pt(0, LineHeight)},
+		TextLine{Text: fmt.Sprintf("%s %d/%d  %s %d/%d  %s  %s %d/%d", v.ui("ui.hp"), p.HitPoints, p.MaxHitPoints, v.ui("ui.mp"), p.MagicPoints, p.MaxMagicPoints,
+			v.levelTitle(p.Level), v.ui("ui.exp"), p.Experience, p.NextLevel), At: image.Pt(0, LineHeight)},
 		// The armor gauge goes between the label and the number.
-		TextLine{Text: "Armor", At: image.Pt(0, 2*LineHeight)},
-		TextLine{Text: fmt.Sprint(p.ArmorClass), At: image.Pt(7*CharWidth+2*armorCells, 2*LineHeight)})
+		TextLine{Text: armor, At: image.Pt(0, 2*LineHeight)},
+		TextLine{Text: fmt.Sprint(p.ArmorClass), At: image.Pt((len(armor)+2)*CharWidth+2*armorCells, 2*LineHeight)})
 	// The skills with a level, two to a line.
 	n := 0
 	for i, sk := range p.Skills {
@@ -352,7 +352,7 @@ func (v *Viewer) stats(p *sim.Player, inv *content.Inventory) []TextLine {
 		if i >= sim.SkillSchool {
 			icons, ratings, k = inv.SchoolIcons, inv.SchoolRatings, i-sim.SkillSchool
 		}
-		text := inspect.SkillName(fmt.Sprint(i))
+		text := inspect.SkillName(v.Pack, fmt.Sprint(i))
 		if r := min(sk.Level, len(ratings)); r > 0 {
 			text = inspect.Text(v.Pack, ratings[r-1])
 		}

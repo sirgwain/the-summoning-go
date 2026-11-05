@@ -118,7 +118,7 @@ func (v *Viewer) frontUpdate(in Input) {
 	case f.Character != nil:
 		w, err := sim.NewGame(v.Pack, v.Seed+uint64(v.Ticks), *f.Character)
 		if err != nil {
-			v.notice("No new game: " + err.Error())
+			v.notice(v.ui("ui.no_new_game", "error", err))
 			v.OpenFrontend()
 			return
 		}

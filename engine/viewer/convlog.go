@@ -129,15 +129,15 @@ func (v *Viewer) logPeople() []logPerson {
 func (v *Viewer) logEntryText(c *sim.Logged, e sim.LogEntry) string {
 	switch e.Kind {
 	case sim.LogQuestion:
-		return v.playerName() + " asks: " + e.Text
+		return v.ui("ui.log.asks", "name", v.playerName(), "text", e.Text)
 	case sim.LogTeach:
-		return "Taught the gesture " + strings.Join(strings.Split(e.Icons, ""), " ")
+		return v.ui("ui.log.taught", "icons", strings.Join(strings.Split(e.Icons, ""), " "))
 	}
 	who := v.playerName()
 	if e.Portrait != "" {
 		who = inspect.ThingName(v.Pack, c.Template)
 	}
-	return who + ": " + v.lineText(e.Text)
+	return v.ui("ui.log.says", "name", who, "text", v.lineText(e.Text))
 }
 
 // logHeading returns conversation c's heading: its level's name and when it began.
@@ -216,7 +216,7 @@ func (v *Viewer) Log() *LogView {
 	corner := image.Pt((v.Screen.X-size.X*lv.Scale)/2, max(Margin, (bottom-size.Y*lv.Scale)/2))
 	lv.Rect = image.Rectangle{corner, corner.Add(size.Mul(lv.Scale))}
 
-	lv.Close = PanelButton{Rect: image.Rect(size.X-logPad-logButton, logPad, size.X-logPad, logPad+LineHeight+4), Name: "close", Label: "Close"}
+	lv.Close = PanelButton{Rect: image.Rect(size.X-logPad-logButton, logPad, size.X-logPad, logPad+LineHeight+4), Name: "close", Label: v.ui("ui.close")}
 	fx := logPad + 6*CharWidth
 	lv.Field = image.Rect(fx, logPad, fx+logField, logPad+LineHeight+4)
 	top := lv.Field.Max.Y + logPad
@@ -237,7 +237,7 @@ func (v *Viewer) Log() *LogView {
 		}
 		lv.Selected = min(v.logView.selected, len(labels)-1)
 		if len(matches) == 0 {
-			lv.Empty = "Nothing found."
+			lv.Empty = v.ui("ui.log.no_match")
 		}
 	} else {
 		for i, p := range people {
@@ -247,7 +247,7 @@ func (v *Viewer) Log() *LogView {
 			}
 		}
 		if len(people) == 0 {
-			lv.Empty = "No one has been talked with yet."
+			lv.Empty = v.ui("ui.log.no_one")
 		}
 	}
 	first := max(0, lv.Selected-fits+1)

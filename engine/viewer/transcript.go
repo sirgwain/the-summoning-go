@@ -82,16 +82,16 @@ func (v *Viewer) transcribe(events []sim.Event) {
 		return
 	}
 	if err := os.MkdirAll(v.SaveDir, 0o755); err != nil {
-		v.notice("No transcript: " + err.Error())
+		v.notice(v.ui("ui.no_transcript", "error", err))
 		return
 	}
 	f, err := os.OpenFile(filepath.Join(v.SaveDir, TranscriptFile), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		v.notice("No transcript: " + err.Error())
+		v.notice(v.ui("ui.no_transcript", "error", err))
 		return
 	}
 	defer f.Close()
 	if _, err := f.WriteString(b.String()); err != nil {
-		v.notice("No transcript: " + err.Error())
+		v.notice(v.ui("ui.no_transcript", "error", err))
 	}
 }

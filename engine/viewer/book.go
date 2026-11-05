@@ -177,11 +177,11 @@ func (g gameBook) pane(tab int, id string) ([]inspect.PaneItem, string) {
 	return items, hint
 }
 
-func (gameBook) empty(tab int) string {
+func (b gameBook) empty(tab int) string {
 	if tab == BookCreatures {
-		return "No creatures found yet."
+		return b.v.ui("ui.book.no_creatures")
 	}
-	return "Nothing found yet."
+	return b.v.ui("ui.book.no_items")
 }
 
 // source returns the book open, the full book or the player's.
@@ -246,12 +246,12 @@ func (v *Viewer) Book() *BookView {
 	bv.Rect = image.Rectangle{corner, corner.Add(size.Mul(bv.Scale))}
 
 	tabs := [2][]bookEntry{v.bookEntries(BookCreatures), v.bookEntries(BookItems)}
-	for i, name := range [2]string{"Creatures", "Items"} {
+	for i, name := range [2]string{"creatures", "items"} {
 		x := bookWinPad + i*(bookWinTab+bookWinPad)
-		bv.Tabs[i] = PanelButton{Rect: image.Rect(x, bookWinPad, x+bookWinTab, bookWinPad+LineHeight+4), Name: strings.ToLower(name),
-			Label: fmt.Sprintf("%s (%d)", name, len(tabs[i]))}
+		bv.Tabs[i] = PanelButton{Rect: image.Rect(x, bookWinPad, x+bookWinTab, bookWinPad+LineHeight+4), Name: name,
+			Label: fmt.Sprintf("%s (%d)", v.ui("ui.book."+name), len(tabs[i]))}
 	}
-	bv.Close = PanelButton{Rect: image.Rect(size.X-bookWinPad-bookWinButton, bookWinPad, size.X-bookWinPad, bookWinPad+LineHeight+4), Name: "close", Label: "Close"}
+	bv.Close = PanelButton{Rect: image.Rect(size.X-bookWinPad-bookWinButton, bookWinPad, size.X-bookWinPad, bookWinPad+LineHeight+4), Name: "close", Label: v.ui("ui.close")}
 	fieldEnd := bv.Close.Rect.Min.X - bookWinPad
 	if bv.Full {
 		label := "This level"
@@ -272,7 +272,7 @@ func (v *Viewer) Book() *BookView {
 	if len(entries) == 0 {
 		bv.Empty = src.empty(bv.Tab)
 		if v.book.typed != "" {
-			bv.Empty = "Nothing matches."
+			bv.Empty = v.ui("ui.book.no_match")
 		}
 		return bv
 	}

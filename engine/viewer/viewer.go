@@ -961,7 +961,7 @@ func (v *Viewer) playKeys(in Input) []input.Command {
 // pause pauses play until the next key or click, showing the pack's pause message meanwhile.
 func (v *Viewer) pause() {
 	v.Paused = true
-	text := "Paused"
+	text := v.ui("ui.paused")
 	if m := v.Pack.Messages; m != nil {
 		if key, ok := m.Messages[content.MsgPaused]; ok {
 			text = inspect.Text(v.Pack, key)
@@ -1138,8 +1138,8 @@ func (v *Viewer) panel(links []SelectionLink) []inspect.Line {
 	if p := v.World.Player(); v.Play && p != nil {
 		text(inspect.Player(v.Pack, p)...)
 		text("")
-		text(helpLines(PlayBindings, n)...)
-		text(helpLines(CommonBindings, n)...)
+		text(helpLines(v.Pack, PlayBindings, n)...)
+		text(helpLines(v.Pack, CommonBindings, n)...)
 		text(v.flipbookLine())
 		if v.Selected != nil {
 			text("")
@@ -1176,8 +1176,8 @@ func (v *Viewer) panel(links []SelectionLink) []inspect.Line {
 			}
 		}
 		text("")
-		text(helpLines(ToolBindings, n)...)
-		text(helpLines(CommonBindings, n)...)
+		text(helpLines(v.Pack, ToolBindings, n)...)
+		text(helpLines(v.Pack, CommonBindings, n)...)
 		text(v.flipbookLine())
 	}
 	for i := range lines {

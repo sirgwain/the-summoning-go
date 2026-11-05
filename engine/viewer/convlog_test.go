@@ -8,6 +8,7 @@ import (
 	"github.com/sirgwain/the-summoning-go/devpack"
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/input"
+	"github.com/sirgwain/the-summoning-go/engine/inspect"
 )
 
 // paneText returns the log pane's rows as text, one per row.
@@ -47,11 +48,11 @@ func TestConversationLogWindow(t *testing.T) {
 	}
 	// The newest conversation comes first, under its heading.
 	text := paneText(lv)
-	if len(text) < 4 || !strings.HasSuffix(text[0], "0:00:00") || !strings.Contains(text[1], "Back again, "+DefaultName) {
+	if len(text) < 4 || !strings.HasSuffix(text[0], "0:00:00") || !strings.Contains(text[1], "Back again, "+inspect.Labels["ui.stranger"]) {
 		t.Fatalf("pane: %q", text)
 	}
 	all := strings.Join(text, "|")
-	for _, want := range []string{DefaultName + " asks: magic", "Watch my hands.", "Taught the gesture I B F"} {
+	for _, want := range []string{inspect.Labels["ui.stranger"] + " asks: magic", "Watch my hands.", "Taught the gesture I B F"} {
 		if !strings.Contains(all, want) {
 			t.Errorf("the pane lacks %q: %q", want, text)
 		}

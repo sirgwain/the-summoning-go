@@ -1,7 +1,6 @@
 package window
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"strconv"
@@ -99,7 +98,7 @@ func (s *Window) drawFront(screen *ebiten.Image) {
 		s.printFace(screen, font.Large, b.Label, r.Min.X+(r.Dx()-w)/2, r.Min.Y+2, 1, color.White)
 	}
 	if f.RollsShown > 0 && !panel.Empty() {
-		text := fmt.Sprintf("Rolls: %d", f.Rolls)
+		text := s.ui("ui.rolls", "n", f.Rolls)
 		a := f.RollsShown
 		c := color.RGBA{uint8(200 * a), uint8(220 * a), uint8(255 * a), uint8(255 * a)}
 		s.printFace(screen, font.Large, text, (f.Size.X-font.Large.Measure(text))/2, panel.Max.Y+viewer.MenuLineHeight/2, 1, c)

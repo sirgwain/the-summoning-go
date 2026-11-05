@@ -686,10 +686,10 @@ func (s *Window) drawMapPage(fv *viewer.FullMapView) {
 	s.drawMapLegend(page, fv, off, t)
 	s.drawMapNote(page, fv, off)
 	// The keys along the bottom, wrapped onto more lines when the sheet is narrow.
-	keys := []string{"Wheel zoom", "Drag pan", "Right-click follow", "Backspace back", "PgUp/PgDn levels", "Home here", "M close"}
 	n := fv.Inner.Dx() / viewer.CharWidth
 	var lines []string
-	for _, k := range keys {
+	for _, key := range []string{"zoom", "pan", "go", "back", "flip", "home", "shut"} {
+		k := s.ui("ui.map.keys." + key)
 		if last := len(lines) - 1; last >= 0 && len(lines[last])+2+len(k) <= n {
 			lines[last] += "  " + k
 		} else {
@@ -713,14 +713,14 @@ func (s *Window) drawMapLegend(page *ebiten.Image, fv *viewer.FullMapView, off i
 	n := first + len(fv.Legend)
 	w := 0
 	for _, k := range fv.Legend {
-		w = max(w, len(viewer.MapKindNames[k]))
+		w = max(w, len(s.v.MapKindName(k)))
 	}
-	w = max(w, 3)*viewer.CharWidth + 40
+	w = max(w, len(s.ui("ui.map.you")))*viewer.CharWidth + 40
 	box := image.Rect(at.X-6, at.Y-6, at.X+w, at.Y+n*viewer.LegendLine+2)
 	vector.FillRect(page, float32(box.Min.X), float32(box.Min.Y-font.LargeLineHeight/2), float32(box.Dx()),
 		float32(box.Dy()+font.LargeLineHeight/2), color.RGBA{196, 165, 112, 235}, false)
 	vector.StrokeRect(page, float32(box.Min.X), float32(box.Min.Y), float32(box.Dx()), float32(box.Dy()), 2, frame.Ink, true)
-	s.printFace(page, font.Large, "Key", box.Min.X+8, box.Min.Y-font.LargeLineHeight+4, 1, color.RGBA{96, 54, 22, 255})
+	s.printFace(page, font.Large, s.ui("ui.map.key"), box.Min.X+8, box.Min.Y-font.LargeLineHeight+4, 1, color.RGBA{96, 54, 22, 255})
 	// Each line's symbol is drawn by a one-cell map of its own.
 	line := func(i int, name string, mc viewer.MapCell, talker bool) {
 		y := at.Y + i*viewer.LegendLine
@@ -737,7 +737,7 @@ func (s *Window) drawMapLegend(page *ebiten.Image, fv *viewer.FullMapView, off i
 		s.printIn(page, name, at.X+26, y, color.RGBA{240, 226, 190, 255})
 	}
 	if fv.HasPlayer {
-		line(0, "You", viewer.MapCell{}, false)
+		line(0, s.ui("ui.map.you"), viewer.MapCell{}, false)
 	}
 	for i, k := range fv.Legend {
 		mc := viewer.MapCell{Kind: viewer.MapFloor, Symbol: k}
@@ -747,7 +747,7 @@ func (s *Window) drawMapLegend(page *ebiten.Image, fv *viewer.FullMapView, off i
 		case viewer.MapNPC:
 			mc.Symbol = viewer.MapNone
 		}
-		line(first+i, viewer.MapKindNames[k], mc, k == viewer.MapNPC)
+		line(first+i, s.v.MapKindName(k), mc, k == viewer.MapNPC)
 	}
 }
 

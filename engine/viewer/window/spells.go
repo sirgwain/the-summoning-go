@@ -44,7 +44,8 @@ func (s *Window) drawSpellPanel(screen *ebiten.Image) {
 		r := sp.Screen(e.Button)
 		fill(r, actionColor)
 		stroke(r, slotEdgeColor)
-		s.print(screen, "Memorize", r.Min.X+(r.Dx()-8*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
+		memorize := s.ui("ui.memorize")
+		s.print(screen, memorize, r.Min.X+(r.Dx()-len(memorize)*viewer.CharWidth)/2, r.Min.Y+(r.Dy()-viewer.LineHeight)/2)
 	}
 	if !sp.Bar.Empty() {
 		fill(sp.Screen(sp.Bar), slotColor)

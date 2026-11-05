@@ -39,22 +39,23 @@ func Message(p *content.Pack, e sim.Event) string {
 	}
 	skill := e.Item
 	if n, ok := strings.CutPrefix(e.Item, "skill."); ok {
-		skill = SkillName(n)
+		skill = SkillName(p, n)
 	}
 	return strings.NewReplacer("{item}", ItemName(p, e.Item), "{skill}", skill, "{school}", Text(p, e.Item), "{name}", Text(p, e.Item),
 		"{score}", strconv.Itoa(e.Score), "{damage}", strconv.Itoa(e.Damage)).Replace(Text(p, e.Text))
 }
 
-// SkillName names skill index n, as a string: weapon classes 0–3, then schools 0–3.
-func SkillName(n string) string {
+// SkillName names skill index n, as a string: weapon classes 0–3, then schools 0–3, each by
+// its label.
+func SkillName(p *content.Pack, n string) string {
 	i, err := strconv.Atoi(n)
 	if err != nil || i < 0 || i >= sim.Skills {
 		return n
 	}
 	if i < sim.SkillSchool {
-		return fmt.Sprintf("weapon class %d", i)
+		return UI(p, "ui.weapon_class", "n", i)
 	}
-	return []string{"Wizardry", "Sorcery", "Enchantment", "Healing"}[i-sim.SkillSchool]
+	return UI(p, fmt.Sprintf("ui.school.%d", i-sim.SkillSchool))
 }
 
 // Hooks returns the procedures feature f's hooks run, in the order Cell lists them, skipping
@@ -381,7 +382,7 @@ func Player(p *content.Pack, pl *sim.Player) []string {
 	var skills []string
 	for i, s := range pl.Skills {
 		if s.Level > 0 || s.Practice > 0 {
-			skills = append(skills, fmt.Sprintf("%s %d (%d/%d)", SkillName(strconv.Itoa(i)), s.Level, s.Practice, s.Threshold))
+			skills = append(skills, fmt.Sprintf("%s %d (%d/%d)", SkillName(p, strconv.Itoa(i)), s.Level, s.Practice, s.Threshold))
 		}
 	}
 	if len(skills) > 0 {

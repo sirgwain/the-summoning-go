@@ -287,6 +287,10 @@ labels, skins, ranged combat and higher-resolution art) is planned in [packs-pla
 
 ## UI
 
+- **Words.** Every word the engine's own panels show is a label: a text key named by its role
+  (`ui.hit_points`, `ui.memorize`), with an English default kept in `engine/inspect` and
+  overridden by the pack's text (pack.md, Labels). The panels never hold words of their own; a
+  test walks them with a pack that renames every label and finds no default left.
 - **Frames.** The engine draws its own panel frames, in the Summoning's spirit but not its art:
   generated from noise and rules (`engine/frame`) at any size, so no original art is needed. A
   frame is `frame.Width` (8) of the panel's own pixels on each side, scaled with the panel, with

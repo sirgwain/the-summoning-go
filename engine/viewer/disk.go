@@ -49,15 +49,15 @@ func (v *Viewer) menuDone(f *Frontend) {
 		v.SaveGame(f.SaveAs)
 	case f.Delete != "":
 		if err := os.Remove(v.savePath(f.Delete)); err != nil {
-			v.notice("Not deleted: " + err.Error())
+			v.notice(v.ui("ui.not_deleted", "error", err))
 		} else {
-			v.notice("Deleted")
+			v.notice(v.ui("ui.deleted"))
 		}
 	case f.RenameTo != "":
 		if err := save.Rename(v.savePath(f.Rename), v.savePath(f.RenameTo), f.RenameTo); err != nil {
-			v.notice("Not renamed: " + err.Error())
+			v.notice(v.ui("ui.not_renamed", "error", err))
 		} else {
-			v.notice("Renamed")
+			v.notice(v.ui("ui.renamed"))
 		}
 	case f.Restore != "":
 		// The restored world has no conversation open.
@@ -97,28 +97,28 @@ func (f *Frontend) layoutDisk() bool {
 	}
 	switch f.Screen {
 	case ScreenSave:
-		f.Title = "Save the game"
-		f.Lines = []string{"Name: " + f.typed + "_", "Type a name, or choose a save to replace."}
+		f.Title = f.ui("ui.save.title")
+		f.Lines = []string{f.ui("ui.save.name") + f.typed + "_", f.ui("ui.save.help")}
 		saves()
-		opts = append(opts, option{"ok", "Save"}, option{"back", "Cancel"})
+		opts = append(opts, option{"ok", f.ui("ui.save")}, option{"back", f.ui("ui.cancel")})
 	case ScreenDelete:
-		f.Title = "Delete a saved game"
+		f.Title = f.ui("ui.delete.title")
 		saves()
-		opts = append(opts, option{"back", "Cancel"})
+		opts = append(opts, option{"back", f.ui("ui.cancel")})
 	case ScreenRename:
-		f.Title = "Rename a saved game"
+		f.Title = f.ui("ui.rename.title")
 		saves()
-		opts = append(opts, option{"back", "Cancel"})
+		opts = append(opts, option{"back", f.ui("ui.cancel")})
 	case ScreenRenameTo:
-		f.Title = "Rename " + f.Rename
-		f.Lines = []string{"New name: " + f.typed + "_"}
-		opts = append(opts, option{"ok", "Rename"}, option{"back", "Cancel"})
+		f.Title = f.ui("ui.rename.to", "name", f.Rename)
+		f.Lines = []string{f.ui("ui.rename.name") + f.typed + "_"}
+		opts = append(opts, option{"ok", f.ui("ui.rename")}, option{"back", f.ui("ui.cancel")})
 	case ScreenConfirm:
-		f.Title = "Leave the game for the main menu?"
+		f.Title = f.ui("ui.leave.title")
 		if f.disk == content.MenuQuit {
-			f.Title = "Quit the game?"
+			f.Title = f.ui("ui.quit.title")
 		}
-		opts = append(opts, option{"yes", "Yes"}, option{"back", "No"})
+		opts = append(opts, option{"yes", f.ui("ui.yes")}, option{"back", f.ui("ui.no")})
 	default:
 		return false
 	}

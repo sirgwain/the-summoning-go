@@ -7,7 +7,7 @@ import (
 )
 
 func TestHelpLinesPack(t *testing.T) {
-	got := helpLines([]Binding{{"A", "one"}, {"B", "two"}, {"C", "three"}}, 12)
+	got := helpLines(nil, []Binding{{"A", "one"}, {"B", "two"}, {"C", "three"}}, 12)
 	if want := []string{"A one  B two", "C three"}; !slices.Equal(got, want) {
 		t.Errorf("helpLines = %q, want %q", got, want)
 	}

@@ -63,7 +63,7 @@ func (s *Window) drawSplash(screen *ebiten.Image, shown int) {
 	if a := ramp(viewer.SplashPromptUpdate, viewer.SplashPromptFade); a > 0 {
 		w, h := float64(r.Dx()), float64(r.Dy())
 		c := color.RGBA{uint8(224 * a), uint8(208 * a), uint8(179 * a), uint8(255 * a)}
-		s.splashText(screen, "PRESS A KEY OR CLICK TO CONTINUE", float64(r.Min.X)+w/2, float64(r.Min.Y)+h*0.91, w/720, c)
+		s.splashText(screen, s.ui("ui.splash.prompt"), float64(r.Min.X)+w/2, float64(r.Min.Y)+h*0.91, w/720, c)
 	}
 }
 
@@ -89,8 +89,8 @@ func (s *Window) drawSplashTitle(screen *ebiten.Image, r image.Rectangle, fill f
 		dst = s.title
 	}
 	x, y, w, h := float64(r.Min.X), float64(r.Min.Y), float64(r.Dx()), float64(r.Dy())
-	b := s.splashText(dst, "THE", x+w/2, y+h*0.125, w/320, color.RGBA{196, 180, 157, 255})
-	b = b.Union(s.splashText(dst, "S U M M O N I N G", x+w/2, y+h*0.205, w/190, color.RGBA{195, 74, 57, 255}))
+	b := s.splashText(dst, s.ui("ui.splash.over"), x+w/2, y+h*0.125, w/320, color.RGBA{196, 180, 157, 255})
+	b = b.Union(s.splashText(dst, s.ui("ui.splash.title"), x+w/2, y+h*0.205, w/190, color.RGBA{195, 74, 57, 255}))
 	if fill >= 1 || b.Empty() {
 		return
 	}

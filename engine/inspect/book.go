@@ -12,16 +12,16 @@ import (
 // What the book says of its entries (docs/spec/player.md, The book), and the names it and the
 // other windows give templates, levels, spells and weapon classes.
 
-// Hints for what the next stage would show.
+// Hints for what the next stage would show, by label key.
 const (
-	HintFight  = "Fight one to learn more."
-	HintDefeat = "Defeat one to learn more."
-	HintPickUp = "Pick one up to learn more."
-	HintUse    = "Use one to learn more."
+	HintFight  = "ui.hint.fight"
+	HintDefeat = "ui.hint.defeat"
+	HintPickUp = "ui.hint.pick_up"
+	HintUse    = "ui.hint.use"
 	// HintUseOrThrow and HintThrow are for items that poison when thrown.
-	HintUseOrThrow = "Use or throw one to learn more."
-	HintThrow      = "Throw one to learn more."
-	HintWear       = "Wear one to learn more."
+	HintUseOrThrow = "ui.hint.use_or_throw"
+	HintThrow      = "ui.hint.throw"
+	HintWear       = "ui.hint.wear"
 )
 
 // ThingName returns thing template id's name: its own, else its conversation's, else its id.
@@ -67,7 +67,7 @@ func WeaponClassName(p *content.Pack, n int) string {
 			}
 		}
 	}
-	return fmt.Sprintf("weapon class %d", n)
+	return UI(p, "ui.weapon_class", "n", n)
 }
 
 // PlayTime returns step as play time: hours, minutes and seconds.
@@ -76,14 +76,14 @@ func PlayTime(step int64) string {
 	return fmt.Sprintf("%d:%02d:%02d", s/3600, s/60%60, s%60)
 }
 
-// Label returns the pack's inventory label key in words, or fallback when the pack has none.
-func Label(p *content.Pack, key, fallback string) string {
+// Label returns the pack's inventory label key in words, or else engine label ui.
+func Label(p *content.Pack, key, ui string) string {
 	if inv := p.Inventory; inv != nil {
 		if k, ok := inv.Labels[key]; ok {
 			return Text(p, k)
 		}
 	}
-	return fallback
+	return UI(p, ui)
 }
 
 // Weight returns a weight in half kilograms in words.
@@ -110,9 +110,9 @@ func BookPicture(p *content.Pack, t *content.Thing) content.Image {
 // across, which only the full book shows, has no level.
 func firstSeen(p *content.Pack, e *sim.Entry) string {
 	if e.Level == "" {
-		return "Not come across yet."
+		return UI(p, "ui.book.not_seen")
 	}
-	return "First seen: " + LevelName(p, e.Level) + ", " + PlayTime(e.Step)
+	return UI(p, "ui.book.first_seen", "level", LevelName(p, e.Level), "time", PlayTime(e.Step))
 }
 
 // CreatureLines returns what the book says of creature template id, as the entry e stands, and
@@ -127,76 +127,76 @@ func CreatureLines(p *content.Pack, id string, e *sim.Entry) (lines []string, hi
 		if talks {
 			return ""
 		}
-		return h
+		return UI(p, h)
 	}
 	if t.Lore != "" {
 		lines = append(lines, Text(p, t.Lore))
 	}
 	if talks {
-		lines = append(lines, "Can be talked to.")
+		lines = append(lines, UI(p, "ui.book.talks"))
 	}
 	lines = append(lines, firstSeen(p, e))
 	if e.Stage < sim.StageFought {
 		return lines, next(HintFight)
 	}
 	if t.Attack != (content.Dice{}) {
-		lines = append(lines, "Strikes for "+t.Attack.String()+".")
+		lines = append(lines, UI(p, "ui.book.strikes", "dice", t.Attack))
 	}
-	for _, b := range []struct{ behavior, text string }{
-		{content.BehaviorPoisonous, "Its blows poison."},
-		{content.BehaviorHurtsOnContact, "Touching it hurts."},
-		{content.BehaviorDeathBlow, "One blow from it can kill."},
-		{content.BehaviorMirrors, "Hurting it hurts you as much."},
+	for _, b := range []struct{ behavior, label string }{
+		{content.BehaviorPoisonous, "ui.book.poisonous"},
+		{content.BehaviorHurtsOnContact, "ui.book.hurts_on_contact"},
+		{content.BehaviorDeathBlow, "ui.book.death_blow"},
+		{content.BehaviorMirrors, "ui.book.mirrors"},
 	} {
 		if t.Has(b.behavior) {
-			lines = append(lines, b.text)
+			lines = append(lines, UI(p, b.label))
 		}
 	}
 	if t.Spell != "" {
-		lines = append(lines, "Casts "+SpellName(p, t.Spell)+".")
+		lines = append(lines, UI(p, "ui.book.casts", "spell", SpellName(p, t.Spell)))
 	}
 	for _, d := range e.Defenses {
 		switch d {
 		case sim.DefenseVulnerable:
 			if t.Vulnerability != nil {
-				lines = append(lines, "Vulnerable to: "+WeaponClassName(p, *t.Vulnerability))
+				lines = append(lines, UI(p, "ui.book.vulnerable", "class", WeaponClassName(p, *t.Vulnerability)))
 			}
 		case content.BehaviorResistsFire:
-			lines = append(lines, "Resists fire.")
+			lines = append(lines, UI(p, "ui.book.resists_fire"))
 		case content.BehaviorResistsLight:
-			lines = append(lines, "Resists lightning.")
+			lines = append(lines, UI(p, "ui.book.resists_light"))
 		case content.BehaviorResistsPoison:
-			lines = append(lines, "Resists poison.")
+			lines = append(lines, UI(p, "ui.book.resists_poison"))
 		case content.BehaviorResistsTeleport:
-			lines = append(lines, "Resists teleporting.")
+			lines = append(lines, UI(p, "ui.book.resists_teleport"))
 		case content.BehaviorPhysicalOnly:
-			lines = append(lines, "Magic does not hurt it, and of weapons only silver does.")
+			lines = append(lines, UI(p, "ui.book.physical_only"))
 		}
 	}
 	if e.Stage < sim.StageKilled {
 		return lines, next(HintDefeat)
 	}
 	if t.HitPoints != (content.Dice{}) {
-		lines = append(lines, "Hit points: "+t.HitPoints.String())
+		lines = append(lines, UI(p, "ui.book.hit_points", "dice", t.HitPoints))
 	}
 	if t.Experience != (content.Dice{}) {
-		lines = append(lines, "Worth "+t.Experience.String()+" experience.")
+		lines = append(lines, UI(p, "ui.book.worth", "dice", t.Experience))
 	}
-	lines = append(lines, fmt.Sprintf("Defeated: %d", e.Kills))
+	lines = append(lines, UI(p, "ui.book.defeated", "n", e.Kills))
 	if len(e.Drops) > 0 {
 		names := make([]string, len(e.Drops))
 		for i, d := range e.Drops {
 			names[i] = ItemName(p, d)
 		}
-		lines = append(lines, "Drops: "+strings.Join(names, ", "))
+		lines = append(lines, UI(p, "ui.book.drops", "list", strings.Join(names, ", ")))
 	}
 	return lines, ""
 }
 
-// wornOn says where an item of wear w is worn, "" for a hand.
+// wornOn is the label saying where an item of wear w is worn, none for a hand.
 var wornOn = map[string]string{
-	content.WearHead: "Worn on the head.", content.WearBody: "Worn on the body.", content.WearFeet: "Worn on the feet.",
-	content.WearArms: "Worn on the arms.", content.WearNeck: "Worn about the neck.", content.WearQuiver: "Worn as a quiver.",
+	content.WearHead: "ui.book.worn.head", content.WearBody: "ui.book.worn.body", content.WearFeet: "ui.book.worn.feet",
+	content.WearArms: "ui.book.worn.arms", content.WearNeck: "ui.book.worn.neck", content.WearQuiver: "ui.book.worn.quiver",
 }
 
 // ItemLines returns what the book says of item id, as the entry e stands, with the recipes it
@@ -215,39 +215,42 @@ func ItemLines(p *content.Pack, id string, e *sim.Entry, recipes ...sim.Recipe) 
 		return append(lines, scrollLines(p, it.Teaches)...), ""
 	}
 	if e.Stage < sim.StageHandled {
-		return lines, HintPickUp
+		return lines, UI(p, HintPickUp)
 	}
-	lines = append(lines, Label(p, content.LabelWeight, "Weight: ")+Weight(it.Weight))
-	lines = append(lines, strikeLines(it)...)
+	lines = append(lines, Label(p, content.LabelWeight, "ui.weight")+Weight(it.Weight))
+	lines = append(lines, strikeLines(p, it)...)
 	if it.Armor > 0 {
-		lines = append(lines, Label(p, content.LabelArmor, "AC bonus of ")+fmt.Sprint(it.Armor))
+		lines = append(lines, Label(p, content.LabelArmor, "ui.armor_bonus")+fmt.Sprint(it.Armor))
 	}
 	if s := wornOn[it.Wear]; s != "" {
-		lines = append(lines, s)
+		lines = append(lines, UI(p, s))
 	}
 	if slices.Contains(it.Tags, "two_handed") {
-		lines = append(lines, Label(p, content.LabelTwoHanded, "Requires two hands"))
+		lines = append(lines, Label(p, content.LabelTwoHanded, "ui.two_handed"))
 	}
 	if c := it.Container; c != nil {
-		lines = append(lines, fmt.Sprintf("Holds %d objects, of size up to %d.", c.Capacity, c.Largest))
+		lines = append(lines, UI(p, "ui.book.holds", "n", c.Capacity, "m", c.Largest))
 		if c.Weightless {
-			lines = append(lines, "What it holds weighs nothing.")
+			lines = append(lines, UI(p, "ui.book.weightless"))
 		}
 	}
 	if it.Charges > 1 {
-		lines = append(lines, fmt.Sprintf("Charges: %d", it.Charges))
+		lines = append(lines, UI(p, "ui.book.charges", "n", it.Charges))
 	}
 	if e.Stage < sim.StageUsed {
-		return lines, useHint(it)
+		if h := useHint(it); h != "" {
+			return lines, UI(p, h)
+		}
+		return lines, ""
 	}
 	if it.Effect != "" {
 		lines = append(lines, Text(p, it.Effect))
 	}
 	if it.Casts != nil {
-		lines = append(lines, "Casts "+SpellName(p, it.Casts.Spell)+".")
+		lines = append(lines, UI(p, "ui.book.casts", "spell", SpellName(p, it.Casts.Spell)))
 	}
 	if it.PoisonsThrown {
-		lines = append(lines, "Thrown, it poisons what it hits.")
+		lines = append(lines, UI(p, "ui.book.thrown_poisons"))
 	}
 	return lines, ""
 }
@@ -258,24 +261,25 @@ func RecipeLines(p *content.Pack, id string, recipes []sim.Recipe) []string {
 	var lines []string
 	for _, r := range recipes {
 		spell, holder, into := SpellName(p, r.Spell), ItemName(p, r.Holder), ItemName(p, r.Into)
-		from := "anything else"
+		from := ""
 		if r.From != "" {
 			from = ItemName(p, r.From)
 		}
+		args := []any{"spell", spell, "holder", article(holder), "into", into, "from", from}
 		switch id {
 		case r.From:
-			lines = append(lines, fmt.Sprintf("%s, with %s, makes it into %s.", spell, article(holder), into))
+			lines = append(lines, UI(p, "ui.book.makes", args...))
 		case r.Into:
 			if r.From == "" {
-				lines = append(lines, fmt.Sprintf("Made by %s in %s from anything else.", spell, article(holder)))
+				lines = append(lines, UI(p, "ui.book.made_any", args...))
 			} else {
-				lines = append(lines, fmt.Sprintf("Made by %s from %s in %s.", spell, from, article(holder)))
+				lines = append(lines, UI(p, "ui.book.made", args...))
 			}
 		case r.Holder:
 			if r.From == "" {
-				lines = append(lines, fmt.Sprintf("%s fills it with %s from anything else.", spell, into))
+				lines = append(lines, UI(p, "ui.book.fills_any", args...))
 			} else {
-				lines = append(lines, fmt.Sprintf("%s fills it from %s with %s.", spell, from, into))
+				lines = append(lines, UI(p, "ui.book.fills", args...))
 			}
 		}
 	}
@@ -319,23 +323,23 @@ func scrollLines(p *content.Pack, gesture string) []string {
 		if sp.Gesture != gesture {
 			continue
 		}
-		teaches := "Teaches " + SpellName(p, id)
+		teaches := UI(p, "ui.book.teaches", "spell", SpellName(p, id))
 		if m := p.Magic; m != nil && sp.School >= 0 && sp.School < len(m.Schools) {
-			teaches += " (" + Text(p, m.Schools[sp.School]) + ")"
+			teaches = UI(p, "ui.book.teaches_school", "spell", SpellName(p, id), "school", Text(p, m.Schools[sp.School]))
 		}
-		lines := []string{teaches + ".", fmt.Sprintf("Costs %d magic points.", sp.Cost)}
+		lines := []string{teaches, UI(p, "ui.book.costs", "n", sp.Cost)}
 		if sp.Effect != "" {
 			lines = append(lines, Text(p, sp.Effect))
 		}
 		return lines
 	}
-	return []string{"Teaches the gesture " + strings.Join(strings.Split(gesture, ""), " ") + "."}
+	return []string{UI(p, "ui.book.gesture", "icons", strings.Join(strings.Split(gesture, ""), " "))}
 }
 
 // strikeLines describe item it's strike actions as the hotbar's boxes number them: a single one
 // by its damage; with two, each with its damage, and the second whether it is slower and the
 // skill it needs.
-func strikeLines(it *content.Item) []string {
+func strikeLines(p *content.Pack, it *content.Item) []string {
 	var strikes []content.ItemAction
 	for _, a := range it.Actions {
 		if a.Attack() && a.Damage != (content.Dice{}) {
@@ -343,16 +347,16 @@ func strikeLines(it *content.Item) []string {
 		}
 	}
 	if len(strikes) == 1 {
-		return []string{"Strikes for " + strikes[0].Damage.String() + "."}
+		return []string{UI(p, "ui.book.strikes", "dice", strikes[0].Damage)}
 	}
 	var out []string
 	for i, a := range strikes {
-		s := fmt.Sprintf("Strike %d: %s damage", i+1, a.Damage)
+		s := UI(p, "ui.book.strike_n", "n", i+1, "dice", a.Damage)
 		if i > 0 && a.Delay > strikes[0].Delay {
-			s += ", slower"
+			s += UI(p, "ui.book.slower")
 		}
 		if a.Skill > 0 {
-			s += fmt.Sprintf(", needs skill %d", a.Skill)
+			s += UI(p, "ui.book.needs_skill", "n", a.Skill)
 		}
 		out = append(out, s+".")
 	}

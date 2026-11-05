@@ -42,12 +42,20 @@ const (
 	MapNone = -1
 )
 
-// MapKindNames name the kinds in the map's legend and its notes.
-var MapKindNames = [MapKinds]string{
-	MapFloor: "Floor", MapWall: "Wall", MapDoor: "Door", MapWater: "Water", MapExit: "Stairs",
-	MapTeleporter: "Teleporter", MapHole: "Pit", MapTrapdoor: "Trapdoor", MapPlate: "Plate",
-	MapMark: "Rune", MapSocket: "Gem socket", MapMouth: "Mouth",
-	MapThurisaz: "Thurisaz", MapGebo: "Gebo", MapRaido: "Raido", MapNPC: "NPC", MapLever: "Lever",
+// mapKindLabels are the labels naming the kinds in the map's legend and its notes.
+var mapKindLabels = [MapKinds]string{
+	MapFloor: "ui.map.floor", MapWall: "ui.map.wall", MapDoor: "ui.map.door", MapWater: "ui.map.water", MapExit: "ui.map.exit",
+	MapTeleporter: "ui.map.teleport", MapHole: "ui.map.hole", MapTrapdoor: "ui.map.trapdoor", MapPlate: "ui.map.plate",
+	MapMark: "ui.map.mark", MapSocket: "ui.map.socket", MapMouth: "ui.map.mouth",
+	MapThurisaz: "ui.map.rune.1", MapGebo: "ui.map.rune.2", MapRaido: "ui.map.rune.3", MapNPC: "ui.map.npc", MapLever: "ui.map.lever",
+}
+
+// MapKindName names map kind k, as the legend and the notes show it.
+func (v *Viewer) MapKindName(k int) string {
+	if k < 0 || k >= MapKinds {
+		return ""
+	}
+	return v.ui(mapKindLabels[k])
 }
 
 // runeSymbols are the symbols of the rune marks the game's runes teleport to, by rune: 1 the
@@ -245,7 +253,7 @@ func (v *Viewer) levelName(id string) string {
 	if d := v.Pack.Levels[id]; d != nil && d.Name != "" {
 		return inspect.Text(v.Pack, d.Name)
 	}
-	return "Level " + id
+	return v.ui("ui.map.level", "id", id)
 }
 
 // mapShowable reports whether the full map can show level id: visited, loaded, not refusing.
@@ -395,10 +403,10 @@ type MapLabel struct {
 const LegendLine = LineHeight + 4
 
 // legendWidth is the full map's legend's width for map m.
-func legendWidth(m *LevelMap) int {
-	w := len("You")
+func (v *Viewer) legendWidth(m *LevelMap) int {
+	w := len(v.ui("ui.map.you"))
 	for _, k := range m.Legend {
-		w = max(w, len(MapKindNames[k]))
+		w = max(w, len(v.MapKindName(k)))
 	}
 	return 40 + w*CharWidth
 }
@@ -432,7 +440,7 @@ func (v *Viewer) fullMap(cursor image.Point) *FullMapView {
 	}
 	fv := &FullMapView{LevelMap: m, Title: m.Name, Selected: st.selected, Arrival: st.arrival}
 	if !m.Current {
-		fv.Title += " - visited"
+		fv.Title += v.ui("ui.map.visited")
 	}
 	fv.Rect = image.Rect(Margin, Margin, v.Screen.X-Margin, v.Screen.Y-Margin)
 	inner := fv.Rect.Inset(3 * Margin)
@@ -441,7 +449,7 @@ func (v *Viewer) fullMap(cursor image.Point) *FullMapView {
 	inner.Max.X -= rw
 	fv.Inner = inner
 	fv.LegendAt = image.Pt(inner.Min.X, inner.Min.Y+3*LineHeight)
-	fv.Area = image.Rect(inner.Min.X+legendWidth(m)+Margin, inner.Min.Y+2*LineHeight, inner.Max.X, inner.Max.Y)
+	fv.Area = image.Rect(inner.Min.X+v.legendWidth(m)+Margin, inner.Min.Y+2*LineHeight, inner.Max.X, inner.Max.Y)
 	fit, center := mapFit(m, fv.Area)
 	fv.Zoom, fv.Center = fit, center
 	if st.zoom > 0 {
@@ -558,19 +566,19 @@ func (fv *FullMapView) note(v *Viewer) {
 	name := ""
 	switch {
 	case mc.Kind == MapDoor && mc.Open:
-		name = "Door, open"
+		name = v.ui("ui.map.door_open")
 	case mc.Kind == MapDoor:
-		name = "Door, closed"
+		name = v.ui("ui.map.door_shut")
 	case mc.Symbol == MapSocket:
-		name = fmt.Sprintf("Gem socket, %d of %d set", mc.Gems, mc.Places)
+		name = v.ui("ui.map.sockets", "n", mc.Gems, "m", mc.Places)
 	case mc.Symbol == MapLever && mc.Open:
-		name = "Lever, on"
+		name = v.ui("ui.map.lever_on")
 	case mc.Symbol == MapLever:
-		name = "Lever, off"
+		name = v.ui("ui.map.lever_off")
 	case isRune(mc.Symbol):
-		name = "Rune mark, " + MapKindNames[mc.Symbol]
+		name = v.ui("ui.map.rune", "name", v.MapKindName(mc.Symbol))
 	case mc.Symbol != MapNone:
-		name = MapKindNames[mc.Symbol]
+		name = v.MapKindName(mc.Symbol)
 	}
 	if name != "" {
 		fv.Note = append(fv.Note, NoteLine{Text: name})
@@ -582,7 +590,7 @@ func (fv *FullMapView) note(v *Viewer) {
 			}
 		}
 		if len(mc.Heard) == 0 {
-			fv.Note = append(fv.Note, NoteLine{Text: "What it says is not known"})
+			fv.Note = append(fv.Note, NoteLine{Text: v.ui("ui.map.unheard")})
 		}
 	}
 	for _, t := range fv.Talkers {
@@ -603,24 +611,24 @@ func (fv *FullMapView) note(v *Viewer) {
 		}
 		if out {
 			if lk.To.Level == fv.Level {
-				place = fmt.Sprintf("here, %d cells", cellDistance(c, lk.To.Cell))
+				place = v.ui("ui.map.here", "n", cellDistance(c, lk.To.Cell))
 			} else {
 				place += fmt.Sprintf(" (%d, %d)", lk.To.Cell[0], lk.To.Cell[1])
 			}
-			fv.Note = append(fv.Note, NoteLine{Text: "To " + place, Kind: lk.Kind})
+			fv.Note = append(fv.Note, NoteLine{Text: v.ui("ui.map.to", "place", place), Kind: lk.Kind})
 			outs++
 			continue
 		}
 		if lk.From.Level == fv.Level {
-			place = fmt.Sprintf("here, %d cells", cellDistance(c, lk.From.Cell))
+			place = v.ui("ui.map.here", "n", cellDistance(c, lk.From.Cell))
 		}
-		fv.Note = append(fv.Note, NoteLine{Text: "From " + place, Kind: lk.Kind})
+		fv.Note = append(fv.Note, NoteLine{Text: v.ui("ui.map.from", "place", place), Kind: lk.Kind})
 		ins++
 	}
 	if outs > 0 {
-		fv.Note = append(fv.Note, NoteLine{Text: "Right-click to follow"})
+		fv.Note = append(fv.Note, NoteLine{Text: v.ui("ui.map.follow")})
 	} else if isLink(mc.Symbol) {
-		fv.Note = append(fv.Note, NoteLine{Text: "Where it leads is not known"})
+		fv.Note = append(fv.Note, NoteLine{Text: v.ui("ui.map.unknown")})
 	}
 	if len(fv.Note) == 0 {
 		return

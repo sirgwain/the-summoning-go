@@ -148,7 +148,7 @@ func (v *Viewer) SpellPanel() *SpellPanel {
 		})
 	}
 	bx := panelPad + iconColumns*iconStep + panelPad
-	for i, b := range []PanelButton{{Name: "learn", Label: "Learn"}, {Name: "back", Label: "Back"}, {Name: "close", Label: "Close"}} {
+	for i, b := range []PanelButton{{Name: "learn", Label: v.ui("ui.learn")}, {Name: "back", Label: v.ui("ui.back")}, {Name: "close", Label: v.ui("ui.close")}} {
 		y := panelPad + i*(buttonHeight+2)
 		b.Rect = image.Rect(bx, y, bx+buttonWidth, y+buttonHeight)
 		sp.Buttons = append(sp.Buttons, b)

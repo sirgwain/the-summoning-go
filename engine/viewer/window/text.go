@@ -5,6 +5,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/sirgwain/the-summoning-go/engine/font"
+	"github.com/sirgwain/the-summoning-go/engine/inspect"
 )
 
 // letters returns face's letters as an image, made once.
@@ -19,6 +20,9 @@ func (s *Window) letters(face *font.Face) *ebiten.Image {
 
 // print draws text on dst in the small face with its first line's top left at (x, y), in
 // white; a newline starts a line below.
+// ui returns label key in words (inspect.UI).
+func (s *Window) ui(key string, args ...any) string { return inspect.UI(s.v.Pack, key, args...) }
+
 func (s *Window) print(dst *ebiten.Image, text string, x, y int) {
 	s.printFace(dst, font.Small, text, x, y, 1, color.White)
 }

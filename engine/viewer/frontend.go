@@ -34,11 +34,11 @@ const (
 // NameLength is the longest name a character may have.
 const NameLength = 25
 
-// Attributes are the six attributes in order, with their short labels.
-var (
-	Attributes      = []string{sim.AttrStrength, sim.AttrAgility, sim.AttrEndurance, sim.AttrAccuracy, sim.AttrTalent, sim.AttrPower}
-	AttributeLabels = []string{"STR", "AGI", "END", "ACC", "TAL", "POW"}
-)
+// Attributes are the six attributes in order.
+var Attributes = []string{sim.AttrStrength, sim.AttrAgility, sim.AttrEndurance, sim.AttrAccuracy, sim.AttrTalent, sim.AttrPower}
+
+// AttributeLabel returns attribute name's short label.
+func AttributeLabel(p *content.Pack, name string) string { return inspect.UI(p, "ui.attr."+name) }
 
 // Frontend is the frontend's state.
 type Frontend struct {
@@ -184,6 +184,9 @@ func (f *Frontend) after() {
 
 func (f *Frontend) creation() *content.Creation { return f.pack.Creation }
 
+// ui returns label key in words (inspect.UI).
+func (f *Frontend) ui(key string, args ...any) string { return inspect.UI(f.pack, key, args...) }
+
 // show goes to screen s.
 func (f *Frontend) show(s string) {
 	f.Screen, f.Choice = s, 0
@@ -208,60 +211,60 @@ func (f *Frontend) layout() {
 	case ScreenMenu:
 		f.Title = f.pack.Manifest.Name
 		if c != nil && len(c.Portraits) > 0 {
-			opts = append(opts, option{"create", "Create a character"})
+			opts = append(opts, option{"create", f.ui("ui.menu.create")})
 		}
 		if len(f.Saves) > 0 {
-			opts = append(opts, option{"restore", "Restore a game"})
+			opts = append(opts, option{"restore", f.ui("ui.menu.restore")})
 		}
 		if c != nil && len(c.Premade) > 0 {
-			opts = append(opts, option{"premade", "Select a premade character"})
+			opts = append(opts, option{"premade", f.ui("ui.menu.premade")})
 		}
-		opts = append(opts, option{"quit", "Quit"})
+		opts = append(opts, option{"quit", f.ui("ui.menu.quit")})
 	case ScreenPortrait:
-		f.Title = "Choose your descendant"
-		f.Lines = []string{"Left and Right step through them, R picks one at random."}
+		f.Title = f.ui("ui.portrait.title")
+		f.Lines = []string{f.ui("ui.portrait.help")}
 		f.Portrait = f.portraitImage(c.Portraits[f.portrait])
-		opts = []option{{"prev", "<"}, {"next", ">"}, {"random", "Random"}, {"ok", "Choose"}, {"back", "Back"}}
+		opts = []option{{"prev", "<"}, {"next", ">"}, {"random", f.ui("ui.random")}, {"ok", f.ui("ui.choose")}, {"back", f.ui("ui.back")}}
 	case ScreenName:
-		f.Title = "Your name"
-		f.Lines = []string{f.char.Name + "_", "", fmt.Sprintf("Type a name of up to %d letters.", NameLength)}
-		opts = []option{{"ok", "Go on"}, {"back", "Back"}}
+		f.Title = f.ui("ui.name.title")
+		f.Lines = []string{f.char.Name + "_", "", f.ui("ui.name.help", "n", NameLength)}
+		opts = []option{{"ok", f.ui("ui.go_on")}, {"back", f.ui("ui.back")}}
 	case ScreenMethod:
-		f.Title = "How shall your attributes be made?"
+		f.Title = f.ui("ui.method.title")
 		for i, m := range c.Methods {
 			opts = append(opts, option{fmt.Sprintf("method.%d", i), m.Name})
 		}
-		opts = append(opts, option{"back", "Back"})
+		opts = append(opts, option{"back", f.ui("ui.back")})
 	case ScreenAttributes:
 		f.layoutAttributes()
 		return
 	case ScreenWeapon, ScreenSchool:
 		list := c.WeaponClasses
-		f.Title = "Choose your weapon"
+		f.Title = f.ui("ui.weapon.title")
 		if f.Screen == ScreenSchool {
-			list, f.Title = c.Schools, "Choose your school of magic"
+			list, f.Title = c.Schools, f.ui("ui.school.title")
 		}
 		for i, t := range list {
 			opts = append(opts, option{fmt.Sprintf("train.%d", i), f.trainingName(t, f.Screen == ScreenSchool, i)})
 		}
-		opts = append(opts, option{"back", "Back"})
+		opts = append(opts, option{"back", f.ui("ui.back")})
 	case ScreenPremade:
-		f.Title = "Select a premade character"
+		f.Title = f.ui("ui.menu.premade")
 		for i, pm := range c.Premade {
 			opts = append(opts, option{fmt.Sprintf("premade.%d", i), pm.Name})
 		}
-		opts = append(opts, option{"back", "Back"})
+		opts = append(opts, option{"back", f.ui("ui.back")})
 		if f.Choice < len(c.Premade) {
 			pm := c.Premade[f.Choice]
 			f.Portrait = f.portraitImage(pm.Portrait)
-			f.Lines = []string{attributeLine(pm.Attributes)}
+			f.Lines = []string{f.attributeLine(pm.Attributes)}
 		}
 	case ScreenRestore:
-		f.Title = "Restore a game"
+		f.Title = f.ui("ui.menu.restore")
 		for i, s := range f.Saves {
 			opts = append(opts, option{fmt.Sprintf("save.%d", i), s})
 		}
-		opts = append(opts, option{"back", "Back"})
+		opts = append(opts, option{"back", f.ui("ui.back")})
 	case ScreenScene:
 		return
 	}
@@ -331,15 +334,15 @@ func (f *Frontend) trainingName(t content.Training, school bool, i int) string {
 		return inspect.Text(f.pack, t.Name)
 	}
 	if school {
-		return fmt.Sprintf("School %d", i+1)
+		return f.ui("ui.school", "n", i+1)
 	}
-	return []string{"Sword", "Axe", "Spear", "Bow"}[min(i, 3)]
+	return f.ui(fmt.Sprintf("ui.weapon.%d", min(i, 3)))
 }
 
-func attributeLine(a map[string]int) string {
+func (f *Frontend) attributeLine(a map[string]int) string {
 	var parts []string
-	for i, name := range Attributes {
-		parts = append(parts, fmt.Sprintf("%s %d", AttributeLabels[i], a[name]))
+	for _, name := range Attributes {
+		parts = append(parts, fmt.Sprintf("%s %d", AttributeLabel(f.pack, name), a[name]))
 	}
 	return strings.Join(parts, "  ")
 }
@@ -350,10 +353,11 @@ func (f *Frontend) layoutAttributes() {
 	f.Title = m.Name
 	a := f.char.Attributes
 	f.Lines = []string{
-		fmt.Sprintf("Hit points %d   Magic points %d", a[sim.AttrStrength]+a[sim.AttrEndurance]+20, a[sim.AttrTalent]+a[sim.AttrPower]+20),
+		fmt.Sprintf("%s %d   %s %d", f.ui("ui.hit_points"), a[sim.AttrStrength]+a[sim.AttrEndurance]+20,
+			f.ui("ui.magic_points"), a[sim.AttrTalent]+a[sim.AttrPower]+20),
 	}
 	if len(m.Points) > 0 {
-		f.Lines = append(f.Lines, fmt.Sprintf("Points to spend: %d", f.points))
+		f.Lines = append(f.Lines, f.ui("ui.points_to_spend", "n", f.points))
 	}
 	w := 24 * MenuCharWidth
 	x := (f.Size.X - w) / 2
@@ -361,7 +365,7 @@ func (f *Frontend) layoutAttributes() {
 	for i, name := range Attributes {
 		row := image.Rect(x, y, x+w, y+MenuLineHeight+4)
 		f.Buttons = append(f.Buttons, PanelButton{Rect: row, Name: fmt.Sprintf("attr.%d", i),
-			Label: fmt.Sprintf("%s %2d", AttributeLabels[i], a[name])})
+			Label: fmt.Sprintf("%s %2d", AttributeLabel(f.pack, name), a[name])})
 		if len(m.Points) > 0 {
 			bw := 3 * MenuCharWidth
 			f.Buttons = append(f.Buttons,
@@ -372,12 +376,12 @@ func (f *Frontend) layoutAttributes() {
 	}
 	var opts []option
 	if len(m.Roll) > 0 && len(m.Points) == 0 {
-		opts = append(opts, option{"reroll", "Roll again"})
+		opts = append(opts, option{"reroll", f.ui("ui.reroll")})
 	}
 	if f.points == 0 {
-		opts = append(opts, option{"ok", "Keep"})
+		opts = append(opts, option{"ok", f.ui("ui.keep")})
 	}
-	opts = append(opts, option{"back", "Back"})
+	opts = append(opts, option{"back", f.ui("ui.back")})
 	for _, o := range opts {
 		f.Buttons = append(f.Buttons, PanelButton{Rect: image.Rect(x, y, x+w, y+MenuLineHeight+4), Name: o.name, Label: o.label})
 		y += MenuLineHeight + 8
@@ -660,7 +664,7 @@ func (f *Frontend) pick(name string) {
 		switch name {
 		case "ok":
 			if strings.TrimSpace(f.char.Name) == "" {
-				f.char.Name = DefaultName
+				f.char.Name = f.ui("ui.stranger")
 			}
 			f.show(ScreenMethod)
 		case "back":

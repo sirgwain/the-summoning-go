@@ -23,8 +23,6 @@ const (
 	talkPortrait   = 48
 	talkFieldWidth = 240
 	maxField       = 39
-	// DefaultName is the player's name in texts when the player has none.
-	DefaultName = "Stranger"
 )
 
 // Word is a word of a line laid out on the screen; Keyword marks one that can be asked.
@@ -113,7 +111,7 @@ func (v *Viewer) Talk() *TalkView {
 			x += bw + talkPad
 		}
 		if len(tv.Buttons) == 0 {
-			tv.Buttons = append(tv.Buttons, PanelButton{Rect: image.Rect(x, y, x+5*CharWidth+2*talkPad, y+LineHeight+4), Name: "bye", Label: "Bye"})
+			tv.Buttons = append(tv.Buttons, PanelButton{Rect: image.Rect(x, y, x+5*CharWidth+2*talkPad, y+LineHeight+4), Name: "bye", Label: v.ui("ui.bye")})
 		}
 		y += LineHeight + 4 + talkPad
 		tv.Field = image.Rect(at.X+talkPad, y, at.X+talkPad+talkFieldWidth, y+LineHeight+4)
@@ -145,13 +143,16 @@ func (v *Viewer) lineText(key string) string {
 	return strings.ReplaceAll(inspect.Text(v.Pack, key), "@", v.playerName())
 }
 
-// playerName returns the player's name, or DefaultName while it has none.
+// playerName returns the player's name, or the stranger's label while it has none.
 func (v *Viewer) playerName() string {
 	if p := v.World.Player(); p != nil && p.Name != "" {
 		return p.Name
 	}
-	return DefaultName
+	return v.ui("ui.stranger")
 }
+
+// ui returns label key in words (inspect.UI).
+func (v *Viewer) ui(key string, args ...any) string { return inspect.UI(v.Pack, key, args...) }
 
 // layoutWords lays text's words out from (x, y), wrapping before right. A word marked with a
 // leading * is a keyword, without its punctuation.

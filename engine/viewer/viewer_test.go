@@ -630,11 +630,11 @@ func TestLevelMap(t *testing.T) {
 	for c, want := range map[content.Cell]int{devpack.PlateB: MapPlate, devpack.Trapdoor: MapTrapdoor, devpack.Mark: MapMark, devpack.Socket: MapSocket} {
 		got, seen := m.At(c)
 		if !seen {
-			t.Errorf("%s at %v not seen", MapKindNames[want], c)
+			t.Errorf("%s at %v not seen", v.MapKindName(want), c)
 			continue
 		}
 		if got.Symbol != want || !slices.Contains(m.Legend, want) {
-			t.Errorf("%v shows %d, want %s; legend %v", c, got.Symbol, MapKindNames[want], m.Legend)
+			t.Errorf("%v shows %d, want %s; legend %v", c, got.Symbol, v.MapKindName(want), m.Legend)
 		}
 	}
 	press(KeySpace)

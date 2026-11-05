@@ -1,0 +1,280 @@
+package inspect
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/sirgwain/the-summoning-go/engine/content"
+)
+
+// Engine labels (docs/pack.md, Labels): the words the engine's own panels, menus and book show.
+// Each is a text key named by its role; the pack's text overrides it, and the engine keeps an
+// English default for a pack that does not.
+
+// UI returns label key in words: the pack's text of it, else the engine's default, else key.
+// args are pairs of a placeholder's name and its value: UI(p, "ui.name.help", "n", 25) puts 25
+// in place of {n}.
+func UI(p *content.Pack, key string, args ...any) string {
+	s, ok := packText(p, key)
+	if !ok {
+		if s, ok = Labels[key]; !ok {
+			s = key
+		}
+	}
+	if len(args) == 0 {
+		return s
+	}
+	pairs := make([]string, 0, len(args))
+	for i := 0; i+1 < len(args); i += 2 {
+		pairs = append(pairs, "{"+fmt.Sprint(args[i])+"}", fmt.Sprint(args[i+1]))
+	}
+	return strings.NewReplacer(pairs...).Replace(s)
+}
+
+// packText returns text key's string in the pack's first language that has it.
+func packText(p *content.Pack, key string) (string, bool) {
+	if p == nil {
+		return "", false
+	}
+	for _, id := range sortedKeys(p.Texts) {
+		if s, ok := p.Texts[id].Strings[key]; ok {
+			return s, true
+		}
+	}
+	return "", false
+}
+
+// Labels are the engine's default words, by label key.
+var Labels = map[string]string{
+	// The character's points and attributes.
+	"ui.hit_points":      "Hit points",
+	"ui.magic_points":    "Magic points",
+	"ui.hp":              "HP",
+	"ui.mp":              "MP",
+	"ui.exp":             "EXP",
+	"ui.armor":           "Armor",
+	"ui.level_title":     "level {n}",
+	"ui.attr.strength":   "STR",
+	"ui.attr.agility":    "AGI",
+	"ui.attr.endurance":  "END",
+	"ui.attr.accuracy":   "ACC",
+	"ui.attr.talent":     "TAL",
+	"ui.attr.power":      "POW",
+	"ui.weight":          "Weight: ",
+	"ui.damage":          "Can do ",
+	"ui.damage_after":    " damage points",
+	"ui.armor_bonus":     "AC bonus of ",
+	"ui.two_handed":      "Requires two hands",
+	"ui.weapon_class":    "weapon class {n}",
+	"ui.weapon.0":        "Sword",
+	"ui.weapon.1":        "Axe",
+	"ui.weapon.2":        "Spear",
+	"ui.weapon.3":        "Bow",
+	"ui.school":          "School {n}",
+	"ui.school.0":        "Wizardry",
+	"ui.school.1":        "Sorcery",
+	"ui.school.2":        "Enchantment",
+	"ui.school.3":        "Healing",
+	"ui.stranger":        "Stranger",
+	"ui.memorize":        "Memorize",
+	"ui.learn":           "Learn",
+	"ui.paused":          "Paused",
+	"ui.bye":             "Bye",
+	"ui.close":           "Close",
+	"ui.back":            "Back",
+	"ui.find":            "Find:",
+	"ui.hotbar.log":      "Log",
+	"ui.hotbar.book":     "Bk",
+	"ui.nap.full":        "Your magic points are full.",
+	"ui.nap.creature":    "A creature is near.",
+	"ui.nap.waiting":     "Waiting: {n}/{m} magic points, played {time}",
+	"ui.splash.over":     "THE",
+	"ui.splash.title":    "S U M M O N I N G",
+	"ui.splash.prompt":   "PRESS A KEY OR CLICK TO CONTINUE",
+	"ui.menu.create":     "Create a character",
+	"ui.menu.restore":    "Restore a game",
+	"ui.menu.premade":    "Select a premade character",
+	"ui.menu.quit":       "Quit",
+	"ui.portrait.title":  "Choose your descendant",
+	"ui.portrait.help":   "Left and Right step through them, R picks one at random.",
+	"ui.random":          "Random",
+	"ui.choose":          "Choose",
+	"ui.name.title":      "Your name",
+	"ui.name.help":       "Type a name of up to {n} letters.",
+	"ui.go_on":           "Go on",
+	"ui.method.title":    "How shall your attributes be made?",
+	"ui.weapon.title":    "Choose your weapon",
+	"ui.school.title":    "Choose your school of magic",
+	"ui.points_to_spend": "Points to spend: {n}",
+	"ui.reroll":          "Roll again",
+	"ui.keep":            "Keep",
+	"ui.rolls":           "Rolls: {n}",
+
+	// The menus over play, and their notices.
+	"ui.save.title":     "Save the game",
+	"ui.save.name":      "Name: ",
+	"ui.save.help":      "Type a name, or choose a save to replace.",
+	"ui.save":           "Save",
+	"ui.cancel":         "Cancel",
+	"ui.delete.title":   "Delete a saved game",
+	"ui.rename.title":   "Rename a saved game",
+	"ui.rename.to":      "Rename {name}",
+	"ui.rename.name":    "New name: ",
+	"ui.rename":         "Rename",
+	"ui.leave.title":    "Leave the game for the main menu?",
+	"ui.quit.title":     "Quit the game?",
+	"ui.yes":            "Yes",
+	"ui.no":             "No",
+	"ui.saved":          "Saved",
+	"ui.not_saved":      "Not saved: {error}",
+	"ui.no_save_place":  "No place to save",
+	"ui.saving_held":    "Not saved while an effect plays",
+	"ui.loaded":         "Loaded",
+	"ui.loaded_warning": "Loaded; {error}",
+	"ui.not_loaded":     "Not loaded: {error}",
+	"ui.no_load_place":  "No place to load from",
+	"ui.deleted":        "Deleted",
+	"ui.not_deleted":    "Not deleted: {error}",
+	"ui.renamed":        "Renamed",
+	"ui.not_renamed":    "Not renamed: {error}",
+	"ui.no_transcript":  "No transcript: {error}",
+	"ui.no_new_game":    "No new game: {error}",
+
+	// The book.
+	"ui.book.creatures":        "Creatures",
+	"ui.book.items":            "Items",
+	"ui.book.no_creatures":     "No creatures found yet.",
+	"ui.book.no_items":         "Nothing found yet.",
+	"ui.book.no_match":         "Nothing matches.",
+	"ui.book.not_seen":         "Not come across yet.",
+	"ui.book.first_seen":       "First seen: {level}, {time}",
+	"ui.book.talks":            "Can be talked to.",
+	"ui.book.strikes":          "Strikes for {dice}.",
+	"ui.book.poisonous":        "Its blows poison.",
+	"ui.book.hurts_on_contact": "Touching it hurts.",
+	"ui.book.death_blow":       "One blow from it can kill.",
+	"ui.book.mirrors":          "Hurting it hurts you as much.",
+	"ui.book.casts":            "Casts {spell}.",
+	"ui.book.vulnerable":       "Vulnerable to: {class}",
+	"ui.book.resists_fire":     "Resists fire.",
+	"ui.book.resists_light":    "Resists lightning.",
+	"ui.book.resists_poison":   "Resists poison.",
+	"ui.book.resists_teleport": "Resists teleporting.",
+	"ui.book.physical_only":    "Magic does not hurt it, and of weapons only silver does.",
+	"ui.book.hit_points":       "Hit points: {dice}",
+	"ui.book.worth":            "Worth {dice} experience.",
+	"ui.book.defeated":         "Defeated: {n}",
+	"ui.book.drops":            "Drops: {list}",
+	"ui.book.worn.head":        "Worn on the head.",
+	"ui.book.worn.body":        "Worn on the body.",
+	"ui.book.worn.feet":        "Worn on the feet.",
+	"ui.book.worn.arms":        "Worn on the arms.",
+	"ui.book.worn.neck":        "Worn about the neck.",
+	"ui.book.worn.quiver":      "Worn as a quiver.",
+	"ui.book.holds":            "Holds {n} objects, of size up to {m}.",
+	"ui.book.weightless":       "What it holds weighs nothing.",
+	"ui.book.charges":          "Charges: {n}",
+	"ui.book.thrown_poisons":   "Thrown, it poisons what it hits.",
+	"ui.book.makes":            "{spell}, with {holder}, makes it into {into}.",
+	"ui.book.made_any":         "Made by {spell} in {holder} from anything else.",
+	"ui.book.made":             "Made by {spell} from {from} in {holder}.",
+	"ui.book.fills_any":        "{spell} fills it with {into} from anything else.",
+	"ui.book.fills":            "{spell} fills it from {from} with {into}.",
+	"ui.book.teaches":          "Teaches {spell}.",
+	"ui.book.teaches_school":   "Teaches {spell} ({school}).",
+	"ui.book.costs":            "Costs {n} magic points.",
+	"ui.book.gesture":          "Teaches the gesture {icons}.",
+	"ui.book.strike_n":         "Strike {n}: {dice} damage",
+	"ui.book.slower":           ", slower",
+	"ui.book.needs_skill":      ", needs skill {n}",
+	"ui.hint.fight":            "Fight one to learn more.",
+	"ui.hint.defeat":           "Defeat one to learn more.",
+	"ui.hint.pick_up":          "Pick one up to learn more.",
+	"ui.hint.use":              "Use one to learn more.",
+	"ui.hint.use_or_throw":     "Use or throw one to learn more.",
+	"ui.hint.throw":            "Throw one to learn more.",
+	"ui.hint.wear":             "Wear one to learn more.",
+
+	// The conversation log.
+	"ui.log.no_match":  "Nothing found.",
+	"ui.log.no_one":    "No one has been talked with yet.",
+	"ui.log.asks":      "{name} asks: {text}",
+	"ui.log.taught":    "Taught the gesture {icons}",
+	"ui.log.says":      "{name}: {text}",
+	"ui.map.level":     "Level {id}",
+	"ui.map.visited":   " - visited",
+	"ui.map.you":       "You",
+	"ui.map.key":       "Key",
+	"ui.map.floor":     "Floor",
+	"ui.map.wall":      "Wall",
+	"ui.map.door":      "Door",
+	"ui.map.water":     "Water",
+	"ui.map.exit":      "Stairs",
+	"ui.map.teleport":  "Teleporter",
+	"ui.map.hole":      "Pit",
+	"ui.map.trapdoor":  "Trapdoor",
+	"ui.map.plate":     "Plate",
+	"ui.map.mark":      "Rune",
+	"ui.map.socket":    "Gem socket",
+	"ui.map.mouth":     "Mouth",
+	"ui.map.rune.1":    "Thurisaz",
+	"ui.map.rune.2":    "Gebo",
+	"ui.map.rune.3":    "Raido",
+	"ui.map.npc":       "NPC",
+	"ui.map.lever":     "Lever",
+	"ui.map.door_open": "Door, open",
+	"ui.map.door_shut": "Door, closed",
+	"ui.map.sockets":   "Gem socket, {n} of {m} set",
+	"ui.map.lever_on":  "Lever, on",
+	"ui.map.lever_off": "Lever, off",
+	"ui.map.rune":      "Rune mark, {name}",
+	"ui.map.unheard":   "What it says is not known",
+	"ui.map.to":        "To {place}",
+	"ui.map.from":      "From {place}",
+	"ui.map.here":      "here, {n} cells",
+	"ui.map.follow":    "Right-click to follow",
+	"ui.map.unknown":   "Where it leads is not known",
+	"ui.map.keys.zoom": "Wheel zoom",
+	"ui.map.keys.pan":  "Drag pan",
+	"ui.map.keys.go":   "Right-click follow",
+	"ui.map.keys.back": "Backspace back",
+	"ui.map.keys.flip": "PgUp/PgDn levels",
+	"ui.map.keys.home": "Home here",
+	"ui.map.keys.shut": "M close",
+
+	// The help panel: what each key does in play.
+	"ui.help.walk":      "walk (two: diagonal)",
+	"ui.help.diagonals": "walk the diagonals",
+	"ui.help.run":       "run (no attacks or spells)",
+	"ui.help.right":     "right hand (Shift: 2nd)",
+	"ui.help.throw_r":   "throw right",
+	"ui.help.left":      "left hand (Shift: 2nd)",
+	"ui.help.throw_l":   "throw left",
+	"ui.help.take":      "take",
+	"ui.help.put":       "put down",
+	"ui.help.underfoot": "lever/key underfoot",
+	"ui.help.talk":      "talk",
+	"ui.help.cast":      "cast (Shift: next spell)",
+	"ui.help.spells":    "spells",
+	"ui.help.inventory": "inventory",
+	"ui.help.log":       "conversation log",
+	"ui.help.book":      "book of creatures and items",
+	"ui.help.map":       "level map (Shift: hide the minimap)",
+	"ui.help.escape":    "close / options",
+	"ui.help.options":   "options",
+	"ui.help.save":      "quick save",
+	"ui.help.load":      "quick load",
+	"ui.help.sound":     "music, effects, silence",
+	"ui.help.recenter":  "recenter",
+	"ui.help.pause":     "pause",
+	"ui.help.nap":       "nap",
+	"ui.help.click_me":  "take / put down",
+	"ui.help.click_box": "swap with the hand",
+	"ui.help.shelve":    "hand to a shelf",
+	"ui.help.read":      "read",
+	"ui.help.portrait":  "inventory",
+	"ui.help.zoom":      "zoom",
+	"ui.help.see_all":   "see all",
+	"ui.help.mode":      "play / tools",
+	"ui.help.debug":     "debug overlay",
+}

@@ -69,29 +69,29 @@ func (v *Viewer) NoticeRect() image.Rectangle {
 // SaveGame writes the world to save name.
 func (v *Viewer) SaveGame(name string) {
 	if v.SaveDir == "" {
-		v.notice("No place to save")
+		v.notice(v.ui("ui.no_save_place"))
 		return
 	}
 	if v.Holding() {
-		v.notice("Not saved while an effect plays")
+		v.notice(v.ui("ui.saving_held"))
 		return
 	}
 	if err := save.Write(v.savePath(name), name, v.World); err != nil {
-		v.notice("Not saved: " + err.Error())
+		v.notice(v.ui("ui.not_saved", "error", err))
 		return
 	}
-	v.notice("Saved")
+	v.notice(v.ui("ui.saved"))
 }
 
 // LoadGame replaces the world with save name.
 func (v *Viewer) LoadGame(name string) {
 	if v.SaveDir == "" {
-		v.notice("No place to load from")
+		v.notice(v.ui("ui.no_load_place"))
 		return
 	}
 	playing := v.Play && v.Front == nil
 	if err := v.LoadFile(v.savePath(name)); err != nil {
-		v.notice("Not loaded: " + err.Error())
+		v.notice(v.ui("ui.not_loaded", "error", err))
 		return
 	}
 	// Loaded during play, the view as last drawn gives way to the loaded world.
@@ -112,10 +112,10 @@ func (v *Viewer) LoadFile(path string) error {
 		v.Audio.StopMusic()
 	}
 	if warning != "" {
-		v.notice("Loaded; " + warning)
+		v.notice(v.ui("ui.loaded_warning", "error", warning))
 		return nil
 	}
-	v.notice("Loaded")
+	v.notice(v.ui("ui.loaded"))
 	return nil
 }
 
@@ -135,6 +135,6 @@ func (v *Viewer) autosave(events []sim.Event) {
 	}
 	v.autosaveDue = false
 	if err := save.Write(v.savePath(AutoSave), AutoSave, v.World); err != nil {
-		v.notice("Not saved: " + err.Error())
+		v.notice(v.ui("ui.not_saved", "error", err))
 	}
 }

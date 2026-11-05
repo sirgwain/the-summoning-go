@@ -44,7 +44,7 @@ func TestBookWindow(t *testing.T) {
 		t.Errorf("the brute's picture: %+v", bv.Picture)
 	}
 	text := strings.Join(bookText(bv), "|")
-	for _, want := range []string{"Brute|", "A hulking cellar dweller", "First seen: ", inspect.HintFight} {
+	for _, want := range []string{"Brute|", "A hulking cellar dweller", "First seen: ", inspect.Labels[inspect.HintFight]} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the pane lacks %q: %q", want, text)
 		}
@@ -83,7 +83,7 @@ func TestBookStages(t *testing.T) {
 	v := playIn(t, devpack.Cellar, content.Cell{3, 3})
 	at := &sim.Entry{Stage: sim.StageFought, Level: devpack.Cellar}
 	lines, hint := inspect.CreatureLines(v.Pack, devpack.ThingBrute, at)
-	if hint != inspect.HintDefeat || !slices.Contains(lines, "Strikes for 1d6.") || slices.Contains(lines, "Hit points: 2d10+4") {
+	if hint != inspect.Labels[inspect.HintDefeat] || !slices.Contains(lines, "Strikes for 1d6.") || slices.Contains(lines, "Hit points: 2d10+4") {
 		t.Errorf("fought: %q, %q", lines, hint)
 	}
 	at = &sim.Entry{Stage: sim.StageKilled, Level: devpack.Cellar, Kills: 2, Drops: []string{devpack.ItemKey}}
@@ -119,7 +119,7 @@ func TestBookStages(t *testing.T) {
 		t.Errorf("a potion seen: %q, %q", lines, hint)
 	}
 	lines, hint = inspect.ItemLines(v.Pack, devpack.ItemPotion, &sim.Entry{Stage: sim.StageHandled})
-	if hint != inspect.HintUse || slices.Contains(lines, "Heals 5d10 hit points.") {
+	if hint != inspect.Labels[inspect.HintUse] || slices.Contains(lines, "Heals 5d10 hit points.") {
 		t.Errorf("a potion handled: %q, %q", lines, hint)
 	}
 	lines, hint = inspect.ItemLines(v.Pack, devpack.ItemPotion, &sim.Entry{Stage: sim.StageUsed})
@@ -148,7 +148,7 @@ func TestBookStages(t *testing.T) {
 		t.Errorf("a blade with two strikes: %q", lines)
 	}
 	lines, hint = inspect.ItemLines(v.Pack, devpack.ItemBoots, &sim.Entry{Stage: sim.StageHandled})
-	if hint != inspect.HintWear || slices.Contains(lines, "Makes you faster (speed +2).") {
+	if hint != inspect.Labels[inspect.HintWear] || slices.Contains(lines, "Makes you faster (speed +2).") {
 		t.Errorf("boots handled: %q, %q", lines, hint)
 	}
 	lines, hint = inspect.ItemLines(v.Pack, devpack.ItemBoots, &sim.Entry{Stage: sim.StageUsed})
@@ -240,7 +240,7 @@ func TestFullBook(t *testing.T) {
 			t.Errorf("the brute's pane lacks %q: %q", want, text)
 		}
 	}
-	if strings.Contains(text, inspect.HintFight) {
+	if strings.Contains(text, inspect.Labels[inspect.HintFight]) {
 		t.Errorf("the full book hints: %q", text)
 	}
 	pressKey(v, KeyEscape)

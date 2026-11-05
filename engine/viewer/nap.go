@@ -28,9 +28,9 @@ func (v *Viewer) napRefusal() string {
 	p := v.World.Player()
 	switch {
 	case p.MagicPoints >= p.MaxMagicPoints:
-		return "Your magic points are full."
+		return v.ui("ui.nap.full")
 	case v.World.CreatureNear():
-		return "A creature is near."
+		return v.ui("ui.nap.creature")
 	}
 	return ""
 }
@@ -81,8 +81,8 @@ func (v *Viewer) nap(in Input, cmds []input.Command) bool {
 	}
 	p = v.World.Player()
 	played := v.World.Step() / sim.StepsPerSecond
-	v.notice(fmt.Sprintf("Waiting: %d/%d magic points, played %d:%02d:%02d",
-		p.MagicPoints, p.MaxMagicPoints, played/3600, played/60%60, played%60))
+	v.notice(v.ui("ui.nap.waiting", "n", p.MagicPoints, "m", p.MaxMagicPoints,
+		"time", fmt.Sprintf("%d:%02d:%02d", played/3600, played/60%60, played%60)))
 	return true
 }
 
