@@ -263,6 +263,31 @@ func TestPushTrap(t *testing.T) {
 	}
 }
 
+// Two pushable things lying on each other, like corpses fallen in one place, can be pushed apart.
+func TestPushStackedApart(t *testing.T) {
+	pk := walkPack(
+		"########",
+		"#@.T...#",
+		"########")
+	l := pk.Levels["level.walk"]
+	second := *l.Things[0]
+	second.ID = "trap2"
+	l.Things = append(l.Things, &second)
+	w, err := New(pk, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, b := w.Current().Thing("trap"), w.Current().Thing("trap2")
+	before := [2]int{a.V, b.V}
+	walk(w, 2, 10)
+	if a.V == before[0] && b.V == before[1] {
+		t.Fatal("neither stacked trap moved")
+	}
+	if a.V == b.V {
+		t.Errorf("the traps did not come apart: both at v %d", a.V)
+	}
+}
+
 func TestWalkingIntoBoulderRollsIt(t *testing.T) {
 	w := walkWorld(t,
 		"##########",

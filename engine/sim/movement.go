@@ -138,8 +138,17 @@ func (w *World) push(l *Level, t *Thing, du, dv, depth int, end int64) bool {
 	if depth >= maxDepth || !w.thingFits(l, t, t.U+du, t.V+dv) {
 		return false
 	}
+	// What t already overlaps where it stands does not block it, so things lying on each other,
+	// like two corpses fallen in one place, can be pushed apart.
+	box := t.Template.Bounds()
+	skip := map[*Thing]bool{}
+	for _, o := range l.Things {
+		if o != t && overlaps(t.U, t.V, box, o.U, o.V, o.Template.Bounds()) {
+			skip[o] = true
+		}
+	}
 	for range maxDepth {
-		b := w.blocker(l, t, true, t.U+du, t.V+dv, t.Template.Bounds(), nil)
+		b := w.blocker(l, t, true, t.U+du, t.V+dv, box, skip)
 		if b == nil {
 			t.glide.start(t.U, t.V, w.step, end)
 			w.moveThingBy(l, t, du, dv)

@@ -80,7 +80,7 @@ Movement is free, in world units.
 
 Rectangles overlap when their open intervals overlap on both axes. After fitting the terrain, a move that would overlap another entity is shortened by 2 units per axis toward zero until it does not, or to nothing. A creature with hit points, and a levitating player, pass over corpses: a corpse does not count for their moves.
 
-**Pushing.** When the player walks into a trap block, a creature corpse (a creature with no hit points) or a conjured thing, it pushes it the same distance, recursively through a line of pushable things. A push costs 3 ticks, and with a 3 in 8 chance adds exertion (player.md). A levitating player passes over corpses instead of pushing them.
+**Pushing.** When the player walks into a trap block, a creature corpse (a creature with no hit points) or a conjured thing, it pushes it the same distance, recursively through a line of pushable things. A pushed thing is not blocked by what it already overlaps. A push costs 3 ticks, and with a 3 in 8 chance adds exertion (player.md). A levitating player passes over corpses instead of pushing them.
 
 **Sliding.** When the player moves diagonally into a diagonal wall (shapes 0, 2, 4, 5), the player slides 4 units along it.
 
@@ -163,7 +163,7 @@ A move that changes the thing's cell runs the effects of the cell it leaves and 
 
 ### Pushing
 
-The player pushes a trap, a corpse (a creature with no hit points) or a conjured thing by moving it the player's whole step, recursively through a line of pushable things; if the line moves, the player then moves as far as the first thing did. A push makes the player wait 3 ticks more before its next update. A levitating player passes over corpses rather than pushing them.
+The player pushes a trap, a corpse (a creature with no hit points) or a conjured thing by moving it the player's whole step, recursively through a line of pushable things; what a pushed thing already overlaps where it stands does not block it, so things lying on each other (two corpses fallen in one place) come apart. If the line moves, the player then moves as far as the first thing did. A push makes the player wait 3 ticks more before its next update. A levitating player passes over corpses rather than pushing them.
 
 A boulder is not pushed. Walking into a rolling boulder hurts the player 2d3, unless it rolls the way the player walks. Walking into a boulder along an axis (an even direction) then starts it rolling the way the player walks: a resting boulder stops when blocked, and a rolling one only turns.
 

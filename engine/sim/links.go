@@ -40,13 +40,13 @@ func (w *World) recordLink(l *Level, f *Feature) {
 }
 
 // recordReturn records the way back from exit, pit or trapdoor f of level l, now that the player
-// has gone through it: an exit on or next to the arrival cell leading to l, to f's cell or next to
-// it. A ladder down is a pit, and its way up such an exit.
+// has gone through it: an exit or pit on or next to the arrival cell leading to l, to f's cell or
+// next to it. A ladder down is a pit and the ladder up an exit, so each is the other's way back.
 func (w *World) recordReturn(l *Level, f *Feature) {
 	at := w.Current()
 	arrived := w.player.Cell()
 	for _, g := range at.Features {
-		if g.Kind != content.FeatureExit || g.To == nil || g.To.Level != l.ID ||
+		if g.Kind != content.FeatureExit && g.Kind != content.FeaturePit || g.To == nil || g.To.Level != l.ID ||
 			!beside(g.Cell, arrived) || !beside(g.To.Cell, f.Cell) {
 			continue
 		}

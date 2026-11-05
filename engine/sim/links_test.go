@@ -64,27 +64,30 @@ func TestLinksRecorded(t *testing.T) {
 	}
 }
 
-// TestExitTeachesTheWayBack records the exit beside the arrival that leads back beside the exit,
-// pit or trapdoor taken (a ladder down is a pit, the way up an exit beside where it lands); an
-// exit beside the arrival that leads elsewhere teaches nothing.
+// TestExitTeachesTheWayBack records the exit or pit beside the arrival that leads back beside the
+// exit, pit or trapdoor taken (a ladder down is a pit, the ladder up an exit, each beside where the
+// other lands); one beside the arrival that leads elsewhere teaches nothing.
 func TestExitTeachesTheWayBack(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		row  string       // the way down, at cell (1, 3)
-		back content.Cell // where the exit beside the arrival leads on level.walk
+		kind string       // the way back beside the arrival
+		back content.Cell // where it leads on level.walk
 		want int
 	}{
-		{"two-way", "#@.X.#", cell{1, 3}, 2},
-		{"leads elsewhere", "#@.X.#", cell{1, 1}, 1},
-		{"ladder", "#@.O.#", cell{1, 2}, 2},
-		{"ladder elsewhere", "#@.O.#", cell{1, 5}, 1},
+		{"two-way", "#@.X.#", content.FeatureExit, cell{1, 3}, 2},
+		{"leads elsewhere", "#@.X.#", content.FeatureExit, cell{1, 1}, 1},
+		{"ladder down", "#@.O.#", content.FeatureExit, cell{1, 2}, 2},
+		{"ladder down elsewhere", "#@.O.#", content.FeatureExit, cell{1, 5}, 1},
+		{"ladder up", "#@.X.#", content.FeaturePit, cell{1, 2}, 2},
+		{"ladder up elsewhere", "#@.X.#", content.FeaturePit, cell{1, 5}, 1},
 	} {
 		p := walkPack(
 			"#######",
 			tc.row+"#",
 			"#######")
 		b := p.Levels["level.below"]
-		b.Features = append(b.Features, &content.Feature{ID: "up", Kind: content.FeatureExit, Cell: cell{1, 2},
+		b.Features = append(b.Features, &content.Feature{ID: "up", Kind: tc.kind, Cell: cell{1, 2},
 			To: &content.Destination{Level: "level.walk", Cell: tc.back}})
 		w, err := New(p, 1)
 		if err != nil {
@@ -104,7 +107,7 @@ func TestExitTeachesTheWayBack(t *testing.T) {
 			t.Fatalf("%s: links %+v", tc.name, links)
 		}
 		if tc.want == 2 {
-			want := Link{Kind: content.FeatureExit, From: content.Destination{Level: "level.below", Cell: cell{1, 2}},
+			want := Link{Kind: tc.kind, From: content.Destination{Level: "level.below", Cell: cell{1, 2}},
 				To: content.Destination{Level: "level.walk", Cell: tc.back}}
 			if links[1] != want {
 				t.Errorf("the way back: %+v", links[1])
