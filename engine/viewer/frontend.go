@@ -216,7 +216,11 @@ func (f *Frontend) layout() {
 		if len(f.Saves) > 0 {
 			opts = append(opts, option{"restore", f.ui("ui.menu.restore")})
 		}
-		if c != nil && len(c.Premade) > 0 {
+		switch {
+		case c != nil && len(c.Portraits) == 0 && len(c.Premade) == 1:
+			// Without character creation the one premade character is the new game.
+			opts = append([]option{{"new", f.ui("ui.menu.new")}}, opts...)
+		case c != nil && len(c.Premade) > 0:
 			opts = append(opts, option{"premade", f.ui("ui.menu.premade")})
 		}
 		opts = append(opts, option{"quit", f.ui("ui.menu.quit")})
@@ -326,6 +330,13 @@ func (f *Frontend) portraitImage(id string) *content.Image {
 		return &img
 	}
 	return nil
+}
+
+// beginPremade begins a new game as premade character pm.
+func (f *Frontend) beginPremade(pm content.Premade) {
+	f.cue(f.creation().StoryMusic)
+	f.begin(sim.Character{Name: pm.Name, Portrait: pm.Portrait, Attributes: pm.Attributes,
+		WeaponClass: pm.WeaponClass, School: pm.School})
 }
 
 // trainingName returns a weapon class's or school's name.
@@ -641,6 +652,8 @@ func (f *Frontend) pick(name string) {
 			f.show(ScreenRestore)
 		case "premade":
 			f.show(ScreenPremade)
+		case "new":
+			f.beginPremade(c.Premade[0])
 		case "quit":
 			f.Done, f.Quit = true, true
 		}
@@ -711,10 +724,7 @@ func (f *Frontend) pick(name string) {
 	case ScreenPremade:
 		switch {
 		case num("premade."):
-			pm := c.Premade[i]
-			f.cue(c.StoryMusic)
-			f.begin(sim.Character{Name: pm.Name, Portrait: pm.Portrait, Attributes: pm.Attributes,
-				WeaponClass: pm.WeaponClass, School: pm.School})
+			f.beginPremade(c.Premade[i])
 		case name == "back":
 			f.show(ScreenMenu)
 		}

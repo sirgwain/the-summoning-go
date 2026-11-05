@@ -47,7 +47,8 @@ the viewer. The text color and gauge colors are constants, and the font is the e
 - [x] Specify a `ui.json` record in pack.md (Skin): a frame style for each framed panel (`hotbar`,
       `inventory`, `spells`, `menu`, `notice`), built-in or a pack image cut in nine; named colors
       (text, slots, buttons, gems, gauges, scene words); a pack font; the splash artwork. The
-      conversation, book, log and map have no frame today, so only their colors are skinned.
+      conversation, book, log and map have no frame today and keep their own colors; skinning
+      them is left open.
 - [x] Give `engine/frame` a style table (`frame.Names`) and a third built-in style, `hull`:
       riveted hull plate with amber indicator lights.
 - [x] Have the viewer take every frame, the named colors, the letters and the splash from the

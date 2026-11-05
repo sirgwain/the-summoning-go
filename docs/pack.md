@@ -394,6 +394,7 @@ the engine's own words.
 | `ui.menu.create` | Create a character |
 | `ui.menu.restore` | Restore a game |
 | `ui.menu.premade` | Select a premade character |
+| `ui.menu.new` | New game |
 | `ui.menu.quit` | Quit |
 | `ui.portrait.title` | Choose your descendant |
 | `ui.portrait.help` | Left and Right step through them, R picks one at random. |
@@ -937,6 +938,9 @@ talks to; `wait` while the game waits. Without the file the system's pointer is 
   skill they start at level 1, and the objects they add, by inventory slot. `icons` are the gesture
   icons a school starts knowing.
 - `inventory` is what every character starts with; one of `body_armor` goes on the body.
+- Without `portraits` the main menu offers no character creation. A premade character starts with
+  its own attributes, which the player cannot change; with no `portraits` and a single `premade`
+  character, the menu offers New game (`ui.menu.new`), which begins it at once.
 - `music` is the track the frontend starts with its splash; `story_music` the track Create
   Character or a premade character starts, which fades out as the `story` scene ends. `story` plays
   when a character is made or chosen, before `scene` (`docs/spec/scenes.md`, The story, in

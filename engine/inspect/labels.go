@@ -94,6 +94,7 @@ var Labels = map[string]string{
 	"ui.menu.create":     "Create a character",
 	"ui.menu.restore":    "Restore a game",
 	"ui.menu.premade":    "Select a premade character",
+	"ui.menu.new":        "New game",
 	"ui.menu.quit":       "Quit",
 	"ui.portrait.title":  "Choose your descendant",
 	"ui.portrait.help":   "Left and Right step through them, R picks one at random.",
