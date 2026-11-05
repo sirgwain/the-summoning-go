@@ -466,6 +466,16 @@ func (w *World) useObject(o *Object, a content.ItemAction) {
 		return
 	case it.Power == 0:
 		return
+	case it.Power == powerRandomize:
+		// The object becomes a random object where it is kept, rather than being used up
+		// (docs/spec/items.md, Powers).
+		if len(w.randomItems) == 0 {
+			return
+		}
+		w.learnItem(o.Item, StageUsed)
+		w.sound(w.player.Cell(), a.Sound)
+		w.replaceKept(o, w.newObject(w.randomItems[w.rng.IntN(len(w.randomItems))]))
+		return
 	default:
 		// Trying it teaches what it does, even when it refuses (docs/spec/player.md, The book).
 		w.learnItem(o.Item, StageUsed)
@@ -527,22 +537,32 @@ func (w *World) usedUp(o *Object, it *content.Item, a content.ItemAction) {
 	if it.Spent != "" {
 		spent = w.newObject(it.Spent)
 	}
+	w.replaceKept(o, spent)
+}
+
+// replaceKept puts object by in the place where the player keeps o, or empties the place when by
+// is nil, and announces o as used. An object the player no longer keeps is left alone.
+func (w *World) replaceKept(o, by *Object) {
+	p := w.player
+	slot := p.slotOf(w.pack, o)
 	switch {
+	case slot < 0:
+		return
 	case slot >= SlotPack:
 		bag := p.Pack(w.pack)
 		i := slot - SlotPack
-		if spent != nil {
-			bag.Contents[i] = spent
+		if by != nil {
+			bag.Contents[i] = by
 		} else {
 			bag.Contents = append(bag.Contents[:i], bag.Contents[i+1:]...)
 		}
 	case slot < Shelves:
-		p.Slots[slot] = spent
+		p.Slots[slot] = by
 	default:
-		p.Slots[slot] = spent
+		p.Slots[slot] = by
 		w.takeOff(o)
-		if spent != nil {
-			w.putOn(spent)
+		if by != nil {
+			w.putOn(by)
 		}
 	}
 	w.emit(Event{Kind: EventObject, Level: w.current, Cell: p.Cell(), Item: o.Item, Detail: "used"})

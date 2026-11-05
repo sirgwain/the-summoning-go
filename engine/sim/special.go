@@ -12,6 +12,8 @@ import (
 const (
 	// powerCharges is the power of an object whose charges absorb damage (items.md, Powers).
 	powerCharges = 0x23
+	// powerRandomize turns the object used into a random object (items.md, Powers).
+	powerRandomize = 0x1B
 	// spinTicks is how long a teleported creature spins.
 	spinTicks = 30
 	// A flickering creature counts flickerBase to flickerBase+flickerRange updates, flickering

@@ -210,7 +210,7 @@ An object's power starts when it is worn (if it lasts while worn) or used. Some 
 | 17h | Status: regenerating | yes |
 | 18h | Shows "(cast smoke spell)" | |
 | 19h | Cast spell 4 at the object's action-1 damage | |
-| 1Bh | Turn the object into a random object | |
+| 1Bh | Turn the object into a random object (Template 0, above), where it is kept; it is not then used up | |
 | 1Ch | Fire shield, 10 | |
 | 1Dh | Heal 6d6 (the Jera potion: its value); refused (3Eh) at full | |
 | 1Eh | Cast spell 0Bh | |

@@ -370,6 +370,29 @@ func TestUsingObjects(t *testing.T) {
 	}
 }
 
+func TestRandomizingRune(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Items["item.fehu"] = &content.Item{ID: "item.fehu", Weight: 1, Size: 1, Power: 0x1B,
+			Actions: []content.ItemAction{{Kind: content.ActionUseUp, Delay: 3}}}
+		p.Items["item.sword"] = &content.Item{ID: "item.sword", Weight: 3, Size: 4, Random: true}
+	},
+		"####",
+		"#@.#",
+		"####")
+	p := w.Player()
+	p.Slots[SlotRightHand] = w.newObject("item.fehu")
+	strike(w, 0, 0)
+	if o := p.Slots[SlotRightHand]; o == nil || o.Item != "item.sword" {
+		t.Errorf("the rune became %+v", o)
+	}
+	p.Slots[SlotLeftHand] = w.newObject("item.fehu")
+	p.Slots[0] = w.newObject("item.fehu")
+	strike(w, 1, 0)
+	if o := p.Slots[SlotLeftHand]; o == nil || o.Item != "item.sword" || p.Slots[0].Item != "item.fehu" {
+		t.Errorf("the left rune became %+v", o)
+	}
+}
+
 func TestStatusesAndStartingInventory(t *testing.T) {
 	w := fightWorld(t, func(p *content.Pack) {
 		p.Things["thing.player"].Inventory = []content.InventoryObject{
