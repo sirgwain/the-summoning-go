@@ -108,8 +108,10 @@ type Thing struct {
 	// walkDir (0..3, 4 resting) and walkCount are a walker's current walk.
 	walkDir, walkCount int
 	// next is the step of its next update; glide where it was at its last, to draw it gliding.
-	next  int64
-	glide glide
+	// frozen is the delay freezes have added to next, taken back when the thing is struck.
+	next   int64
+	frozen int64
+	glide  glide
 }
 
 // Cell returns the cell the thing stands in.

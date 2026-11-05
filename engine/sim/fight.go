@@ -68,6 +68,7 @@ func (w *World) hurtThing(l *Level, t *Thing, d int, k combat.Kind) int {
 	if !alive(t) {
 		return 0
 	}
+	w.thaw(t)
 	if l == w.Current() {
 		w.learnCreature(t, StageFought)
 		w.meetKind(l, t, k)
@@ -86,6 +87,21 @@ func (w *World) hurtThing(l *Level, t *Thing, d int, k combat.Kind) int {
 		w.creatureDies(l, t)
 	}
 	return d
+}
+
+// freeze delays every thing on level l by n steps (docs/spec/spells.md, Freeze).
+func (w *World) freeze(l *Level, n int64) {
+	for _, t := range l.Things {
+		t.next += n
+		t.frozen += n
+	}
+}
+
+// thaw takes back the delay freezes added to thing t, as a strike on it does (docs/spec/combat.md,
+// Hurting a creature).
+func (w *World) thaw(t *Thing) {
+	t.next -= t.frozen
+	t.frozen = 0
 }
 
 // creatureDies drops what creature t carries, gives the player its experience, and leaves its
@@ -134,7 +150,7 @@ func (w *World) updateCreatures(l *Level) {
 			continue
 		}
 		if t.Template.Kind == content.ThingConjured && w.step >= t.next && l.Thing(t.ID) == t {
-			t.next = w.step + stepsMS(t.Template.IntervalMS)
+			t.next, t.frozen = w.step+stepsMS(t.Template.IntervalMS), 0
 			w.wearConjured(l, t)
 			continue
 		}
@@ -145,7 +161,7 @@ func (w *World) updateCreatures(l *Level) {
 		if !alive(t) || w.step < t.next || l.Thing(t.ID) != t {
 			continue
 		}
-		t.next = w.step + stepsMS(t.Template.IntervalMS)
+		t.next, t.frozen = w.step+stepsMS(t.Template.IntervalMS), 0
 		t.glide.start(t.U, t.V, w.step, t.next)
 		t.Moving = false
 		if t.Pose != "" {
@@ -249,7 +265,7 @@ func (w *World) windingUp(l *Level, t *Thing) {
 		return
 	}
 	t.WindUpFrom, t.WindUpUntil = 0, 0
-	t.next = w.step + stepsMS(t.Template.IntervalMS)
+	t.next, t.frozen = w.step+stepsMS(t.Template.IntervalMS), 0
 	t.glide.start(t.U, t.V, w.step, t.next)
 	t.Moving = false
 	if p == nil || p.Dead || w.current != l.ID {

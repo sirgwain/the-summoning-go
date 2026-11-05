@@ -216,7 +216,7 @@ An object's power starts when it is worn (if it lasts while worn) or used. Some 
 | 1Eh | Cast spell 0Bh | |
 | 1Fh | Weapon class 1 skill +2, quietly | |
 | 20h | A random school +1 | |
-| 21h | Delay every other entity by 100 ticks; message 39h | |
+| 21h | Delay every other entity by 100 ticks, as Freeze does (spells.md); message 39h | |
 | 22h | Show the level map, unless the level refuses it (world.md) | |
 | 23h | Status: charges | |
 | 24h | Cure poison; refused (40h) unless poisoned | |

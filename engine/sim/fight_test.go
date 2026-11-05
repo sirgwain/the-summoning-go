@@ -813,3 +813,37 @@ func TestWindUpDodged(t *testing.T) {
 		t.Errorf("the wolf does not rest after its blow: walk %d", wolf.walkDir)
 	}
 }
+
+func TestStrikeThawsFrozenCreature(t *testing.T) {
+	w := fightWorld(t, nil,
+		"#####",
+		"#@G.#",
+		"#####")
+	l, p := w.Current(), w.Player()
+	g := l.Thing("guard")
+	before := g.next
+	w.freeze(l, Steps(1000))
+	if g.next != before+Steps(1000) {
+		t.Fatalf("freeze delayed the guard to %d, want %d", g.next, before+Steps(1000))
+	}
+	s, err := w.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w, err = Restore(w.pack, s); err != nil {
+		t.Fatal(err)
+	}
+	l, p = w.Current(), w.Player()
+	g = l.Thing("guard")
+	if g.frozen != Steps(1000) {
+		t.Fatalf("restored freeze delay %d, want %d", g.frozen, Steps(1000))
+	}
+	p.Facing = 2
+	besideGuard(w)
+	if ev := strike(w, 0, 0); !has(ev, EventMessage, content.MsgHit) {
+		t.Fatalf("the strike missed: %v", ev)
+	}
+	if g.frozen != 0 || g.next > w.step+stepsMS(g.Template.IntervalMS) {
+		t.Errorf("the struck guard is still frozen: next %d at step %d", g.next, w.step)
+	}
+}

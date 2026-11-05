@@ -125,7 +125,7 @@ A directional sprite's eight frames are numbered by the caster's facing, which i
 | 17 | Dispel | The spells in flight within 96 of the player end where they are |
 | 18 | Gateway | Practices Sorcery 5 more. Opens a portal (kind 9, resource 60, frames 0, 1, 2, 1 every 9 ticks) a cell ahead, replacing any other; message 6Fh when there is no room. Walking into it removes it, stores the player's level and cell, and takes the player to level 30 at (60, 26) |
 | 19 | Mending | Joins the staff halves D8h and D9h in the hands into DAh, in the right hand (Sorcery 20 more); sets interaction variable 32 to 1 and starts conversation 79h |
-| 20 | Freeze | Practices Enchantment 1 more. Delays every other entity's update by `power × 10` ticks (message 39h) |
+| 20 | Freeze | Practices Enchantment 1 more. Delays every other entity's update by `power × 10` ticks (message 39h); a creature struck while delayed loses the delay (combat.md, Hurting a creature) |
 | 21 | Lightning Shield | Practices Enchantment 1 more. Lightning shield for `power` ticks (message 38h) |
 | 22 | Fire Shield | Practices Enchantment 1 more. Fire shield for `power` ticks (message 37h) |
 | 23 | Weapon Skill | Each weapon class +1 for `power` ticks (message 62h); if already active, message 63h and the time extends |
@@ -159,7 +159,7 @@ A spell is a record: its school, cost, power (dice and the bonus die's sides), g
 | `teleport_to_mark` | Ripples the player to a mark of a rune |
 | `dispel` | Ends spells in flight within a distance of the player |
 | `join` | Joins two items held in the hands into a third |
-| `freeze` | Delays every other thing by `power ×` ticks |
+| `freeze` | Delays every other thing by `power ×` ticks, until a creature is struck |
 | `shape_change` | Takes the look of the nearest creature within a distance |
 | `transmute` | Fills an item held in a hand from the other hand's, by a table |
 | `cure_poison`, `restore`, `heal` | Cure poison, recover `power` fatigue, heal an amount |

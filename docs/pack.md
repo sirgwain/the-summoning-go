@@ -1350,7 +1350,7 @@ Spells' effects use these actions too, with the cast's power:
 | `{ "teleport_to_mark": rune }` | Ripple the player to a mark |
 | `{ "dispel": distance }` | End spells in flight near the player |
 | `{ "join": { "items", "into" } }` | Join the two items held in the hands into one |
-| `{ "freeze": ticks }` | Delay every other thing by `power × ticks` |
+| `{ "freeze": ticks }` | Delay every other thing by `power × ticks`; a creature struck loses its delay |
 | `{ "shape_change": distance }` | Take the look of the nearest creature |
 | `{ "transmute": { "holder", "table", "otherwise" } }` | Fill the `holder` item in a hand from the other hand's object: by `table`, using it up, or else `otherwise`, valued at the power |
 | `{ "cure_poison": true }`, `{ "restore": true }`, `{ "heal": dice }` | Cure poison; recover `power` fatigue; heal |

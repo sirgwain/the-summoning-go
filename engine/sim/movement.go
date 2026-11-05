@@ -183,7 +183,7 @@ func (w *World) startBoulder(t *Thing, d int, shuttle bool) {
 		return
 	}
 	t.Rolling = &content.Rolling{Direction: d, Shuttle: shuttle}
-	t.next = w.step
+	t.next, t.frozen = w.step, 0
 }
 
 // rollBoulders moves the rolling boulders of l whose update has come (docs/spec/entities.md,
@@ -193,7 +193,7 @@ func (w *World) rollBoulders(l *Level) {
 		if t.Rolling == nil || w.step < t.next || l.Thing(t.ID) != t {
 			continue
 		}
-		t.next = w.step + stepsMS(t.Template.IntervalMS)
+		t.next, t.frozen = w.step+stepsMS(t.Template.IntervalMS), 0
 		t.glide.start(t.U, t.V, w.step, t.next)
 		d := t.Rolling.Direction
 		speed := t.Template.Speed

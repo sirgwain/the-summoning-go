@@ -496,9 +496,7 @@ func (w *World) spellEffect(l *Level, c caster, sp *content.Spell, e content.Act
 		}
 	case e.Freeze != nil:
 		w.message(l, at, content.MsgFrozen, "")
-		for _, t := range l.Things {
-			t.next += Steps(power * *e.Freeze)
-		}
+		w.freeze(l, Steps(power**e.Freeze))
 	case e.ShapeChange != nil:
 		if t := w.nearestCreature(*e.ShapeChange); t != nil {
 			w.shapeChange(t.Template.Sprite)

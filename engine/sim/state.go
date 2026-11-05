@@ -86,6 +86,7 @@ type ThingState struct {
 	WalkDir   int    `json:"walk_dir"`
 	WalkCount int    `json:"walk_count"`
 	Next      int64  `json:"next"`
+	Frozen    int64  `json:"frozen,omitempty"`
 	Casting   int    `json:"casting,omitempty"`
 	AnimCount int    `json:"anim_count,omitempty"`
 	AnimStep  int    `json:"anim_step,omitempty"`
@@ -137,7 +138,7 @@ func (w *World) State() (*State, error) {
 		}
 		for _, t := range l.Things {
 			ls.Things = append(ls.Things, ThingState{Thing: *t, Template: t.Template.ID, WalkDir: t.walkDir, WalkCount: t.walkCount,
-				Next: t.next, Casting: t.casting, AnimCount: t.animCount, AnimStep: t.animStep, Spin: t.spin, SpinNext: t.spinNext})
+				Next: t.next, Frozen: t.frozen, Casting: t.casting, AnimCount: t.animCount, AnimStep: t.animStep, Spin: t.spin, SpinNext: t.spinNext})
 		}
 		for _, f := range l.Flights {
 			fs := FlightState{Flight: *f, Waited: f.waited, Next: f.next}
@@ -225,7 +226,7 @@ func Restore(p *content.Pack, s *State) (*World, error) {
 				return nil, fmt.Errorf("level %s: %w", ls.ID, err)
 			}
 			t := ts.Thing
-			t.Template, t.walkDir, t.walkCount, t.next = tm, ts.WalkDir, ts.WalkCount, ts.Next
+			t.Template, t.walkDir, t.walkCount, t.next, t.frozen = tm, ts.WalkDir, ts.WalkCount, ts.Next, ts.Frozen
 			t.casting, t.animCount, t.animStep, t.spin, t.spinNext = ts.Casting, ts.AnimCount, ts.AnimStep, ts.Spin, ts.SpinNext
 			l.Things = append(l.Things, &t)
 			things[t.ID] = &t

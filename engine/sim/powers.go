@@ -397,9 +397,7 @@ func (w *World) startPower(power, sign int) bool {
 	case 0x25:
 		w.raiseSkill(SkillWeapon+w.rng.IntN(4), 1, false)
 	case 0x21:
-		for _, t := range l.Things {
-			t.next += Steps(freezeTicks)
-		}
+		w.freeze(l, Steps(freezeTicks))
 	case 0x23:
 		p.Status.Charges = true
 	case 0x24:

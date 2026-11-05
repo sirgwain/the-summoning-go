@@ -108,6 +108,7 @@ For damage `d` of kind `k`, with `poison` set by poisoning attacks:
 - Creature record 79h is not hurt: the player takes the damage instead, as if hurt by it. It only animates, but it can be struck.
 
 - Animated objects, corpses and kinds other than creatures are not hurt. A conjured thing loses 1 of its strength instead.
+- A creature delayed by a freeze (spell 20, item power 21h) and struck loses what is left of the delay, whatever the blow does: its next update returns to when it was before the freezes. Several freezes add up, and a strike ends them all.
 - Behavior 1000h: immune. Record 31h: hurt only by exactly 3000.
 - Behavior 0400h: non-physical damage does 0.
 - Quarter damage: poison with 8000h, fire with 2000h, lightning with 4000h.

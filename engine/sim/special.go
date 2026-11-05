@@ -180,7 +180,7 @@ func (w *World) spin(l *Level, t *Thing) bool {
 		t.spinNext = w.step + Steps(1)
 		t.Facing = (t.Facing + 2) % 8
 		if t.spin == 0 {
-			t.next = w.step
+			t.next, t.frozen = w.step, 0
 		}
 		w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "spins"})
 	}
