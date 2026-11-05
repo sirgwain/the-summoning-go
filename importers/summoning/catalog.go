@@ -225,7 +225,7 @@ func (im *importer) items() error {
 		}
 		it := &content.Item{
 			ID: id, Name: name, Weight: tm.Weight(), Size: tm.Size(), Icon: icon, Floor: floor,
-			Random: !tm.NeverRandom() && (tm.Weapon() || tm.Category() == categoryRandom),
+			Random: i != templateRandom && !tm.NeverRandom() && (tm.Weapon() || tm.Category() == categoryRandom),
 		}
 		if tm.Container() {
 			it.Container = &content.Container{Capacity: tm.Capacity(), Largest: tm.Largest(), Weightless: i == templateBagOfLightness}

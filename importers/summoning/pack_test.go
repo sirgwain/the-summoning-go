@@ -344,7 +344,7 @@ func TestImportCatalog(t *testing.T) {
 		dagger.Icon != (content.Image{Sprite: "sprite.res.11", Frame: 0}) || dagger.Floor != (content.Image{Sprite: "sprite.res.13", Frame: 0}) {
 		t.Errorf("dagger %+v", dagger)
 	}
-	if p.Items["item.key"].Random || p.Items["item.random_object"].Random != true {
+	if p.Items["item.key"].Random || p.Items["item.random_object"].Random || !p.Items["item.sack"].Random {
 		t.Error("random items wrong")
 	}
 	if c := p.Items["item.bag_of_lightness"].Container; c == nil || c.Capacity != 4 || c.Largest != 9 || !c.Weightless {

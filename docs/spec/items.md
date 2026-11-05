@@ -22,7 +22,7 @@ OBJECTS holds 254 templates of 15 bytes. An object is an instance of a template 
 
 **Categories.** 1 body armor ("shirts"), 4 quiver, 7 arrows, 8 bottles (break into Broken Glass, template 0Ch); categories 9..12 are weapon classes 0..3 (a weapon's class is its category − 9). Weapons have the 40h flag.
 
-**Template 0** ("Random Object") in a level is a random object: any template that is not never-random and is a weapon or of category 6.
+**Template 0** ("Random Object") in a level is a random object: any template other than 0 that is not never-random and is a weapon or of category 6. Template 0 itself is never chosen.
 
 **The Bag of Lightness** is template 05h.
 
