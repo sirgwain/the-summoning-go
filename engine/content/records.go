@@ -288,6 +288,11 @@ type Thing struct {
 	IntervalMS   int `json:"interval_ms,omitempty"`
 	// WindUpMS is how long a creature gathers itself before its blow lands; 0 strikes at once.
 	WindUpMS int `json:"wind_up_ms,omitempty"`
+	// KeepDistance, in cells, is how far a hostile creature keeps from the player; 0 closes in.
+	// AfterBlow is what it does after its blow: AfterBlowRest (or empty), AfterBlowBackOff or
+	// AfterBlowFlank (docs/spec/creatures.md, Tactics).
+	KeepDistance int    `json:"keep_distance,omitempty"`
+	AfterBlow    string `json:"after_blow,omitempty"`
 	// Footprint is the side of the square, in world units around the ground point, whose corners
 	// boulders and traps test against the terrain, and which sizes the shadow; 0 means
 	// DefaultFootprint.

@@ -195,8 +195,9 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 	}
 	if t.walkCount--; t.walkCount <= 0 {
 		if t.Hostile && !p.Dead && !p.hidden() {
-			t.walkDir, t.walkCount = towards(t.U, t.V, p.U, p.V), 1
+			w.hostileWalk(l, t)
 		} else {
+			t.facePlayer = false
 			t.walkDir, t.walkCount = w.rng.IntN(5), 5+w.rng.IntN(5)
 			if t.walkDir == restDir {
 				t.walkCount += 10
@@ -208,6 +209,9 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 	}
 	d := 2 * t.walkDir
 	t.Facing = d
+	if t.facePlayer {
+		t.Facing = 2 * towards(t.U, t.V, p.U, p.V)
+	}
 	speed := stepOf(t)
 	du, dv := Dirs[d][0]*speed, Dirs[d][1]*speed
 	for ; du != 0 && !w.creatureAccepts(l, t, t.U+du, t.V); du -= sign(du) {
@@ -240,15 +244,17 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 	case hit != nil && hit.thing == nil && t.Hostile && !p.Dead:
 		t.Facing = 2 * towards(t.U, t.V, p.U, p.V)
 		w.creatureStrikes(l, t)
-		t.walkDir, t.walkCount = restDir, 10+w.rng.IntN(5)
+		w.recover(t)
 	case hit != nil && hit.thing == nil && t.Template.Has(content.BehaviorHurtsOnContact):
 		w.hurtPlayer(1, combat.Physical, t.ID)
 		if t.Template.Has(content.BehaviorPoisonous) {
 			w.poisonPlayer()
 		}
 	case t.Hostile:
+		t.facePlayer = false
 		t.walkDir, t.walkCount = w.rng.IntN(4), 5+w.rng.IntN(5)
 	default:
+		t.facePlayer = false
 		t.walkDir, t.walkCount = (t.walkDir+2)%4, 5+w.rng.IntN(5)
 	}
 }
@@ -271,7 +277,7 @@ func (w *World) windingUp(l *Level, t *Thing) {
 	if p == nil || p.Dead || w.current != l.ID {
 		return
 	}
-	t.walkDir, t.walkCount = restDir, 10+w.rng.IntN(5)
+	w.recover(t)
 	if w.playerAhead(l, t) {
 		w.creatureStrikes(l, t)
 		return
@@ -306,7 +312,11 @@ func (w *World) playerAhead(l *Level, t *Thing) bool {
 
 // creatureAccepts reports whether creature t's ground point may stand at (u, v).
 func (w *World) creatureAccepts(l *Level, t *Thing, u, v int) bool {
-	c := cellOf(u, v)
+	return w.creatureStands(l, t, cellOf(u, v))
+}
+
+// creatureStands reports whether creature t's ground point may stand in cell c.
+func (w *World) creatureStands(l *Level, t *Thing, c content.Cell) bool {
 	if l.Blocked(c) {
 		return false
 	}

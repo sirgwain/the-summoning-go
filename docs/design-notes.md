@@ -237,6 +237,13 @@ Change's frame by facing, and the hostile speed of records 23h and 2Bh (`hostile
 - Done: the remake's own panel frames (iron and sapphire, runic slate for the spell panel) and
   outline font (`engine/font`). The game's panel art is not used, by choice.
 - Hotkeys for the hotbar's objects.
+- Done: creature tactics (`docs/spec/creatures.md`, Tactics). Hostile walkers find their way
+  around walls; `keep_distance` makes casters back away, close in and line up to cast;
+  `after_blow` makes a creature `back_off` or `flank` to the player's back after its blow
+  (`engine/sim/tactics.go`, `TestWayAroundWall`, `TestKeepDistance*`, `TestAfterBlow*`). The
+  importer gives casters `keep_distance` 4 with `back_off`, poisonous fighters `back_off` and
+  quick ones `flank`. Left: charging (a wind-up at range, then a rush), fleeing at low hit
+  points, guarding a spot, and groups spreading around the player.
 - Done: the map in the engine's own style (`docs/spec/world.md`, The engine's map): ink on a
   parchment made from noise (`frame.Parchment`, `frame.Roll`) that unrolls, raised walls,
   glowing symbols, the minimap following the player. The world records the links the

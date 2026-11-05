@@ -735,7 +735,10 @@ the engine's own words.
 - `facing` is the starting direction, `speed` the step in world units, `interval_ms` the time
   between updates. `hostile_speed`, if set, is a creature's speed once a conversation turns it
   hostile. `wind_up_ms`, if set, is how long a creature gathers itself, glowing, before its blow
-  lands (docs/spec/combat.md, Wind-up); without it a creature strikes at once.
+  lands (docs/spec/combat.md, Wind-up); without it a creature strikes at once. `keep_distance`,
+  in cells, makes a hostile creature back away from a player nearer than that, close in on one
+  more than 2 cells farther, and line up to cast between; `after_blow` is what it does after its
+  blow: `rest` (the default), `back_off` or `flank` (docs/spec/creatures.md, Tactics).
 - `box` is the rectangle the thing collides by, `[x, y, w, h]` in view pixels from where its
   ground point is drawn: its left edge, its top, its width and its height. Two things whose boxes
   overlap collide. Without one, a thing collides by `[-n/2, -n/4, n, n/2]` for its footprint `n`.

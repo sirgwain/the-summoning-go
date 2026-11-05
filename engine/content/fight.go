@@ -38,6 +38,13 @@ const (
 	AnimateCycle   = "cycle"
 )
 
+// After-blow tactics (docs/spec/creatures.md, Tactics).
+const (
+	AfterBlowRest    = "rest"
+	AfterBlowBackOff = "back_off"
+	AfterBlowFlank   = "flank"
+)
+
 // Animate changes an animated creature's frame on each of its updates.
 type Animate struct {
 	Kind   string `json:"kind"`
@@ -88,6 +95,14 @@ func (v *verifier) itemFight(owner string, i *Item) {
 func (v *verifier) thingFight(owner string, t *Thing) {
 	if t.Name != "" {
 		v.text(owner, t.Name)
+	}
+	switch t.AfterBlow {
+	case "", AfterBlowRest, AfterBlowBackOff, AfterBlowFlank:
+	default:
+		v.fail("%s: unknown after_blow %q", owner, t.AfterBlow)
+	}
+	if t.KeepDistance < 0 {
+		v.fail("%s: keep_distance %d is below 0", owner, t.KeepDistance)
 	}
 	if a := t.Animate; a != nil {
 		switch a.Kind {

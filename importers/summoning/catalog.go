@@ -629,11 +629,34 @@ func (im *importer) creature(n int) (string, error) {
 			anims[fmt.Sprintf("attack.%d", e)] = still(wrap(d + frames - 4))
 		}
 		anims["dead"] = still(len(b.Frames) - 1)
+		t.KeepDistance, t.AfterBlow = tactics(t.Spell != "", beh&behaviorPoisonous != 0, rec.Attack(), rec.Interval())
 	}
 	t.Animations = im.fitAnimations(fmt.Sprintf("NPC record %d", n), anims, len(b.Frames))
 	im.specialCreature(n, rec, t)
 	im.pack.Things[id] = t
 	return id, nil
+}
+
+// Tactics the importer gives walkers (docs/spec/creatures.md, Tactics, Import).
+const (
+	casterKeepDistance = 4
+	quickInterval      = 3
+)
+
+// tactics returns the keep_distance and after_blow of a walker with or without a spell, poison
+// and an attack code, updating every interval ticks.
+func tactics(spell, poisonous bool, attack, interval int) (int, string) {
+	switch {
+	case spell:
+		return casterKeepDistance, content.AfterBlowBackOff
+	case attack == 0:
+		return 0, ""
+	case poisonous:
+		return 0, content.AfterBlowBackOff
+	case interval <= quickInterval:
+		return 0, content.AfterBlowFlank
+	}
+	return 0, ""
 }
 
 // windUp is the wind-up in ms of a creature with hitDice hit dice updating every interval ticks:

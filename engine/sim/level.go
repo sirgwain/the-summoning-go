@@ -99,6 +99,12 @@ type Thing struct {
 	WindUpUntil int64 `json:",omitempty"`
 	// ShotNext is the step a creature with a ranged attack may next shoot.
 	ShotNext int64 `json:",omitempty"`
+	// Recovery is how a creature recovers from its blow (content.AfterBlowBackOff or
+	// content.AfterBlowFlank), for RecoverySteps more steps; empty when it is not recovering.
+	Recovery      string `json:",omitempty"`
+	RecoverySteps int    `json:",omitempty"`
+	// facePlayer makes a creature's current walk step with its face toward the player.
+	facePlayer bool
 	// casting counts a stationary caster's updates to its next cast; animCount and animStep an
 	// animated creature's frame changes; spin the ticks a teleported creature still spins.
 	casting             int

@@ -70,7 +70,7 @@ The frames of a creature with `n` frames: walking direction `d` shows frames `d`
 
 Each update a creature counts down its current walk. When the count runs out it picks a new one:
 
-- **Hostile**, and the player is visible (not invisible and not transformed): head toward the player for one step. The heading picks the four-way direction that best closes the larger of the two axis gaps.
+- **Hostile**, and the player is visible (not invisible and not transformed): head toward the player for one step. The heading picks the four-way direction that best closes the larger of the two axis gaps. In the engine, Tactics below refine this.
 - **Otherwise**: a random direction 0..4 for 5–9 steps; direction 4 rests 10 steps longer.
 
 Then, if it is not resting, it steps 8 units in its direction:
@@ -80,7 +80,7 @@ Then, if it is not resting, it steps 8 units in its direction:
 - **Blocked by the player, when it hurts on contact:** 1 damage, poisoning if the creature is poisonous.
 - **Blocked otherwise:** it turns around and rests 5–9 steps (a hostile one picks a random direction instead).
 
-After an attack or a cast it rests 10–14 steps.
+After an attack or a cast it rests 10–14 steps (in the engine, after an attack it recovers as Tactics, After the blow, says).
 
 A creature that is poisoned loses 1–2 hit points with a 1 in 40 chance each update.
 
@@ -144,6 +144,37 @@ A creature template carries what fighting needs: `attack` (dice, byte 9), `vulne
 - **Showing.** A walking creature shows `walk.e`, stepped by its moves; attacking it shows `attack.e` for its next update; a corpse shows `dead`.
 - **Dying.** Its items drop on its cell, the player gains its experience, and it becomes a corpse (`leaves_corpse`) or is removed. Corpses weigh on plates and can be pushed.
 - **Poison.** A poisoned creature is a state of the thing, not of the template.
+
+## Tactics
+
+Tactics are the engine's own addition, like the wind-up (combat.md). The game's hostile creatures all head straight for the player and rest after every blow; in the engine a creature finds its way around walls, and its template may say how it fights around the player. A template with no tactics fights as the game's creatures do, but for finding its way.
+
+These rules replace the hostile heading of Walkers. Each applies when a hostile walker picks a new walk while the player is visible (not invisible, not transformed); the walk lasts one step, as the heading does. Facing follows the step, unless a rule says the creature faces the player, in which case it steps backward or sideways with its face toward the player (the four-way direction of the heading).
+
+**Finding the way.** A creature heading for a goal cell (the player's, unless said otherwise) counts the way to it in cells, four-way, over the cells its ground point may stand in (Engine model, Walking: not blocked, not an avoided floor, and no pit or open trapdoor unless it resists teleporting) within 24 cells of its own on each axis. The player's cell counts as one it may stand in, unless a rule says otherwise; other things are not counted. Its step is the heading's (Walkers) toward the goal, the player's ground point or else the middle of the goal cell, when the neighboring cell that way is one nearer the goal, or when it stands in the goal cell. Otherwise it steps toward a neighboring cell one nearer the goal, trying the direction of its last step, then the direction that closes the other axis gap, then the rest in direction order (0..3), so that it keeps to one way around. When no way reaches the goal within that window, it takes the heading.
+
+**Keeping distance.** A template's `keep_distance`, `n` cells, makes a creature fight from afar. The gap is the larger of the two axis gaps between its ground point and the player's, in units; a cell is 32.
+
+- **Too near** (gap below `32n`): it backs away, facing the player. It steps directly away along the axis of the larger gap; if the neighboring cell that way is not one it may stand in, along the other axis away from the player (either way when that gap is 0, the positive first); if neither, it heads for the player (Finding the way) and fights as any creature does.
+- **Too far** (gap above `32(n + 2)`): it heads for the player (Finding the way).
+- **Within reach:** when the smaller axis gap is below its step, it is lined up: it rests this step facing the player and, 1 time in 4, casts its spell at the player, then rests 10–14 steps as after any cast. Otherwise it steps along the smaller gap's axis toward lining up, facing the player.
+
+**After the blow.** A template's `after_blow` says what a creature does after its blow, whether the blow struck or met nothing (combat.md, Wind-up), in place of resting 10–14 steps:
+
+| `after_blow` | What it does |
+| --- | --- |
+| `rest`, or none | Rests 10–14 steps |
+| `back_off` | For its next 2–3 steps it backs away from the player as Keeping distance's too near, facing the player; a step it cannot back away it rests. Then it heads for the player again |
+| `flank` | For up to its next 20 steps it heads for the cell behind the player, the cell beside the player's against the player's four-way facing, counting the player's cell as one it cannot stand in (but for its own). In that cell it steps onto the line of the player's facing, until its gap across that line is below its step; then it stops flanking and heads for the player, and its blow strikes from behind (combat.md). With no way to that cell, it stops flanking and rests 10–14 steps; so does a creature whose blow was already from behind |
+
+What remains of a creature's recovery is saved with it. A creature blocked by the player while flanking or backing off attacks as any hostile creature does, and recovers anew from that blow.
+
+**Import.** The importer gives each walker's template tactics from its NPC record:
+
+- With a magic attack (byte 12 a spell): `keep_distance` 4 and `after_blow` `back_off`.
+- Otherwise, poisonous (0040h) with an attack (byte 9 above 0): `after_blow` `back_off`, to strike and step away.
+- Otherwise, updating every 3 ticks or quicker (byte 11 of 3 or less) with an attack: `after_blow` `flank`.
+- Otherwise none.
 
 ## Unknowns
 
