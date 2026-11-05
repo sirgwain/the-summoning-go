@@ -32,3 +32,12 @@ func TestPlayerStrikeRules(t *testing.T) {
 		t.Errorf("an object with no class: %+v", r)
 	}
 }
+
+func TestLevelThresholds(t *testing.T) {
+	want := []int{500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 128000, 256000, 600000, 1200000}
+	for level, w := range want {
+		if got := (Rules{}).LevelThreshold(level); got != w {
+			t.Errorf("after level %d: %d, want %d", level, got, w)
+		}
+	}
+}

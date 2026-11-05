@@ -14,6 +14,8 @@ const (
 	firedRange  = 127
 	arrowBreaks = 25
 	throwDelay  = 15
+	// failedThrowDelay is the hand's wait after a throw that could not fly: 2 points.
+	failedThrowDelay = 6
 	// touchReach is how far ahead a thrower touches what it hits at once.
 	touchReach = 4
 	// bowClass is the weapon class throwing and firing practice.
@@ -304,6 +306,7 @@ func (w *World) throwFrom(hand int) {
 	}
 	rng := (100-min(o.Weight(w.pack), 100))/5 + 5
 	if !w.launch(l, o, p.U, p.V, p.Facing, rng, w.missileDamage(o, false), true, false, nil) {
+		w.setDelay(hand, failedThrowDelay)
 		return
 	}
 	p.Slots[SlotRightHand+hand] = nil

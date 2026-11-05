@@ -384,7 +384,7 @@ the engine's own words.
 | `ui.damage_after` | ` damage points` |
 | `ui.armor_bonus` | `AC bonus of ` |
 | `ui.two_handed` | Requires two hands |
-| `ui.weapon_class` | weapon class {n} |
+| `ui.weapon_class` | weapon class {n}, for a class whose `ui.weapon_class.<n>` the pack's text does not give |
 | `ui.weapon.0` | Sword |
 | `ui.weapon.1` | Axe |
 | `ui.weapon.2` | Spear |

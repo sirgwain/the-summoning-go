@@ -41,7 +41,7 @@ Experience comes from killing creatures (creatures.md), from raising skills, and
 
 Four weapon classes (0–3; class 3 is bows) and four magic schools (0 Wizardry, 1 Sorcery, 2 Enchantment, 3 Healing), each with a level, practice points and a practice threshold that starts at 10.
 
-Practice adds points. When they reach the threshold the level rises by 1 (with a fanfare, audio.md, and message 44h), the threshold is subtracted, the threshold doubles (up to 1400h), and the player gains 57 experience. Weapons practice on hits (combat.md); schools practice on casting and on a spell's hits (spells.md). Lowering a skill shows message 45h.
+Practice adds points. When they reach the threshold the level rises by 1 (with a fanfare, audio.md, and message 44h naming the skill: TEXT 2Eh + class for a weapon class, 2Ah + school for a school; 45h names it the same way), the threshold is subtracted, the threshold doubles (up to 1400h), and the player gains 57 experience. Weapons practice on hits (combat.md); schools practice on casting and on a spell's hits (spells.md). Lowering a skill shows message 45h.
 
 ## Facing and walking
 

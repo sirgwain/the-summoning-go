@@ -165,14 +165,14 @@ var levels = [...]struct{ hit, magic content.Dice }{
 
 func d(n, sides int) content.Dice { return content.Dice{Count: n, Sides: sides} }
 
-// LevelThreshold is 500 for the first level, doubling, with 512000 becoming 600000.
+// LevelThreshold is 500 for the first level, each doubling the last, with 512000 becoming
+// 600000 (and so the next 1200000).
 func (Rules) LevelThreshold(level int) int {
 	t := 500
 	for range level {
-		t *= 2
-	}
-	if t == 512000 {
-		t = 600000
+		if t *= 2; t == 512000 {
+			t = 600000
+		}
 	}
 	return t
 }

@@ -57,6 +57,9 @@ func SkillName(p *content.Pack, n string) string {
 		return n
 	}
 	if i < sim.SkillSchool {
+		if s, ok := packText(p, fmt.Sprintf("ui.weapon_class.%d", i)); ok {
+			return s
+		}
 		return UI(p, "ui.weapon_class", "n", i)
 	}
 	return UI(p, fmt.Sprintf("ui.school.%d", i-sim.SkillSchool))

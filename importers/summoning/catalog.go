@@ -179,6 +179,16 @@ func (im *importer) text(strs []string) {
 			m.Messages[key] = id
 		}
 	}
+	// A skill's messages name it by its TEXT record: the schools 2Ah–2Dh, the weapon classes
+	// 2Eh–31h (player.md, Skills).
+	for i := range 4 {
+		if w, ok := t.Strings[msgID(msgFirstSchool+i)]; ok {
+			t.Strings[fmt.Sprintf("ui.school.%d", i)] = w
+		}
+		if w, ok := t.Strings[msgID(msgFirstWeaponClass+i)]; ok {
+			t.Strings[fmt.Sprintf("ui.weapon_class.%d", i)] = w
+		}
+	}
 	// An attribute's message names it by its TEXT record, 22h–27h (player.md, Derived values).
 	for i, name := range []string{"strength", "agility", "endurance", "accuracy", "talent", "power"} {
 		if w, ok := t.Strings[msgID(0x22+i)]; ok {

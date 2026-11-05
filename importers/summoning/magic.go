@@ -338,8 +338,12 @@ var gestureHolds = map[string]string{
 	"H": "L", "I": "AGJKL", "J": "ABI", "K": "EL", "L": "BDEHIK",
 }
 
-// msgFirstSchool is the TEXT record of school 0's name.
-const msgFirstSchool = 0x2A
+// msgFirstSchool and msgFirstWeaponClass are the TEXT records of school 0's and weapon class
+// 0's names.
+const (
+	msgFirstSchool      = 0x2A
+	msgFirstWeaponClass = 0x2E
+)
 
 func varID(n int) string { return fmt.Sprintf("var.%d", n) }
 

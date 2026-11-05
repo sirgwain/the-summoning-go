@@ -71,7 +71,7 @@ func TestFlightStartsAhead(t *testing.T) {
 }
 
 // TestThrowTooCloseToWall refuses a throw whose flight would start in the wall: the rock stays in
-// hand and the hand does not wait (docs/spec/entities.md, Too close to a wall).
+// hand and the hand waits 2 points (docs/spec/entities.md, Too close to a wall).
 func TestThrowTooCloseToWall(t *testing.T) {
 	w := fightWorld(t, nil,
 		"#####",
@@ -82,11 +82,11 @@ func TestThrowTooCloseToWall(t *testing.T) {
 	rock := w.newObject("item.rock")
 	p.Slots[SlotRightHand] = rock
 	ev := w.Update([]input.Command{input.Throw{Hand: 0}})
-	if !has(ev, EventMessage, content.MsgTooCloseToWall) || p.Slots[SlotRightHand] != rock || p.Delays[0] != 0 || len(l.Flights) != 0 {
+	if !has(ev, EventMessage, content.MsgTooCloseToWall) || p.Slots[SlotRightHand] != rock || p.Delays[0] == 0 || p.Delays[0] > failedThrowDelay || len(l.Flights) != 0 {
 		t.Errorf("throwing into the wall: %v, hand %v, delay %d, %d flights", ev, p.Slots[SlotRightHand], p.Delays[0], len(l.Flights))
 	}
 	// A step back, the flight starts on the floor.
-	p.V = 60
+	p.V, p.Delays[0] = 60, 0
 	if w.Update([]input.Command{input.Throw{Hand: 0}}); p.Slots[SlotRightHand] != nil || len(l.Flights) != 1 {
 		t.Errorf("throwing from a step back: hand %v, %d flights", p.Slots[SlotRightHand], len(l.Flights))
 	}

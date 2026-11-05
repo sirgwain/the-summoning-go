@@ -187,7 +187,7 @@ At each update, in this order:
 
 A thrower already touching something when it throws (its own box, moved 4 units along its facing, overlaps a thing; for a cell, the flight's box moved so) hits it at once, and the object lands where its flight starts.
 
-**Too close to a wall.** Then, if the flight would start in a blocked cell, it does not fly. The player's throw or shot is refused with message 28h (`too_close_to_wall`): the object stays in the hand or goes back into the quiver, and the hand does not wait, practice or pose; a blow already struck by touching stands. A creature's object is lost. Spells say the same in spells.md, Missiles.
+**Too close to a wall.** Then, if the flight would start in a blocked cell, it does not fly. The player's throw or shot is refused with message 28h (`too_close_to_wall`): the object stays in the hand or goes back into the quiver, and the hand does not practice or pose, but it waits: a throw 2 points, a shot its action's delay, as every refused shot does; a blow already struck by touching stands. A creature's object is lost. Spells say the same in spells.md, Missiles.
 
 **Drawing it.** It glides between its moves, as Drawn between updates says; spells in flight do the same (spells.md, Missiles).
 
