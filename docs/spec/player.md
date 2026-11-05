@@ -144,6 +144,8 @@ interval = max(1, interval)
 - `w ≥ L`: agility − `p`, with `p = (w − L) / 20 + 1`, and `load` gets `p + 1`.
 - Then, from agility after that: `load` gets −1 at 15 or more, or `10 − AGI` below 10.
 
+The load changes the agility attribute itself, as it stands: every use of agility (the to-hit scores both ways, combat.md, and the attributes shown) sees agility as the load leaves it, and the change is taken back and worked out again whenever the load or strength changes.
+
 The load gauge shows `5w / L` of 5 steps.
 
 ## Exertion and fatigue

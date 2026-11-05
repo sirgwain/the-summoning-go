@@ -371,7 +371,7 @@ func (w *World) creatureStrikes(l *Level, t *Thing) {
 	}
 	r := w.rules.CreatureStrikes(w.rng, combat.CreatureStrike{
 		Accuracy: t.Template.Stats["accuracy"], Bonus: t.Template.Stats["bonus"], Damage: t.Template.Attack,
-		Behind: behind(t.Facing, p.Facing), PlayerAgility: p.Attributes[AttrAgility], Status: w.combatStatus(),
+		Behind: behind(t.Facing, p.Facing), PlayerAgility: p.Attribute(w.pack, AttrAgility), Status: w.combatStatus(),
 	})
 	if !r.Hit {
 		w.messageNumbers(l, t.Cell(), content.MsgCreatureMiss, r.Score, 0)
@@ -627,7 +627,7 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 		}
 	}
 	s := combat.PlayerStrike{
-		Agility: p.Attributes[AttrAgility], Endurance: p.Attributes[AttrEndurance],
+		Agility: p.Attribute(w.pack, AttrAgility), Endurance: p.Attributes[AttrEndurance],
 		Accuracy: p.Attributes[AttrAccuracy], Strength: p.Attributes[AttrStrength],
 		Weapon: o != nil, Classed: class >= 0, Damage: a.Damage, Behind: behind(d, t.Facing), Status: w.combatStatus(),
 		CreatureAccuracy: t.Template.Stats["accuracy"], Resistance: t.Template.Stats["resistance"],

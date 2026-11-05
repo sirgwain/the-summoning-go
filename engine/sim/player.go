@@ -514,6 +514,16 @@ func (p *Player) Agility(pk *content.Pack) (agility, extra int) {
 	return agility, extra
 }
 
+// Attribute returns attribute name as it now counts: agility as the load leaves it, the others
+// as they are (docs/spec/player.md, Load).
+func (p *Player) Attribute(pk *content.Pack, name string) int {
+	if name == AttrAgility {
+		a, _ := p.Agility(pk)
+		return a
+	}
+	return p.Attributes[name]
+}
+
 // IntervalTicks returns the ticks the player's speed adds to its template's base interval:
 // load and agility, and low endurance. A player without attributes adds none.
 func (p *Player) IntervalTicks(pk *content.Pack) int {

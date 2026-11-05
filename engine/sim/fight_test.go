@@ -1088,3 +1088,15 @@ func TestHurtCreatureActsAtOnce(t *testing.T) {
 		t.Errorf("a hurt guard's next update is %d, at step %d", g.next, w.step)
 	}
 }
+
+func TestLoadSetsAgilityForFighting(t *testing.T) {
+	w := fightWorld(t, nil,
+		"####",
+		"#@.#",
+		"####")
+	p := w.Player()
+	base := p.Attributes[AttrAgility]
+	if got := p.Attribute(w.Pack(), AttrAgility); got != base+1 {
+		t.Errorf("carrying nothing: agility %d, want %d", got, base+1)
+	}
+}

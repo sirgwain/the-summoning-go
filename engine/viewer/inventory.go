@@ -326,10 +326,11 @@ func (v *Viewer) stats(p *sim.Player, inv *content.Inventory) []TextLine {
 	var lines []TextLine
 	x := 0
 	for _, n := range Attributes {
-		l := TextLine{Text: fmt.Sprintf("%s:%d", AttributeLabel(v.Pack, n), p.Attributes[n]), At: image.Pt(x, 0)}
-		if m, ok := p.MaxAttributes[n]; ok && m != p.Attributes[n] {
+		a := p.Attribute(v.Pack, n)
+		l := TextLine{Text: fmt.Sprintf("%s:%d", AttributeLabel(v.Pack, n), a), At: image.Pt(x, 0)}
+		if m, ok := p.MaxAttributes[n]; ok && m != a {
 			l.Text += fmt.Sprintf("/%d", m)
-			if l.Tone = ToneLow; p.Attributes[n] > m {
+			if l.Tone = ToneLow; a > m {
 				l.Tone = ToneHigh
 			}
 		}
