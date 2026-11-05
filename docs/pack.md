@@ -671,7 +671,7 @@ the engine's own words.
   with `power_worn` also when worn. `spent` is the item a used-up object leaves
   in its hand; without one the hand is left empty. A charged object is never replaced.
 - `casts` makes using the item cast a spell: `{ "spell": "spell.fireball", "power": "1d6" }`, the
-  power optional (the spell's own roll without it), with `message` an engine message shown as it
+  power optional (the spell's own roll without it; `"0"` casts at power 0), with `message` an engine message shown as it
   casts. `conversation` makes using it start the
   conversation of a thing template; with `use_result` it is used only when that conversation
   leaves the `use_result` counter nonzero, and otherwise it is never used up. Either replaces

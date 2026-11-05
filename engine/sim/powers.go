@@ -495,8 +495,8 @@ func (w *World) useObject(o *Object, a content.ItemAction) {
 			w.message(w.Current(), w.player.Cell(), it.Casts.Message, "")
 		}
 		power := noPower
-		if it.Casts.Power != (content.Dice{}) {
-			power = w.roll(it.Casts.Power)
+		if it.Casts.Power != nil {
+			power = w.roll(*it.Casts.Power)
 		}
 		w.learnItem(o.Item, StageUsed)
 		w.castSpell(w.playerCaster(), sp, power)

@@ -368,26 +368,32 @@ func (im *importer) scroll(t int, tm *ObjectTemplate, it *content.Item) {
 // model). Conversations name NPC records, whose templates are added with the conversations.
 func (im *importer) casting(tm *ObjectTemplate, it *content.Item) {
 	p, _ := tm.Power()
-	cast := func(n int, power content.Dice, msg string) {
+	// The action-1 damage it casts at is its dice, and 0 for code 0 (1d1).
+	actionDice := func() *content.Dice {
+		d := dice(tm.DamageCode(1))
+		return &d
+	}
+	fixed := func(n int) *content.Dice { return &content.Dice{Bonus: n} }
+	cast := func(n int, power *content.Dice, msg string) {
 		if id, ok := spellID(n); ok {
 			it.Casts = &content.Cast{Spell: id, Power: power, Message: msg}
 		}
 	}
 	switch {
 	case p == 0x13:
-		cast(3, content.Dice{Bonus: 20}, "")
+		cast(3, fixed(20), "")
 	case p == 0x19:
-		cast(4, dice(tm.DamageCode(1)), "")
+		cast(4, actionDice(), "")
 	case p == 0x1E:
-		cast(11, content.Dice{}, "")
+		cast(11, fixed(0), "")
 	case p == 0x29:
-		cast(14, content.Dice{Bonus: 20}, "")
+		cast(14, fixed(20), "")
 	case p == 0x4E:
-		cast(10, content.Dice{Bonus: 10}, content.MsgSight)
+		cast(10, fixed(10), content.MsgSight)
 	case p == 0x5C:
-		cast(5, dice(tm.DamageCode(1)), "")
+		cast(5, actionDice(), "")
 	case p == 0x5D:
-		cast(6, content.Dice{}, "")
+		cast(6, nil, "")
 	case p == 0x51:
 		it.Conversation, it.UseResult = npcID(0x30), true
 	case p == 0x52:

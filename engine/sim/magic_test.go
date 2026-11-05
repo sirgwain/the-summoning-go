@@ -215,7 +215,7 @@ func TestCreatureCasts(t *testing.T) {
 
 func TestObjectCastsAndTalks(t *testing.T) {
 	w := studyWorld(t, devpack.StudyStart, 2, func(p *content.Pack) {
-		p.Items[devpack.ItemSphere].Casts = &content.Cast{Spell: devpack.SpellFireball, Power: content.Dice{Bonus: 50}}
+		p.Items[devpack.ItemSphere].Casts = &content.Cast{Spell: devpack.SpellFireball, Power: &content.Dice{Bonus: 50}}
 		p.Items[devpack.ItemSphere].Actions = []content.ItemAction{{Kind: content.ActionUseUp, Delay: 3}}
 		p.Items[devpack.ItemRock].Conversation = devpack.ThingSage
 		p.Items[devpack.ItemRock].UseResult = true

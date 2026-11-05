@@ -171,8 +171,8 @@ type Counters struct {
 // Cast is a spell an item casts when used.
 type Cast struct {
 	Spell string `json:"spell"`
-	// Power is the cast's power; none rolls the spell's own.
-	Power Dice `json:"power,omitzero"`
+	// Power is the cast's power, "0" included; none rolls the spell's own.
+	Power *Dice `json:"power,omitempty"`
 	// Message is an engine message shown as it casts.
 	Message string `json:"message,omitempty"`
 }
