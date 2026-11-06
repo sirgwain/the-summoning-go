@@ -278,9 +278,7 @@ func (w *World) drop(l *Level, c content.Cell, o *Object, by, depth int) bool {
 			w.fall(l, f, o, depth)
 			return true
 		case f.Kind == content.FeatureTeleporter && f.Armed && depth < maxDepth:
-			to := w.jump(l, f)
-			w.emit(Event{Kind: EventSound, Level: l.ID, Cell: c, Detail: soundTeleport})
-			return w.drop(l, to, o, byWorld, depth+1)
+			return w.drop(l, w.jump(l, f), o, byWorld, depth+1)
 		case f.Kind == content.FeatureDoor && f.SealedBy != "" && o.Item == f.SealedBy:
 			w.unseal(l, f)
 		}
@@ -407,14 +405,24 @@ func (w *World) entered(l *Level, t *Thing, depth int) {
 	switch {
 	case f == nil:
 	case f.Kind == content.FeatureTeleporter && f.Armed:
-		to := w.jump(l, f)
-		w.emit(Event{Kind: EventSound, Level: l.ID, Cell: f.Cell, Detail: soundTeleport})
-		if !w.teleportThing(l, t, to, depth+1) {
-			return
+		if t.Template.Kind == content.ThingCreature {
+			// A creature or corpse is first set down in the middle of the teleporter's cell, and is
+			// crushed if something stands there; a living one then spins before it jumps.
+			u, v := cellCenter(f.Cell)
+			if w.blocker(l, t, false, u, v, t.Template.Bounds(), nil) != nil {
+				t.U, t.V = u, v
+				w.removeThing(l, t, "crushed")
+				return
+			}
+			t.U, t.V = u, v
+			if alive(t) && !t.Template.Has(content.BehaviorAnimated) {
+				if t.spin == 0 {
+					t.spin, t.spinNext = spinTicks, w.step+Steps(1)
+				}
+				return
+			}
 		}
-		if alive(t) && t.spin == 0 && !t.Template.Has(content.BehaviorAnimated) {
-			t.spin, t.spinNext = spinTicks, w.step+Steps(1)
-		}
+		w.teleportThing(l, t, w.jump(l, f), depth+1)
 	case (f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor && f.Open) && t.Template.Kind == content.ThingCreature:
 		w.removeThing(l, t, "fell")
 	}

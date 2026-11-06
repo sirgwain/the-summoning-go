@@ -111,6 +111,15 @@ func settle(w *World) []Event {
 	return all
 }
 
+// spinOut runs updates until a creature that came onto a teleporter has spun and jumped.
+func spinOut(w *World) []Event {
+	var all []Event
+	for range Steps(1)*spinTicks + 2 {
+		all = append(all, w.Update(nil)...)
+	}
+	return all
+}
+
 func has(events []Event, kind, detail string) bool {
 	return slices.ContainsFunc(events, func(e Event) bool { return e.Kind == kind && (detail == "" || e.Detail == detail) })
 }
@@ -289,8 +298,15 @@ func TestTeleporterSendsObjectsAndThings(t *testing.T) {
 		t.Fatalf("first key at (1, 4): %v, next %d", got, tele.Next)
 	}
 	do(w, input.Move{Thing: "guard", Cell: cell{1, 2}})
+	if g := w.Current().Thing("guard"); g.Cell() != (cell{1, 2}) || g.spin == 0 || tele.Next != 1 {
+		t.Errorf("the guard did not spin on the teleporter: at %v, spin %d, next %d", g.Cell(), g.spin, tele.Next)
+	}
+	ev := spinOut(w)
 	if g := w.Current().Thing("guard"); g.Cell() != (cell{3, 2}) || tele.Next != 0 {
 		t.Errorf("guard at %v, next %d", g.Cell(), tele.Next)
+	}
+	if has(ev, EventSound, soundTeleport) {
+		t.Error("a creature through a teleporter made the teleport sound")
 	}
 	do(w, input.Place{Thing: "thing.ghost", Cell: cell{1, 2}})
 	if g := w.Current().ThingsAt(cell{1, 2}); len(g) != 1 {

@@ -88,7 +88,7 @@ A creature that is poisoned loses 1–2 hit points with a 1 in 40 chance each up
 
 **Corpses** (no hit points) do not update.
 
-**Teleported creatures** arrive at once, then spin for 30 ticks, turning to the next of their four directions each tick, before they act again (rules.md).
+**Teleported creatures** spin on the teleporter for 30 ticks, turning to the next of their four directions each tick, and are then moved; they act again from there (rules.md, In-level teleporters).
 
 **Animated objects, engine model.** A template's `animate` says how its frame changes on each of its updates: `flicker` (a count of 15–29 is set when it runs out and counts down; while above 15 the frame alternates between the flicker frames by the count's parity, or is a random one of them with `random`; otherwise the rest frame), `toggle` (between two frames, every 2–9 updates), `random` (a random frame of the list each update) and `cycle` (the next frame of the list each update). The importer gives patterns 101–104 `flicker` over frames 0, 1, 2; `flicker` random over 0, 1, 2, 3; `toggle` over 0, 1; and `random` over 0–3.
 

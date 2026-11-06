@@ -565,6 +565,34 @@ func TestTeleporterAndFloors(t *testing.T) {
 	}
 }
 
+// A fire floor burns at each step onto it, once per axis the step moves along, not once per cell.
+func TestFireBurnsEachStep(t *testing.T) {
+	w := walkWorld(t,
+		"#######",
+		"#@....#",
+		"#^^^..#",
+		"#^^^..#",
+		"#^^^..#",
+		"#######")
+	p := w.Player()
+	p.U, p.V = cellCenter(cell{3, 2})
+	walk(w, 4, 1)
+	if hp := p.HitPoints; hp != 28 {
+		t.Errorf("a step along an axis on fire left %d hit points, want 28", hp)
+	}
+	p.U, p.V = cellCenter(cell{3, 2})
+	walk(w, 3, 1)
+	if hp := p.HitPoints; hp != 24 {
+		t.Errorf("a diagonal step on fire left %d hit points, want 24", hp)
+	}
+	p.U, p.V = cellCenter(cell{3, 2})
+	p.Status.Levitating = true
+	walk(w, 4, 1)
+	if hp := p.HitPoints; hp != 24 {
+		t.Errorf("a levitating step on fire left %d hit points, want 24", hp)
+	}
+}
+
 func TestTeleporterCrushesWhatStandsThere(t *testing.T) {
 	for _, id := range []string{"boulder", "guard"} {
 		w := walkWorld(t,
@@ -619,6 +647,7 @@ func TestTeleportedThingCrushedWhereSomethingStands(t *testing.T) {
 	l = w.Current()
 	l.Thing("guard").Items = []*Object{{Item: "item.rock"}}
 	w.Update([]input.Command{input.Move{Thing: "guard", Cell: cell{1, 3}}})
+	spinOut(w)
 	if l.Thing("guard") != nil || len(l.Objects[dest]) != 1 {
 		t.Errorf("guard onto the player: guard %v, floor %v", l.Thing("guard"), l.Objects[dest])
 	}
@@ -631,6 +660,7 @@ func TestTeleportedThingCrushedWhereSomethingStands(t *testing.T) {
 	l.Thing("guard").HitPoints = 0
 	l.Thing("guard").U, l.Thing("guard").V = cellCenter(dest)
 	w.Update([]input.Command{input.Place{Thing: "thing.guard", Cell: cell{1, 3}}})
+	spinOut(w)
 	if got := l.ThingsAt(dest); len(got) != 2 {
 		t.Fatalf("a guard onto a corpse: %d things there", len(got))
 	}
@@ -638,6 +668,42 @@ func TestTeleportedThingCrushedWhereSomethingStands(t *testing.T) {
 		if u, v := cellCenter(dest); th.U != u || th.V != v {
 			t.Errorf("%s at (%d, %d), not the cell's center", th.ID, th.U, th.V)
 		}
+	}
+}
+
+func TestPushedCorpseGoesThroughTeleporter(t *testing.T) {
+	w := walkWorld(t,
+		"#########",
+		"#@.Gt...#",
+		"#########")
+	l := w.Current()
+	l.Thing("guard").HitPoints = 0
+	// Push the corpse onto the teleporter: it goes on alone, with no sound, and the player stays.
+	var ev []Event
+	for range 40 {
+		ev = append(ev, walk(w, 2, 1)...)
+		if g := l.Thing("guard"); g.Cell() == (cell{1, 6}) {
+			break
+		}
+	}
+	if g := l.Thing("guard"); g.Cell() != (cell{1, 6}) {
+		t.Fatalf("the corpse is at %v", g.Cell())
+	}
+	if c := w.Player().Cell(); c != (cell{1, 3}) {
+		t.Errorf("pushing the corpse through took the player to %v", c)
+	}
+	if has(ev, EventSound, soundTeleport) {
+		t.Error("the corpse made the teleport sound")
+	}
+	// Following it onto the teleporter crushes it.
+	for range 20 {
+		walk(w, 2, 1)
+		if w.Player().Cell() == (cell{1, 6}) {
+			break
+		}
+	}
+	if c := w.Player().Cell(); c != (cell{1, 6}) || l.Thing("guard") != nil {
+		t.Errorf("following the corpse: player at %v, corpse %v", c, l.Thing("guard"))
 	}
 }
 

@@ -590,6 +590,7 @@ func (w *World) walk(d int) bool {
 			return true
 		}
 		if ok {
+			w.stepOnto(l, cellOf(p.U+su, p.V))
 			break
 		}
 	}
@@ -600,6 +601,7 @@ func (w *World) walk(d int) bool {
 			return true
 		}
 		if ok {
+			w.stepOnto(l, cellOf(p.U, p.V+sv))
 			break
 		}
 	}
@@ -625,13 +627,14 @@ func (w *World) walk(d int) bool {
 		t := hit.thing
 		switch {
 		case pushable(t):
-			from := [2]int{t.U, t.V}
-			// A push makes the player wait longer; it and what it pushes glide over the wait.
+			// A push makes the player wait longer; it and what it pushes glide over the wait. The
+			// player moves its own step, whatever the cell the thing entered did with it.
 			end := p.next + Steps(pushTicks)
+			id := t.ID
 			if w.push(l, t, du, dv, 0, end) {
-				su, sv = t.U-from[0], t.V-from[1]
+				su, sv = du, dv
 				p.next, p.glide.end = end, end
-				w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "pushed"})
+				w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: id, Detail: "pushed"})
 			}
 		case t.Template.Kind == content.ThingPortal && t.Portal != nil:
 			w.enterPortal(l, t)
@@ -774,24 +777,45 @@ func (w *World) movePlayerBy(l *Level, du, dv int) {
 	p.Idle = 0
 	to := p.Cell()
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: to, Thing: PlayerID, Detail: "moved"})
-	if ft := l.FloorType(to); ft != nil && ft.Depth == 4 && !p.Status.Levitating && w.chance(1, 4) {
-		w.hurtPlayer(1, combat.Physical, "deep water")
-	}
 	if from != to {
 		w.weigh(l, from, -p.weight(), 0)
 		w.weigh(l, to, p.weight(), 0)
-		w.playerEntered(l, to, 0)
+		w.cellEntered(l, to, 0)
 	}
 }
 
-// playerEntered runs what cell c does to the player entering it: its floor's effect, a floor
-// exit, a teleporter (docs/spec/rules.md, The player and the features).
+// stepOnto runs what the floor of cell c does to the player at each step onto it: its enter
+// effect, and deep water's chance of a hit point. A walk steps onto the cell of each axis whose
+// terrain test it accepts (docs/spec/world.md, Liquids).
+func (w *World) stepOnto(l *Level, c content.Cell) {
+	p := w.player
+	ft := l.FloorType(c)
+	if ft == nil || p.Status.Levitating {
+		return
+	}
+	if ft.Enter != nil {
+		w.floorEffect(ft.Enter)
+	}
+	if ft.Depth == 4 && w.chance(1, 4) {
+		w.hurtPlayer(1, combat.Physical, "deep water")
+	}
+}
+
+// playerEntered runs what cell c does to the player arriving in it other than by walking: a
+// step onto its floor, then its feature.
 func (w *World) playerEntered(l *Level, c content.Cell, depth int) {
 	if depth >= maxDepth || w.current != l.ID {
 		return
 	}
-	if ft := l.FloorType(c); ft != nil && ft.Enter != nil && !w.player.Status.Levitating {
-		w.floorEffect(ft.Enter)
+	w.stepOnto(l, c)
+	w.cellEntered(l, c, depth)
+}
+
+// cellEntered runs what cell c's feature does to the player entering it: a floor exit, a
+// teleporter (docs/spec/rules.md, The player and the features).
+func (w *World) cellEntered(l *Level, c content.Cell, depth int) {
+	if depth >= maxDepth || w.current != l.ID {
+		return
 	}
 	f := l.byCell[c]
 	switch {

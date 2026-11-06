@@ -98,7 +98,7 @@ When blocked, it hurts what blocked it 3d4. In state 1 it then stops; if it hit 
 
 They do nothing on their own, except:
 
-- A thing on a teleporter is moved by it, to the center of the destination cell; if the player or another thing's box overlaps its own there (a living creature leaving corpses out), it is crushed instead: removed, dropping what it carries on that cell.
+- A thing on a teleporter is moved by it, silently: a living creature after spinning there, anything else at once (rules.md, In-level teleporters). It goes to the center of the destination cell; if the player or another thing's box overlaps its own there (a living creature leaving corpses out), it is crushed instead: removed, dropping what it carries on that cell.
 - Conjured things with a lifetime count it down each update and vanish at 0, leaving any weight plate.
 - Entities using resource 60 cycle frames 0, 1, 2, 1.
 
@@ -159,11 +159,11 @@ Features refuse the player's ground point at their cell, with an effect:
 
 Creatures are refused by pits and open trapdoors unless they resist teleporting, and by floors their template avoids. Boulders and traps are not refused by features.
 
-A move that changes the thing's cell runs the effects of the cell it leaves and the one it enters: plates, teleporters, floor effects, exit markers (rules.md, world.md).
+A move that changes the thing's cell runs the effects of the cell it leaves and the one it enters: plates, teleporters, exit markers (rules.md, world.md). A floor's effects act on the player at each terrain test it accepts, not once per cell (world.md, Liquids).
 
 ### Pushing
 
-The player pushes a trap, a corpse (a creature with no hit points) or a conjured thing by moving it the player's whole step, recursively through a line of pushable things; what a pushed thing already overlaps where it stands does not block it, so things lying on each other (two corpses fallen in one place) come apart. If the line moves, the player then moves as far as the first thing did. A push makes the player wait 3 ticks more before its next update. A levitating player passes over corpses rather than pushing them.
+The player pushes a trap, a corpse (a creature with no hit points) or a conjured thing by moving it the player's whole step, recursively through a line of pushable things; what a pushed thing already overlaps where it stands does not block it, so things lying on each other (two corpses fallen in one place) come apart. If the line moves, the player then moves its whole step too, even when the cell a pushed thing entered sent it elsewhere (a teleporter) or took it (a pit). A push makes the player wait 3 ticks more before its next update. A levitating player passes over corpses rather than pushing them.
 
 A boulder is not pushed. Walking into a rolling boulder hurts the player 2d3, unless it rolls the way the player walks. Walking into a boulder along an axis (an even direction) then starts it rolling the way the player walks: a resting boulder stops when blocked, and a rolling one only turns.
 

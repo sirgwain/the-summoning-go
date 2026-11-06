@@ -171,8 +171,9 @@ func (w *World) animate(l *Level, t *Thing) {
 	}
 }
 
-// spin turns a teleported creature to its next direction each tick until its spin runs out,
-// and reports whether it is spinning.
+// spin turns a creature on a teleporter to its next direction each tick until its spin runs
+// out, when the teleporter under it, if still armed, sends it on; it reports whether it was
+// spinning.
 func (w *World) spin(l *Level, t *Thing) bool {
 	if t.spin == 0 {
 		return false
@@ -181,10 +182,13 @@ func (w *World) spin(l *Level, t *Thing) bool {
 		t.spin--
 		t.spinNext = w.step + Steps(1)
 		t.Facing = (t.Facing + 2) % 8
+		w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "spins"})
 		if t.spin == 0 {
 			t.next, t.frozen = w.step, 0
+			if f := l.byCell[t.Cell()]; f != nil && f.Kind == content.FeatureTeleporter && f.Armed {
+				w.teleportThing(l, t, w.jump(l, f), 1)
+			}
 		}
-		w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "spins"})
 	}
 	return true
 }
