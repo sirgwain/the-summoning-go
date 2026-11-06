@@ -13,13 +13,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/sirgwain/the-summoning-go/engine/audio"
 	"github.com/sirgwain/the-summoning-go/engine/audio/speaker"
 	"github.com/sirgwain/the-summoning-go/engine/content"
+	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/render"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
-	"github.com/sirgwain/the-summoning-go/engine/viewer/window"
 	"github.com/spf13/cobra"
 )
 
@@ -96,7 +95,10 @@ type flipbookPlayer struct {
 	palette   *content.Palette
 	mixer     *audio.Mixer
 	art       *ebiten.Image
-	paused    bool
+	// border is the frame drawn round a framed flipbook, for borderSize.
+	border     *ebiten.Image
+	borderSize image.Point
+	paused     bool
 	// clock runs the palette's effects; idle counts time since the run finished.
 	clock, idle int
 	err         error
@@ -182,13 +184,11 @@ func (p *flipbookPlayer) Draw(screen *ebiten.Image) {
 	if err := p.sprites.DrawImage(p.art, content.Image{Sprite: f.Sprite, Frame: p.run.Frame()}, 0, 0, false); err != nil && p.err == nil {
 		p.err = err
 	}
-	outer := size.Add(image.Pt(2*window.FlipbookBorder, 2*window.FlipbookBorder))
+	outer := size.Add(image.Pt(2*frame.Width, 2*frame.Width))
 	scale := max(1, min(p.screen.X/outer.X, (p.screen.Y-40)/outer.Y))
 	at := p.screen.Sub(size.Mul(scale)).Div(2)
 	if f.Framed {
-		bw := float32(window.FlipbookBorder * scale)
-		vector.FillRect(screen, float32(at.X)-bw, float32(at.Y)-bw, float32(size.X*scale)+2*bw, float32(size.Y*scale)+2*bw, window.FlipbookFrame, false)
-		vector.FillRect(screen, float32(at.X), float32(at.Y), float32(size.X*scale), float32(size.Y*scale), flipbookBackdrop, false)
+		p.drawBorder(screen, outer, at.Sub(image.Pt(frame.Width*scale, frame.Width*scale)), scale)
 	}
 	p.presenter.SetColors(p.palette.At(int64(p.clock)), p.palette.Colors)
 	p.presenter.PresentAt(screen, p.art, scale, at)
@@ -227,4 +227,27 @@ func stepSounds(s content.FlipbookStep) string {
 func (p *flipbookPlayer) Layout(w, h int) (int, int) {
 	p.screen = image.Pt(w, h)
 	return w, h
+}
+
+// drawBorder draws the frame of a view effect's box, outer art pixels in all, at top-left at and
+// scale: the pack skin's built-in style for the effect panel, or iron. (A pack's own nine-cut
+// style shows in the game's window only.)
+func (p *flipbookPlayer) drawBorder(screen *ebiten.Image, outer, at image.Point, scale int) {
+	if p.border == nil || p.borderSize != outer {
+		style := frame.Iron
+		if p.pack.Skin != nil {
+			if st, ok := frame.Names[p.pack.Skin.Frames[content.PanelEffect]]; ok {
+				style = st
+			}
+		}
+		if p.border != nil {
+			p.border.Deallocate()
+		}
+		p.border = ebiten.NewImageFromImage(frame.Draw(style, outer.X, outer.Y).Base)
+		p.borderSize = outer
+	}
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(float64(scale), float64(scale))
+	op.GeoM.Translate(float64(at.X), float64(at.Y))
+	screen.DrawImage(p.border, op)
 }

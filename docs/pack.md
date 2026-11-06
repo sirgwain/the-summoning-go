@@ -317,8 +317,9 @@ colors and letters (`docs/design.md`, UI).
 ```
 
 - `frames` gives each framed panel (`hotbar`, `inventory`, `spells`, `menu` for the frontend's and
-  the game's menus, `notice`) a frame style: a built-in one, `iron` (blue-black iron with
-  sapphires, the hotbar's, the inventory's, the menus' and notices' own), `runic` (slate cut with
+  the game's menus, `notice`, `effect` for a view effect's box) a frame style: a built-in one,
+  `iron` (blue-black iron with sapphires, the hotbar's, the inventory's, the menus', notices' and
+  view effects' own), `runic` (slate cut with
   lit runes, the spell panel's own) or `hull` (riveted hull plate with amber lights), or one of
   `styles`.
 - `styles` are the pack's frame styles, each an image cut in nine: its corners `corner` pixels
@@ -1072,7 +1073,8 @@ view effects as `flipbook.effect.<n>` and the sparkles as `flipbook.sparkle.<kin
 
 - `sprite` holds the frames, all of the flipbook's size. The size is the sprite's frame size.
   Transparent pixels show what is behind: the view, for a view effect.
-- `framed` draws a border around the flipbook.
+- `framed` draws a border around the flipbook: the `effect` panel's frame (Skin), its inside left
+  clear.
 - Each step shows `frame` for `ms`. With `cancel`, Esc or the right mouse button during the step
   ends the flipbook at once.
 - As a step starts, `music_fade` fades out the music track playing, or `music_stop` stops it at once.

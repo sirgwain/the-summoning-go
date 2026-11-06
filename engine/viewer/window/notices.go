@@ -2,7 +2,6 @@ package window
 
 import (
 	"image"
-	"image/color"
 	"unicode/utf8"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -11,12 +10,6 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/frame"
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
-
-// FlipbookFrame is the color of a framed flipbook's border, and FlipbookBorder its width in art
-// pixels.
-var FlipbookFrame = color.RGBA{120, 100, 70, 255}
-
-const FlipbookBorder = 8
 
 // drawNotice draws the viewer's message line above the hotbar while it lasts.
 func (s *Window) drawNotice(screen *ebiten.Image) {
@@ -43,14 +36,9 @@ func (s *Window) drawShowing(screen *ebiten.Image) {
 	}
 	at := v.ScreenPoint(sh.At)
 	if sh.Framed {
-		bw := float32(FlipbookBorder * v.Scale)
-		x, y := float32(at.X), float32(at.Y)
-		w, h := float32(size.X*v.Scale), float32(size.Y*v.Scale)
-		// The border only: the box's transparent pixels show the view.
-		vector.FillRect(screen, x-bw, y-bw, w+2*bw, bw, FlipbookFrame, false)
-		vector.FillRect(screen, x-bw, y+h, w+2*bw, bw, FlipbookFrame, false)
-		vector.FillRect(screen, x-bw, y, bw, h, FlipbookFrame, false)
-		vector.FillRect(screen, x+w, y, bw, h, FlipbookFrame, false)
+		// The frame only, its inside clear: the box's transparent pixels show the view.
+		box := image.Rectangle{at, at.Add(size.Mul(v.Scale))}
+		s.panelFrame(screen, content.PanelEffect, frame.Iron, box.Inset(-frame.Width*v.Scale), v.Scale, 0)
 	}
 	art := s.artImage(size)
 	if err := s.sprites.DrawImage(art, sh.Frame(), 0, 0, false); err != nil && s.err == nil {

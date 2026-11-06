@@ -50,9 +50,10 @@ const (
 	PanelSpells    = "spells"
 	PanelMenu      = "menu"
 	PanelNotice    = "notice"
+	PanelEffect    = "effect"
 )
 
-var skinPanels = map[string]bool{PanelHotbar: true, PanelInventory: true, PanelSpells: true, PanelMenu: true, PanelNotice: true}
+var skinPanels = map[string]bool{PanelHotbar: true, PanelInventory: true, PanelSpells: true, PanelMenu: true, PanelNotice: true, PanelEffect: true}
 
 // BuiltinFrames are the engine's frame styles by name.
 var BuiltinFrames = map[string]bool{"iron": true, "runic": true, "hull": true}
