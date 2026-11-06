@@ -269,11 +269,7 @@ func (w *World) newPlayer() *Player {
 func (w *World) place(c content.Cell, quiet bool) {
 	p, l := w.player, w.Current()
 	p.U, p.V = cellCenter(c)
-	for _, t := range append([]*Thing(nil), l.Things...) {
-		if overlaps(p.U, p.V, p.Template.Bounds(), t.U, t.V, t.Template.Bounds()) {
-			w.removeThing(l, t, "crushed")
-		}
-	}
+	w.crushUnderPlayer(l)
 	if quiet {
 		l.addWeight(c, p.weight())
 	} else {
@@ -282,6 +278,18 @@ func (w *World) place(c content.Cell, quiet bool) {
 	p.vision = c
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: c, Thing: PlayerID, Detail: "placed"})
 	w.see()
+}
+
+// crushUnderPlayer removes whatever stands where the player has just been placed in level l:
+// creatures, corpses, boulders and traps, a creature dropping what it carries
+// (docs/spec/entities.md, Placing).
+func (w *World) crushUnderPlayer(l *Level) {
+	p := w.player
+	for _, t := range append([]*Thing(nil), l.Things...) {
+		if overlaps(p.U, p.V, p.Template.Bounds(), t.U, t.V, t.Template.Bounds()) {
+			w.removeThing(l, t, "crushed")
+		}
+	}
 }
 
 // travel takes the player to a level and cell: it leaves its plate, the level changes, and it
@@ -797,13 +805,15 @@ func (w *World) playerEntered(l *Level, c content.Cell, depth int) {
 	}
 }
 
-// teleportPlayer moves the player through teleporter f, keeping its place within the cell.
+// teleportPlayer moves the player through teleporter f to the middle of its destination cell,
+// crushing what stands there.
 func (w *World) teleportPlayer(l *Level, f *Feature, depth int) {
 	p := w.player
 	from := p.Cell()
 	to := w.jump(l, f)
 	w.emit(Event{Kind: EventSound, Level: l.ID, Cell: f.Cell, Detail: soundTeleport})
-	p.U, p.V = CellUnits*to[0]+p.U-CellUnits*from[0], CellUnits*to[1]+p.V-CellUnits*from[1]
+	p.U, p.V = cellCenter(to)
+	w.crushUnderPlayer(l)
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: to, Thing: PlayerID, Detail: "teleported"})
 	w.recordLink(l, f)
 	w.transition(content.TransitionTeleporter)

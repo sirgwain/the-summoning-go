@@ -143,10 +143,10 @@ What the player does to a level's features, in the engine's terms:
 - **Using.** The player uses the lever in its own cell (Levers). On a keyhole (terrain 17h) instead, the engine adds a convenience the game does not have: using puts the key the keyhole takes into it, from what the player carries (the hand, then the shelves in order, the right and left hands, then the bag in the left hand), as if the player had put it down there (Item slots); a refusal leaves the key where it was, and without the key nothing happens. Object holes (18h) get no such help: what goes in them is the player's to work out. With no lever or keyhole, the player uses the nearest mouth whose cell is the player's or one of its eight neighbors, which says its message. With none, nothing happens.
 - **Putting down.** The player puts the object in its hand down on its own cell, handled as Dropping objects says; a refusal keeps it in hand.
 - **Plates.** The player weighs 100 on the plate of its cell, unless levitating.
-- **Teleporters.** The player entering an armed teleporter's cell is moved to its destination, keeping its place in the cell, with a teleport sound.
+- **Teleporters.** The player entering an armed teleporter's cell is moved to its destination, with a teleport sound, and arrives as below: at the center of the destination cell, crushing what stands there.
 - **Exits.** Walking onto a floor exit, or into a wall exit along an axis (entities.md, Moving), takes the player to the exit's level and cell.
 - **Pits and open trapdoors.** The player stepping onto one falls to its destination, hurt 4d5, unless it walks along directions 1–3 (stepping down carefully; the game's facings 2–4), which hurts nothing. A levitating player passes over.
-- **Arriving.** The player arrives at the center of the destination cell. Things whose boxes overlap the player's there are crushed: removed, creatures dropping what they carry. The new level's visibility is computed from that cell.
+- **Arriving.** The player arrives at the center of the destination cell. Things whose boxes overlap the player's there are crushed: removed, creatures dropping what they carry. Corpses, boulders and traps are crushed as creatures are; objects on the floor are not. The new level's visibility is computed from that cell.
 
 ## Import
 

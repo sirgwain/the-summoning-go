@@ -565,6 +565,37 @@ func TestTeleporterAndFloors(t *testing.T) {
 	}
 }
 
+func TestTeleporterCrushesWhatStandsThere(t *testing.T) {
+	for _, id := range []string{"boulder", "guard"} {
+		w := walkWorld(t,
+			"#######",
+			"#@t.r.#",
+			"#...B.#",
+			"#...G.#",
+			"#######")
+		l := w.Current()
+		dest := cell{1, 4}
+		th := l.Thing(id)
+		th.U, th.V = cellCenter(dest)
+		if id == "guard" {
+			th.HitPoints = 0 // a corpse
+		}
+		walk(w, 2, 2)
+		if c := w.Player().Cell(); c != dest {
+			t.Fatalf("the teleporter sent the player to %v", c)
+		}
+		if u, v := cellCenter(dest); w.Player().U != u || w.Player().V != v {
+			t.Errorf("the player arrived at (%d, %d), not the cell's center (%d, %d)", w.Player().U, w.Player().V, u, v)
+		}
+		if l.Thing(id) != nil {
+			t.Errorf("the %s the player arrived on was not crushed", id)
+		}
+		if len(l.Objects[dest]) != 1 {
+			t.Errorf("the rock on the floor: %v", l.Objects[dest])
+		}
+	}
+}
+
 func TestDoorClosingOnPlayerReopens(t *testing.T) {
 	w := walkWorld(t,
 		"#####",

@@ -56,7 +56,7 @@ Where each kind is placed in cell `(a, b)`:
 
 A trap is a kind-5 entity with the level's trap sprite bank, interval 128. A boulder has the level's boulder bank, speed 8, interval 4. An exit marker uses resource 99, a mouth resource 56; both have interval 100. Both stand on floor cells: a mouth is drawn up against the wall behind it.
 
-Placing an entity where something already stands crushes it: when the player is placed (teleporting, changing level), whatever stands on it is removed, creatures dropping what they carry; another entity placed on a blocked spot is removed itself.
+Placing an entity where something already stands crushes it: when the player is placed (by a teleporter, a rune mark, changing level), whatever stands on it is removed, a creature, corpse, boulder or trap alike, living creatures dropping what they carry; another entity placed on a blocked spot is removed itself.
 
 ## Movement
 
