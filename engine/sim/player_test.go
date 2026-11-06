@@ -596,6 +596,51 @@ func TestTeleporterCrushesWhatStandsThere(t *testing.T) {
 	}
 }
 
+func TestTeleportedThingCrushedWhereSomethingStands(t *testing.T) {
+	dest := cell{1, 5}
+	// A boulder sent onto a creature is crushed; the creature stays.
+	w := walkWorld(t,
+		"########",
+		"#@.t.G.#",
+		"#...B..#",
+		"########")
+	l := w.Current()
+	l.Thing("guard").U, l.Thing("guard").V = cellCenter(dest)
+	w.Update([]input.Command{input.Move{Thing: "boulder", Cell: cell{1, 3}}})
+	if l.Thing("boulder") != nil || l.Thing("guard") == nil {
+		t.Errorf("boulder onto a guard: boulder %v, guard %v", l.Thing("boulder"), l.Thing("guard"))
+	}
+	// A creature sent onto the player is crushed, leaving what it carries there.
+	w = walkWorld(t,
+		"########",
+		"#..t.@.#",
+		"#...G..#",
+		"########")
+	l = w.Current()
+	l.Thing("guard").Items = []*Object{{Item: "item.rock"}}
+	w.Update([]input.Command{input.Move{Thing: "guard", Cell: cell{1, 3}}})
+	if l.Thing("guard") != nil || len(l.Objects[dest]) != 1 {
+		t.Errorf("guard onto the player: guard %v, floor %v", l.Thing("guard"), l.Objects[dest])
+	}
+	// A living creature sent onto a corpse arrives at the cell's center.
+	w = walkWorld(t,
+		"########",
+		"#@.t.G.#",
+		"########")
+	l = w.Current()
+	l.Thing("guard").HitPoints = 0
+	l.Thing("guard").U, l.Thing("guard").V = cellCenter(dest)
+	w.Update([]input.Command{input.Place{Thing: "thing.guard", Cell: cell{1, 3}}})
+	if got := l.ThingsAt(dest); len(got) != 2 {
+		t.Fatalf("a guard onto a corpse: %d things there", len(got))
+	}
+	for _, th := range l.ThingsAt(dest) {
+		if u, v := cellCenter(dest); th.U != u || th.V != v {
+			t.Errorf("%s at (%d, %d), not the cell's center", th.ID, th.U, th.V)
+		}
+	}
+}
+
 func TestDoorClosingOnPlayerReopens(t *testing.T) {
 	w := walkWorld(t,
 		"#####",

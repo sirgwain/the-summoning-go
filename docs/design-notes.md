@@ -214,8 +214,6 @@ Change's frame by facing, and the hostile speed of records 23h and 2Bh (`hostile
   Four-way Fireball starts from its facing's parity, as the player's does; Kano meeting a wall
   shows 93h whoever cast it; a cast's extra practice is a second practice, so it can raise a level
   twice.
-- A creature or boulder moved by a teleporter onto a spot something already blocks is not yet
-  removed itself, as entities.md (Placement) says; the player's arrival crushes what is there.
 - See a spell in flight and its burst on the imported game on screen: the dev pack's are drawn
   (`TestStudy`), the imported ones only checked by rule.
 

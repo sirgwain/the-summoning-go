@@ -409,13 +409,42 @@ func (w *World) entered(l *Level, t *Thing, depth int) {
 	case f.Kind == content.FeatureTeleporter && f.Armed:
 		to := w.jump(l, f)
 		w.emit(Event{Kind: EventSound, Level: l.ID, Cell: f.Cell, Detail: soundTeleport})
-		w.moveThing(l, t, to, depth+1)
+		if !w.teleportThing(l, t, to, depth+1) {
+			return
+		}
 		if alive(t) && t.spin == 0 && !t.Template.Has(content.BehaviorAnimated) {
 			t.spin, t.spinNext = spinTicks, w.step+Steps(1)
 		}
 	case (f.Kind == content.FeaturePit || f.Kind == content.FeatureTrapdoor && f.Open) && t.Template.Kind == content.ThingCreature:
 		w.removeThing(l, t, "fell")
 	}
+}
+
+// teleportThing places thing t, sent by a teleporter, at the center of cell to and runs the
+// effects of the cells it leaves and enters. Something already standing there crushes t instead:
+// it is removed where it arrived, a creature dropping what it carries (docs/spec/entities.md,
+// Placement). It reports whether t is still in the level.
+func (w *World) teleportThing(l *Level, t *Thing, to content.Cell, depth int) bool {
+	from := t.Cell()
+	u, v := cellCenter(to)
+	if w.blocker(l, t, false, u, v, t.Template.Bounds(), nil) != nil {
+		w.weigh(l, from, -t.weight(), depth)
+		t.U, t.V = u, v
+		l.removeThing(t)
+		w.emit(Event{Kind: EventThing, Level: l.ID, Cell: to, Thing: t.ID, Detail: "crushed"})
+		for _, o := range t.Items {
+			w.drop(l, to, o, byWorld, 0)
+		}
+		return false
+	}
+	t.U, t.V = u, v
+	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: to, Thing: t.ID, Detail: "moved"})
+	if from != to {
+		w.weigh(l, from, -t.weight(), depth)
+		w.weigh(l, to, t.weight(), depth)
+	}
+	w.entered(l, t, depth)
+	return l.Thing(t.ID) == t
 }
 
 // removeThing takes t out of the level, saying why, and lifts its weight off any plate; a

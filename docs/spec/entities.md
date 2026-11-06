@@ -98,7 +98,7 @@ When blocked, it hurts what blocked it 3d4. In state 1 it then stops; if it hit 
 
 They do nothing on their own, except:
 
-- A thing on a teleporter is moved by it.
+- A thing on a teleporter is moved by it, to the center of the destination cell; if the player or another thing's box overlaps its own there (a living creature leaving corpses out), it is crushed instead: removed, dropping what it carries on that cell.
 - Conjured things with a lifetime count it down each update and vanish at 0, leaving any weight plate.
 - Entities using resource 60 cycle frames 0, 1, 2, 1.
 
