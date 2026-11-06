@@ -356,3 +356,25 @@ func TestLevitatingPlayerFloats(t *testing.T) {
 		t.Fatalf("levitating: lift %d, anim %q", th.Lift, th.Anim)
 	}
 }
+
+// TestLoadLine shows the weight carried against the limit with nothing on the pointer, in the
+// low tone once the player carries its limit or more.
+func TestLoadLine(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	p := v.World.Player()
+	p.Hand = nil
+	clear(p.Slots[:])
+	p.Attributes[sim.AttrStrength] = 1
+	load := func() TextLine { return v.details(nil)[2] }
+	if l := load(); !strings.HasSuffix(l.Text, "0.0/5.0 kg.") || l.Tone != "" {
+		t.Errorf("empty-handed: %+v", l)
+	}
+	p.Slots[sim.SlotBody] = &sim.Object{Item: devpack.ItemMail}
+	w := p.Carried(v.Pack)
+	if w < 10 {
+		t.Skipf("the mail weighs %d, under STR 1's limit", w)
+	}
+	if l := load(); l.Tone != ToneLow {
+		t.Errorf("carrying %d of 10: %+v", w, l)
+	}
+}

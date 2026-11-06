@@ -108,11 +108,14 @@ func Label(p *content.Pack, key, ui string) string {
 }
 
 // Weight returns a weight in half kilograms in words.
-func Weight(halves int) string {
+func Weight(halves int) string { return Kilograms(halves) + " kg." }
+
+// Kilograms returns a weight in half kilograms as kilograms, without the unit: "12.5".
+func Kilograms(halves int) string {
 	if halves%2 != 0 {
-		return fmt.Sprintf("%d.5 kg.", halves/2)
+		return fmt.Sprintf("%d.5", halves/2)
 	}
-	return fmt.Sprintf("%d.0 kg.", halves/2)
+	return fmt.Sprintf("%d.0", halves/2)
 }
 
 // BookPicture returns creature template t's picture: the first frame its animate shows, or the

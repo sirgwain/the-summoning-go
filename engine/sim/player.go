@@ -506,11 +506,20 @@ func (p *Player) Carried(pk *content.Pack) int {
 	return w
 }
 
+// LoadLimit returns the weight the player carries before it is overloaded: 10 × STR
+// (docs/spec/player.md, Load).
+func (p *Player) LoadLimit() int { return 10 * p.Attributes[AttrStrength] }
+
+// Overloaded reports whether the player carries its load limit or more.
+func (p *Player) Overloaded(pk *content.Pack) bool {
+	return len(p.Attributes) > 0 && p.Carried(pk) >= p.LoadLimit()
+}
+
 // Agility returns the player's agility as its load leaves it, and the ticks a heavy load adds
 // besides (docs/spec/player.md, Speed).
 func (p *Player) Agility(pk *content.Pack) (agility, extra int) {
 	agility = p.Attributes[AttrAgility]
-	w, limit := p.Carried(pk), 10*p.Attributes[AttrStrength]
+	w, limit := p.Carried(pk), p.LoadLimit()
 	switch {
 	case w < limit/10:
 		agility++

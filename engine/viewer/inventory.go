@@ -192,9 +192,10 @@ func (v *Viewer) Inventory() *InventoryPanel {
 	ip.Frame = framed(ip.Rect, ip.Scale)
 	// The details last: they describe the box under the pointer, which needs the panel placed.
 	o := v.described(ip)
-	for i, s := range v.details(o) {
+	for i, l := range v.details(o) {
 		if i < detailLines {
-			ip.Lines = append(ip.Lines, TextLine{At: detailsAt.Add(image.Pt(0, i*LineHeight)), Text: s})
+			l.At = detailsAt.Add(image.Pt(0, i*LineHeight))
+			ip.Lines = append(ip.Lines, l)
 		}
 	}
 	return ip
@@ -274,13 +275,39 @@ func (v *Viewer) described(ip *InventoryPanel) *sim.Object {
 	return v.World.Player().Hand
 }
 
-// details are the lines describing object o, the one the panel describes; with none, the
-// character: its name, title and load.
-func (v *Viewer) details(o *sim.Object) []string {
+// details are the lines describing object o, the one the panel describes, placed by the caller;
+// with none, the character: its name, title and load against its limit, in the low tone when
+// overloaded.
+func (v *Viewer) details(o *sim.Object) []TextLine {
 	p := v.World.Player()
 	if o == nil {
-		return []string{v.playerName(), v.levelTitle(p.Level), inspect.Label(v.Pack, content.LabelWeight, "ui.weight") + inspect.Weight(p.Carried(v.Pack))}
+		return []TextLine{{Text: v.playerName()}, {Text: v.levelTitle(p.Level)}, v.loadLine(p)}
 	}
+	var lines []TextLine
+	for _, s := range v.objectDetails(o) {
+		lines = append(lines, TextLine{Text: s})
+	}
+	return lines
+}
+
+// loadLine is the character's weight line: the weight carried against the load limit, in the
+// low tone when overloaded (docs/spec/items.md, The inventory panel); a player without attributes has no
+// limit, so just the weight.
+func (v *Viewer) loadLine(p *sim.Player) TextLine {
+	label := inspect.Label(v.Pack, content.LabelWeight, "ui.weight")
+	w := p.Carried(v.Pack)
+	if len(p.Attributes) == 0 {
+		return TextLine{Text: label + inspect.Weight(w)}
+	}
+	l := TextLine{Text: label + inspect.Kilograms(w) + "/" + inspect.Weight(p.LoadLimit())}
+	if p.Overloaded(v.Pack) {
+		l.Tone = ToneLow
+	}
+	return l
+}
+
+// objectDetails are the lines describing object o.
+func (v *Viewer) objectDetails(o *sim.Object) []string {
 	it := v.Pack.Items[o.Item]
 	if it == nil {
 		return nil

@@ -141,9 +141,11 @@ func TestLabelsRenamed(t *testing.T) {
 	for _, l := range v.stats(pl, p.Inventory) {
 		add(l.Text)
 	}
-	add(v.details(nil)...)
+	for _, l := range v.details(nil) {
+		add(l.Text)
+	}
 	for _, id := range sortedItems(p) {
-		add(v.details(&sim.Object{Item: id})...)
+		add(v.objectDetails(&sim.Object{Item: id})...)
 	}
 	h := v.Hotbar()
 	add(h.Log.Label, h.Book.Label)
