@@ -292,7 +292,7 @@ var Labels = map[string]string{
 	"ui.help.click_box": "swap with the hand",
 	"ui.help.shelve":    "hand to a shelf",
 	"ui.help.read":      "read",
-	"ui.help.portrait":  "inventory",
+	"ui.help.portrait":  "inventory; with an object in hand, put it on",
 	"ui.help.zoom":      "zoom",
 	"ui.help.see_all":   "see all",
 	"ui.help.mode":      "play / tools",

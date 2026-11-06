@@ -193,7 +193,7 @@ A thrower already touching something when it throws (its own box, moved 4 units 
 
 ### The player's update
 
-The player's update comes every `interval_ms` of its template (player.md, Speed). In it, if a walk was asked for since the last update, the player turns to that direction and moves its template's `speed` along it, half that along directions 1 and 5 (screen left and right). A walk that moves shows the walk animation's next frame; after 8 updates without walking the player shows its idle frame. A blocked step that meets a creature touches it (combat, later).
+The player's update comes every `interval_ms` of its template (player.md, Speed). In it, if a walk was asked for since the last update, the player turns to that direction and moves its template's `speed` along it, half that along directions 1 and 5 (screen left and right). A walk that moves shows the walk animation's next frame, or, while the player levitates, its idle frame (player.md, Figure); after 8 updates without walking the player shows its idle frame. A blocked step that meets a creature touches it (combat, later).
 
 **Asking to walk.** The game reads the keys at the player's update, so a key let go before it walks no further. The engine is told of walks as they are asked, every world update while a walk key is held, and keeps the latest direction for the player's next update, with one exception: when a world update asks for no walk and a walk was asked for in the world update that ran the player's last update, the walk held through that update has been let go, and the direction kept is dropped. A walk asked for afresh after the player's update, a tap, is kept though it is let go before the next.
 

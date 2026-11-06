@@ -93,10 +93,13 @@ func SimScene(w *sim.World, l *sim.Level) Scene {
 				th.Held[hand] = o.Item
 			}
 		}
+		if p.Status.Levitating {
+			th.Lift = LevitateLift
+		}
 		switch {
 		case p.Pose != "":
 			th.Anim = fmt.Sprintf("%s.%d", p.Pose, p.Facing)
-		case p.Walking():
+		case p.Walking() && !p.Status.Levitating:
 			th.Anim, th.Phase = fmt.Sprintf("walk.%d", p.Facing), p.Moves
 		}
 		s.Things = append(s.Things, th)

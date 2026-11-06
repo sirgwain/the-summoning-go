@@ -424,29 +424,58 @@ func (v *Viewer) dollSlot(p *sim.Player, col, row int) int {
 	if slot == sim.SlotQuiver && it.Size == 0 && !(arrows && !hand(sim.SlotQuiver)) {
 		return slot
 	}
-	switch it.Wear {
-	case content.WearHead:
-		slot = sim.SlotHead
-	case content.WearBody:
-		slot = sim.SlotBody
-	case content.WearFeet:
-		slot = sim.SlotFeet
-	case content.WearArms:
-		slot = sim.SlotArms
-	case content.WearNeck:
-		slot = sim.SlotNeck
-	case content.WearQuiver:
-		slot = sim.SlotQuiver
-		if row > 48 {
-			slot = sim.SlotRightHand
-		}
-	default:
+	slot = wornSlot(it)
+	if slot == sim.SlotQuiver && row > 48 {
 		slot = sim.SlotRightHand
 	}
 	if slot == sim.SlotRightHand && col >= 44 {
 		slot = sim.SlotLeftHand
 	}
 	return slot
+}
+
+// wornSlot returns the worn slot item it is put on in: the slot of its wear, the right hand for
+// a hand object or one worn nowhere (docs/spec/items.md, Wearing).
+func wornSlot(it *content.Item) int {
+	switch it.Wear {
+	case content.WearHead:
+		return sim.SlotHead
+	case content.WearBody:
+		return sim.SlotBody
+	case content.WearFeet:
+		return sim.SlotFeet
+	case content.WearArms:
+		return sim.SlotArms
+	case content.WearNeck:
+		return sim.SlotNeck
+	case content.WearQuiver:
+		return sim.SlotQuiver
+	}
+	return sim.SlotRightHand
+}
+
+// portraitClick is a left click on the hotbar's portrait. With a wearable object on the pointer
+// (one worn on the head, body, feet, arms, neck or as the quiver, or a weapon), or arrows while a
+// quiver is worn, it swaps the object into the slot it is worn in, so what was worn there comes
+// onto the pointer; otherwise it opens or closes the inventory panel (docs/spec/items.md, The
+// mouse).
+func (v *Viewer) portraitClick() []input.Command {
+	p := v.World.Player()
+	if p != nil && p.Hand != nil {
+		if it := v.Pack.Items[p.Hand.Item]; it != nil {
+			switch {
+			case slices.Contains(it.Tags, "arrows"):
+				if p.Slots[sim.SlotQuiver] != nil {
+					return v.clickSlot(sim.SlotQuiver)
+				}
+			case it.Wear != content.WearHand && it.Wear != "":
+				return v.clickSlot(wornSlot(it))
+			case it.WeaponClass != nil || slices.Contains(it.Tags, "weapon"):
+				return v.clickSlot(sim.SlotRightHand)
+			}
+		}
+	}
+	return v.ToggleInventory()
 }
 
 // panelSlot returns the slot of the box or the figure's region under screen point pt.

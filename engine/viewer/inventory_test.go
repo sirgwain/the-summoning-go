@@ -302,3 +302,57 @@ func TestArmorGauge(t *testing.T) {
 		}
 	}
 }
+
+// A click on the portrait with boots on the pointer puts them on, the boots worn before coming
+// onto the pointer, and a second click swaps them back; a sword goes to the right hand; anything
+// worn nowhere opens the panel instead.
+func TestPortraitPutsOn(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	p := v.World.Player()
+	old, boots := &sim.Object{Item: devpack.ItemBoots}, &sim.Object{Item: devpack.ItemBoots}
+	p.Slots[sim.SlotFeet], p.Hand, p.Slots[sim.SlotRightHand] = old, boots, nil
+	portrait := v.Hotbar().Screen(v.Hotbar().PortraitRect)
+	at := portrait.Min.Add(portrait.Max).Div(2)
+	tapAt(v, at)
+	if p.Slots[sim.SlotFeet] != boots || p.Hand != old || v.InventoryOpen {
+		t.Fatalf("first click: feet %p, pointer %p, panel %v", p.Slots[sim.SlotFeet], p.Hand, v.InventoryOpen)
+	}
+	tapAt(v, at)
+	if p.Slots[sim.SlotFeet] != old || p.Hand != boots {
+		t.Fatalf("second click: feet %p, pointer %p", p.Slots[sim.SlotFeet], p.Hand)
+	}
+	sword := &sim.Object{Item: devpack.ItemSword}
+	p.Hand = sword
+	tapAt(v, at)
+	if p.Slots[sim.SlotRightHand] != sword || p.Hand != nil {
+		t.Fatalf("sword: right hand %p, pointer %p", p.Slots[sim.SlotRightHand], p.Hand)
+	}
+	p.Hand = &sim.Object{Item: devpack.ItemRock}
+	tapAt(v, at)
+	if !v.InventoryOpen || p.Hand == nil {
+		t.Fatalf("rock: panel %v, pointer %+v", v.InventoryOpen, p.Hand)
+	}
+}
+
+// A levitating player floats: drawn LevitateLift pixels up, standing still as it walks.
+func TestLevitatingPlayerFloats(t *testing.T) {
+	v := playIn(t, devpack.Study, devpack.StudyStart)
+	p := v.World.Player()
+	p.Moves, p.Idle = 3, 0
+	player := func() drawlist.Thing {
+		for _, th := range drawlist.SimScene(v.World, v.World.Current()).Things {
+			if th.ID == sim.PlayerID {
+				return th
+			}
+		}
+		t.Fatal("no player in the scene")
+		return drawlist.Thing{}
+	}
+	if th := player(); th.Lift != 0 || th.Anim == "" {
+		t.Fatalf("walking: lift %d, anim %q", th.Lift, th.Anim)
+	}
+	p.Status.Levitating = true
+	if th := player(); th.Lift != drawlist.LevitateLift || th.Anim != "" {
+		t.Fatalf("levitating: lift %d, anim %q", th.Lift, th.Anim)
+	}
+}

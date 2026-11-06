@@ -87,6 +87,8 @@ Objects given by the game (conversations, powers) go into the first empty shelf,
 
 A click counts as on the player's figure for these, rather than walking, anywhere within 32 view pixels of the point 8 right and 2 down from the top-left of the player's sprite, measured from the pointer's hot spot as `|dx| + |dy| < 32`. The engine also counts the figure's own pixels and its cell's ground.
 
+**Engine model.** A click on the hotbar's portrait opens or closes the inventory panel; with an object on the pointer that is worn somewhere (head, body, feet, arms, neck, quiver: Wearing) or is a weapon, it swaps the object into that slot instead, a weapon into the right hand, as a click on that slot's box would, so what was worn there comes onto the pointer and a second click swaps them back. Arrows go to the quiver slot this way while a quiver is worn. Any other object on the pointer leaves the click opening or closing the panel.
+
 With the right button, an object on the pointer goes to the first empty shelf (with none, message 7Fh and it stays on the pointer); with an empty pointer, a click in the view does what the take key does: the top object underfoot goes to the first empty shelf, with its messages. (The engine adds right clicks on boxes: see Opening containers and Using from a slot.)
 
 ## Opening containers

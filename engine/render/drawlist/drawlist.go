@@ -83,6 +83,9 @@ type Flight struct {
 	Spell  bool
 	// Back moves it on screen back toward where it was, as it glides (GlideBack).
 	Back image.Point
+	// Lift raises it on screen by that many view pixels, off its ground point (a levitating
+	// player: LevitateLift).
+	Lift int
 }
 
 // flightHeight is how high above its ground point an object in flight is drawn, in pixels.
@@ -197,12 +200,19 @@ type Thing struct {
 	Sprite string
 	// Back moves it on screen back toward where it was, as it glides (GlideBack).
 	Back image.Point
+	// Lift raises it on screen by that many view pixels, off its ground point (a levitating
+	// player: LevitateLift).
+	Lift int
 	// FireShield and LightningShield are the player's shields, which give light.
 	FireShield, LightningShield bool
 }
 
 // point returns the view pixel thing t's ground point is drawn at.
-func (t Thing) point() image.Point { return RefPoint(t.U, t.V).Add(t.Back) }
+func (t Thing) point() image.Point { return RefPoint(t.U, t.V).Add(t.Back).Sub(image.Pt(0, t.Lift)) }
+
+// LevitateLift is how many view pixels above its ground point a levitating player is drawn
+// (docs/spec/player.md, Figure).
+const LevitateLift = 4
 
 // Label is text drawn over the view: damage shown over a thing, at the view pixel At, the top
 // middle of the thing's sprite.

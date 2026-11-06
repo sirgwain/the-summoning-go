@@ -160,7 +160,11 @@ func (v *Viewer) onPlayer(pt image.Point) bool {
 	}
 	if b := v.Pack.Sprites[p.Template.Sprite]; b != nil {
 		anchor, _ := b.AnchorOf(0)
-		d := pt.Sub(drawlist.RefPoint(p.U, p.V).Sub(image.Pt(anchor[0], anchor[1])).Add(reachAt))
+		top := drawlist.RefPoint(p.U, p.V).Sub(image.Pt(anchor[0], anchor[1]))
+		if p.Status.Levitating {
+			top.Y -= drawlist.LevitateLift
+		}
+		d := pt.Sub(top.Add(reachAt))
 		if abs(d.X)+abs(d.Y) < reachDistance {
 			return true
 		}

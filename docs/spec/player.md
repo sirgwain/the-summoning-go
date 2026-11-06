@@ -74,7 +74,7 @@ A walk step moves the player's speed (8 units) in the facing, or half that when 
 3. the **body look** `B`, bank `C + B` frame `h[g] + s` at `(0, 5)`;
 4. the **head look** `H`, bank `C + H` frame `s` at `(8, 0)`;
 
-with `h` = 0, 8, 16, 24, 16, 8, 32, 40, 48, 56 for groups 0–9. The strike groups (6 and up) take the torso's and legs' frame `s` rather than `f`. The figure's top-left is the player's position, so its anchor is `(18, 19)`. The figure's colors do not animate (scenes.md, Palette animation), and its colors E0h–E3h are the portrait's (below).
+with `h` = 0, 8, 16, 24, 16, 8, 32, 40, 48, 56 for groups 0–9. The strike groups (6 and up) take the torso's and legs' frame `s` rather than `f`. The figure's top-left is the player's position, so its anchor is `(18, 19)`. The figure's colors do not animate (scenes.md, Palette animation), and its colors E0h–E3h are the portrait's (below). **Levitating**, the player floats: its figure is drawn 4 pixels higher than its position puts it, as if out of water at any depth, and it does not walk. Its step count stays at 1 (audio.md, Footsteps), so as it moves it keeps the frame `p + 8` of its facing `p`, its standing frame, rather than stepping through the walk. The click that reaches the player (items.md, The mouse) is measured from the raised figure.
 
 **Worn looks.** What is worn chooses the looks. Each worn object's look is byte 11's low seven bits (items.md) for categories 0–2:
 
