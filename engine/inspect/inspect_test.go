@@ -84,6 +84,15 @@ func TestMessage(t *testing.T) {
 	if got := Message(w.Pack(), e); got != "The Key doesn't fit" {
 		t.Errorf("%q", got)
 	}
+	// A creature's blow names the creature, after words that leave it out.
+	hit := sim.Event{Kind: sim.EventMessage, Detail: content.MsgCreatureHits, Text: "Hit for {damage}", Item: "a spider", Damage: 3}
+	if got := Message(w.Pack(), hit); got != "Hit for 3 (a spider)" {
+		t.Errorf("creature blow: %q", got)
+	}
+	hit.Text = "{name} bites for {damage}"
+	if got := Message(w.Pack(), hit); got != "a spider bites for 3" {
+		t.Errorf("creature blow naming itself: %q", got)
+	}
 	ev := w.Update([]input.Command{input.Use{Cell: content.Cell{1, 1}}})
 	if got := Message(w.Pack(), ev[0]); got != "Hello" {
 		t.Errorf("mouth: %q", got)

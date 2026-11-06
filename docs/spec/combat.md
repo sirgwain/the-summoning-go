@@ -71,7 +71,7 @@ score = (creature accuracy − AGI) / 2
 
 A creature with the death blow (behavior 0800h) ends the game at once when it attacks, unless the player is warded against it.
 
-On a hit, damage is its attack damage code rolled; less a quarter under blow protection, unless the d20 was a natural 20; doubled from behind; at least 0. The score and damage show as message 7Dh; a miss shows 7Eh. Damage above 0 hurts the player (physical), and poisons 2 times in 8 if the creature is poisonous.
+On a hit, damage is its attack damage code rolled; less a quarter under blow protection, unless the d20 was a natural 20; doubled from behind; at least 0. The score and damage show as message 7Dh; a miss shows 7Eh. **Engine model.** The message also names the creature: its name (creatures.md) follows the words, in parentheses. Damage above 0 hurts the player (physical), and poisons 2 times in 8 if the creature is poisonous.
 
 Messages about combat are hidden while interaction variable "quiet combat" is set (dialogue.md).
 

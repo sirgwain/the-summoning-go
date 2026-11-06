@@ -374,10 +374,10 @@ func (w *World) creatureStrikes(l *Level, t *Thing) {
 		Behind: behind(t.Facing, p.Facing), PlayerAgility: p.Attribute(w.pack, AttrAgility), Status: w.combatStatus(),
 	})
 	if !r.Hit {
-		w.messageNumbers(l, t.Cell(), content.MsgCreatureMiss, r.Score, 0)
+		w.messageNumbers(l, t.Cell(), content.MsgCreatureMiss, t.Template.Name, r.Score, 0)
 		return
 	}
-	w.messageNumbers(l, t.Cell(), content.MsgCreatureHits, r.Score, r.Damage)
+	w.messageNumbers(l, t.Cell(), content.MsgCreatureHits, t.Template.Name, r.Score, r.Damage)
 	if r.Damage > 0 {
 		w.hurtPlayerAloud(r.Damage, combat.Physical, t.ID)
 		if t.Template.Has(content.BehaviorPoisonous) && w.chance(2, 8) {
@@ -386,8 +386,9 @@ func (w *World) creatureStrikes(l *Level, t *Thing) {
 	}
 }
 
-// messageNumbers shows engine message key with a strike's numbers.
-func (w *World) messageNumbers(l *Level, c content.Cell, key string, score, damage int) {
+// messageNumbers shows engine message key with a strike's numbers and, for a creature's blow,
+// the creature's name (a text key).
+func (w *World) messageNumbers(l *Level, c content.Cell, key, name string, score, damage int) {
 	if w.quiet(key) {
 		return
 	}
@@ -395,7 +396,7 @@ func (w *World) messageNumbers(l *Level, c content.Cell, key string, score, dama
 	if m := w.pack.Messages; m != nil {
 		text = m.Messages[key]
 	}
-	w.emit(Event{Kind: EventMessage, Level: l.ID, Cell: c, Text: text, Detail: key, Score: score, Damage: damage})
+	w.emit(Event{Kind: EventMessage, Level: l.ID, Cell: c, Text: text, Detail: key, Item: name, Score: score, Damage: damage})
 }
 
 // strike is the player acting with hand (0 right, 1 left) by its object's action
@@ -642,7 +643,7 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 	}
 	r := w.rules.PlayerStrikes(w.rng, s)
 	if !r.Hit {
-		w.messageNumbers(l, p.Cell(), content.MsgMiss, r.Score, 0)
+		w.messageNumbers(l, p.Cell(), content.MsgMiss, "", r.Score, 0)
 		w.cue(p.Cell(), content.CueMiss)
 		return
 	}
@@ -653,7 +654,7 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 	if it != nil && it.Poisons {
 		w.meetDefense(l, t, content.BehaviorResistsPoison)
 	}
-	w.messageNumbers(l, p.Cell(), content.MsgHit, r.Score, r.Damage)
+	w.messageNumbers(l, p.Cell(), content.MsgHit, "", r.Score, r.Damage)
 	w.turnHostile(t)
 	if r.Damage == 0 {
 		w.cue(p.Cell(), content.CueMiss)

@@ -804,8 +804,16 @@ func TestWindUpLands(t *testing.T) {
 	u, v := wolf.U, wolf.V
 	var struck bool
 	until := wolf.WindUpUntil
+	wolf.Template.Name = "text.wolf"
+	var named bool
 	for wolf.WindUpUntil > 0 && w.Step() <= until {
-		struck = has(w.Update(nil), EventThing, "strikes") || struck
+		ev := w.Update(nil)
+		struck = has(ev, EventThing, "strikes") || struck
+		for _, e := range ev {
+			if e.Kind == EventMessage && (e.Detail == content.MsgCreatureHits || e.Detail == content.MsgCreatureMiss) {
+				named = e.Item == "text.wolf"
+			}
+		}
 		if wolf.U != u || wolf.V != v {
 			t.Fatal("the wolf moved while winding up")
 		}
@@ -815,6 +823,9 @@ func TestWindUpLands(t *testing.T) {
 	}
 	if !struck || p.HitPoints != p.MaxHitPoints-3 {
 		t.Errorf("the wound-up blow did not land: struck %v, %d hit points", struck, p.HitPoints)
+	}
+	if !named {
+		t.Error("the blow's message does not name the wolf")
 	}
 	if wolf.WindUpUntil != 0 || wolf.Pose != PoseAttack {
 		t.Errorf("after the blow: until %d, pose %q", wolf.WindUpUntil, wolf.Pose)

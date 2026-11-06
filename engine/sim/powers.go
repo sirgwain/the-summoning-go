@@ -96,7 +96,7 @@ func (w *World) heal(n int) {
 	n = min(n, p.MaxHitPoints-p.HitPoints)
 	p.HitPoints += n
 	if n > 1 {
-		w.messageNumbers(w.Current(), p.Cell(), content.MsgHealed, 0, n)
+		w.messageNumbers(w.Current(), p.Cell(), content.MsgHealed, "", 0, n)
 	}
 }
 
@@ -107,7 +107,7 @@ func (w *World) gainMagic(n int) {
 	n = max(0, min(n, p.MaxMagicPoints-p.MagicPoints))
 	p.MagicPoints += n
 	if n > 2 {
-		w.messageNumbers(w.Current(), p.Cell(), content.MsgMagicRestored, 0, n)
+		w.messageNumbers(w.Current(), p.Cell(), content.MsgMagicRestored, "", 0, n)
 	}
 }
 
@@ -144,7 +144,7 @@ func (w *World) recoverFatigue(n int) {
 	if n == 1 {
 		w.message(w.Current(), p.Cell(), content.MsgEnduranceRestored, "")
 	} else {
-		w.messageNumbers(w.Current(), p.Cell(), content.MsgEndurancePointsRestored, 0, n)
+		w.messageNumbers(w.Current(), p.Cell(), content.MsgEndurancePointsRestored, "", 0, n)
 	}
 }
 

@@ -261,7 +261,7 @@ The engine defines the keys; the pack gives the text. In `slot_wrong_item`, `slo
 `weapon_breaks`, `vanishes` and `filled`, `{item}` stands for the item's name; in `not_memorized` and
 `only_spell`, `{school}` for the school's name; in `killed`, `{name}` for the creature's; in
 `absorbed`, `{damage}` for the damage absorbed; in `miss`, `hit`, `creature_hits` and
-`creature_misses`, `{score}` and `{damage}` stand for the numbers; in `attribute_up` and
+`creature_misses`, `{score}` and `{damage}` stand for the numbers, and in `creature_hits` and `creature_misses` `{name}` for the creature's; words that leave the name out are shown through the label `ui.creature_strike`; in `attribute_up` and
 `attribute_down`, `{attribute}` for the attribute's name (the label `ui.attribute.<name>`). The keys: `lever_stuck`,
 `slot_wrong_item`, `slot_stuck`, `no_drop_here`, `no_room`, `not_a_creature`, `cannot_hurt`,
 `miss`, `hit`, `creature_hits`, `creature_misses`, `weapon_breaks`, `vanishes`, `skill_up`, `level_up`,
@@ -463,6 +463,7 @@ the engine's own words.
 | `ui.not_renamed` | Not renamed: {error} |
 | `ui.no_transcript` | No transcript: {error} |
 | `ui.no_new_game` | No new game: {error} |
+| `ui.creature_strike` | {message} ({name}) |
 
 **The book.**
 
