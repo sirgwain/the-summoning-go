@@ -34,7 +34,7 @@ func (v *Viewer) notice(text string) {
 }
 
 // show puts text on the message line without keeping it among the messages: for one that
-// changes from update to update.
+// changes from update to update, and for saving, loading and the saves' notices.
 func (v *Viewer) show(text string) {
 	v.Notice, v.NoticeUntil = text, v.Ticks+noticeUpdates
 }
@@ -93,29 +93,29 @@ func (v *Viewer) NoticeRect() image.Rectangle {
 // SaveGame writes the world to save name.
 func (v *Viewer) SaveGame(name string) {
 	if v.SaveDir == "" {
-		v.notice(v.ui("ui.no_save_place"))
+		v.show(v.ui("ui.no_save_place"))
 		return
 	}
 	if v.Holding() {
-		v.notice(v.ui("ui.saving_held"))
+		v.show(v.ui("ui.saving_held"))
 		return
 	}
 	if err := save.Write(v.savePath(name), name, v.World); err != nil {
-		v.notice(v.ui("ui.not_saved", "error", err))
+		v.show(v.ui("ui.not_saved", "error", err))
 		return
 	}
-	v.notice(v.ui("ui.saved"))
+	v.show(v.ui("ui.saved"))
 }
 
 // LoadGame replaces the world with save name.
 func (v *Viewer) LoadGame(name string) {
 	if v.SaveDir == "" {
-		v.notice(v.ui("ui.no_load_place"))
+		v.show(v.ui("ui.no_load_place"))
 		return
 	}
 	playing := v.Play && v.Front == nil
 	if err := v.LoadFile(v.savePath(name)); err != nil {
-		v.notice(v.ui("ui.not_loaded", "error", err))
+		v.show(v.ui("ui.not_loaded", "error", err))
 		return
 	}
 	// Loaded during play, the view as last drawn gives way to the loaded world.
@@ -138,10 +138,10 @@ func (v *Viewer) LoadFile(path string) error {
 		v.Audio.StopMusic()
 	}
 	if warning != "" {
-		v.notice(v.ui("ui.loaded_warning", "error", warning))
+		v.show(v.ui("ui.loaded_warning", "error", warning))
 		return nil
 	}
-	v.notice(v.ui("ui.loaded"))
+	v.show(v.ui("ui.loaded"))
 	return nil
 }
 
@@ -161,6 +161,6 @@ func (v *Viewer) autosave(events []sim.Event) {
 	}
 	v.autosaveDue = false
 	if err := save.Write(v.savePath(AutoSave), AutoSave, v.World); err != nil {
-		v.notice(v.ui("ui.not_saved", "error", err))
+		v.show(v.ui("ui.not_saved", "error", err))
 	}
 }

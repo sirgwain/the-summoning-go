@@ -49,15 +49,15 @@ func (v *Viewer) menuDone(f *Frontend) {
 		v.SaveGame(f.SaveAs)
 	case f.Delete != "":
 		if err := os.Remove(v.savePath(f.Delete)); err != nil {
-			v.notice(v.ui("ui.not_deleted", "error", err))
+			v.show(v.ui("ui.not_deleted", "error", err))
 		} else {
-			v.notice(v.ui("ui.deleted"))
+			v.show(v.ui("ui.deleted"))
 		}
 	case f.RenameTo != "":
 		if err := save.Rename(v.savePath(f.Rename), v.savePath(f.RenameTo), f.RenameTo); err != nil {
-			v.notice(v.ui("ui.not_renamed", "error", err))
+			v.show(v.ui("ui.not_renamed", "error", err))
 		} else {
-			v.notice(v.ui("ui.renamed"))
+			v.show(v.ui("ui.renamed"))
 		}
 	case f.Restore != "":
 		// The restored world has no conversation open.

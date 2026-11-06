@@ -112,8 +112,10 @@ func TestConversationLogWindow(t *testing.T) {
 // one by one when shown together, and narrows them by the search.
 func TestMessageLog(t *testing.T) {
 	v := playIn(t, devpack.Study, content.Cell{1, 3})
-	v.notice("Saved")
+	v.notice("Music off")
 	v.show("Waiting 1 of 9")
+	v.SaveDir = t.TempDir()
+	v.SaveGame("one")
 	v.announce([]sim.Event{
 		{Kind: sim.EventMessage, Text: "Creature hit!"},
 		{Kind: sim.EventMessage, Text: "You are poisoned"},
@@ -124,7 +126,7 @@ func TestMessageLog(t *testing.T) {
 	}
 	pressKey(v, KeyArrowRight)
 	lv := v.Log()
-	if got := strings.Join(paneText(lv), "|"); lv.Tab != LogMessages || got != "You are poisoned|Creature hit!|Saved" {
+	if got := strings.Join(paneText(lv), "|"); lv.Tab != LogMessages || got != "You are poisoned|Creature hit!|Music off" {
 		t.Fatalf("messages: tab %d, %q", lv.Tab, got)
 	}
 	typeText(v, "HIT")
