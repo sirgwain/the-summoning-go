@@ -1285,14 +1285,15 @@ A floor type is a floor set variant and what the floor does. All fields but `var
 | Field | Meaning |
 | --- | --- |
 | `variant` | The floor set's variant drawn |
-| `enter` | An effect on whoever enters: `{ "damage": dice, "type": "fire" }` or `{ "drain_magic": n }`; `"cue"` names a cue its damage to the player plays |
+| `enter` | An effect on the player at each step onto it: `{ "damage": dice, "type": "fire" }` or `{ "drain_magic": n }`; `"cue"` names a cue its damage to the player plays |
 | `tick` | An effect on whoever stands there, every status tick |
 | `depth` | Water depth 1..4 (`docs/spec/world.md`, Liquids) |
 | `sinks` | Objects put down here are lost, except on a plate that is up |
 | `avoided` | Creatures do not walk onto it |
 
-`enter` and `depth` act on the player as it enters, `tick` and depth 4 on every status tick
-(`docs/spec/world.md`, Liquids); `sinks` acts on dropped objects. `avoided` applies to creatures
+`enter` and depth 4's chance act on the player at each step onto the floor: each axis of a walk
+whose terrain test is accepted there, and arriving there by teleporter or placement. `depth` is set
+as the player enters; `tick` and depth 4 act on every status tick (`docs/spec/world.md`, Liquids); `sinks` acts on dropped objects. `avoided` applies to creatures
 with Fight.
 
 ### Features

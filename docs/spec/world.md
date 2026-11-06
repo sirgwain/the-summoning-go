@@ -284,11 +284,12 @@ The links that arrived at the focus show the same way, drawn dashed, so the play
 
 ## Liquids
 
-The header's liquid kind:
+The header's liquid kind. A liquid acts on the player at each **step onto it**: each time a walk's terrain test (entities.md, Moving) accepts the player's ground point in a cell of terrain 1Bh–1Eh, and on arriving there by teleporter or placement. A walk tests each axis it moves along, so a walk step along an axis on the liquid is one step onto it and a diagonal step two; standing still is none. The test comes before things are met, so a step that a thing then stops still counts.
 
-- **2, fire.** Entering a cell of terrain 1Bh–1Eh hurts the player 2d2 fire damage. Every status tick (player.md) on the level hurts 2d2 fire damage wherever the player stands. Fire immunity and levitation prevent both.
-- **1, water-like.** Terrain 1Dh hurts the player 1 on entering, and creatures avoid it. Terrain 1Eh drains 1 magic point on entering.
-- **Deep water** (formats.md): terrain 1Bh, 1Ch, 1Dh, 1Eh are depths 1, 2, 3, 4. At depth 4, every move has a 1 in 4 chance of costing 1 hit point, and every status tick costs 1, unless the player levitates. At depth 3 or more the player cannot throw or use hand actions.
+
+- **2, fire.** Each step onto terrain 1Bh–1Eh hurts the player 2d2 fire damage, so walking across a cell of it burns several times. Every status tick (player.md) on the level hurts 2d2 fire damage wherever the player stands. Fire immunity and levitation prevent both.
+- **1, water-like.** Each step onto terrain 1Dh hurts the player 1, and creatures avoid it. Each step onto terrain 1Eh drains 1 magic point.
+- **Deep water** (formats.md): terrain 1Bh, 1Ch, 1Dh, 1Eh are depths 1, 2, 3, 4. At depth 4, each step onto it has a 1 in 4 chance of costing 1 hit point, and every status tick costs 1, unless the player levitates. At depth 3 or more the player cannot throw or use hand actions.
 
 ## Import
 
@@ -297,8 +298,8 @@ The header's liquid kind:
 | Level | Types 0–3 (1Bh–1Eh) | Plain type |
 | --- | --- | --- |
 | No liquid | variants 0–3 | type 0 |
-| Water-like (1) | 1Dh enters for 1 damage and is avoided; 1Eh enters for 1 magic point | variant 0 |
-| Fire (2) | enters for 2d2 fire damage; every status tick 2d2 fire | variant 0, every status tick 2d2 fire |
+| Water-like (1) | each step onto 1Dh 1 damage, and it is avoided; each step onto 1Eh 1 magic point | variant 0 |
+| Fire (2) | each step onto it 2d2 fire damage; every status tick 2d2 fire | variant 0, every status tick 2d2 fire |
 | Deep water | depths 1–4; objects sink | variant 0; objects sink |
 
 **Wall shapes.** Shapes 0, 2, 4 and 5 are diagonal; 1 and 3 are faces. A diagonal wall fills the half of its cell at one corner of the cell's diamond, which decides which way the player slides along it (entities.md, Moving):
