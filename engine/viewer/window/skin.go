@@ -132,23 +132,38 @@ func fontAtlas(p *content.Pack, face *font.Face, id string) *image.RGBA {
 	return atlas
 }
 
+// The parts of a frame to draw: its inside, its edges, or both. A panel whose boxes reach under
+// its edges draws the inside, then the boxes, then the edges over them.
+type framePart int
+
+const (
+	frameWhole framePart = iota
+	frameInside
+	frameEdges
+)
+
 // panelFrame draws panel's frame filling outer: the skin's style for it, else def.
 func (s *Window) panelFrame(screen *ebiten.Image, panel string, def frame.Style, outer image.Rectangle, scale int, opacity float32) {
+	s.panelFramePart(screen, panel, def, outer, scale, opacity, frameWhole)
+}
+
+// panelFramePart draws part of panel's frame filling outer.
+func (s *Window) panelFramePart(screen *ebiten.Image, panel string, def frame.Style, outer image.Rectangle, scale int, opacity float32, part framePart) {
 	name := s.skin.frames[panel]
 	if st := s.skin.styles[name]; st != nil {
-		s.drawNine(screen, st, outer, scale, opacity)
+		s.drawNine(screen, st, outer, scale, opacity, part)
 		return
 	}
 	style := def
 	if b, ok := frame.Names[name]; ok {
 		style = b
 	}
-	s.drawFrame(screen, style, outer, scale, opacity)
+	s.drawFrame(screen, style, outer, scale, opacity, part)
 }
 
 // drawNine draws pack frame style st filling outer at scale: its corners kept, its edges
 // stretched or tiled, its middle stretched, or filled with its inside color at opacity.
-func (s *Window) drawNine(screen *ebiten.Image, st *nineStyle, outer image.Rectangle, scale int, opacity float32) {
+func (s *Window) drawNine(screen *ebiten.Image, st *nineStyle, outer image.Rectangle, scale int, opacity float32, part framePart) {
 	b := st.img.Bounds()
 	c := st.corner
 	src := [3]int{0, c, b.Dx() - c}
@@ -164,10 +179,11 @@ func (s *Window) drawNine(screen *ebiten.Image, st *nineStyle, outer image.Recta
 		for i := range 3 {
 			from := image.Rect(src[i], srcY[j], srcEnd[i], srcYEnd[j])
 			to := image.Rect(dst[i], dstY[j], dstEnd[i], dstYEnd[j])
-			if from.Empty() || to.Empty() {
+			middle := i == 1 && j == 1
+			if from.Empty() || to.Empty() || part == frameInside && !middle || part == frameEdges && middle {
 				continue
 			}
-			if i == 1 && j == 1 && st.inside != nil {
+			if middle && st.inside != nil {
 				in := *st.inside
 				k := opacity * float32(in.A) / 255
 				fill := color.RGBA{uint8(float32(in.R) * k), uint8(float32(in.G) * k), uint8(float32(in.B) * k), uint8(255 * k)}

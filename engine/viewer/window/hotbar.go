@@ -70,7 +70,9 @@ func (s *Window) drawHotbar(screen *ebiten.Image) {
 	stroke := func(r image.Rectangle, c color.Color) {
 		vector.StrokeRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), 1, c, false)
 	}
-	s.panelFrame(screen, content.PanelHotbar, frame.Iron, h.Frame, h.Scale, 1)
+	// The frame's edges go over the boxes, which may reach under them.
+	s.panelFramePart(screen, content.PanelHotbar, frame.Iron, h.Frame, h.Scale, 1, frameInside)
+	defer s.panelFramePart(screen, content.PanelHotbar, frame.Iron, h.Frame, h.Scale, 1, frameEdges)
 	for i, g := range h.Gauges {
 		r := h.Screen(g.Rect)
 		fill(r, slotColor)

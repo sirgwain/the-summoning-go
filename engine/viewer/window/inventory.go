@@ -37,7 +37,9 @@ func (s *Window) drawInventory(screen *ebiten.Image) {
 	}
 	win := s.inv
 	win.Clear()
-	s.panelFrame(screen, content.PanelInventory, frame.Iron, ip.Frame, ip.Scale, 1)
+	// The frame's edges go over the boxes, which may reach under them.
+	s.panelFramePart(screen, content.PanelInventory, frame.Iron, ip.Frame, ip.Scale, 1, frameInside)
+	defer s.panelFramePart(screen, content.PanelInventory, frame.Iron, ip.Frame, ip.Scale, 1, frameEdges)
 	for _, b := range ip.Slots {
 		r := b.Rect.Inset(1)
 		vector.FillRect(win, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), slotColor, false)

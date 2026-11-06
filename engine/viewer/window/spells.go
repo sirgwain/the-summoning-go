@@ -25,7 +25,9 @@ func (s *Window) drawSpellPanel(screen *ebiten.Image) {
 	stroke := func(r image.Rectangle, c color.Color) {
 		vector.StrokeRect(screen, float32(r.Min.X), float32(r.Min.Y), float32(r.Dx()), float32(r.Dy()), 1, c, false)
 	}
-	s.panelFrame(screen, content.PanelSpells, frame.Runic, sp.Frame, sp.Scale, 1)
+	// The frame's edges go over the boxes, which may reach under them.
+	s.panelFramePart(screen, content.PanelSpells, frame.Runic, sp.Frame, sp.Scale, 1, frameInside)
+	defer s.panelFramePart(screen, content.PanelSpells, frame.Runic, sp.Frame, sp.Scale, 1, frameEdges)
 	for _, b := range sp.Icons {
 		fill(sp.Screen(b.Rect), slotColor)
 		stroke(sp.Screen(b.Rect), slotEdgeColor)
