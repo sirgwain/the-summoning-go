@@ -49,7 +49,7 @@ type PlacementType uint8
 const (
 	PlaceObjects     PlacementType = 0
 	PlaceDecoration  PlacementType = 1
-	PlaceContainer   PlacementType = 2
+	PlaceRuneMark    PlacementType = 2
 	PlaceTeleporter  PlacementType = 3
 	PlaceDoor        PlacementType = 4
 	PlaceUnused      PlacementType = 5

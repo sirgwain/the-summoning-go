@@ -136,16 +136,11 @@ func (lb *levelBuilder) placements() error {
 			lb.report(c, "placement type %d outside the level; left out", p.Type)
 			continue
 		}
-		switch p.Type {
-		case PlaceNPC:
+		if p.Type == PlaceNPC {
 			lb.creature(c, p)
-		case PlaceContainer:
-			lb.container(c, p.Objects)
-		default:
-			for _, t := range p.Objects {
-				if o, ok := lb.object(c, t); ok {
-					lb.cl.Objects = append(lb.cl.Objects, &content.FloorObject{Cell: c, Object: o})
-				}
+		} else {
+			for _, o := range lb.objects(c, p.Objects) {
+				lb.cl.Objects = append(lb.cl.Objects, &content.FloorObject{Cell: c, Object: o})
 			}
 		}
 		if p.Trap {
@@ -194,40 +189,49 @@ func (lb *levelBuilder) object(c content.Cell, t byte) (content.Object, bool) {
 	return content.Object{Item: id}, ok
 }
 
-// container places a container holding the objects after it; what does not fit lies beside it.
-func (lb *levelBuilder) container(c content.Cell, templates []byte) {
-	if len(templates) == 0 {
-		return
-	}
-	box, ok := lb.object(c, templates[0])
-	tm := (*ObjectTemplate)(nil)
-	if ok && box.Item != content.RandomItem {
-		tm = &lb.im.objects.Templates[templates[0]]
-	}
-	if tm == nil || !tm.Container() {
-		lb.report(c, "container placement whose first object is not a container; all on the floor")
-		tm = nil
-	}
-	var floor []content.Object
-	if ok {
-		floor = append(floor, box)
-	}
-	for _, t := range templates[1:] {
+// objects makes an entry's objects (formats.md, Entity stream): those listed before any container
+// are returned, and each one after a container goes into the latest container listed, if it fits.
+func (lb *levelBuilder) objects(c content.Cell, templates []byte) []content.Object {
+	var out []content.Object
+	// path leads from out to the latest container: the index in out, then in each one's contents.
+	var path []int
+	var box *ObjectTemplate
+	lost := false
+	for _, t := range templates {
 		o, ok := lb.object(c, t)
 		if !ok {
 			continue
 		}
-		fits := tm != nil && len(floor[0].Contents) < tm.Capacity() &&
-			(t == templateRandom || lb.im.objects.Templates[t].Size() <= tm.Largest())
-		if fits {
-			floor[0].Contents = append(floor[0].Contents, o)
-		} else {
-			floor = append(floor, o)
+		var tm *ObjectTemplate
+		if o.Item != content.RandomItem {
+			tm = &lb.im.objects.Templates[t]
+		}
+		switch {
+		case lost:
+			lb.report(c, "object %d after a container that did not fit; lost", t)
+			continue
+		case path == nil:
+			out = append(out, o)
+			if tm != nil && tm.Container() {
+				path, box = []int{len(out) - 1}, tm
+			}
+			continue
+		}
+		into := &out[path[0]]
+		for _, i := range path[1:] {
+			into = &into.Contents[i]
+		}
+		if len(into.Contents) >= box.Capacity() || tm != nil && tm.Size() > box.Largest() {
+			lb.report(c, "object %d does not fit in %s; lost", t, into.Item)
+			lost = tm != nil && tm.Container()
+			continue
+		}
+		into.Contents = append(into.Contents, o)
+		if tm != nil && tm.Container() {
+			path, box = append(path, len(into.Contents)-1), tm
 		}
 	}
-	for _, o := range floor {
-		lb.cl.Objects = append(lb.cl.Objects, &content.FloorObject{Cell: c, Object: o})
-	}
+	return out
 }
 
 // thingID returns a new local id for a thing of kind at c.
@@ -247,11 +251,7 @@ func (lb *levelBuilder) creature(c content.Cell, p *Placement) {
 	}
 	offset := creatureOffset
 	t := &content.PlacedThing{ID: lb.thingID("creature", c), Thing: tid, Cell: c, Offset: &offset}
-	for _, tmpl := range p.Objects {
-		if o, ok := lb.object(c, tmpl); ok {
-			t.Items = append(t.Items, o)
-		}
-	}
+	t.Items = lb.objects(c, p.Objects)
 	lb.cl.Things = append(lb.cl.Things, t)
 }
 

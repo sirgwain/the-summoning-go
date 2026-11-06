@@ -128,7 +128,7 @@ u8 extra[len(type)]
 | --- | --- | --- |
 | 0 | 0 | Objects only |
 | 1 | 1 | Wall decoration `b`: ornament frame `b % 10`, decoration `b / 10` |
-| 2 | 1 | Container: the first object is a container, the rest go in it. The byte is unused |
+| 2 | 1 | Rune mark: the rune, 0..2 for terrain 21h..23h. The game reads the byte and ignores it; the terrain is the mark |
 | 3 | 5 | In-level teleporter record (rules.md) |
 | 4 | 1 | Door, with its initial state byte (rules.md) |
 | 5 | 0 | Unused |
@@ -139,9 +139,11 @@ u8 extra[len(type)]
 | 10 | 1 | Weight plate (byte unused) |
 | 11 | 1 | Mouth, with its message id in the level's text pool |
 
-The exit's `marker` byte follows what the cell is: 0 a visible exit marker on a floor cell, 1 a pit (25h), 2 a closed trapdoor (27h), 3 an open trapdoor (26h), 4 an exit in a wall. Type 10 occurs only on the gem socket's cell, and type 2 containers only on rune marks (21h–23h).
+The exit's `marker` byte follows what the cell is: 0 a visible exit marker on a floor cell, 1 a pit (25h), 2 a closed trapdoor (27h), 3 an open trapdoor (26h), 4 an exit in a wall. Type 10 occurs only on the gem socket's cell, and type 2 only on rune marks (21h–23h), with no objects.
 
-Objects: each template id becomes an object. If the entry is an NPC, the objects go into its inventory. Otherwise, if the first object is a container, the rest go inside it (an object that does not fit is dropped); else they lie on the floor of the cell.
+Objects, of an entry of any type: each template id becomes an object, in the order listed. Until a container is listed, each object goes into the NPC's inventory if the entry is an NPC, and otherwise lies on the floor of the cell. Once one is, each object after it goes into the most recently listed container instead, if that container takes it (items.md, Weight and containers); an object it does not take is lost. A container is listed as the start of an entry's objects (a chest and what it holds), or after other objects, which lie beside it; and a container listed after another goes into it and is filled in its turn. So a chest followed by a dagger and a key is a chest holding the dagger and the key, in that order.
+
+No level lists a container that the container before it does not take; the engine loses the objects after such a container with it. A random object (items.md, Template 0) is chosen when its level is first entered; one chosen inside a container that does not take it is lost then, and one chosen to be a container holds nothing (the objects after it stay in the container listed before it).
 
 The trap flag places a trap entity (entities.md) at the cell.
 

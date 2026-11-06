@@ -483,6 +483,31 @@ func TestRandomObjectsAndHitPoints(t *testing.T) {
 	}
 }
 
+// A random object chosen inside a container that does not take it is lost (formats.md, Entity
+// stream).
+func TestRandomObjectInContainer(t *testing.T) {
+	w := newWorld(t, func(p *content.Pack) {
+		p.Items["item.sword"].Size = 5
+		p.Items["item.pouch"] = &content.Item{ID: "item.pouch", Weight: 1, Container: &content.Container{Capacity: 4, Largest: 1}}
+		random := []content.Object{{Item: content.RandomItem}, {Item: "item.key"}}
+		p.Levels["level.00"].Objects = []*content.FloorObject{
+			{Cell: cell{0, 0}, Object: content.Object{Item: "item.sack", Contents: random}},
+			{Cell: cell{0, 0}, Object: content.Object{Item: "item.pouch", Contents: random}},
+		}
+	})
+	var got [][]string
+	for _, o := range w.Current().Objects[cell{0, 0}] {
+		var in []string
+		for _, c := range o.Contents {
+			in = append(in, c.Item)
+		}
+		got = append(got, in)
+	}
+	if want := [][]string{{"item.sword", "item.key"}, {"item.key"}}; !slices.EqualFunc(got, want, slices.Equal) {
+		t.Errorf("contents %v, want %v", got, want)
+	}
+}
+
 func TestRefusals(t *testing.T) {
 	w := newWorld(t)
 	for _, c := range []input.Command{

@@ -157,9 +157,9 @@ func importFixture() *Source {
 		u8(1, 2, 0, 0, uint8(PlaceTrigger), 0, 0, 50, 1, noProcedure).
 		// A creature carrying a Dagger, with a trap; a shuttling boulder; a Sack holding the Key
 		// and a random object; a mouth.
-		u8(1, 1, 1, 1, 1, uint8(PlaceNPC), 0).
+		u8(1, 1, 3, 1, 2, 3, 1, uint8(PlaceNPC), 0).
 		u8(1, 1, 0, 0, uint8(PlaceBoulder), boulderShuttling, 1).
-		u8(1, 2, 3, 2, 3, 0, 0, uint8(PlaceContainer), 0).
+		u8(1, 2, 5, 3, 2, 1, 0, 3, 0, uint8(PlaceObjects)).
 		u8(1, 0, 0, 0, uint8(PlaceMouth), 0).
 		u8(0xFF, 0xFF)
 	level = level.u16(6).str("Hello\x00")
@@ -194,8 +194,13 @@ func TestImport(t *testing.T) {
 	// The fixture has six item templates, none of the starting inventory's or creation's, no spell
 	// art, no door or story pictures and no view effect or sparkle art, so its spells, scenes and flipbooks
 	// are left out.
+	// The key after the full sack on (1, 2) is lost (formats.md, Entity stream).
+	lost := "level 0 (1, 2): object 3 does not fit in item.sack; lost"
+	if !slices.Contains(report.Lines(), lost) {
+		t.Errorf("report lacks %q", lost)
+	}
 	for _, line := range report.Lines() {
-		ok := false
+		ok := line == lost
 		for _, prefix := range []string{"starting inventory:", "spell ", "gesture icons:", "magic wall:", "gateway:", "portrait ", "pointers:", "inventory:", "worn image ", "character creation:", "door picture ", "the door scene:", "the ending scene:", "the story scene:", "the end scene", "Rowena's portrait ", "view effect ", "sparkle "} {
 			ok = ok || strings.HasPrefix(line, prefix)
 		}
@@ -308,7 +313,7 @@ func TestImportFeatures(t *testing.T) {
 
 	offset := content.Offset{-6, 12}
 	wantThings := []*content.PlacedThing{
-		{ID: "creature.1.1", Thing: "thing.npc.0", Cell: cell(1, 1), Offset: &offset, Items: []content.Object{{Item: dagger}}},
+		{ID: "creature.1.1", Thing: "thing.npc.0", Cell: cell(1, 1), Offset: &offset, Items: []content.Object{{Item: dagger}, {Item: "item.sack", Contents: []content.Object{{Item: key}}}}},
 		{ID: "trap.1.1", Thing: "thing.trap.18", Cell: cell(1, 1)},
 		{ID: "boulder.1.1", Thing: "thing.boulder.18", Cell: cell(1, 1), Rolling: &content.Rolling{Direction: 2, Shuttle: true}},
 	}
@@ -316,7 +321,8 @@ func TestImportFeatures(t *testing.T) {
 		t.Errorf("things %+v", l.Things)
 	}
 	wantObjects := []*content.FloorObject{
-		{Cell: cell(1, 2), Object: content.Object{Item: "item.sack", Contents: []content.Object{{Item: key}, {Item: content.RandomItem}}}},
+		{Cell: cell(1, 2), Object: content.Object{Item: key}},
+		{Cell: cell(1, 2), Object: content.Object{Item: "item.sack", Contents: []content.Object{{Item: dagger}, {Item: content.RandomItem}}}},
 	}
 	if !reflect.DeepEqual(l.Objects, wantObjects) {
 		t.Errorf("objects %+v", l.Objects)
@@ -384,8 +390,8 @@ func TestImportStillObject(t *testing.T) {
 	levels, _ := ReadContainer(src.Levels)
 	level := append([]byte(nil), levels[0]...)
 	// Place record 1, an animated object showing frame 3, instead of record 0.
-	i := bytes.Index(level, []byte{1, 1, 1, 1, 1, uint8(PlaceNPC), 0})
-	level[i+6] = 1
+	i := bytes.Index(level, []byte{1, 1, 3, 1, 2, 3, 1, uint8(PlaceNPC), 0})
+	level[i+8] = 1
 	src.Levels = container(level)
 	p, _, err := Import(src, Options{})
 	if err != nil {

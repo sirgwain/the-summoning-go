@@ -45,7 +45,7 @@ type Step struct {
 	Slot        *int  `json:"slot,omitempty"`
 	Action      []int `json:"action,omitempty"`
 	Right       bool  `json:"right,omitempty"`
-	// Tap taps a named part of the play UI (TapPoint): "spell.0" a school's box, "gesture" the
+	// Tap taps a named part of the play UI (TapPoint): "slot.0" a slot's box, as Slot, "spell.0" a school's box, "gesture" the
 	// gesture box, "icon.A" an icon of the spell panel, "learn", "back" and "close" its buttons,
 	// "book.0" the Memorize button of the first spell row of the spellbook showing, "offer.0" a
 	// conversation's offered keyword (by place), "map.x,y" a cell of the full map, "bye", "word.<text>" a marked word of the line
@@ -246,6 +246,8 @@ func (v *Viewer) TapPoint(name string) (image.Point, error) {
 	kind, arg, _ := strings.Cut(name, ".")
 	n, _ := strconv.Atoi(arg)
 	switch kind {
+	case "slot":
+		return hotbarPoint(v, Step{Slot: &n})
 	case "map":
 		fv := v.FullMap()
 		var c content.Cell

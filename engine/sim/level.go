@@ -283,10 +283,20 @@ func (w *World) object(o content.Object) *Object {
 		item = w.randomItems[w.rng.IntN(len(w.randomItems))]
 	}
 	obj := w.newObject(item)
+	var box *content.Container
+	if it := w.pack.Items[item]; it != nil {
+		box = it.Container
+	}
 	for _, c := range o.Contents {
-		if co := w.object(c); co != nil {
-			obj.Contents = append(obj.Contents, co)
+		co := w.object(c)
+		if co == nil {
+			continue
 		}
+		// A random object chosen too large for its container is lost (formats.md, Entity stream).
+		if it := w.pack.Items[co.Item]; c.Item == content.RandomItem && box != nil && it != nil && it.Size > box.Largest {
+			continue
+		}
+		obj.Contents = append(obj.Contents, co)
 	}
 	return obj
 }
