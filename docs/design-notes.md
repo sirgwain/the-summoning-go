@@ -273,7 +273,8 @@ Change's frame by facing, and the hostile speed of records 23h and 2Bh (`hostile
     and gesture taught, with the question that brought it), leaves out the menu's, and keeps it
     in saves, filtering a restored log the same way (`TestConversationLog`); L or the hotbar's Log box opens a window of the people talked
     with, their conversations newest first, and a search that jumps to the line
-    (`TestConversationLogWindow`). Saves imported from the game start with an empty log.
+    (`TestConversationLogWindow`). Saves imported from the game start with an empty log. A Messages tab lists the message line's
+    messages, newest first, the last 500, narrowed by the search (`TestMessageLog`).
   - Done: the book (player.md, The book). The world enters each creature and item template the
     player comes across, in stages (seen, fought or handled, killed or used), with the kills and
     drops, and each defense once it works on one, kept in saves (`TestBookCreatures`,

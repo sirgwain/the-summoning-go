@@ -81,7 +81,7 @@ func (v *Viewer) nap(in Input, cmds []input.Command) bool {
 	}
 	p = v.World.Player()
 	played := v.World.Step() / sim.StepsPerSecond
-	v.notice(v.ui("ui.nap.waiting", "n", p.MagicPoints, "m", p.MaxMagicPoints,
+	v.show(v.ui("ui.nap.waiting", "n", p.MagicPoints, "m", p.MaxMagicPoints,
 		"time", fmt.Sprintf("%d:%02d:%02d", played/3600, played/60%60, played%60)))
 	return true
 }

@@ -3,6 +3,7 @@ package viewer
 import (
 	"image"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/sirgwain/the-summoning-go/engine/content"
@@ -26,9 +27,31 @@ const (
 // savePath returns the path of save name.
 func (v *Viewer) savePath(name string) string { return filepath.Join(v.SaveDir, name+".sav") }
 
-// notice shows text on the message line for a while.
+// notice shows text on the message line for a while, and keeps it among the messages.
 func (v *Viewer) notice(text string) {
+	v.record(text)
+	v.show(text)
+}
+
+// show puts text on the message line without keeping it among the messages: for one that
+// changes from update to update.
+func (v *Viewer) show(text string) {
 	v.Notice, v.NoticeUntil = text, v.Ticks+noticeUpdates
+}
+
+// maxMessages is how many messages the log's Messages tab keeps.
+const maxMessages = 500
+
+// record keeps messages for the log's Messages tab, the last maxMessages.
+func (v *Viewer) record(messages ...string) {
+	for _, m := range messages {
+		if m != "" {
+			v.messages = append(v.messages, m)
+		}
+	}
+	if n := len(v.messages) - maxMessages; n > 0 {
+		v.messages = slices.Delete(v.messages, 0, n)
+	}
 }
 
 // announce shows the game's messages among events on the message line, those said in one update
@@ -44,7 +67,8 @@ func (v *Viewer) announce(events []sim.Event) {
 		}
 	}
 	if len(lines) > 0 {
-		v.notice(strings.Join(lines, " "))
+		v.record(lines...)
+		v.show(strings.Join(lines, " "))
 	}
 }
 

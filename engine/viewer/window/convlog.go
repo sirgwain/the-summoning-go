@@ -9,8 +9,9 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/viewer"
 )
 
-// drawLog draws the conversation log: the search field, the people talked with or the matches
-// down the left, and the chosen person's conversations on the right. It draws the window at its
+// drawLog draws the conversation log: its tabs, the search field, and on the Conversations tab
+// the people talked with or the matches down the left and the chosen person's conversations on
+// the right, on the Messages tab the messages shown. It draws the window at its
 // own pixels, then scales it onto the screen.
 func (s *Window) drawLog(screen *ebiten.Image) {
 	v := s.v
@@ -43,6 +44,15 @@ func (s *Window) drawLog(screen *ebiten.Image) {
 		cursor = "_"
 	}
 	s.print(win, lv.Typed+cursor, lv.Field.Min.X+4, lv.Field.Min.Y+2)
+	for i, t := range lv.Tabs {
+		bg := actionColor
+		if i == lv.Tab {
+			bg = talkSelectedColor
+		}
+		fill(t.Rect, bg)
+		edge(t.Rect, slotEdgeColor)
+		s.print(win, t.Label, t.Rect.Min.X+(t.Rect.Dx()-len(t.Label)*viewer.CharWidth)/2, t.Rect.Min.Y+2)
+	}
 	fill(lv.Close.Rect, actionColor)
 	edge(lv.Close.Rect, slotEdgeColor)
 	s.print(win, lv.Close.Label, lv.Close.Rect.Min.X+(lv.Close.Rect.Dx()-len(lv.Close.Label)*viewer.CharWidth)/2, lv.Close.Rect.Min.Y+2)

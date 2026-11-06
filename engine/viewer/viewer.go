@@ -165,7 +165,10 @@ type Viewer struct {
 		selected int     // the match highlighted
 		scroll   int     // how far its pane is scrolled
 		focus    *[2]int // the line a match chose
+		tab      int     // the tab open: LogConversations or LogMessages
 	}
+	// messages are the messages the message line has shown, oldest first, the last maxMessages.
+	messages []string
 	// book is the book's window (book.go), the player's or the tools' full book.
 	book bookState
 	// Showing is the view effect or sparkle playing, nil when none is; shows are the effect and

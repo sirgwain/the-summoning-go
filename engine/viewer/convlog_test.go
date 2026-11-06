@@ -9,6 +9,7 @@ import (
 	"github.com/sirgwain/the-summoning-go/engine/content"
 	"github.com/sirgwain/the-summoning-go/engine/input"
 	"github.com/sirgwain/the-summoning-go/engine/inspect"
+	"github.com/sirgwain/the-summoning-go/engine/sim"
 )
 
 // paneText returns the log pane's rows as text, one per row.
@@ -104,5 +105,44 @@ func TestConversationLogWindow(t *testing.T) {
 	tapAt(v, h.Screen(h.Log.Rect).Min.Add(image.Pt(2, 2)))
 	if !v.LogOpen {
 		t.Error("the hotbar's box did not open the log")
+	}
+}
+
+// TestMessageLog keeps the message line's messages, newest first, in the log's Messages tab,
+// one by one when shown together, and narrows them by the search.
+func TestMessageLog(t *testing.T) {
+	v := playIn(t, devpack.Study, content.Cell{1, 3})
+	v.notice("Saved")
+	v.show("Waiting 1 of 9")
+	v.announce([]sim.Event{
+		{Kind: sim.EventMessage, Text: "Creature hit!"},
+		{Kind: sim.EventMessage, Text: "You are poisoned"},
+	})
+	pressKey(v, "L")
+	if lv := v.Log(); lv == nil || lv.Tab != LogConversations {
+		t.Fatalf("the log opens on its conversations: %+v", lv)
+	}
+	pressKey(v, KeyArrowRight)
+	lv := v.Log()
+	if got := strings.Join(paneText(lv), "|"); lv.Tab != LogMessages || got != "You are poisoned|Creature hit!|Saved" {
+		t.Fatalf("messages: tab %d, %q", lv.Tab, got)
+	}
+	typeText(v, "HIT")
+	if got := strings.Join(paneText(v.Log()), "|"); got != "Creature hit!" {
+		t.Errorf("searched: %q", got)
+	}
+	typeText(v, "z")
+	if lv := v.Log(); len(lv.Text) != 0 || lv.Empty != inspect.Labels["ui.log.no_match"] {
+		t.Errorf("no match: %+v", lv)
+	}
+	tapAt(v, lv.Screen(lv.Tabs[LogConversations].Rect).Min.Add(image.Pt(2, 2)))
+	if v.Log().Tab != LogConversations {
+		t.Error("clicking the tab did not switch back")
+	}
+	for range maxMessages + 5 {
+		v.record("again")
+	}
+	if len(v.messages) != maxMessages {
+		t.Errorf("%d messages kept", len(v.messages))
 	}
 }

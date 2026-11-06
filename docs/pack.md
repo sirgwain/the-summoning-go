@@ -536,6 +536,9 @@ the engine's own words.
 
 | Label | Default |
 |---|---|
+| `ui.log.conversations` | Conversations |
+| `ui.log.messages` | Messages |
+| `ui.log.no_messages` | No messages yet. |
 | `ui.log.no_match` | Nothing found. |
 | `ui.log.no_one` | No one has been talked with yet. |
 | `ui.log.asks` | {name} asks: {text} |

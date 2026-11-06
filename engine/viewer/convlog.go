@@ -14,7 +14,14 @@ import (
 // The conversation log window (docs/spec/dialogue.md, Engine model): the people talked with down
 // the left, the chosen one's conversations newest first on the right, and a search field over
 // them all. Typing searches; the left column then lists the matches, and choosing one shows its
-// line in its conversation.
+// line in its conversation. A second tab lists the messages the message line has shown, newest
+// first, which the search narrows.
+
+// Log tabs.
+const (
+	LogConversations = iota
+	LogMessages
+)
 
 // Conversation log layout, in window pixels, which the window scales by up to talkScale.
 const (
@@ -26,6 +33,7 @@ const (
 	logMatchRow  = LineHeight + 4
 	logField     = 240
 	logButton    = 60
+	logTab       = 120
 )
 
 // LogView is the conversation log laid out on the screen. Rect is on the screen and Scale its
@@ -33,6 +41,9 @@ const (
 type LogView struct {
 	Rect  image.Rectangle
 	Scale int
+	// Tabs are the Conversations and Messages tabs, Tab the one open.
+	Tabs [2]PanelButton
+	Tab  int
 	// Field is the search field and Typed what is typed in it; Close the button that closes.
 	Field image.Rectangle
 	Typed string
@@ -94,6 +105,7 @@ func (v *Viewer) OpenLog() {
 		return
 	}
 	v.LogOpen, v.LogTyped, v.logView.selected, v.logView.scroll, v.logView.focus = true, "", 0, 0, nil
+	v.logView.tab = LogConversations
 	v.SpellsOpen = false
 	if people := v.logPeople(); len(people) > 0 {
 		v.logView.chosen = people[0].template
@@ -210,17 +222,33 @@ func (v *Viewer) Log() *LogView {
 		bottom = h.Frame.Min.Y - Margin
 	}
 	avail := max(bottom-2*Margin, 1)
-	lv := &LogView{Typed: v.LogTyped, Selected: -1}
+	lv := &LogView{Typed: v.LogTyped, Selected: -1, Tab: v.logView.tab}
 	lv.Scale = max(1, min(talkScale, (v.Screen.X-2*Margin)/logWidth, avail/logMinHeight))
 	size := image.Pt(logWidth, max(logMinHeight, avail/lv.Scale))
 	corner := image.Pt((v.Screen.X-size.X*lv.Scale)/2, max(Margin, (bottom-size.Y*lv.Scale)/2))
 	lv.Rect = image.Rectangle{corner, corner.Add(size.Mul(lv.Scale))}
 
 	lv.Close = PanelButton{Rect: image.Rect(size.X-logPad-logButton, logPad, size.X-logPad, logPad+LineHeight+4), Name: "close", Label: v.ui("ui.close")}
-	fx := logPad + 6*CharWidth
-	lv.Field = image.Rect(fx, logPad, fx+logField, logPad+LineHeight+4)
+	for i, name := range [2]string{"conversations", "messages"} {
+		x := logPad + i*(logTab+logPad)
+		lv.Tabs[i] = PanelButton{Rect: image.Rect(x, logPad, x+logTab, logPad+LineHeight+4), Name: name, Label: v.ui("ui.log." + name)}
+	}
+	fx := lv.Tabs[1].Rect.Max.X + logPad + 6*CharWidth
+	lv.Field = image.Rect(fx, logPad, min(fx+logField, lv.Close.Rect.Min.X-logPad), logPad+LineHeight+4)
 	top := lv.Field.Max.Y + logPad
 	body := image.Rect(logPad, top, size.X-logPad, size.Y-logPad)
+	if lv.Tab == LogMessages {
+		lv.Pane = body
+		rows, height := v.messageLines(lv.Pane.Dx() - CharWidth)
+		v.layoutPane(lv, rows, height)
+		if len(lv.Text) == 0 {
+			lv.Empty = v.ui("ui.log.no_messages")
+			if v.LogTyped != "" {
+				lv.Empty = v.ui("ui.log.no_match")
+			}
+		}
+		return lv
+	}
 
 	// The left column: the matches while a search is typed, else the people.
 	rowH := logRowHeight
@@ -270,10 +298,19 @@ func (v *Viewer) Log() *LogView {
 	// The right pane: the chosen person's conversations, scrolled.
 	lv.Pane = image.Rect(body.Min.X+logColumn+logPad, body.Min.Y, body.Max.X, body.Max.Y)
 	lines, height := v.logLines(lv.Pane.Dx() - CharWidth)
+	texts := make([]LogText, len(lines))
+	for i, l := range lines {
+		texts[i] = l.LogText
+	}
+	v.layoutPane(lv, texts, height)
+	return lv
+}
+
+// layoutPane puts rows laid out from the pane's top, height in all, into lv's pane, scrolled.
+func (v *Viewer) layoutPane(lv *LogView, rows []LogText, height int) {
 	lv.PaneHeight = height
 	lv.Scroll = max(0, min(v.logView.scroll, height-lv.Pane.Dy()))
-	for _, l := range lines {
-		t := l.LogText
+	for _, t := range rows {
 		t.Words = slices.Clone(t.Words)
 		in := true
 		for i := range t.Words {
@@ -285,7 +322,31 @@ func (v *Viewer) Log() *LogView {
 			lv.Text = append(lv.Text, t)
 		}
 	}
-	return lv
+}
+
+// messageLines lays out the messages that hold the text typed, ignoring case, newest first,
+// wrapped to width, and returns them and their height.
+func (v *Viewer) messageLines(width int) ([]LogText, int) {
+	query := strings.ToLower(strings.TrimSpace(v.LogTyped))
+	var out []LogText
+	y := 0
+	for i := len(v.messages) - 1; i >= 0; i-- {
+		m := v.messages[i]
+		if query != "" && !strings.Contains(strings.ToLower(m), query) {
+			continue
+		}
+		words := layoutWords(strings.ReplaceAll(m, "*", ""), CharWidth, y, width)
+		out = append(out, LogText{Words: words})
+		if n := len(words); n > 0 {
+			y = words[n-1].Rect.Max.Y
+		}
+	}
+	return out, y
+}
+
+// logTab opens tab of the log.
+func (v *Viewer) logTab(tab int) {
+	v.logView.tab, v.logView.scroll, v.logView.selected = tab, 0, 0
 }
 
 // logPortrait returns the portrait the log shows for person p: the latest it was shown with.
@@ -332,7 +393,8 @@ func (v *Viewer) logChoose(i int) {
 
 // logInput takes input while the log is open. Typing searches, Backspace takes a letter off;
 // Up and Down choose among the left column's rows, and Enter or a click chooses a match. The
-// wheel, Page Up and Page Down scroll the pane. Escape clears the search, leaving the pane as it
+// wheel, Page Up and Page Down scroll the pane, as Up and Down do on the Messages tab. Left,
+// Right and a click on a tab switch tabs. Escape clears the search, leaving the pane as it
 // is, or closes the log, as a right click or Close does.
 func (v *Viewer) logInput(in Input) {
 	lv := v.Log()
@@ -349,12 +411,26 @@ func (v *Viewer) logInput(in Input) {
 		return
 	}
 	if in.Left.Released {
+		for i, t := range lv.Tabs {
+			if cursor.In(t.Rect) {
+				v.logTab(i)
+				return
+			}
+		}
 		for i, r := range lv.Rows {
 			if cursor.In(r.Rect) {
 				v.logChoose(lv.First + i)
 				return
 			}
 		}
+	}
+	switch {
+	case in.pressed(KeyArrowLeft):
+		v.logTab(LogConversations)
+		return
+	case in.pressed(KeyArrowRight):
+		v.logTab(LogMessages)
+		return
 	}
 	typed := false
 	if in.pressed(KeyBackspace) && v.LogTyped != "" {
@@ -368,18 +444,26 @@ func (v *Viewer) logInput(in Input) {
 	}
 	if typed {
 		v.logView.selected = 0
+		if v.logView.tab == LogMessages {
+			v.logView.scroll = 0
+		}
 		return
 	}
 	sel := v.logView.selected
 	if v.LogTyped == "" {
 		sel = v.logChosenIndex()
 	}
+	messages := v.logView.tab == LogMessages
 	switch {
+	case messages && in.pressed(KeyArrowUp):
+		v.logView.scroll = max(0, lv.Scroll-LineHeight)
+	case messages && in.pressed(KeyArrowDown):
+		v.logView.scroll = lv.Scroll + LineHeight
 	case in.pressed(KeyArrowUp):
 		v.logStep(sel - 1)
 	case in.pressed(KeyArrowDown):
 		v.logStep(sel + 1)
-	case in.pressed(KeyEnter) && v.LogTyped != "":
+	case in.pressed(KeyEnter) && v.LogTyped != "" && !messages:
 		v.logChoose(sel)
 	case in.pressed(KeyPageDown):
 		v.logView.scroll = lv.Scroll + lv.Pane.Dy()*3/4
