@@ -136,7 +136,7 @@ func CellLines(p *content.Pack, l *sim.Level, c content.Cell) []Line {
 	if objs := l.Objects[c]; len(objs) > 0 {
 		lines = append(lines, Line{Text: fmt.Sprintf("Objects (%d), top last:", len(objs))})
 		for _, o := range objs {
-			addItem(o.Item, "%s", object(p, o))
+			lines = append(lines, objectLines(p, o, "  ", "  ")...)
 		}
 	}
 	for _, t := range l.ThingsAt(c) {
@@ -183,16 +183,28 @@ func effect(e *content.Effect) string {
 	return strings.Join(parts, ", ")
 }
 
+// object names an object and its weight, contents included.
 func object(p *content.Pack, o *sim.Object) string {
-	s := ItemName(p, o.Item)
-	if len(o.Contents) > 0 {
-		var in []string
-		for _, c := range o.Contents {
-			in = append(in, object(p, c))
-		}
-		s += " holding " + strings.Join(in, ", ")
+	return fmt.Sprintf("%s (weight %d)", ItemName(p, o.Item), o.Weight(p))
+}
+
+// objectLines describes object o on a line starting with first, and then each object it holds on
+// a line of its own, indented two more than indent, and what those hold below them.
+func objectLines(p *content.Pack, o *sim.Object, first, indent string) []Line {
+	lines := []Line{{Text: first + object(p, o), Item: o.Item}}
+	for _, c := range o.Contents {
+		lines = append(lines, objectLines(p, c, indent+"  ", indent+"  ")...)
 	}
-	return fmt.Sprintf("%s (weight %d)", s, o.Weight(p))
+	return lines
+}
+
+// texts returns the lines' texts.
+func texts(lines []Line) []string {
+	out := make([]string, len(lines))
+	for i, l := range lines {
+		out[i] = l.Text
+	}
+	return out
 }
 
 // feature describes a feature and the procedures its hooks run.
@@ -349,7 +361,7 @@ func ThingLines(p *content.Pack, t *sim.Thing) []Line {
 		add("stats: %s", strings.Join(stats, ", "))
 	}
 	for _, o := range t.Items {
-		addItem(o.Item, "carries %s", object(p, o))
+		lines = append(lines, objectLines(p, o, "  carries ", "  ")...)
 	}
 	if r := t.Rolling; r != nil {
 		add("rolling in direction %d%s", r.Direction, onOff(r.Shuttle, ", shuttling", ""))
@@ -408,18 +420,18 @@ func Player(p *content.Pack, pl *sim.Player) []string {
 	if pl.Delays != [2]int{} {
 		lines = append(lines, fmt.Sprintf("  hands wait %d and %d", pl.Delays[0], pl.Delays[1]))
 	}
-	hand := "nothing"
 	if pl.Hand != nil {
-		hand = object(p, pl.Hand)
+		lines = append(lines, texts(objectLines(p, pl.Hand, "  hand: ", "  "))...)
+	} else {
+		lines = append(lines, "  hand: nothing")
 	}
-	lines = append(lines, "  hand: "+hand)
 	n := sim.SlotCount
 	if bag := pl.Pack(p); bag != nil {
 		n = sim.SlotPack + len(bag.Contents)
 	}
 	for i := range n {
 		if o := pl.Slot(p, i); o != nil {
-			lines = append(lines, fmt.Sprintf("  %s: %s", SlotName(i), object(p, o)))
+			lines = append(lines, texts(objectLines(p, o, "  "+SlotName(i)+": ", "  "))...)
 		}
 	}
 	return lines

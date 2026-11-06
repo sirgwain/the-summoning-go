@@ -62,7 +62,7 @@ func TestCell(t *testing.T) {
 		"Cell (0, 0)", "variant 1; entering: 2d2 fire damage",
 		"Feature plate (plate)", "up, armed, weight 3 of 50",
 		"[1] on_press runs p0:", "switch on door", "make Key at (1, 0)",
-		"Sack holding Key (weight 1) (weight 3)")
+		"\n  Sack (weight 3)\n    Key (weight 1)")
 	contains(t, Cell(p, l, content.Cell{0, 1}), "closed, stage 0 of 4", "blocked")
 	contains(t, Cell(p, l, content.Cell{1, 1}), `says "Hello"`)
 	contains(t, Cell(p, l, content.Cell{1, 0}), "Thing guard (thing.guard, creature), 7 hit points")

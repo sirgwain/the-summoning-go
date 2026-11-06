@@ -71,7 +71,8 @@ func TestCellLineKinds(t *testing.T) {
 		items[strings.TrimSpace(l.Text)] = l.Item
 	}
 	// Lines naming an item carry it: what an action makes, and an object on the floor.
-	if items["make Key at (1, 0)"] != "item.key" || items["Sack holding Key (weight 1) (weight 3)"] != "item.sack" {
+	if items["make Key at (1, 0)"] != "item.key" || items["Sack (weight 3)"] != "item.sack" ||
+		items["Key (weight 1)"] != "item.key" {
 		t.Errorf("items %v", items)
 	}
 	// The plate's p0 opens the door and makes a key.
