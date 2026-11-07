@@ -45,6 +45,8 @@ Most slots end their work by disarming themselves, so a second object is refused
 
 **Engine model.** The engine adds a slot that is full. A slot becomes full when an object it takes is consumed and procedure a, once run, has left the slot armed, with the same procedure a and the same template, and procedure a creates no object of that template. A full slot refuses every object with message 87h, and the object stays in hand; arming or disarming it does not change that. A slot that disarms itself, moves on to its next procedure, or hands its object back, never becomes full, and behaves as in the game.
 
+An object can also reach a slot from something other than the player's hand: a thrown or fired object landing on it, what a dying creature drops, an object a procedure creates, or one a teleporter, pit or trapdoor passes on (Dropping objects). Such an object is taken as the player's would be. If it is refused, it lies on the slot's cell as on a floor, and no message is shown, so the player can pick it up again. The engine never loses an object a slot refuses.
+
 ## Doors
 
 A door record: its cell and a state byte.

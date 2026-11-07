@@ -290,6 +290,21 @@ func TestSlot(t *testing.T) {
 	}
 }
 
+func TestSlotRefusesToTheFloor(t *testing.T) {
+	w := newWorld(t)
+	l := w.Current()
+	w.events = nil
+	w.drop(l, cell{3, 0}, w.newObject("item.rock"), byWorld, 0)
+	if ev := w.events; has(ev, EventMessage, "") || !slices.Equal(objects(w, cell{3, 0}), []string{"item.rock"}) {
+		t.Fatalf("a rock landing on the keyhole: %v, objects %v", w.events, objects(w, cell{3, 0}))
+	}
+	do(w, input.Switch{Feature: "slot", Mode: input.SwitchOff})
+	w.drop(l, cell{3, 0}, w.newObject("item.key"), byWorld, 0)
+	if got := objects(w, cell{3, 0}); !slices.Equal(got, []string{"item.rock", "item.key"}) {
+		t.Errorf("a key landing on the disarmed keyhole: objects %v", got)
+	}
+}
+
 func TestSlotFills(t *testing.T) {
 	w := newWorld(t)
 	slot := w.Current().Feature("slot")

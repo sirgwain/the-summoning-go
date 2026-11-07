@@ -270,7 +270,12 @@ func (w *World) drop(l *Level, c content.Cell, o *Object, by, depth int) bool {
 	if f != nil {
 		switch {
 		case f.Kind == content.FeatureSlot:
-			return w.insert(l, f, o, depth)
+			if w.insert(l, f, o, by, depth) {
+				return true
+			}
+			if by == byPlayer {
+				return false
+			}
 		case f.Kind == content.FeatureSocket:
 			w.setGem(l, f, o, depth)
 			return true
@@ -289,17 +294,22 @@ func (w *World) drop(l *Level, c content.Cell, o *Object, by, depth int) bool {
 	return true
 }
 
-// insert puts an object in a slot: the wrong item, or a disarmed or full slot, refuse it; the
-// right one is used up and runs the slot's hook. A slot the hook leaves as it was, without
-// handing the object back, is full (docs/spec/rules.md, Item slots).
-func (w *World) insert(l *Level, f *Feature, o *Object, depth int) bool {
+// insert puts an object in a slot: the wrong item, or a disarmed or full slot, refuse it, with a
+// message when the player put it there; the right one is used up and runs the slot's hook. A slot
+// the hook leaves as it was, without handing the object back, is full (docs/spec/rules.md, Item
+// slots).
+func (w *World) insert(l *Level, f *Feature, o *Object, by, depth int) bool {
+	refuse := func(msg string) bool {
+		if by == byPlayer {
+			w.message(l, f.Cell, msg, o.Item)
+		}
+		return false
+	}
 	switch {
 	case o.Item != f.Accepts:
-		w.message(l, f.Cell, content.MsgSlotWrongItem, o.Item)
-		return false
+		return refuse(content.MsgSlotWrongItem)
 	case !f.Armed || f.Full:
-		w.message(l, f.Cell, content.MsgSlotStuck, o.Item)
-		return false
+		return refuse(content.MsgSlotStuck)
 	}
 	w.emit(Event{Kind: EventObject, Level: l.ID, Cell: f.Cell, Item: o.Item, Detail: "used"})
 	hook, item := f.OnInsert, f.Accepts
