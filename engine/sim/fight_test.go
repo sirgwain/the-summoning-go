@@ -1111,3 +1111,24 @@ func TestLoadSetsAgilityForFighting(t *testing.T) {
 		t.Errorf("carrying nothing: agility %d, want %d", got, base+1)
 	}
 }
+
+// TestPointerWeighsNothing: a boulder on the pointer adds nothing to the load, and weighs once
+// it is put on a shelf (docs/spec/player.md, Load).
+func TestPointerWeighsNothing(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Items["item.boulder"] = &content.Item{ID: "item.boulder", Weight: 400, Size: 4}
+	},
+		"####",
+		"#@.#",
+		"####")
+	p, pk := w.Player(), w.Pack()
+	clear(p.Slots[:])
+	p.Hand = &Object{Item: "item.boulder"}
+	if c := p.Carried(pk); c != 0 || p.Overloaded(pk) {
+		t.Errorf("a boulder on the pointer: carried %d, overloaded %v", c, p.Overloaded(pk))
+	}
+	p.Slots[0], p.Hand = p.Hand, nil
+	if c := p.Carried(pk); c != 400 || !p.Overloaded(pk) {
+		t.Errorf("a boulder on a shelf: carried %d, overloaded %v", c, p.Overloaded(pk))
+	}
+}

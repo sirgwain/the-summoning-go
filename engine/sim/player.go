@@ -491,13 +491,11 @@ func (p *Player) FigureLooks(pk *content.Pack) []string {
 	return out
 }
 
-// Carried returns the weight the player carries: the hand and every slot, with their contents
-// (docs/spec/items.md, Weight and containers).
+// Carried returns the weight the player carries: every slot, with their contents
+// (docs/spec/items.md, Weight and containers). The object on the pointer weighs nothing
+// (docs/spec/player.md, Load).
 func (p *Player) Carried(pk *content.Pack) int {
 	w := 0
-	if p.Hand != nil {
-		w += p.Hand.Weight(pk)
-	}
 	for _, o := range p.Slots {
 		if o != nil {
 			w += o.Weight(pk)

@@ -774,19 +774,18 @@ func TestPlayerSpeed(t *testing.T) {
 		t.Errorf("agile and unladen: %d steps, want %d", got, steps(4))
 	}
 	// 180 carried against a limit of 180: agility −1 to 19, and 2 ticks more.
-	p.Hand = &Object{Item: "item.rock"}
-	p.Slots[0], p.Slots[1] = &Object{Item: "item.rock"}, &Object{Item: "item.rock"}
+	p.Slots[0], p.Slots[1], p.Slots[2] = &Object{Item: "item.rock"}, &Object{Item: "item.rock"}, &Object{Item: "item.rock"}
 	if got := w.PlayerInterval(); got != steps(6) {
 		t.Errorf("at the load limit: %d steps, want %d", got, steps(6))
 	}
 	// Agility 8 and endurance 6, carrying a little: 2 + 3 ticks more.
-	p.Hand, p.Slots[0], p.Slots[1] = &Object{Item: "item.rock"}, nil, nil
+	p.Slots[1], p.Slots[2] = nil, nil
 	p.Attributes[AttrAgility], p.Attributes[AttrEndurance] = 8, 6
 	if got := w.PlayerInterval(); got != steps(10) {
 		t.Errorf("clumsy and tired: %d steps, want %d", got, steps(10))
 	}
 	// A bonus of −2 from powers, back to agility 20: 2 ticks.
-	p.Hand, p.IntervalBonus = nil, -2
+	p.Slots[0], p.IntervalBonus = nil, -2
 	p.Attributes[AttrAgility], p.Attributes[AttrEndurance] = 20, 18
 	if got := w.PlayerInterval(); got != steps(2) {
 		t.Errorf("with a bonus of −2: %d steps, want %d", got, steps(2))
