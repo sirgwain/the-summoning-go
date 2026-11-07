@@ -290,6 +290,39 @@ func TestSlot(t *testing.T) {
 	}
 }
 
+func TestSlotFills(t *testing.T) {
+	w := newWorld(t)
+	slot := w.Current().Feature("slot")
+	do(w, input.Drop{Cell: cell{3, 0}, Item: "item.key"})
+	if !slot.Full {
+		t.Fatal("a slot its hook left armed is not full")
+	}
+	ev := do(w, input.Drop{Cell: cell{3, 0}, Item: "item.key"})
+	if !has(ev, EventMessage, content.MsgSlotStuck) || has(ev, EventProcedure, "open") {
+		t.Fatalf("full slot: %v", ev)
+	}
+	do(w, input.Switch{Feature: "slot", Mode: input.SwitchOff})
+	do(w, input.Switch{Feature: "slot", Mode: input.SwitchOn})
+	if ev := do(w, input.Drop{Cell: cell{3, 0}, Item: "item.key"}); !has(ev, EventMessage, content.MsgSlotStuck) {
+		t.Errorf("re-armed full slot: %v", ev)
+	}
+}
+
+func TestSlotStaysOpen(t *testing.T) {
+	for name, open := range map[string][]content.Action{
+		"disarms itself": {{Off: ptr("slot")}},
+		"moves on":       {{SetHook: &content.SetHook{Feature: "slot", Hook: content.HookInsert, Procedure: ptr("close")}}},
+		"takes another":  {{SetAccepts: &content.SetAccepts{Feature: "slot", Item: "item.rock"}}},
+		"hands it back":  {{Create: &content.Create{Cell: cell{0, 0}, Item: "item.key"}}},
+	} {
+		w := newWorld(t, func(p *content.Pack) { p.Levels["level.00"].Procedures["open"] = open })
+		do(w, input.Drop{Cell: cell{3, 0}, Item: "item.key"})
+		if w.Current().Feature("slot").Full {
+			t.Errorf("%s: the slot is full", name)
+		}
+	}
+}
+
 func TestTeleporterSendsObjectsAndThings(t *testing.T) {
 	w := newWorld(t)
 	tele := w.Current().Feature("tele")

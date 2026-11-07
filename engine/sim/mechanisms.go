@@ -289,19 +289,27 @@ func (w *World) drop(l *Level, c content.Cell, o *Object, by, depth int) bool {
 	return true
 }
 
-// insert puts an object in a slot: the wrong item, or a disarmed slot, refuse it; the right one
-// is used up and runs the slot's hook.
+// insert puts an object in a slot: the wrong item, or a disarmed or full slot, refuse it; the
+// right one is used up and runs the slot's hook. A slot the hook leaves as it was, without
+// handing the object back, is full (docs/spec/rules.md, Item slots).
 func (w *World) insert(l *Level, f *Feature, o *Object, depth int) bool {
 	switch {
 	case o.Item != f.Accepts:
 		w.message(l, f.Cell, content.MsgSlotWrongItem, o.Item)
 		return false
-	case !f.Armed:
+	case !f.Armed || f.Full:
 		w.message(l, f.Cell, content.MsgSlotStuck, o.Item)
 		return false
 	}
 	w.emit(Event{Kind: EventObject, Level: l.ID, Cell: f.Cell, Item: o.Item, Detail: "used"})
-	w.run(l, f.OnInsert, depth+1)
+	hook, item := f.OnInsert, f.Accepts
+	givesBack := slices.ContainsFunc(l.Def.Procedures[hook], func(a content.Action) bool {
+		return a.Create != nil && a.Create.Item == item
+	})
+	w.run(l, hook, depth+1)
+	if f.Armed && f.OnInsert == hook && f.Accepts == item && !givesBack {
+		f.Full = true
+	}
 	return true
 }
 

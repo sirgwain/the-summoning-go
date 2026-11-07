@@ -210,6 +210,8 @@ type Feature struct {
 	// the slot puts it in from what the player carries. Other slots are object holes.
 	Accepts string `json:"accepts,omitempty"`
 	Keyhole bool   `json:"keyhole,omitempty"`
+	// Full marks a slot that has taken its object and refuses any more: the world's state.
+	Full bool `json:"full,omitempty"`
 
 	// Teleporter.
 	Destinations []Cell `json:"destinations,omitempty"`

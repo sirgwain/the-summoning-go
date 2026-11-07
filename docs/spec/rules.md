@@ -41,6 +41,10 @@ The player drops an object onto the slot's cell:
 - If the slot is disarmed: message 87h, and the object stays in hand.
 - Otherwise the object is consumed and procedure a runs. On level 30, at cell (40, 11), a slot whose procedure a is 0 runs procedure 18h instead.
 
+Most slots end their work by disarming themselves, so a second object is refused. A slot that takes several objects in turn has each procedure set the slot's next procedure, and sometimes the next object it takes, and its last procedure disarms it or leaves it as it is. Some slots never disarm: in the game they go on consuming the object they take, running their procedure again each time, so the extra objects are lost. A few of those hand the object back: their procedure creates an object of the template the slot takes (a pass returned past the teleporter it opens, a key put back where the level placed it), so the slot can be used again.
+
+**Engine model.** The engine adds a slot that is full. A slot becomes full when an object it takes is consumed and procedure a, once run, has left the slot armed, with the same procedure a and the same template, and procedure a creates no object of that template. A full slot refuses every object with message 87h, and the object stays in hand; arming or disarming it does not change that. A slot that disarms itself, moves on to its next procedure, or hands its object back, never becomes full, and behaves as in the game.
+
 ## Doors
 
 A door record: its cell and a state byte.

@@ -1311,7 +1311,7 @@ runs nothing.
 | `door` | `state` (`closed`, `open`, `opening`, `closing`), `sealed_by` (an item), `opened_by_spell`, `sparkle` (a flipbook) | | `closed`, `1` .. `n`, `open`, `sealed` |
 | `lever` | `on`, `armed` | `on_turn_on`, `on_turn_off` | `off`, `on` |
 | `plate` | `down`, `armed`, `threshold` | `on_press`, `on_release` | `up`, `down` |
-| `slot` | `accepts` (an item), `armed`, `keyhole` | `on_insert` | `slot` |
+| `slot` | `accepts` (an item), `armed`, `keyhole`, `full` | `on_insert` | `slot` |
 | `teleporter` | `armed`, `destinations` (two cells), `next` 0 or 1, `turn` (eighths of a turn for things in flight), `fly_over` | | `armed`, `disarmed` |
 | `exit` | `to` (a level and a cell), `effect` (a flipbook) | | `exit` |
 | `pit` | `to` | | `pit` |
@@ -1331,6 +1331,8 @@ runs nothing.
   stands on a floor cell, drawn up against the wall behind it.
 - A `keyhole` slot takes a key: using it puts that key in from what the player carries. A slot
   without it is an object hole, which gives no hint of what it takes.
+- A `full` slot has taken its object and refuses any more (docs/spec/rules.md, Item slots). It
+  is the world's state: a level leaves it out, and the slot fills as it is played.
 - A socket draws `full` when every place is set; otherwise `empty` and `set.i` for each set place.
 - A plate's counter starts at the weight of what the level places on it.
 - How each kind behaves is in `docs/spec/rules.md`.
