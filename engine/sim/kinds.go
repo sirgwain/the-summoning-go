@@ -162,7 +162,7 @@ const shotAim = 12
 // vanishes where it lands. It reports whether t shot.
 func (w *World) creatureShoots(l *Level, t *Thing) bool {
 	s, p := t.Template.Shoots, w.player
-	if s == nil || p == nil || p.Dead || p.hidden() || !t.Hostile || w.current != l.ID || w.step < t.ShotNext {
+	if s == nil || p == nil || p.Dead || p.hidden() || t.Alert == 0 || w.current != l.ID || w.step < t.ShotNext {
 		return false
 	}
 	speed := s.Speed

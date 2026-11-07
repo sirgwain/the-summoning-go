@@ -279,3 +279,62 @@ func TestAfterBlowFlankNoWay(t *testing.T) {
 		t.Errorf("with no way behind the wolf recovers %q, walk %d for %d; want a rest", wolf.Recovery, wolf.walkDir, wolf.walkCount)
 	}
 }
+
+// TestNoticing leaves a hostile creature far off wandering, notices the player near and in
+// sight, keeps chasing while in sight, and loses the player out of sight.
+func TestNoticing(t *testing.T) {
+	w, wolf := tacticsWorld(t, nil,
+		"##############",
+		"#@..........W#",
+		"##############")
+	l, p := w.Current(), w.Player()
+	w.notice(l, wolf)
+	if wolf.Alert != 0 {
+		t.Fatalf("a wolf %d cells off noticed the player", wolf.Cell()[1]-p.Cell()[1])
+	}
+	wolf.V = p.V + noticeCells*CellUnits
+	wolf.walkCount = 5
+	w.notice(l, wolf)
+	if wolf.Alert != loseSteps || wolf.walkCount != 0 {
+		t.Fatalf("a wolf %d cells off: alert %d, walk %d; want it to notice and end its walk", noticeCells, wolf.Alert, wolf.walkCount)
+	}
+	wolf.V = p.V + 10*CellUnits
+	w.notice(l, wolf)
+	if wolf.Alert != loseSteps {
+		t.Errorf("a wolf that noticed the player stopped chasing it in sight: alert %d", wolf.Alert)
+	}
+	p.Status.Invisible = true
+	for range loseSteps {
+		w.notice(l, wolf)
+	}
+	if wolf.Alert != 0 {
+		t.Errorf("a wolf out of sight %d updates still chases: alert %d", loseSteps, wolf.Alert)
+	}
+}
+
+// TestProvokedNotices makes a creature the player strikes from afar notice the player.
+func TestProvokedNotices(t *testing.T) {
+	_, wolf := tacticsWorld(t, nil,
+		"##############",
+		"#@..........W#",
+		"##############")
+	wolf.Hostile = false
+	w := &World{}
+	w.provoke(wolf)
+	if !wolf.Hostile || wolf.Alert != loseSteps {
+		t.Errorf("provoked wolf: hostile %v, alert %d", wolf.Hostile, wolf.Alert)
+	}
+}
+
+// TestNoticingNeedsSight leaves a near creature beyond a wall unaware of the player.
+func TestNoticingNeedsSight(t *testing.T) {
+	w, wolf := tacticsWorld(t, nil,
+		"#######",
+		"#@.#.W#",
+		"#######")
+	w.Update(nil)
+	w.notice(w.Current(), wolf)
+	if wolf.Alert != 0 {
+		t.Errorf("a wolf beyond a wall noticed the player: alert %d", wolf.Alert)
+	}
+}

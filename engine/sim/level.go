@@ -103,6 +103,10 @@ type Thing struct {
 	// content.AfterBlowFlank), for RecoverySteps more steps; empty when it is not recovering.
 	Recovery      string `json:",omitempty"`
 	RecoverySteps int    `json:",omitempty"`
+	// Alert is how many more of its updates a hostile creature that has noticed the player keeps
+	// chasing it out of sight; 0 while it has not noticed the player (docs/spec/creatures.md,
+	// Tactics, Noticing).
+	Alert int `json:",omitempty"`
 	// facePlayer makes a creature's current walk step with its face toward the player.
 	facePlayer bool
 	// casting counts a stationary caster's updates to its next cast; animCount and animStep an

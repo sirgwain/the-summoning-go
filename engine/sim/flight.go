@@ -168,7 +168,7 @@ func (w *World) flightHits(l *Level, f *Flight, b *body) {
 	}
 	t := b.thing
 	if f.ByPlayer {
-		w.turnHostile(t)
+		w.provoke(t)
 	}
 	if t.Template.Kind == content.ThingCreature && l == w.Current() {
 		w.learnItem(f.Object.Item, StageUsed)

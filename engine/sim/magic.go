@@ -758,7 +758,7 @@ func (w *World) walkerCasts(l *Level, t *Thing) {
 		return
 	}
 	p := w.player
-	if t.Hostile {
+	if t.Alert > 0 {
 		if t.walkCount != 1 || p == nil {
 			return
 		}

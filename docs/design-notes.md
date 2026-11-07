@@ -248,7 +248,10 @@ Change's frame by facing, and the hostile speed of records 23h and 2Bh (`hostile
 - Done: creature tactics (`docs/spec/creatures.md`, Tactics). Hostile walkers find their way
   around walls; `keep_distance` makes casters back away, close in and line up to cast;
   `after_blow` makes a creature `back_off` or `flank` to the player's back after its blow
-  (`engine/sim/tactics.go`, `TestWayAroundWall`, `TestKeepDistance*`, `TestAfterBlow*`). The
+  (`engine/sim/tactics.go`, `TestWayAroundWall`, `TestKeepDistance*`, `TestAfterBlow*`). Hostile
+  creatures wander until they notice the player, in sight within 6 cells or struck by the
+  player, and lose the player after 40 updates out of sight (`TestNoticing*`); the distances are
+  constants for now, and could become template fields if creatures should differ. The
   importer gives casters `keep_distance` 4 with `back_off`, poisonous fighters `back_off` and
   quick ones `flank`. Left: charging (a wind-up at range, then a rush), fleeing at low hit
   points, guarding a spot, and groups spreading around the player.

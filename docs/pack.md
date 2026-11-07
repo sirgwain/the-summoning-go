@@ -776,7 +776,7 @@ the engine's own words.
   quarter, none, or a quarter more. The book learns each when such damage first meets it, and
   shows a weakness of a creature with a `vulnerability` as that vulnerability.
 - `shoots` (creatures) is a ranged attack made without a spell:
-  `{ "item", "damage", "kind", "range", "interval_ms", "speed" }`. Hostile, it shoots at the player
+  `{ "item", "damage", "kind", "range", "interval_ms", "speed" }`. Hostile, once it has noticed the player (`docs/spec/creatures.md`, Tactics, Noticing), it shoots at the player
   standing within `range` steps along one of the eight directions (within 12 units of the line),
   at most once each `interval_ms`: it faces that way, takes its attack pose and launches an object
   of `item` (its look) doing `damage` of `kind`, which vanishes where it lands.

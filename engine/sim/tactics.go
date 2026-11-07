@@ -17,7 +17,32 @@ const (
 	backOffRange = 2
 	// flankSteps is the most steps a creature spends making for the cell behind the player.
 	flankSteps = 20
+	// noticeCells is how near, in cells along the larger axis gap, a hostile creature notices the
+	// player in sight; loseSteps how many of its updates it keeps chasing the player out of sight.
+	noticeCells = 6
+	loseSteps   = 40
 )
+
+// notice brings hostile creature t's noticing of the player up to date: it notices the player in
+// sight and near, keeps chasing while the player is in sight, and loses the player after
+// loseSteps updates out of sight. Noticing ends its current walk (docs/spec/creatures.md,
+// Tactics, Noticing).
+func (w *World) notice(l *Level, t *Thing) {
+	p := w.player
+	if !t.Hostile || p == nil || p.Dead || w.current != l.ID {
+		t.Alert = 0
+		return
+	}
+	inSight := !p.hidden() && l.Visible(t.Cell())
+	switch {
+	case inSight && t.Alert > 0:
+		t.Alert = loseSteps
+	case inSight && max(abs(p.U-t.U), abs(p.V-t.V)) <= noticeCells*CellUnits:
+		t.Alert, t.walkCount = loseSteps, 0
+	case t.Alert > 0:
+		t.Alert--
+	}
+}
 
 // recover starts creature t's recovery from its blow, as its template's after_blow says; a
 // flanker whose blow was already from behind rests.

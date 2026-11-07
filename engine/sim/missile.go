@@ -210,7 +210,7 @@ func (w *World) spellHits(l *Level, f *Flight, b *body) {
 	w.soundInSight(l, f.Cell(), m.Sound)
 	t := b.thing
 	if t != nil && f.ByPlayer {
-		w.turnHostile(t)
+		w.provoke(t)
 	}
 	practice := func(school, n int) {
 		if f.ByPlayer && w.player != nil {

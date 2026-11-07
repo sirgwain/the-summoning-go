@@ -151,6 +151,14 @@ func (w *World) turnHostile(t *Thing) {
 	t.Hostile = true
 }
 
+// provoke makes creature t, struck by the player, hostile, and it notices the player.
+func (w *World) provoke(t *Thing) {
+	w.turnHostile(t)
+	if t.Hostile {
+		t.Alert = loseSteps
+	}
+}
+
 // updateCreatures runs the updates due of level l's walking creatures (docs/spec/creatures.md,
 // Walkers).
 func (w *World) updateCreatures(l *Level) {
@@ -182,6 +190,7 @@ func (w *World) updateCreatures(l *Level) {
 				continue
 			}
 		}
+		w.notice(l, t)
 		if w.creatureShoots(l, t) {
 			continue
 		}
@@ -203,7 +212,7 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 		return
 	}
 	if t.walkCount--; t.walkCount <= 0 {
-		if t.Hostile && !p.Dead && !p.hidden() {
+		if t.Alert > 0 && !p.Dead && !p.hidden() {
 			w.hostileWalk(l, t)
 		} else {
 			t.facePlayer = false
@@ -259,7 +268,7 @@ func (w *World) walkCreature(l *Level, t *Thing) {
 		if t.Template.Has(content.BehaviorPoisonous) && w.chance(2, 8) {
 			w.poisonPlayer()
 		}
-	case t.Hostile:
+	case t.Alert > 0:
 		t.facePlayer = false
 		t.walkDir, t.walkCount = w.rng.IntN(4), 5+w.rng.IntN(5)
 	default:
@@ -655,7 +664,7 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 		w.meetDefense(l, t, content.BehaviorResistsPoison)
 	}
 	w.messageNumbers(l, p.Cell(), content.MsgHit, "", r.Score, r.Damage)
-	w.turnHostile(t)
+	w.provoke(t)
 	if r.Damage == 0 {
 		w.cue(p.Cell(), content.CueMiss)
 		return
