@@ -59,6 +59,9 @@ type Item struct {
 	Looks map[string]FigureLook `json:"looks,omitempty"`
 	// Fill gives a container a look for how full it is.
 	Fill *Fill `json:"fill,omitempty"`
+	// Bane is the damage its blows do to creatures only physical blows hurt (physical_only), whom
+	// a weapon without it does not hurt.
+	Bane *Dice `json:"bane,omitempty"`
 	// Poisons makes its blows poison, PoisonsThrown what it hurts in flight; Grows and Levels
 	// make it a counted weapon; OnBreak runs when it breaks; Flying is its look in flight.
 	Poisons       bool     `json:"poisons,omitempty"`

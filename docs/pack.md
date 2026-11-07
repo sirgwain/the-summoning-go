@@ -706,6 +706,8 @@ the engine's own words.
   `on_break` actions run when it breaks (`set_counter`, `converse`, `remove_all`, `experience`).
   `flying` is its look in flight, `{ "sprite", "fired_only" }`: a frame for each direction,
   `(direction + 1) mod 8`, shown only when fired with `fired_only`; without it the floor image.
+- `bane` (dice) is the damage its blows do to creatures with `physical_only`, in place of the
+  blow's own; a weapon without it does them none.
 - `poisons` makes its blows poison what they hit; `poisons_thrown` makes it poison what it hurts
   in flight, thrown or fired. `grows` makes it a counted weapon:
   `{ "into", "at", "first", "grown", "counter" }`, and `levels` the grown one:

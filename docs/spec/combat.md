@@ -46,7 +46,7 @@ d = d + d / 2                    under battle rage
 d = d + 2                        if status "accurate"
 d = d + d / 4                    if the weapon's category is the creature's vulnerability
 d = d + STR − 10                 with any object in the hand (not bare hands)
-d = the Silver Sword's action-1 roll, or 0 for any other weapon
+d = the Silver Sword's action-1 damage code rolled (its second slot holds no action, but the code is read all the same), or 0 for any other weapon
                                  against creatures with behavior 0400h
 d = max(0, d − creature resistance)
 ```
@@ -150,6 +150,7 @@ Combat is a module (`engine/combat`) the simulation calls with plain numbers; th
 ## Engine model, special weapons and creatures
 
 - An item's `poisons` makes its blows poison the creature hit.
+- An item's `bane` is the dice its blows roll against creatures with behavior 0400h (`physical_only`); the importer gives the Silver Sword its action-1 damage code, which it reads whether or not that action slot holds an action. Other weapons do 0 to them.
 - An item's `grows` is a counted weapon: the damage it deals goes into the player's weapon count; `first` names the thing template whose conversation the first hit starts, and at `at` the item is replaced by `into` with `grown` the conversation that follows and `counter` set to 1. An item's `levels` is the grown weapon: every `every` points while `counter` is below `max`, the counter rises, the count resets and `talk`'s conversation starts.
 - A creature template with `mirrors` passes the damage it takes to the player, and can be struck though it only animates.
 - A creature template's `name` is shown when the player's blow kills it, if it has no conversation; `kill_practice` is the practice that blow gives (2 for records 50 and above without a conversation).

@@ -638,8 +638,8 @@ func (w *World) swing(hand int, o *Object, a content.ItemAction) {
 	if class >= 0 {
 		s.Skill = p.Skills[SkillWeapon+class].Level
 	}
-	if it != nil && hasTag(it, "silver") && len(it.Actions) > 1 {
-		s.Hurts = &it.Actions[1].Damage
+	if it != nil {
+		s.Hurts = it.Bane
 	}
 	r := w.rules.PlayerStrikes(w.rng, s)
 	if !r.Hit {

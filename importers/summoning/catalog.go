@@ -384,6 +384,12 @@ func (im *importer) fighting(i int, tm *ObjectTemplate, it *content.Item) {
 		}
 		it.Actions = append(it.Actions, act)
 	}
+	// The Silver Sword's second damage code, whatever its action, is what it does to creatures
+	// only physical blows hurt (combat.md, Damage).
+	if i == templateSilverSword {
+		bane := dice(tm.DamageCode(1))
+		it.Bane = &bane
+	}
 	if p, worn := tm.Power(); p != 0 {
 		it.Power, it.PowerWorn = p, worn
 	}

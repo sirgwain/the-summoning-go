@@ -1132,3 +1132,30 @@ func TestPointerWeighsNothing(t *testing.T) {
 		t.Errorf("a boulder on a shelf: carried %d, overloaded %v", c, p.Overloaded(pk))
 	}
 }
+
+// TestBaneHurtsPhysicalOnly checks that only a weapon with a bane hurts a physical_only creature,
+// and by its bane rather than its action (docs/spec/combat.md, Damage).
+func TestBaneHurtsPhysicalOnly(t *testing.T) {
+	for _, bane := range []bool{false, true} {
+		w := fightWorld(t, func(p *content.Pack) {
+			g := p.Things["thing.guard"]
+			g.Behaviors = append(g.Behaviors, content.BehaviorPhysicalOnly)
+			if bane {
+				p.Items["item.sword"].Bane = &content.Dice{Bonus: 7}
+			}
+		},
+			"#####",
+			"#@G.#",
+			"#####")
+		p, g := w.Player(), w.Current().Thing("guard")
+		p.Facing = 2
+		besideGuard(w)
+		p.Hand = w.newObject("item.sword")
+		w.Update([]input.Command{input.PutOn{}})
+		hp := g.HitPoints
+		strike(w, 0, 0)
+		if want := map[bool]int{false: hp, true: hp - 7}[bane]; g.HitPoints != want {
+			t.Errorf("bane %v: %d hit points, want %d", bane, g.HitPoints, want)
+		}
+	}
+}
