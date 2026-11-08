@@ -749,12 +749,12 @@ const (
 // creatureCaster is creature t casting along its facing.
 func creatureCaster(t *Thing) caster { return caster{thing: t, u: t.U, v: t.V, dir: t.Facing} }
 
-// walkerCasts is a walker that has just stepped casting its spell, 1 step in 10: a hostile one
+// walkerCasts is a walker in view that has just stepped casting its spell, 1 step in 10: a hostile one
 // faces the player first when chasing it, and casts only then; others face a random way. It
 // then rests.
 func (w *World) walkerCasts(l *Level, t *Thing) {
 	sp := w.pack.Spells[t.Template.Spell]
-	if sp == nil || !w.chance(1, castChance) {
+	if sp == nil || !w.inView(l, t) || !w.chance(1, castChance) {
 		return
 	}
 	p := w.player
@@ -771,10 +771,11 @@ func (w *World) walkerCasts(l *Level, t *Thing) {
 	t.walkDir, t.walkCount = restDir, 10+w.rng.IntN(5)
 }
 
-// stationaryCasts counts a stationary caster's updates: it turns, and later casts its spell.
+// stationaryCasts counts a stationary caster's updates in view: it turns, and later casts its
+// spell. Out of view its count waits.
 func (w *World) stationaryCasts(l *Level, t *Thing) {
 	sp := w.pack.Spells[t.Template.Spell]
-	if sp == nil || w.player == nil || w.current != l.ID {
+	if sp == nil || !w.inView(l, t) {
 		return
 	}
 	if t.casting == 0 {

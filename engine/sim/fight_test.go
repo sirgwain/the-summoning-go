@@ -1159,3 +1159,30 @@ func TestBaneHurtsPhysicalOnly(t *testing.T) {
 		}
 	}
 }
+
+// A stationary caster counts toward its casts, and casts, only in view; out of view its count
+// waits (docs/spec/creatures.md, In view).
+func TestStationaryCasterCastsOnlyInView(t *testing.T) {
+	w := fightWorld(t, func(p *content.Pack) {
+		p.Things["thing.guard"].Spell = "spell.bolt"
+		p.Spells["spell.bolt"] = &content.Spell{ID: "spell.bolt"}
+	},
+		"#####",
+		"#@G.#",
+		"#####")
+	l := w.Current()
+	g := l.Thing("guard")
+	g.casting = turnAt + 1
+	home := g.U
+	g.U += 10 * CellUnits
+	w.stationaryCasts(l, g)
+	if g.casting != turnAt+1 {
+		t.Fatalf("out of view the count went to %d", g.casting)
+	}
+	g.U = home
+	facing := g.Facing
+	w.stationaryCasts(l, g)
+	if g.casting != turnAt || g.Facing == facing {
+		t.Errorf("in view: count %d, facing %d (was %d)", g.casting, g.Facing, facing)
+	}
+}

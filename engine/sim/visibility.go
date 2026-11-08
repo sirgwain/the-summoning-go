@@ -121,6 +121,19 @@ const (
 	sightRows    = 7
 )
 
+// inSightWindow reports whether cell c lies in the sight window around cell at.
+func inSightWindow(at, c content.Cell) bool {
+	da, db := c[0]-at[0], c[1]-at[1]
+	return abs(db-da) <= sightColumns && abs(da+db) <= sightRows
+}
+
+// inView reports whether creature t of level l is in view: the player is on l and t's cell lies
+// in the sight window around the player's cell (docs/spec/creatures.md, Walkers, In view; world.md, Engine model).
+func (w *World) inView(l *Level, t *Thing) bool {
+	p := w.player
+	return p != nil && w.current == l.ID && inSightWindow(p.Cell(), t.Cell())
+}
+
 // markSeen marks as seen the visible cells within the sight window around cell at.
 func (l *Level) markSeen(at content.Cell) {
 	if l.visible == nil {
@@ -128,10 +141,10 @@ func (l *Level) markSeen(at content.Cell) {
 	}
 	for da := -sightColumns; da <= sightColumns; da++ {
 		for db := -sightColumns; db <= sightColumns; db++ {
-			if abs(db-da) > sightColumns || abs(da+db) > sightRows {
+			c := content.Cell{at[0] + da, at[1] + db}
+			if !inSightWindow(at, c) {
 				continue
 			}
-			c := content.Cell{at[0] + da, at[1] + db}
 			if l.InBounds(c) && l.visible[l.index(c)] {
 				l.seen[l.index(c)] = true
 			}

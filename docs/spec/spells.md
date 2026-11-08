@@ -89,7 +89,7 @@ On hitting an entity (the player included):
 | 0Eh | Moves its target, a boulder, trap, conjured thing or walking creature (not the player, nor a creature that only animates or stands and casts), to a random plain floor cell (terrain 1Bh–1Eh) the player has seen. Random cells are drawn until 100 such cells have been tried; the first where the target is not blocked takes it | School 1 by 3, on hitting anything, whether or not it moves |
 | 1Ah | 3000 damage to creature record 31h; nothing to others | School 2 by 20 |
 
-Only the player's missiles practice, and a creature hit by one turns hostile. Type 0Bh meeting a door whose bit 20h is set (rules.md) opens it (school 1 by 5); a door without it gives message 34h (school 1 by 1); a wall gives message 93h. Bouncing missiles turn back off walls (a diagonal one turning a quarter when it meets a wall along one axis) and fly on; meeting an entity ends them.
+A creature's missile hurts whatever it meets as the player's does, other creatures included, those of its own kind as well; a creature it kills gives the player its experience (creatures.md, Death). Only the player's missiles practice, and a creature hit by one turns hostile. Type 0Bh meeting a door whose bit 20h is set (rules.md) opens it (school 1 by 5); a door without it gives message 34h (school 1 by 1); a wall gives message 93h. Bouncing missiles turn back off walls (a diagonal one turning a quarter when it meets a wall along one axis) and fly on; meeting an entity ends them.
 
 | Type | Sprite | Frame in flight |
 | --- | --- | --- |

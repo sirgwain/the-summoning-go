@@ -202,6 +202,21 @@ func TestCasterDiesAndDeathBlow(t *testing.T) {
 		t.Errorf("caster dies: %+v", e)
 	}
 
+	// Out of view, a caster dies with no effect.
+	p = walkPack("#####", "#@G.#", "#####")
+	withEffectCues(p)
+	if w, err = New(p, 1); err != nil {
+		t.Fatal(err)
+	}
+	l = w.Current()
+	g = l.Thing("guard")
+	g.U += 10 * CellUnits
+	w.events = nil
+	w.creatureDies(l, g)
+	if e, ok := eventOf(w.events, EventEffect); ok {
+		t.Errorf("a caster out of view died with an effect: %+v", e)
+	}
+
 	p = walkPack("#####", "#@G.#", "#####")
 	withEffectCues(p)
 	p.Things["thing.guard"].Behaviors = []string{content.BehaviorDeathBlow}

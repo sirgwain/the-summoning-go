@@ -117,7 +117,7 @@ func (w *World) actAtOnce(t *Thing) {
 // corpse or removes it (docs/spec/creatures.md, Death).
 func (w *World) creatureDies(l *Level, t *Thing) {
 	w.emit(Event{Kind: EventThing, Level: l.ID, Cell: t.Cell(), Thing: t.ID, Detail: "died"})
-	if t.Template.Has(content.BehaviorStationary) {
+	if t.Template.Has(content.BehaviorStationary) && w.inView(l, t) {
 		w.playEffect(l, w.pack.Effect(content.EffectCasterDies), t.Cell(), t.ID)
 	}
 	w.record(t.Template.ID).Dead = true

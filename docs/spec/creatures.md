@@ -86,6 +86,8 @@ A creature that is poisoned loses 1–2 hit points with a 1 in 40 chance each up
 
 **Stationary casters** (frame count 2) with a magic attack: every 15–24 updates they turn (frame and direction flip) and, 9 updates later, cast spell 1 at power 15d10.
 
+**In view.** A creature uses its magic attack only while it is in view, on the game's screen. Out of view a walker's steps never cast, and a stationary caster neither turns nor counts toward its next cast; it picks up its count where it left off once back in view.
+
 **Corpses** (no hit points) do not update.
 
 **Teleported creatures** spin on the teleporter for 30 ticks, turning to the next of their four directions each tick, and are then moved; they act again from there (rules.md, In-level teleporters).
@@ -105,7 +107,7 @@ A creature turns hostile when the player attacks it, unless behavior bit 0004h o
 
 ## Death
 
-At 0 hit points a creature drops what it carries (in its cell). A stationary caster dies with a view effect (scenes.md). With bit 0010h it stays as a corpse showing its bank's last frame (pushable, no updates); otherwise it is removed. Its record gets bit 0002h. The player gains its experience (player.md):
+At 0 hit points a creature drops what it carries (in its cell). A stationary caster that dies in view (Walkers, In view) dies with a view effect (scenes.md); out of view it dies with none. With bit 0010h it stays as a corpse showing its bank's last frame (pushable, no updates); otherwise it is removed. Its record gets bit 0002h. The player gains its experience (player.md):
 
 ```
 xp = (byte 3)d10 + 4 × byte 2 + 13 × byte 5 + byte 10 + byte 4
@@ -137,6 +139,7 @@ A creature template carries what fighting needs: `attack` (dice, byte 9), `vulne
 
 - **Walking.** Creature direction `d` is engine direction `2d`. A walker's step tests its ground point like the player's (entities.md, Moving) and refuses avoided floors, and pits and open trapdoors unless it resists teleporting; it then backs off from other things by 2 units per axis. A step that moves nothing is blocked; what it met is the blocker.
 - **Waking.** A creature whose ground point is farther than 320 units (half the Manhattan distance) from the player does not move.
+- **In view.** A creature is in view when the player is on its level and its cell lies in the sight window around the player's cell (world.md, Engine model), the game's screen centered on the player, whatever the size of the engine's view. A walker beyond waking distance does not step at all, so does not cast either.
 - **Counting.** The walk count and rests count the creature's updates (`interval_ms`).
 - **Animated objects** (pattern 100 or more) and stationary casters do not walk.
 - **Casting.** A creature's `spell` names the spell it casts (Walkers; Stationary casters). Casting turns it as the rules above say and casts at the creature's facing with the power given; casting needs no gesture, magic points or memorization.
