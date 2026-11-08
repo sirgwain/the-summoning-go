@@ -142,7 +142,7 @@ A creature template carries what fighting needs: `attack` (dice, byte 9), `vulne
 - **Casting.** A creature's `spell` names the spell it casts (Walkers; Stationary casters). Casting turns it as the rules above say and casts at the creature's facing with the power given; casting needs no gesture, magic points or memorization.
 - **Talking.** `conversation` names the conversation record of its NPC record, `talk_portrait` the portrait shown (byte 1), and the behavior `talks` (0008h) that it can be talked to; turning hostile takes `talks` away from that creature.
 - **Showing.** A walking creature shows `walk.e`, stepped by its moves; attacking it shows `attack.e` for its next update; a corpse shows `dead`.
-- **Dying.** Its items drop on its cell, the player gains its experience, and it becomes a corpse (`leaves_corpse`) or is removed. Corpses weigh on plates and can be pushed.
+- **Dying.** Its items drop on its cell, the player gains its experience, and it becomes a corpse (`leaves_corpse`) or is removed. Corpses weigh on plates, even those of creatures that resist teleporting (rules.md, Weight plates), and can be pushed.
 - **Poison.** A poisoned creature is a state of the thing, not of the template.
 
 ## Tactics

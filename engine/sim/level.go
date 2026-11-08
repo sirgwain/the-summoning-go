@@ -129,9 +129,10 @@ func (t *Thing) Cell() content.Cell {
 	return content.Cell{floorDiv(t.U, CellUnits), floorDiv(t.V, CellUnits)}
 }
 
-// weight is what the thing adds to a plate it stands on.
+// weight is what the thing adds to a plate it stands on: nothing for a living creature that
+// resists teleporting, though its corpse weighs (docs/spec/rules.md, Weight plates).
 func (t *Thing) weight() int {
-	if t.Template.Has(content.BehaviorResistsTeleport) {
+	if t.Template.Has(content.BehaviorResistsTeleport) && !(corpse(t) && t.Template.Has(content.BehaviorLeavesCorpse)) {
 		return 0
 	}
 	return t.Template.Weight

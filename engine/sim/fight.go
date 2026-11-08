@@ -136,6 +136,9 @@ func (w *World) creatureDies(l *Level, t *Thing) {
 		w.removeThing(l, t, "removed")
 		return
 	}
+	if t.Template.Has(content.BehaviorResistsTeleport) {
+		w.weigh(l, t.Cell(), t.weight(), 0)
+	}
 	items := t.Items
 	t.Items = nil
 	for _, o := range items {

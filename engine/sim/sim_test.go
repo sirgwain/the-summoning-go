@@ -251,6 +251,36 @@ func TestThingsPressPlates(t *testing.T) {
 	}
 }
 
+func TestResistingCorpsePressesPlate(t *testing.T) {
+	for _, leaves := range []bool{true, false} {
+		w := newWorld(t, func(p *content.Pack) {
+			if leaves {
+				g := p.Things["thing.ghost"]
+				g.Behaviors = append(g.Behaviors, content.BehaviorLeavesCorpse)
+			}
+		})
+		l := w.Current()
+		plate := l.Feature("plate")
+		do(w, input.Place{Thing: "thing.ghost", Cell: cell{2, 2}})
+		g := l.ThingsAt(cell{2, 2})[0]
+		g.HitPoints = 0
+		w.creatureDies(l, g)
+		want := 0
+		if leaves {
+			want = 100
+		}
+		if plate.Counter != want || plate.Down != leaves {
+			t.Errorf("leaves corpse %v: counter %d, down %v", leaves, plate.Counter, plate.Down)
+		}
+		if leaves {
+			do(w, input.Move{Thing: g.ID, Cell: cell{2, 3}})
+			if plate.Counter != 0 || plate.Down {
+				t.Errorf("corpse moved off: counter %d, down %v", plate.Counter, plate.Down)
+			}
+		}
+	}
+}
+
 func TestPlateStartsWithPlacedWeight(t *testing.T) {
 	w := newWorld(t, func(p *content.Pack) {
 		p.Levels["level.00"].Objects = []*content.FloorObject{{Cell: cell{2, 2}, Object: content.Object{

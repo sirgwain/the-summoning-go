@@ -31,7 +31,7 @@ Things on a plate add weight to its counter: 100 for an entity, an object's weig
 
 Arming a plate re-evaluates it: a down plate below its threshold runs b and rises; an up plate at its threshold runs a and goes down.
 
-Things in flight, wall spells, creatures that resist teleporting and a levitating player do not press plates. An entity keeps its weight on the plate until it stands on another cell. Levitation lifts the player off.
+Things in flight, wall spells, living creatures that resist teleporting and a levitating player do not press plates; the corpse of a creature that resists teleporting does, with an entity's weight, from the moment it dies. An entity keeps its weight on the plate until it stands on another cell. Levitation lifts the player off.
 
 ### Item slots (17h, 18h)
 
