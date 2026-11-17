@@ -5,6 +5,8 @@ RPGs in the style of *The Summoning* (Event Horizon Software, 1992): a dungeon s
 angle, palette pixel art, a character panel, real-time combat and spellcasting, conversation by
 keyword, and levels full of pressure plates, levers, keyholes, teleporters and objects to move.
 
+![The engine playing a level imported from The Summoning](docs/images/screenshot.png)
+
 The engine is general, and *The Summoning* is its first game. An importer turns your own copy of
 the game's data files into a content pack the engine plays: levels, creatures, items, text, art and
 music. **No original game data is in this repository.** You need your own copy of the game.
